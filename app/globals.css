@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ───────── TOKENS (variables CSS pour usages hors Tailwind) ───────── */
+:root {
+  --font-sora: "Sora", system-ui, sans-serif;
+  --font-inter: "Inter", system-ui, sans-serif;
+  --dark-900: #0a0e14;
+  --dark-800: #111722;
+  --dark-700: #1a2231;
+  --dark-border: #243044;
+  --gold: #f5a623;
+  --gold-d: #d4891a;
+  --green: #1b4332;
+  --neon-gold: #ffc93c;
+  --hh: 64px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: #fafaf8;
+  color: #141412;
+  line-height: 1.6;
+  overflow-x: hidden;
+  font-size: 15px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ───────── COMPOSANTS RÉUTILISABLES ───────── */
+@layer components {
+  .wrap {
+    @apply mx-auto w-full max-w-[1320px] px-4;
+  }
+
+  .neon-text {
+    text-shadow: 0 0 8px rgba(255, 201, 60, 0.6), 0 0 20px rgba(255, 201, 60, 0.3);
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+  }
+
+  .text-grad-gold {
+    @apply bg-grad-gold bg-clip-text text-transparent;
+  }
+
+  /* Boutons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border-2 border-transparent px-5 py-2.5 text-[.88rem] font-semibold transition-all;
+  }
+  .btn-green {
+    @apply bg-green text-white hover:bg-green-mid hover:-translate-y-px;
+  }
+  .btn-gold {
+    @apply bg-grad-gold font-bold text-dark-900 shadow-glow-gold hover:-translate-y-px;
+    background-size: 200% 200%;
+  }
+  .btn-neon {
+    @apply border-[1.5px] border-neon-gold bg-dark-800 text-neon-gold shadow-glow-gold hover:bg-neon-gold hover:text-dark-900;
+  }
+  .btn-outline {
+    @apply border-gray-100 bg-transparent text-green hover:border-green hover:bg-gray-50;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-gray-700 hover:bg-gray-50;
+  }
+  .btn-wa {
+    @apply bg-brand-wa font-bold text-white hover:-translate-y-px hover:shadow-glow-wa;
+  }
+  .btn-sm {
+    @apply px-3.5 py-2 text-[.8rem];
+  }
+  .btn-lg {
+    @apply px-7 py-3.5 text-base;
+  }
+  .btn-block {
+    @apply w-full;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-[20px] px-2 py-0.5 text-[.68rem] font-bold uppercase tracking-wider;
+  }
+  .b-une {
+    @apply animate-neonPulse bg-grad-gold text-dark-900;
+  }
+  .b-prem {
+    @apply border border-[#f0d080] bg-gold-pale text-gold-dark;
+  }
+  .b-verif {
+    @apply bg-green-pale text-green;
+  }
+  .b-pro {
+    @apply bg-green text-white;
+  }
+  .b-sponsor {
+    @apply bg-gray-500/15 text-gray-500;
+    font-size: 0.6rem;
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full rounded-[10px] border-2 border-gray-100 bg-gray-50 px-3.5 py-2.5 text-[.9rem] text-gray-900 outline-none transition focus:border-green focus:bg-white focus:ring-4 focus:ring-green/10;
+  }
+  .label {
+    @apply mb-1.5 block text-[.8rem] font-semibold text-gray-700;
+  }
+
+  /* Carte annonce */
+  .card-img-sq {
+    @apply aspect-square w-full object-cover;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
