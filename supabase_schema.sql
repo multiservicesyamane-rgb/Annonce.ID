@@ -12,13 +12,15 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   name TEXT NOT NULL,
-  phone TEXT UNIQUE NOT NULL,
+  phone TEXT UNIQUE,
+  email TEXT UNIQUE,
   avatar TEXT,
   role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
   is_verified BOOLEAN DEFAULT false,
   is_pro BOOLEAN DEFAULT false,
   rating NUMERIC(3, 2) DEFAULT 0.0,
   sales INTEGER DEFAULT 0,
+  free_ads_remaining INTEGER DEFAULT 2,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -127,11 +129,13 @@ CREATE TRIGGER update_transactions_modtime BEFORE UPDATE ON public.transactions 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, phone, name)
+  INSERT INTO public.profiles (id, phone, email, name, avatar)
   VALUES (
     new.id,
-    new.phone, -- Supabase Phone Auth
-    COALESCE(new.raw_user_meta_data->>'name', 'Utilisateur ' || substring(new.id::text, 1, 6))
+    new.phone,
+    new.email,
+    COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'Utilisateur ' || substring(new.id::text, 1, 6)),
+    new.raw_user_meta_data->>'avatar_url'
   );
   RETURN new;
 END;

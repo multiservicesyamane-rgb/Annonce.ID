@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, COUNTRIES, BOOSTS } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const STEPS = ["Catégorie", "Détails", "Photos", "Contact", "Boost"];
 const DEMO_PHOTOS = [
@@ -22,6 +23,21 @@ export default function PublishWizard() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [boost, setBoost] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  const supabase = createClient();
+
+  // Charger le profil pour connaître le nombre d'annonces gratuites restantes
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
+          if (data) setUserProfile(data);
+        });
+      }
+    });
+  }, [supabase]);
 
   const cat = CATEGORIES.find((c) => c.slug === catSlug);
   const show = (m: string) => {
@@ -29,18 +45,57 @@ export default function PublishWizard() {
     setTimeout(() => setToast(null), 2200);
   };
 
-  function next() {
+  const freeAdsRemaining = userProfile?.free_ads_remaining ?? 0;
+
+  async function next() {
     if (step === 1 && !catSlug) return show("⚠ Choisissez une catégorie");
+    
+    // Bloquer si l'utilisateur essaie de continuer avec Gratuit mais n'a plus de crédit
+    if (step === 5 && boost === 0 && freeAdsRemaining <= 0) {
+      return show("⚠ Vous avez épuisé vos annonces gratuites. Veuillez booster l'annonce.");
+    }
+
     if (step < 5) {
       setStep((s) => s + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
+      show("Création de l'annonce en cours...");
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        show("⚠ Vous devez être connecté !");
+        return;
+      }
+
+      const { data, error } = await supabase.from('listings').insert({
+        user_id: user.id,
+        title: title || "Annonce sans titre",
+        slug: (title || "annonce").toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now(),
+        description: desc || "Pas de description",
+        price: price || "0",
+        category: cat?.name || "Autre",
+        category_slug: catSlug || "autre",
+        location: "Dakar",
+        image: photos.length > 0 ? photos[0] : "https://placehold.co/600x400?text=Sans+Image",
+        photos: photos,
+        status: boost === 0 ? "pending" : "active"
+      }).select().single();
+
+      if (error) {
+        console.error(error);
+        show("⚠ Erreur lors de la publication");
+        return;
+      }
+
       if (boost === 0) {
+        // Décrémenter le compteur d'annonces gratuites
+        await supabase.from('profiles').update({ free_ads_remaining: freeAdsRemaining - 1 }).eq('id', user.id);
+        
         show("🎉 Annonce publiée gratuitement !");
         setTimeout(() => router.push("/dashboard"), 1200);
       } else {
         show("Redirection paiement…");
-        setTimeout(() => router.push(`/paiement?boost=${BOOSTS[boost].key}`), 900);
+        setTimeout(() => router.push(`/paiement?boost=${BOOSTS[boost].key}&listing_id=${data.id}`), 900);
       }
     }
   }
