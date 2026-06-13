@@ -166,12 +166,21 @@ export default function Dashboard() {
               <h2 className="font-display text-[1.2rem] font-extrabold">Mes annonces</h2>
               <Link href="/publier" className="btn btn-green btn-sm">+ Nouvelle</Link>
             </div>
-            <div className="flex flex-col items-center justify-center rounded-lg border-[1.5px] border-gray-100 bg-white py-16 text-center">
-               <div className="text-[3rem] opacity-40 mb-2">📦</div>
-               <div className="text-[1rem] font-bold text-gray-700">Aucune annonce trouvée</div>
-               <div className="text-[.85rem] text-gray-400 mb-4">Vous n'avez publié aucune annonce pour le moment.</div>
-               <Link href="/publier" className="btn btn-outline btn-sm">Créer une annonce</Link>
-            </div>
+            
+            {ads.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border-[1.5px] border-gray-100 bg-white py-16 text-center">
+                 <div className="text-[3rem] opacity-40 mb-2">📦</div>
+                 <div className="text-[1rem] font-bold text-gray-700">Aucune annonce trouvée</div>
+                 <div className="text-[.85rem] text-gray-400 mb-4">Vous n'avez publié aucune annonce pour le moment.</div>
+                 <Link href="/publier" className="btn btn-outline btn-sm">Créer une annonce</Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {ads.map((ad) => (
+                  <AdCard key={ad.id} ad={ad} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
