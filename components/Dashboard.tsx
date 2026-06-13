@@ -194,7 +194,7 @@ export default function Dashboard() {
               <div className="grid gap-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className="label">Nom complet / Identifiant</label><input className="input" defaultValue={displayName} /></div>
-                  <div><label className="label">Contact (Email ou Tél)</label><input className="input" defaultValue={displayEmail} readOnly disabled className="input bg-gray-50 text-gray-500" /></div>
+                  <div><label className="label">Contact (Email ou Tél)</label><input className="input bg-gray-50 text-gray-500" defaultValue={displayEmail} readOnly disabled /></div>
                 </div>
                 <div><label className="label">Bio</label><textarea className="input resize-y" rows={3} placeholder="Présentez-vous aux acheteurs..." /></div>
               </div>
