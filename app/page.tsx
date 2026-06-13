@@ -40,33 +40,51 @@ export default function HomePage() {
       </section>
 
       {/* PREMIUM carousel */}
-      <section className="bg-[#121212] py-10 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+      <section className="bg-gradient-to-b from-[#0f172a] to-black py-12 relative overflow-hidden">
+        {/* Subtle glowing orb in background */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gold/5 rounded-full blur-[100px] pointer-events-none"></div>
         <div className="wrap relative z-10">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="flex items-center gap-3 font-display text-[1.4rem] font-bold text-white tracking-wide">
-              Annonces Premium <span className="bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] text-black px-2 py-0.5 rounded text-[0.7rem] uppercase tracking-widest">VIP</span>
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="flex items-center gap-3 font-display text-[1.6rem] font-bold text-white tracking-tight">
+              Annonces Premium <span className="bg-gradient-to-r from-gold to-[#F3E5AB] text-dark-900 px-3 py-0.5 rounded-full text-[0.65rem] font-extrabold uppercase tracking-widest shadow-[0_0_15px_rgba(212,175,55,0.3)]">VIP</span>
             </h2>
-            <Link href="/recherche" className="text-[.82rem] font-semibold text-[#D4AF37] hover:text-white transition">
-              Découvrir la sélection →
+            <Link href="/recherche" className="text-[.85rem] font-semibold text-gold hover:text-white transition-colors flex items-center gap-2">
+              Découvrir la sélection <span>→</span>
             </Link>
           </div>
-          <div className="no-scrollbar flex gap-4 overflow-x-auto pb-4 snap-x">
+          
+          <div className="no-scrollbar flex gap-5 overflow-x-auto pb-6 snap-x pt-2">
             {prem.map((ad) => (
               <Link
                 key={ad.id}
                 href={`/annonce/${ad.id}/${ad.slug}`}
-                className="w-[200px] shrink-0 overflow-hidden rounded-xl bg-[#1A1A1A] border border-[#333] transition-all duration-300 hover:-translate-y-2 hover:border-[#D4AF37] hover:shadow-[0_10px_30px_rgba(212,175,55,0.15)] snap-start group"
+                className="w-[260px] shrink-0 overflow-hidden rounded-[16px] bg-[#1A1A1A]/80 backdrop-blur-md border border-white/10 transition-all duration-300 hover:-translate-y-2 hover:border-gold/50 hover:shadow-[0_12px_30px_rgba(212,175,55,0.15)] snap-start group"
               >
-                <div className="relative w-full aspect-square overflow-hidden">
-                  <Image src={ad.image} alt={ad.title} width={350} height={350} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                  <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-black/60 to-transparent"></div>
-                  <span className="absolute top-2 right-2 text-white text-xs bg-black/50 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">⭐ Premium</span>
+                <div className="relative w-full aspect-[4/3] overflow-hidden bg-black/50">
+                  <Image src={ad.image} alt={ad.title} width={400} height={300} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A] via-transparent to-transparent"></div>
+                  
+                  {/* VIP Tag over image */}
+                  <div className="absolute top-3 right-3">
+                    <span className="bg-black/60 backdrop-blur-md text-gold text-[.6rem] font-bold px-2.5 py-1 rounded-full border border-gold/30 uppercase tracking-widest shadow-lg">
+                      ⭐ Top
+                    </span>
+                  </div>
                 </div>
-                <div className="p-3">
-                  <div className="line-clamp-2 text-[.85rem] font-semibold text-white leading-tight mb-2 group-hover:text-[#D4AF37] transition-colors">{ad.title}</div>
-                  <div className="font-display text-[1rem] font-bold text-[#D4AF37] mb-1">{ad.price}</div>
-                  <div className="text-[.7rem] text-gray-400">📍 {ad.location}</div>
+                
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[.65rem] uppercase tracking-widest text-gray-400 font-bold">{ad.category}</span>
+                  </div>
+                  <h3 className="line-clamp-2 text-[.95rem] font-bold text-white leading-snug mb-3 group-hover:text-gold transition-colors">
+                    {ad.title}
+                  </h3>
+                  <div className="font-display text-[1.15rem] font-extrabold text-gold mb-1">
+                    {ad.price}
+                  </div>
+                  <div className="text-[.75rem] text-gray-400 font-medium">
+                    <span className="opacity-70">📍</span> {ad.location}
+                  </div>
                 </div>
               </Link>
             ))}
