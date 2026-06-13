@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -7,49 +8,31 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
+    const cookieStore = cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) {
-            return undefined // on ne lit pas les cookies dans ce route handler GET
-          },
-          set(name: string, value: string, options: CookieOptions) {
-             // ceci est géré par le NextResponse en dessous
-          },
-          remove(name: string, options: CookieOptions) {
-             // ceci est géré par le NextResponse en dessous
-          },
-        },
-      }
-    )
-    
-    // Le vrai échange de code se fait sans utiliser les cookies de request car la méthode exchangeCodeForSession
-    // mettra à jour la session dans l'objet supabase, mais on va utiliser une méthode SSR standard:
-    
-    const response = NextResponse.redirect(`${origin}${next}`)
-    
-    const supabaseWithCookies = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
           getAll() {
-            return []
+            return cookieStore.getAll()
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options)
-            })
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch (error) {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing user sessions.
+            }
           },
         },
       }
     )
-
-    await supabaseWithCookies.auth.exchangeCodeForSession(code)
-
-    return response
+    
+    await supabase.auth.exchangeCodeForSession(code)
+    return NextResponse.redirect(`${origin}${next}`)
   }
 
   // S'il n'y a pas de code, redirige vers la connexion
