@@ -1,71 +1,115 @@
-import React from "react";
 import Link from "next/link";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function YamanetechLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-[#F4F7FE] text-gray-700 font-sans">
-      {/* Sidebar - Lector Style */}
-      <aside className="w-[250px] bg-white border-r border-gray-100 flex flex-col z-20 shrink-0">
-        <div className="h-[60px] bg-gradient-to-r from-[#E9437E] to-[#F1618B] flex items-center px-6">
-          <div className="flex items-center gap-2 text-white font-bold text-xl tracking-wide">
-            <span className="w-5 h-5 rounded-full bg-yellow-400"></span> Annonce.ID
+    <div className="flex min-h-screen bg-[#f3f4f6]">
+      {/* Sidebar - Dark theme */}
+      <aside className="no-scrollbar fixed left-0 top-0 z-40 h-screen w-[260px] overflow-y-auto bg-[#1e1e2d] text-gray-300">
+        <div className="flex h-[70px] items-center gap-3 px-6">
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-gold text-dark-900">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
           </div>
+          <span className="font-display text-[1.2rem] font-bold text-white">IDstore</span>
         </div>
-        <nav className="flex-1 overflow-y-auto py-4 custom-scrollbar">
-          {[
-            { href: "/yamanetech", icon: "🏠", label: "Dashboard", active: true },
-            { href: "/yamanetech/annonces", icon: "📋", label: "Annonces" },
-            { href: "/yamanetech/utilisateurs", icon: "👥", label: "Utilisateurs (Admin)" },
-            { href: "/yamanetech/transactions", icon: "💳", label: "Paiements PayTech" },
-            { href: "/yamanetech/signalements", icon: "⚠️", label: "Signalements" },
-            { href: "/yamanetech/categories", icon: "📁", label: "Catégories" },
-            { href: "/yamanetech/parametres", icon: "⚙️", label: "Paramètres Système" },
-            { href: "/yamanetech/logs", icon: "📝", label: "Logs & Sécurité" },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-4 px-6 py-2.5 text-[.8rem] transition-colors ${
-                item.active 
-                  ? "text-[#E9437E] font-semibold border-l-2 border-[#E9437E] bg-pink-50/50" 
-                  : "text-gray-500 hover:text-[#E9437E] hover:bg-gray-50 border-l-2 border-transparent"
-              }`}
-            >
-              <span className="text-base grayscale opacity-70">{item.icon}</span>
-              <span>{item.label}</span>
+
+        <div className="px-4 py-4">
+          <Link href="/yamanetech" className="flex items-center gap-3 rounded-lg bg-gold px-4 py-3 text-[.85rem] font-bold text-dark-900 transition hover:bg-gold-light">
+            <span>🏠</span> Dashboard
+          </Link>
+        </div>
+
+        <nav className="flex flex-col px-4 pb-10">
+          <Section title="GESTION" />
+          <NavItem href="/yamanetech/utilisateurs" icon="👥" label="Utilisateurs" />
+          <NavItem href="/yamanetech/annonces" icon="📋" label="Annonces" />
+          <NavItem href="/yamanetech/categories" icon="🗂️" label="Catégories" />
+          <NavItem href="/yamanetech/villes" icon="🌍" label="Villes & Pays" />
+
+          <Section title="PROMOTION" />
+          <NavItem href="/yamanetech/publicites" icon="📢" label="Publicités" />
+          <NavItem href="/yamanetech/premium" icon="⭐" label="Annonces Premium" />
+
+          <Section title="FINANCES" />
+          <NavItem href="/yamanetech/paiements" icon="💳" label="Paiements" />
+          <NavItem href="/yamanetech/revenus" icon="💰" label="Revenus" />
+          <NavItem href="/yamanetech/commissions" icon="% " label="Commissions" />
+
+          <Section title="COMMUNICATION" />
+          <NavItem href="/yamanetech/messagerie" icon="💬" label="Messagerie" />
+          <NavItem href="/yamanetech/notifications" icon="🔔" label="Notifications" />
+          <NavItem href="/yamanetech/support" icon="🎧" label="Support" />
+
+          <Section title="ANALYTICS" />
+          <NavItem href="/yamanetech/statistiques" icon="📊" label="Statistiques" />
+          <NavItem href="/yamanetech/rapports" icon="📄" label="Rapports" />
+
+          <Section title="PARAMÈTRES" />
+          <NavItem href="/yamanetech/parametres" icon="⚙️" label="Paramètres" />
+          <NavItem href="/yamanetech/securite" icon="🛡️" label="Sécurité" />
+
+          <div className="mt-6 border-t border-[#2a2a3c] pt-4">
+            <Link href="/" className="flex items-center gap-3 rounded-lg px-4 py-2 text-[.85rem] transition hover:bg-[#2a2a3c] hover:text-white">
+              <span>↪️</span> Quitter l'Admin
             </Link>
-          ))}
+          </div>
         </nav>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[#F4F7FE]">
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col pl-[260px]">
         {/* Topbar */}
-        <header className="h-[60px] bg-white flex items-center justify-between px-6 shrink-0">
+        <header className="sticky top-0 z-30 flex h-[70px] items-center justify-between border-b border-gray-200 bg-white px-8">
           <div className="flex items-center gap-4">
-            <button className="text-gray-400 hover:text-gray-600">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-            </button>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+              <input 
+                type="text" 
+                placeholder="Rechercher..." 
+                className="h-10 w-[300px] rounded-[8px] border border-gray-200 bg-gray-50 pl-10 pr-4 text-[.85rem] focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-5">
-            <button className="relative text-gray-400 hover:text-[#E9437E] transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-              <span className="absolute top-0 right-0 w-2 h-2 bg-[#10B981] rounded-full"></span>
-            </button>
-            <button className="text-gray-400 hover:text-[#E9437E] transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            </button>
-            <div className="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs font-bold border border-gray-200 cursor-pointer">
-              S
+          <div className="flex items-center gap-6">
+            <div className="flex gap-4 text-gray-500">
+              <button className="relative transition hover:text-dark-900">
+                🔔 <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-red text-[.5rem] font-bold text-white">5</span>
+              </button>
+              <button className="relative transition hover:text-dark-900">
+                ✉️ <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-red text-[.5rem] font-bold text-white">3</span>
+              </button>
+            </div>
+            <div className="h-8 w-px bg-gray-200"></div>
+            <div className="flex items-center gap-3">
+              <div className="text-right text-[.8rem]">
+                <div className="font-bold text-dark-900">Admin IDstore</div>
+                <div className="text-[.7rem] text-gray-500">Super Admin</div>
+              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="https://i.pravatar.cc/100?img=11" alt="Admin" className="h-10 w-10 rounded-full border-2 border-gold object-cover" />
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto p-6 bg-[#F4F7FE]">
+        <main className="flex-1 p-8">
           {children}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
+  );
+}
+
+function Section({ title }: { title: string }) {
+  return <div className="mb-2 mt-6 px-4 text-[.65rem] font-bold uppercase tracking-wider text-[#6b6b80]">{title}</div>;
+}
+
+function NavItem({ href, icon, label }: { href: string; icon: string; label: string }) {
+  return (
+    <Link href={href} className="flex items-center justify-between rounded-lg px-4 py-2 text-[.85rem] transition hover:bg-[#2a2a3c] hover:text-white">
+      <span className="flex items-center gap-3">{icon} {label}</span>
+      <span className="text-[#6b6b80]">›</span>
+    </Link>
   );
 }

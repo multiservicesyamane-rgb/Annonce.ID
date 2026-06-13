@@ -1,201 +1,200 @@
-import React from "react";
-
-export default function AdminDashboard() {
+export default function SuperAdminDashboard() {
   return (
-    <div className="max-w-[1200px] mx-auto space-y-6">
-      {/* Top Section: Line Chart + Donut Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
-        {/* Line Chart Panel */}
-        <div className="bg-white rounded-[10px] p-6 shadow-sm border border-gray-100 flex flex-col relative">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h2 className="text-[.9rem] font-bold text-gray-700">Dashboard</h2>
-              <p className="text-[.7rem] text-gray-400">Overview of Latest Month</p>
-            </div>
-            <div className="flex gap-4 text-[.7rem] font-semibold text-gray-400">
-              <span className="hover:text-[#E9437E] cursor-pointer">DAILY</span>
-              <span className="hover:text-[#E9437E] cursor-pointer">WEEKLY</span>
-              <span className="text-[#E9437E] border-b-2 border-[#E9437E] pb-1 cursor-pointer">MONTHLY</span>
-              <span className="hover:text-[#E9437E] cursor-pointer">YEARLY</span>
-            </div>
-          </div>
-          
-          <div className="flex justify-between items-end mb-4">
-            <div>
-              <div className="text-3xl font-extrabold text-gray-800 mb-2">1 245 K FCFA</div>
-              <div className="text-[.8rem] font-bold text-gray-700">842</div>
-              <div className="text-[.65rem] text-gray-400 mb-3">Nouvelles Annonces</div>
-              <button className="bg-[#E9437E] text-white text-[.7rem] px-4 py-1.5 rounded shadow-sm hover:bg-[#D8366D] transition">Last Month Summary</button>
-            </div>
-            
-            {/* SVG placeholder for Line Chart to match image style */}
-            <div className="w-[60%] h-[120px] relative">
-               <svg viewBox="0 0 400 120" className="w-full h-full overflow-visible" preserveAspectRatio="none">
-                  <path d="M 0 100 Q 50 60 100 80 T 200 40 T 300 90 T 400 20" fill="url(#gradOrange)" opacity="0.3" />
-                  <path d="M 0 100 Q 50 60 100 80 T 200 40 T 300 90 T 400 20" fill="none" stroke="#F59E0B" strokeWidth="3" />
-                  
-                  <path d="M 0 110 Q 50 80 100 60 T 200 80 T 300 20 T 400 100" fill="url(#gradPink)" opacity="0.3" />
-                  <path d="M 0 110 Q 50 80 100 60 T 200 80 T 300 20 T 400 100" fill="none" stroke="#E9437E" strokeWidth="3" />
-                  
-                  <defs>
-                    <linearGradient id="gradPink" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#E9437E" stopOpacity="1" />
-                      <stop offset="100%" stopColor="#E9437E" stopOpacity="0" />
-                    </linearGradient>
-                    <linearGradient id="gradOrange" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#F59E0B" stopOpacity="1" />
-                      <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-               </svg>
-            </div>
-          </div>
+    <div className="animate-fadeUp">
+      {/* Header */}
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-[1.5rem] font-extrabold text-dark-900">Dashboard</h1>
+          <p className="text-[.85rem] text-gray-500">Bienvenue sur votre tableau de bord</p>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-[.85rem] text-gray-600 shadow-sm">
+          <span>📅</span> 01 Mai 2026 - 31 Mai 2026
+        </div>
+      </div>
 
-          <div className="flex gap-6 mt-auto pt-4 border-t border-gray-50">
-             <div className="flex items-center gap-2">
-               <div className="w-5 h-5 rounded-full bg-[#E9437E] flex items-center justify-center text-white text-[.6rem]">👑</div>
-               <span className="text-[.65rem] text-gray-500">Premium<br/><b className="text-gray-800 text-[.75rem]">545,000 F</b></span>
-             </div>
-             <div className="flex items-center gap-2">
-               <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center text-white text-[.6rem]">✨</div>
-               <span className="text-[.65rem] text-gray-500">À la Une<br/><b className="text-gray-800 text-[.75rem]">700,000 F</b></span>
+      {/* Top 6 KPI Cards */}
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-6">
+        <StatCard icon="📄" label="Total Annonces" value="250,548" trend="+12.5%" color="bg-blue-50 text-blue-600" />
+        <StatCard icon="✓" label="Annonces Actives" value="182,540" trend="+8.2%" color="bg-green-50 text-[#22c55e]" />
+        <StatCard icon="⏳" label="En Attente" value="12,540" trend="+4.3%" color="bg-orange-50 text-orange-500" />
+        <StatCard icon="✕" label="Annonces Rejetées" value="5,320" trend="-2.1%" color="bg-red-50 text-brand-red" trendDown />
+        <StatCard icon="👥" label="Utilisateurs" value="98,652" trend="+15.3%" color="bg-purple-50 text-purple-600" />
+        <StatCard icon="⭐" label="Vendeurs Vérifiés" value="3,254" trend="+6.7%" color="bg-sky-50 text-sky-500" />
+      </div>
+
+      {/* Charts Row */}
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Evolution Chart */}
+        <div className="rounded-[12px] border border-gray-100 bg-white p-5 shadow-sm lg:col-span-1">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="font-display text-[.9rem] font-bold">Évolution des annonces</h3>
+            <select className="rounded border-gray-200 text-[.75rem]"><option>30 derniers jours</option></select>
+          </div>
+          {/* Mockup Chart using CSS */}
+          <div className="relative mt-8 h-[160px] w-full border-b border-l border-gray-100">
+             {/* Lines */}
+             <svg viewBox="0 0 100 50" className="h-full w-full preserve-3d" preserveAspectRatio="none">
+               <polyline points="0,40 20,25 40,35 60,15 80,20 100,5" fill="none" stroke="#fbbf24" strokeWidth="2" />
+               <polyline points="0,45 20,35 40,40 60,25 80,30 100,20" fill="none" stroke="#3b82f6" strokeWidth="2" />
+             </svg>
+             <div className="absolute bottom-0 flex w-full justify-between pt-2 text-[.6rem] text-gray-400">
+               <span>01 Mai</span><span>08 Mai</span><span>15 Mai</span><span>22 Mai</span><span>29 Mai</span>
              </div>
           </div>
         </div>
 
-        {/* Donut Chart Panel */}
-        <div className="bg-white rounded-[10px] p-6 shadow-sm border border-gray-100 flex flex-col items-center justify-center relative">
-          <h2 className="text-[.8rem] font-bold text-gray-700 absolute top-6 left-6">Catégories</h2>
-          <div className="relative w-40 h-40 mt-4 mb-6">
-            <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#F3F4F6" strokeWidth="6"></circle>
-              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#E9437E" strokeWidth="6" strokeDasharray="55 45" strokeDashoffset="0"></circle>
-              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#8B5CF6" strokeWidth="6" strokeDasharray="33 67" strokeDashoffset="-55"></circle>
-              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#FBBF24" strokeWidth="6" strokeDasharray="12 88" strokeDashoffset="-88"></circle>
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center bg-white m-3 rounded-full shadow-inner">
-               <span className="text-[.85rem] font-bold text-gray-700">Total</span>
+        {/* Category Chart */}
+        <div className="rounded-[12px] border border-gray-100 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 font-display text-[.9rem] font-bold">Annonces par catégorie</h3>
+          <div className="flex h-[180px] items-center justify-center gap-6">
+            <div className="relative h-32 w-32 rounded-full border-[16px] border-gray-100" style={{ borderTopColor: "#3b82f6", borderRightColor: "#22c55e", borderBottomColor: "#fbbf24", borderLeftColor: "#a855f7" }}></div>
+            <div className="flex flex-col gap-2 text-[.75rem] text-gray-600">
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#3b82f6]"></span> Immobilier 35%</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#22c55e]"></span> Véhicules 25%</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#fbbf24]"></span> Électronique 20%</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#a855f7]"></span> Emploi 10%</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-gray-300"></span> Autres 10%</div>
             </div>
           </div>
-          <div className="flex w-full justify-between px-4 text-center">
-            <div>
-              <div className="text-[1.1rem] font-bold text-gray-800">55%</div>
-              <div className="text-[.65rem] text-gray-400 flex items-center gap-1 justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#E9437E]"></span> Immobilier</div>
-            </div>
-            <div>
-              <div className="text-[1.1rem] font-bold text-gray-800">33%</div>
-              <div className="text-[.65rem] text-gray-400 flex items-center gap-1 justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6]"></span> Véhicules</div>
-            </div>
-            <div>
-              <div className="text-[1.1rem] font-bold text-gray-800">12%</div>
-              <div className="text-[.65rem] text-gray-400 flex items-center gap-1 justify-center"><span className="w-1.5 h-1.5 rounded-full bg-[#FBBF24]"></span> Emploi</div>
-            </div>
+        </div>
+
+        {/* Revenus Bar Chart */}
+        <div className="rounded-[12px] border border-gray-100 bg-white p-5 shadow-sm lg:col-span-1">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="font-display text-[.9rem] font-bold">Revenus</h3>
+            <select className="rounded border-gray-200 text-[.75rem]"><option>Mensuel</option></select>
+          </div>
+          <div className="mb-4">
+            <div className="text-[1.3rem] font-extrabold text-dark-900">2,543,890 FCFA</div>
+            <div className="text-[.7rem] font-bold text-[#22c55e]">+19.6% vs l'année dernière</div>
+          </div>
+          <div className="flex h-[120px] items-end justify-between gap-2 border-b border-gray-100 pb-1">
+            <div className="w-full rounded-t-sm bg-blue-400" style={{ height: "30%" }}></div>
+            <div className="w-full rounded-t-sm bg-blue-400" style={{ height: "45%" }}></div>
+            <div className="w-full rounded-t-sm bg-blue-400" style={{ height: "60%" }}></div>
+            <div className="w-full rounded-t-sm bg-blue-400" style={{ height: "50%" }}></div>
+            <div className="w-full rounded-t-sm bg-blue-400" style={{ height: "80%" }}></div>
+            <div className="w-full rounded-t-sm bg-blue-500" style={{ height: "100%" }}></div>
+          </div>
+          <div className="mt-1 flex justify-between text-[.6rem] text-gray-400">
+            <span>Jan</span><span>Fév</span><span>Mar</span><span>Avr</span><span>Mai</span><span>Juin</span>
           </div>
         </div>
       </div>
 
-      {/* Middle Section: Gradient Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { title: "Revenus (Aujourd'hui)", value: "45,000 F", color: "from-[#F1618B] to-[#E9437E]", shadow: "shadow-[#E9437E]/30" },
-          { title: "Nouvelles Annonces", value: "142", color: "from-[#9372F9] to-[#714AE5]", shadow: "shadow-[#714AE5]/30" },
-          { title: "Inscriptions (Mois)", value: "845", color: "from-[#5DB3FF] to-[#3B82F6]", shadow: "shadow-[#3B82F6]/30" },
-          { title: "Signalements Actifs", value: "12", color: "from-[#FBBF24] to-[#F59E0B]", shadow: "shadow-[#F59E0B]/30" },
-        ].map((card, i) => (
-          <div key={i} className={`bg-gradient-to-br ${card.color} rounded-[10px] p-5 shadow-lg ${card.shadow} text-white relative overflow-hidden h-[110px] flex flex-col justify-between`}>
-            <div className="text-[.7rem] font-medium opacity-90">{card.title}</div>
-            <div className="text-[1.6rem] font-bold">{card.value}</div>
-            {/* Fake sparkline background */}
-            <svg viewBox="0 0 100 30" className="absolute bottom-0 left-0 w-full h-[40px] opacity-20" preserveAspectRatio="none">
-               <path d="M0 30 L 20 10 L 40 25 L 60 5 L 80 20 L 100 0 L 100 30 Z" fill="white" />
-            </svg>
-          </div>
-        ))}
+      {/* Colorful Revenue Cards */}
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-4">
+        <ColorCard title="Revenus Publicités" value="845,600 FCFA" trend="+12.5% vs mois dernier" color="bg-gradient-to-br from-purple-500 to-indigo-600" />
+        <ColorCard title="Revenus Abonnements" value="623,400 FCFA" trend="+9.7% vs mois dernier" color="bg-gradient-to-br from-green-500 to-emerald-600" />
+        <ColorCard title="Transactions" value="12,458" trend="+14.3% vs mois dernier" color="bg-gradient-to-br from-orange-400 to-orange-500" />
+        <ColorCard title="Taux de Conversion" value="8.35%" trend="+2.1% vs mois dernier" color="bg-gradient-to-br from-blue-500 to-blue-600" />
       </div>
 
-      {/* Bottom Section: Timeline + Table */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2.5fr] gap-6">
-        {/* Recent Activities */}
-        <div className="bg-white rounded-[10px] p-6 shadow-sm border border-gray-100">
-          <h2 className="text-[.85rem] font-bold text-gray-700 mb-6">Activités Récentes</h2>
-          <div className="space-y-6 relative before:absolute before:inset-0 before:ml-2.5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
-            {[
-              { time: "10 Min", title: "Annonce VIP", desc: "Moussa a publié une villa.", color: "bg-[#E9437E]" },
-              { time: "2 Hrs", title: "Paiement Validé", desc: "PayTech: 10,000 FCFA.", color: "bg-[#8B5CF6]" },
-              { time: "5 Hrs", title: "Utilisateur Signalé", desc: "Modération requise.", color: "bg-[#3B82F6]" },
-              { time: "1 J", title: "Compte Vérifié", desc: "Diallo est maintenant Pro.", color: "bg-[#F59E0B]" },
-            ].map((act, i) => (
-              <div key={i} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className="flex items-center justify-center w-5 h-5 rounded-full border-2 border-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10" style={{ backgroundColor: "transparent" }}>
-                   <span className={`w-3 h-3 rounded-full ${act.color}`}></span>
-                </div>
-                <div className="w-[calc(100%-2rem)] md:w-[calc(50%-1.5rem)] flex items-center gap-4">
-                  <div className="text-[.65rem] text-gray-400 w-12 text-right">{act.time}</div>
-                  <div>
-                    <div className="text-[.75rem] font-bold text-gray-700">{act.title}</div>
-                    <div className="text-[.65rem] text-gray-500">{act.desc}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
+      {/* Bottom Row */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Table Dernières Annonces */}
+        <div className="rounded-[12px] border border-gray-100 bg-white p-5 shadow-sm lg:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="font-display text-[.9rem] font-bold">Dernières annonces</h3>
+            <button className="text-[.75rem] text-blue-500 hover:underline">Voir toutes</button>
           </div>
-        </div>
-
-        {/* Order Status Table */}
-        <div className="bg-white rounded-[10px] p-6 shadow-sm border border-gray-100">
-          <div className="flex justify-between items-center mb-1">
-            <h2 className="text-[.85rem] font-bold text-gray-700">Dernières Transactions PayTech</h2>
-            <div className="flex items-center gap-2">
-              <button className="bg-[#E9437E] text-white w-6 h-6 rounded flex items-center justify-center text-xs shadow-sm hover:bg-[#D8366D]">+</button>
-              <div className="relative">
-                <input type="text" placeholder="Search..." className="bg-gray-50 border border-gray-200 rounded px-3 py-1 text-[.7rem] w-48 outline-none focus:border-[#E9437E] transition-colors" />
-                <span className="absolute right-2 top-1.5 text-gray-400 text-xs">🔍</span>
-              </div>
-            </div>
-          </div>
-          <p className="text-[.7rem] text-gray-400 mb-4">Overview of Latest Month</p>
-
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-[.75rem]">
-              <thead className="bg-[#2D334A] text-white">
+            <table className="w-full text-left text-[.8rem]">
+              <thead className="border-b border-gray-100 text-[.7rem] font-bold uppercase text-gray-400">
                 <tr>
-                  <th className="py-2.5 px-4 font-semibold rounded-tl">RÉFÉRENCE</th>
-                  <th className="py-2.5 px-4 font-semibold">UTILISATEUR</th>
-                  <th className="py-2.5 px-4 font-semibold">TYPE</th>
-                  <th className="py-2.5 px-4 font-semibold">MONTANT</th>
-                  <th className="py-2.5 px-4 font-semibold rounded-tr">STATUS</th>
+                  <th className="pb-2">Annonce</th>
+                  <th className="pb-2">Catégorie</th>
+                  <th className="pb-2">Prix</th>
+                  <th className="pb-2">Statut</th>
+                  <th className="pb-2">Ajouté le</th>
                 </tr>
               </thead>
-              <tbody className="text-gray-600">
-                {[
-                  { ref: "TRX-12348", user: "Cheikh Diop", type: "Premium", amount: "5,000 F", status: "Succès", badge: "bg-[#E9437E]" },
-                  { ref: "TRX-12347", user: "Mamadou Ba", type: "À la Une", amount: "10,000 F", status: "Attente", badge: "bg-[#8B5CF6]" },
-                  { ref: "TRX-12346", user: "Awa Ndiaye", type: "Premium", amount: "5,000 F", status: "Échoué", badge: "bg-[#3B82F6]" },
-                  { ref: "TRX-12345", user: "Fatou Fall", type: "Premium", amount: "5,000 F", status: "Succès", badge: "bg-[#F59E0B]" },
-                ].map((row, i) => (
-                  <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td className="py-3 px-4 font-medium text-gray-800">{row.ref}</td>
-                    <td className="py-3 px-4">{row.user}</td>
-                    <td className="py-3 px-4">{row.type}</td>
-                    <td className="py-3 px-4 font-medium">{row.amount}</td>
-                    <td className="py-3 px-4">
-                      <span className={`${row.badge} text-white text-[.6rem] px-2 py-0.5 rounded-full`}>{row.status}</span>
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-gray-50">
+                <TableRow img="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=50&h=50&fit=crop" name="Villa à vendre à Almadies" cat="Immobilier" price="120,000,000 FCFA" status="Active" date="31 Mai 2026" />
+                <TableRow img="https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=50&h=50&fit=crop" name="Toyota RAV4 2020" cat="Véhicules" price="18,500,000 FCFA" status="En attente" date="31 Mai 2026" />
+                <TableRow img="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=50&h=50&fit=crop" name="iPhone 14 Pro Max 256Go" cat="Électronique" price="850,000 FCFA" status="Active" date="31 Mai 2026" />
+                <TableRow img="https://placehold.co/50/22c55e/FFF?text=DEV" name="Développeur Full Stack" cat="Emploi" price="450,000 FCFA" status="Active" date="30 Mai 2026" />
               </tbody>
             </table>
           </div>
-          <div className="mt-4 flex justify-between items-center text-[.7rem] text-gray-400">
-            <span>Showing 1 to 4 of 28 entries</span>
-            <div className="flex gap-1">
-              <span className="w-5 h-5 rounded-full bg-[#E9437E] text-white flex items-center justify-center cursor-pointer">1</span>
-              <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center cursor-pointer hover:bg-gray-200">2</span>
-              <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center cursor-pointer hover:bg-gray-200">...</span>
-            </div>
+        </div>
+
+        {/* Activités récentes */}
+        <div className="rounded-[12px] border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="font-display text-[.9rem] font-bold">Activités récentes</h3>
+            <button className="text-[.75rem] text-blue-500 hover:underline">Voir tout</button>
+          </div>
+          <div className="flex flex-col gap-4">
+            <Activity icon="🔵" title="Nouvelle annonce publiée" desc="Toyota Camry 2021 par Ousmane Diop" time="il y a 5 min" />
+            <Activity icon="🟢" title="Paiement reçu" desc="Paiement publicité 50,000 FCFA par Saliou Fall" time="il y a 25 min" />
+            <Activity icon="🟣" title="Nouvel utilisateur inscrit" desc="Awa Ndiaye s'est inscrit" time="il y a 1 heure" />
+            <Activity icon="🔴" title="Annonce signalée" desc="Villa à vendre aux Almadies signalée" time="il y a 2 heures" />
+            <Activity icon="🟠" title="Abonnement souscrit" desc="Abonnement Premium souscrit par Abdoulaye Ba" time="il y a 3 heures" />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, trend, color, trendDown }: any) {
+  return (
+    <div className="rounded-[12px] border border-gray-100 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center gap-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[1.2rem] ${color}`}>
+          {icon}
+        </div>
+      </div>
+      <div className="text-[1.3rem] font-extrabold text-dark-900">{value}</div>
+      <div className="mt-1 text-[.75rem] font-medium text-gray-500">{label}</div>
+      <div className={`mt-1 text-[.7rem] font-bold ${trendDown ? "text-brand-red" : "text-[#22c55e]"}`}>{trend}</div>
+    </div>
+  );
+}
+
+function ColorCard({ title, value, trend, color }: any) {
+  return (
+    <div className={`rounded-[12px] p-5 text-white shadow-md ${color}`}>
+      <div className="mb-1 text-[.85rem] font-medium opacity-90">{title}</div>
+      <div className="mb-4 text-[1.6rem] font-extrabold">{value}</div>
+      <div className="mb-3 text-[.75rem] font-medium opacity-80">{trend}</div>
+      <button className="text-[.75rem] font-bold opacity-90 transition hover:opacity-100">Voir détails →</button>
+    </div>
+  );
+}
+
+function TableRow({ img, name, cat, price, status, date }: any) {
+  return (
+    <tr className="border-b border-gray-50 last:border-0">
+      <td className="py-2.5">
+        <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={img} alt="" className="h-9 w-9 rounded object-cover" />
+          <span className="font-semibold text-gray-800">{name}</span>
+        </div>
+      </td>
+      <td className="py-2.5 text-gray-500">{cat}</td>
+      <td className="py-2.5 font-mono text-[.75rem] font-bold">{price}</td>
+      <td className="py-2.5">
+        <span className={`rounded px-2 py-0.5 text-[.65rem] font-bold ${status === "Active" ? "bg-green-50 text-[#22c55e]" : "bg-orange-50 text-orange-500"}`}>
+          {status}
+        </span>
+      </td>
+      <td className="py-2.5 text-gray-500">{date}</td>
+    </tr>
+  );
+}
+
+function Activity({ icon, title, desc, time }: any) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="text-[1.2rem]">{icon}</div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[.8rem] font-bold text-gray-800">{title}</div>
+        <div className="truncate text-[.75rem] text-gray-500">{desc}</div>
+      </div>
+      <div className="whitespace-nowrap text-[.65rem] text-gray-400">{time}</div>
     </div>
   );
 }
