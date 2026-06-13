@@ -84,7 +84,7 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
         show("Redirection vers Google...");
         await supabase.auth.signInWithOAuth({
           provider: 'google',
-          options: { redirectTo: `${window.location.origin}/dashboard` }
+          options: { redirectTo: `${window.location.origin}/auth/callback` }
         });
       }} 
       className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-gray-100 bg-white py-2.5 text-[.88rem] font-semibold text-gray-700 hover:border-gray-300 transition-colors mt-3"

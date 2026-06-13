@@ -92,9 +92,15 @@ export default function Dashboard() {
           </div>
         ))}
         <div className="mt-auto border-t border-gray-100 p-4">
-          <Link href="/" className="btn btn-ghost btn-sm btn-block justify-start !text-brand-red">
+          <button 
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.href = "/";
+            }} 
+            className="btn btn-ghost btn-sm btn-block justify-start !text-brand-red hover:bg-red-50"
+          >
             🚪 Déconnexion
-          </Link>
+          </button>
         </div>
       </aside>
 
