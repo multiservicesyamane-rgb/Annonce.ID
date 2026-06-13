@@ -1,0 +1,46 @@
+import { NextResponse } from "next/server";
+
+const PAYTECH_API_KEY = "bdcc2596e0c2a8ea784c16c1be45fcff7234784029fa5af5811a6aebfdddf342";
+const PAYTECH_SECRET_KEY = "9553d5bf2d20d315b29d66a5faefb92a5fe53242fa34949fc14315a5409c74d5";
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { amount, itemName, refCommand } = body;
+
+    const paymentData = {
+      item_name: itemName || "Boost Annonce",
+      item_price: amount,
+      currency: "XOF",
+      ref_command: refCommand || `CMD-${Date.now()}`,
+      command_name: "Paiement Boost Annonce.ID",
+      env: "test", // Changer en "live" en production
+      ipn_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/paytech/ipn`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/paiement/succes`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/paiement/erreur`,
+    };
+
+    const response = await fetch("https://paytech.sn/api/payment/request-payment", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "API_KEY": PAYTECH_API_KEY,
+        "API_SECRET": PAYTECH_SECRET_KEY,
+      },
+      body: JSON.stringify(paymentData),
+    });
+
+    const data = await response.json();
+
+    if (data.success === 1) {
+      return NextResponse.json({ redirect_url: data.redirect_url });
+    } else {
+      console.error("PayTech Error:", data);
+      return NextResponse.json({ error: "Erreur lors de l'initialisation du paiement PayTech." }, { status: 400 });
+    }
+  } catch (error) {
+    console.error("Payment API Error:", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}

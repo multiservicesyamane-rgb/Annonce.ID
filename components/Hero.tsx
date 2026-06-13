@@ -59,7 +59,8 @@ export default function Hero() {
       <div className="pointer-events-none absolute -top-20 right-[10%] h-[300px] w-[300px] animate-floatBlob rounded-full bg-gold opacity-40 blur-[60px]" />
       <div className="pointer-events-none absolute -bottom-16 left-[5%] h-[240px] w-[240px] animate-floatBlob rounded-full bg-neon-cyan opacity-40 blur-[60px]" />
 
-      <div className="relative z-10 mx-auto max-w-[1320px] px-4 pb-12 pt-10">
+      {/* Desktop Hero */}
+      <div className="hidden md:block relative z-10 mx-auto max-w-[1320px] px-4 pb-12 pt-10">
         <h1 className="mb-2.5 font-display text-[clamp(1.8rem,5vw,3.4rem)] font-extrabold leading-[1.12] text-white">
           Le marché de
           <br />
@@ -92,6 +93,31 @@ export default function Hero() {
           <Counter to={27} label="Pays" />
           <Counter to={1200000} label="Utilisateurs" />
           <Counter to={98} suffix="%" label="Satisfaction" />
+        </div>
+      </div>
+
+      {/* Mobile Strategic Hero */}
+      <div className="md:hidden relative z-10 px-4 py-6">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="font-display text-[1.3rem] font-extrabold text-white leading-tight">
+            Trouvez ce que <br/><span className="text-neon-gold">vous cherchez</span>
+          </h1>
+          <div className="text-right">
+            <div className="text-[1.2rem] font-bold text-white">250K+</div>
+            <div className="text-[.6rem] uppercase text-white/60 tracking-wider">Annonces</div>
+          </div>
+        </div>
+        <SearchBar variant="hero" />
+        <div className="flex overflow-x-auto no-scrollbar gap-2 mt-4 pb-1">
+          {QUICK.map((q) => (
+            <Link
+              key={q.label}
+              href={q.href}
+              className="whitespace-nowrap rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[.75rem] font-medium text-white shadow-sm"
+            >
+              {q.label}
+            </Link>
+          ))}
         </div>
       </div>
     </section>

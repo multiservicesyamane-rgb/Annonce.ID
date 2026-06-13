@@ -15,13 +15,29 @@ export default function PaymentFlow({ boost }: { boost: Boost }) {
   const fees = method.key === "carte" ? Math.round(boost.price * 0.015) : 0;
   const total = boost.price + fees;
 
-  function pay() {
+  async function pay() {
     setProcessing(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/paytech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: total,
+          itemName: `Boost ${boost.name}`,
+          refCommand: `AID-${Math.floor(Math.random() * 100000)}`
+        })
+      });
+      const data = await res.json();
+      if (data.redirect_url) {
+        window.location.href = data.redirect_url; // Redirection vers PayTech
+      } else {
+        alert("Erreur d'initialisation du paiement");
+        setProcessing(false);
+      }
+    } catch (err) {
+      console.error(err);
       setProcessing(false);
-      setDone(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 2000);
+    }
   }
 
   const steps = ["Annonce", "Options", "Paiement", "Confirmation"];

@@ -1,3 +1,4 @@
+import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Hero from "@/components/Hero";
@@ -6,6 +7,10 @@ import AdCard from "@/components/AdCard";
 import HomeRecent from "@/components/HomeRecent";
 import { featuredListings, premiumListings } from "@/lib/data";
 import { CATEGORIES } from "@/lib/constants";
+
+import UneCarousel from "@/components/UneCarousel";
+
+import CategoryCarousel from "@/components/CategoryCarousel";
 
 export default function HomePage() {
   const une = featuredListings();
@@ -30,66 +35,38 @@ export default function HomePage() {
             Voir tout →
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-[2fr_1fr_1fr]">
-          {une.map((ad, i) => (
-            <Link
-              key={ad.id}
-              href={`/annonce/${ad.id}/${ad.slug}`}
-              className={`group relative overflow-hidden rounded-lg shadow-sm transition hover:-translate-y-[3px] hover:shadow-lg ${
-                i === 0 ? "col-span-2 md:col-span-1 md:row-span-2" : ""
-              }`}
-            >
-              <Image
-                src={ad.image}
-                alt={ad.title}
-                width={600}
-                height={i === 0 ? 600 : 180}
-                className={`w-full object-cover transition duration-500 group-hover:scale-105 ${
-                  i === 0 ? "h-full min-h-[240px] md:min-h-[320px]" : "h-[180px]"
-                }`}
-              />
-              <span className="badge b-une absolute left-2.5 top-2.5">✦ À la Une</span>
-              <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,rgba(0,0,0,.88),transparent)] p-4">
-                <div className={`font-display font-bold text-white ${i === 0 ? "text-[1.2rem]" : "text-[.9rem]"}`}>
-                  {ad.title}
-                </div>
-                <div
-                  className={`font-bold text-neon-gold [text-shadow:0_0_12px_rgba(255,201,60,.4)] ${
-                    i === 0 ? "text-[1.15rem]" : "text-[.92rem]"
-                  }`}
-                >
-                  {ad.price}
-                </div>
-                <div className="mt-0.5 text-[.68rem] text-white/60">📍 {ad.location} · {ad.date}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        
+        <UneCarousel listings={une} />
       </section>
 
       {/* PREMIUM carousel */}
-      <section className="border-y border-[#f0d080] bg-[linear-gradient(135deg,#fffbf0,#fff8e6)] py-6">
-        <div className="wrap">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-display text-[1.25rem] font-bold text-gray-900">
-              🌟 Annonces Premium <span className="badge b-prem">✦ PREMIUM</span>
+      <section className="bg-[#121212] py-10 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+        <div className="wrap relative z-10">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="flex items-center gap-3 font-display text-[1.4rem] font-bold text-white tracking-wide">
+              Annonces Premium <span className="bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] text-black px-2 py-0.5 rounded text-[0.7rem] uppercase tracking-widest">VIP</span>
             </h2>
-            <Link href="/recherche" className="text-[.82rem] font-semibold text-green hover:text-gold-dark">
-              Voir tout →
+            <Link href="/recherche" className="text-[.82rem] font-semibold text-[#D4AF37] hover:text-white transition">
+              Découvrir la sélection →
             </Link>
           </div>
-          <div className="no-scrollbar flex gap-3 overflow-x-auto pb-2">
+          <div className="no-scrollbar flex gap-4 overflow-x-auto pb-4 snap-x">
             {prem.map((ad) => (
               <Link
                 key={ad.id}
                 href={`/annonce/${ad.id}/${ad.slug}`}
-                className="w-[175px] shrink-0 overflow-hidden rounded-lg border-[1.5px] border-transparent [background:linear-gradient(#fff,#fff)_padding-box,linear-gradient(135deg,#F5A623,#FFD166,#F5A623)_border-box] transition hover:-translate-y-[3px] hover:shadow-glow-gold"
+                className="w-[200px] shrink-0 overflow-hidden rounded-xl bg-[#1A1A1A] border border-[#333] transition-all duration-300 hover:-translate-y-2 hover:border-[#D4AF37] hover:shadow-[0_10px_30px_rgba(212,175,55,0.15)] snap-start group"
               >
-                <Image src={ad.image} alt={ad.title} width={350} height={350} className="card-img-sq" />
-                <div className="p-2.5">
-                  <div className="line-clamp-2 text-[.82rem] font-semibold leading-snug">{ad.title}</div>
-                  <div className="mt-0.5 font-display text-[.92rem] font-bold text-grad-gold">{ad.price}</div>
-                  <div className="mt-0.5 text-[.68rem] text-gray-500">📍 {ad.location}</div>
+                <div className="relative w-full aspect-square overflow-hidden">
+                  <Image src={ad.image} alt={ad.title} width={350} height={350} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-black/60 to-transparent"></div>
+                  <span className="absolute top-2 right-2 text-white text-xs bg-black/50 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">⭐ Premium</span>
+                </div>
+                <div className="p-3">
+                  <div className="line-clamp-2 text-[.85rem] font-semibold text-white leading-tight mb-2 group-hover:text-[#D4AF37] transition-colors">{ad.title}</div>
+                  <div className="font-display text-[1rem] font-bold text-[#D4AF37] mb-1">{ad.price}</div>
+                  <div className="text-[.7rem] text-gray-400">📍 {ad.location}</div>
                 </div>
               </Link>
             ))}
@@ -97,22 +74,27 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* BANNER PUBLIER */}
+      <section className="wrap py-6">
+        <Link href="/publier" className="block relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-600 to-green-400 p-6 sm:p-8 text-white shadow-lg transition hover:shadow-xl hover:scale-[1.01]">
+          <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="font-display text-[1.4rem] font-bold mb-1">Publier un produit ou service GRATUITEMENT !</h3>
+              <p className="text-white/80 text-sm">Commencez à vendre dès aujourd'hui à des milliers d'acheteurs.</p>
+            </div>
+            <div className="bg-white text-green-600 px-6 py-3 rounded-full font-bold whitespace-nowrap shadow-sm">
+              Publier mon annonce
+            </div>
+          </div>
+          <div className="absolute -right-10 -top-10 text-[10rem] opacity-20 pointer-events-none">🎁</div>
+        </Link>
+      </section>
+
       {/* CATEGORIES */}
       <section className="wrap py-9">
         <h2 className="mb-5 font-display text-[1.25rem] font-bold text-gray-900">Explorer par catégorie</h2>
-        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
-          {CATEGORIES.map((c) => (
-            <Link
-              key={c.slug}
-              href={`/categorie/${c.slug}`}
-              className="rounded-lg border-[1.5px] border-gray-100 bg-white px-2 py-4 text-center transition hover:-translate-y-0.5 hover:border-gold hover:shadow-sm"
-            >
-              <span className="mb-1 block text-[1.7rem]">{c.icon}</span>
-              <div className="text-[.76rem] font-semibold text-gray-700">{c.name}</div>
-              <div className="text-[.66rem] text-gray-300">{c.count}</div>
-            </Link>
-          ))}
-        </div>
+        {/* We will replace this with CategoryCarousel in the next step, for now it's just the wrapper */}
+        <CategoryCarousel />
       </section>
 
       {/* AD A2 */}
@@ -121,11 +103,11 @@ export default function HomePage() {
       </div>
 
       {/* RÉCENTES */}
-      <section className="wrap py-9">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-[1.25rem] font-bold text-gray-900">Annonces récentes</h2>
-          <Link href="/recherche" className="text-[.82rem] font-semibold text-green hover:text-gold-dark">
-            Voir tout →
+      <section className="wrap py-10">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-3">
+          <h2 className="font-display text-[1.5rem] font-extrabold text-gray-900 tracking-tight">Nouveautés Récentes</h2>
+          <Link href="/recherche" className="text-[.85rem] font-bold text-blue-600 hover:text-blue-800 transition">
+            Parcourir tout →
           </Link>
         </div>
         <HomeRecent />
@@ -133,19 +115,18 @@ export default function HomePage() {
 
       {/* TRUST */}
       <section className="wrap py-9">
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           {[
             { ic: "💬", t: "Contact direct", d: "WhatsApp, Appel ou message. Sans intermédiaire, sans panier." },
             { ic: "✅", t: "Vendeurs vérifiés", d: "Identité et téléphone vérifiés. Badges de confiance." },
-            { ic: "💳", t: "Paiement local", d: "Orange Money, Wave, MTN, Moov. Sans frais cachés." },
-            { ic: "🌍", t: "27 pays", d: "Toute l'Afrique de l'Ouest et au-delà, en français." },
+            { ic: "🌍", t: "Accès Polyvalent", d: "Disponible partout, transactions simples et rapides." },
           ].map((b) => (
-            <div key={b.t} className="rounded-lg border-[1.5px] border-gray-100 bg-white p-5 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-[14px] bg-grad-gold text-[1.3rem] shadow-glow-gold">
+            <div key={b.t} className="rounded-xl border-[1.5px] border-gray-100 bg-white p-6 text-center hover:shadow-md transition">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-[1.5rem] text-blue-600">
                 {b.ic}
               </div>
-              <h4 className="mb-1 font-display text-[.92rem] font-bold">{b.t}</h4>
-              <p className="text-[.78rem] text-gray-500">{b.d}</p>
+              <h4 className="mb-2 font-display text-[1rem] font-bold text-gray-900">{b.t}</h4>
+              <p className="text-[.85rem] text-gray-500 leading-relaxed">{b.d}</p>
             </div>
           ))}
         </div>

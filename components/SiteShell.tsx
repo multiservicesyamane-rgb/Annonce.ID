@@ -32,13 +32,15 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  const isAnnoncePage = pathname.startsWith("/annonce/");
+
   return (
     <>
       <Header />
       {showCatStrip && <CategoryStrip />}
-      <main className="min-h-[40vh] pb-20 lg:pb-0">{children}</main>
+      <main className={`min-h-[40vh] ${isAnnoncePage ? 'pb-20' : 'pb-20 lg:pb-0'}`}>{children}</main>
       {!noFooter && <Footer />}
-      <BottomNav />
+      {!isAnnoncePage && <BottomNav />}
     </>
   );
 }

@@ -19,7 +19,7 @@ export default function PublishWizard() {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState("");
-  const [photos, setPhotos] = useState(0);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [boost, setBoost] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -226,24 +226,32 @@ export default function PublishWizard() {
           <div className="animate-fadeUp">
             <h2 className="font-display text-[1.1rem] font-bold">Ajoutez vos photos</h2>
             <p className="mb-5 text-[.83rem] text-gray-500">1 à 10 photos · Format carré recommandé</p>
-            <button
-              type="button"
-              onClick={() => setPhotos((p) => Math.min(p + 1, 10))}
-              className="w-full rounded-[10px] border-2 border-dashed border-gold bg-gold-pale px-4 py-8 text-center transition hover:bg-[#fef0c7]"
-            >
+            <label className="block w-full cursor-pointer rounded-[10px] border-2 border-dashed border-gold bg-gold-pale px-4 py-8 text-center transition hover:bg-[#fef0c7]">
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    const newFiles = Array.from(e.target.files).map(f => URL.createObjectURL(f));
+                    setPhotos(prev => [...prev, ...newFiles].slice(0, 10));
+                  }
+                }}
+              />
               <div className="mb-1 text-[2rem]">📸</div>
               <p className="text-[.88rem] font-semibold text-gray-700">Cliquez pour ajouter des photos</p>
               <span className="text-[.75rem] text-gray-500">JPG, PNG · Max 5 Mo · Recadrage carré auto</span>
-            </button>
-            {photos > 0 && (
+            </label>
+            {photos.length > 0 && (
               <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-2.5">
-                {Array.from({ length: photos }).map((_, i) => (
+                {photos.map((src, i) => (
                   <div
                     key={i}
                     className={`relative aspect-square overflow-hidden rounded-lg border-2 ${i === 0 ? "border-gold" : "border-gray-100"}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={DEMO_PHOTOS[i % 3]} alt="" className="h-full w-full object-cover" />
+                    <img src={src} alt="" className="h-full w-full object-cover" />
                     {i === 0 && (
                       <div className="absolute inset-x-0 bottom-0 bg-gold py-0.5 text-center text-[.6rem] font-bold text-dark-900">
                         COUVERTURE
@@ -251,8 +259,8 @@ export default function PublishWizard() {
                     )}
                     <button
                       type="button"
-                      onClick={() => setPhotos((p) => p - 1)}
-                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-[.7rem] text-white"
+                      onClick={() => setPhotos((p) => p.filter((_, idx) => idx !== i))}
+                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-[.7rem] text-white hover:bg-red-500"
                     >
                       ✕
                     </button>
@@ -340,7 +348,7 @@ export default function PublishWizard() {
               <h3 className="mb-3 font-display text-[.95rem] font-bold">Récapitulatif</h3>
               <div className="mb-3 flex items-center gap-3 rounded-[10px] bg-gray-50 p-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photos > 0 ? DEMO_PHOTOS[0] : "https://placehold.co/64/E8E8E4/BEBEBB?text=📷"} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                <img src={photos.length > 0 ? photos[0] : "https://placehold.co/64/E8E8E4/BEBEBB?text=📷"} alt="" className="h-16 w-16 rounded-lg object-cover" />
                 <div className="min-w-0 flex-1">
                   <div className="text-[.88rem] font-semibold">{title || "Votre titre"}</div>
                   <div className="mt-0.5 text-[.75rem] text-gray-500">{cat?.name ?? "Catégorie"} · Dakar</div>

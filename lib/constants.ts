@@ -235,7 +235,7 @@ export const categoryByName = (name: string) =>
 
 // ───────── Boosts (section 10.6) ─────────
 export type Boost = {
-  key: "gratuit" | "premium" | "une" | "pack";
+  key: "gratuit" | "premium_1w" | "premium_1m" | "une_1w" | "une_1m";
   name: string;
   price: number;
   duration: string;
@@ -244,10 +244,11 @@ export type Boost = {
 };
 
 export const BOOSTS: Boost[] = [
-  { key: "gratuit", name: "🆓 Gratuit", price: 0, duration: "30 jours", features: ["30 jours", "Position standard"] },
-  { key: "premium", name: "⭐ Premium", price: 3500, duration: "60 jours", features: ["Top résultats", "Badge doré néon", "60 jours"], popular: true },
-  { key: "une", name: "🔝 À la Une", price: 9000, duration: "14 jours", features: ["Page d'accueil", "Grande bannière", "14 jours"] },
-  { key: "pack", name: "🚀 Pack Pro", price: 15000, duration: "30 jours", features: ["À la Une + Premium", "Partage réseaux", "30 jours"] },
+  { key: "gratuit", name: "🆓 Gratuit", price: 0, duration: "30 jours", features: ["2 annonces incluses", "Position standard"] },
+  { key: "premium_1w", name: "⭐ Premium (1 Semaine)", price: 500, duration: "7 jours", features: ["Top résultats", "Badge exclusif"], popular: true },
+  { key: "premium_1m", name: "⭐ Premium (1 Mois)", price: 5000, duration: "30 jours", features: ["Top résultats", "Badge exclusif"] },
+  { key: "une_1w", name: "🔝 À la Une (1 Semaine)", price: 1000, duration: "7 jours", features: ["Page d'accueil", "Design Marque"] },
+  { key: "une_1m", name: "🔝 À la Une (1 Mois)", price: 10000, duration: "30 jours", features: ["Page d'accueil", "Design Marque"] },
 ];
 
 // ───────── Méthodes de paiement (section 13) ─────────

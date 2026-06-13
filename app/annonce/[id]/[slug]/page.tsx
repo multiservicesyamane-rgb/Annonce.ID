@@ -166,7 +166,7 @@ export default function AnnoncePage({ params }: Props) {
       </div>
 
       {/* Barre contact sticky mobile */}
-      <div className="fixed inset-x-0 bottom-16 z-[700] flex gap-2 border-t border-gray-100 bg-white p-2.5 shadow-[0_-4px_16px_rgba(0,0,0,.08)] lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-[700] flex gap-2 border-t border-gray-100 bg-white p-2.5 shadow-[0_-4px_16px_rgba(0,0,0,.08)] lg:hidden">
         <a
           href={`https://wa.me/221770000000`}
           target="_blank"

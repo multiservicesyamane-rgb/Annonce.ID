@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://paytech.sn/cdn/paytech.min.css"/>
 <style>
 /* ═══════════════ TOKENS ULTRA-PREMIUM ═══════════════ */
 :root{
@@ -42,6 +43,8 @@ button{cursor:pointer;font-family:inherit;border:none}input,select,textarea{font
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes tickPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes urgentFlash{0%,100%{opacity:1}50%{opacity:.7}}
 .reveal{animation:fadeUp .5s ease both}
 
 /* ═══════════════ UTILS ═══════════════ */
@@ -171,25 +174,37 @@ button{cursor:pointer;font-family:inherit;border:none}input,select,textarea{font
 .ad-loc{font-size:.7rem;color:var(--g500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ad-date{font-size:.68rem;color:var(--g300);flex-shrink:0}
 
-/* UNE grid */
-.une-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
-@media(min-width:768px){.une-grid{grid-template-columns:2fr 1fr 1fr}}
-.une-card{border-radius:var(--r-lg);overflow:hidden;position:relative;cursor:pointer;box-shadow:var(--sh-sm);transition:.25s}
-.une-card:hover{transform:translateY(-3px);box-shadow:var(--sh-lg)}
-.une-card.feat{grid-column:1/-1}
-@media(min-width:768px){.une-card.feat{grid-column:1;grid-row:1/3}}
-.une-card img{width:100%;height:180px;object-fit:cover;transition:.4s}
-.une-card.feat img{height:100%;min-height:240px}
-@media(min-width:768px){.une-card.feat img{min-height:320px}}
-.une-card:hover img{transform:scale(1.05)}
-.une-ov{position:absolute;bottom:0;left:0;right:0;padding:1rem;background:linear-gradient(to top,rgba(0,0,0,.88),transparent)}
-.une-card.feat .une-ov{padding:1.4rem}
-.une-tag{position:absolute;top:.6rem;left:.6rem}
-.une-t{color:#fff;font-family:'Sora',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:.25rem}
-.une-card.feat .une-t{font-size:1.2rem}
-.une-p{color:var(--neon-gold);font-weight:700;font-size:.92rem;text-shadow:0 0 12px rgba(255,201,60,.4)}
-.une-card.feat .une-p{font-size:1.15rem}
-.une-m{color:rgba(255,255,255,.6);font-size:.68rem;margin-top:.2rem}
+/* ═══════════════ NEW "À LA UNE" CAROUSEL ═══════════════ */
+.une-carousel-w{width:100%;overflow:hidden;position:relative;margin-top:1.5rem}
+.une-carousel{display:flex;gap:1rem;overflow-x:auto;scrollbar-width:none;padding-bottom:1rem;scroll-snap-type:x mandatory}
+.une-carousel::-webkit-scrollbar{display:none}
+.unc-card{flex-shrink:0;width:280px;background:#EBDCB5;border-radius:12px;padding:12px;position:relative;scroll-snap-align:start;display:flex;flex-direction:column;cursor:pointer;transition:transform .2s;box-shadow:var(--sh-sm)}
+.unc-card:hover{transform:translateY(-4px);box-shadow:var(--sh-md)}
+.unc-img-w{position:relative;border-radius:8px;overflow:hidden;margin-bottom:.8rem}
+.unc-img-w img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;transition:transform .4s}
+.unc-card:hover .unc-img-w img{transform:scale(1.05)}
+.unc-badge{position:absolute;top:8px;left:8px;background:#855F19;color:#fff;font-size:.65rem;font-weight:700;padding:4px 8px;border-radius:4px;display:flex;align-items:center;gap:4px;text-transform:uppercase;z-index:2}
+.unc-main{flex:1;display:flex;justify-content:space-between;gap:.5rem}
+.unc-info{flex:1;display:flex;flex-direction:column}
+.unc-title{font-weight:700;font-size:.9rem;color:#3A2618;line-height:1.3;margin-bottom:.4rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.unc-price{font-family:'Sora',sans-serif;font-weight:800;font-size:1rem;color:#4A3520;margin-bottom:.6rem}
+.unc-loc{font-size:.7rem;color:#7B6852;display:flex;align-items:center;gap:4px;margin-top:auto}
+.unc-actions{display:flex;flex-direction:column;gap:8px;justify-content:flex-end}
+.unc-btn{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;border:1.5px solid;background:transparent;cursor:pointer;transition:.2s}
+.unc-btn:hover{background:#fff}
+.unc-btn.tel{border-color:#855F19;color:#855F19}
+.unc-btn.wa{border-color:#22c55e;color:#22c55e}
+.unc-footer{margin-top:.8rem;border-top:1px solid rgba(133,95,25,.15);padding-top:.8rem;display:flex;align-items:center;gap:8px}
+.unc-shop-icon{width:28px;height:28px;background:rgba(133,95,25,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;color:#3A2618}
+.unc-shop-name{font-size:.75rem;font-weight:700;color:#7B6852;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unc-promo{background:#fff;border:1.5px solid #EBDCB5;text-align:center;padding:1.5rem 1rem;justify-content:center;align-items:center}
+.unc-promo h3{font-family:'Sora',sans-serif;font-weight:800;font-size:1.05rem;color:#141412;margin-bottom:.8rem;line-height:1.4}
+.unc-promo img{width:140px;margin:0 auto 1rem;display:block}
+.unc-promo p{font-size:.8rem;color:#7B6852;margin-bottom:1rem;line-height:1.4}
+.unc-promo .btn-promo{background:#855F19;color:#fff;border-radius:20px;font-weight:600;padding:.6rem 1.2rem;display:inline-block;border:none;cursor:pointer;transition:.2s}
+.unc-promo .btn-promo:hover{background:#6F4E13}
+.flash-viewall{display:inline-flex;align-items:center;gap:.3rem;color:var(--neon-gold);font-size:.82rem;font-weight:600;transition:.2s}
+.flash-viewall:hover{text-shadow:0 0 10px rgba(255,201,60,.5)}
 
 /* PREMIUM scroll */
 .prem-strip{background:linear-gradient(135deg,#fffbf0,#fff8e6);border-top:1px solid #f0d080;border-bottom:1px solid #f0d080}
@@ -208,7 +223,15 @@ button{cursor:pointer;font-family:inherit;border:none}input,select,textarea{font
 .ad-banner .sponsor-tag{position:absolute;top:.4rem;right:.6rem;font-size:.6rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em}
 .ad-banner-mesh{position:absolute;inset:0;background:radial-gradient(at 80% 50%,rgba(245,166,35,.3),transparent 50%)}
 
-/* CATEGORIES GRID */
+/* THIN ADSENSE BANNERS */
+.adsense-thin{border-radius:8px;overflow:hidden;position:relative;background:linear-gradient(90deg,rgba(10,14,20,.04),rgba(27,67,50,.06));min-height:50px;max-height:50px;display:flex;align-items:center;justify-content:center;border:1px solid var(--g100);color:var(--g500);font-size:.68rem;cursor:pointer;transition:.2s}
+.adsense-thin:hover{border-color:var(--gold);background:linear-gradient(90deg,rgba(245,166,35,.06),rgba(27,67,50,.06))}
+.adsense-thin .ad-tag{position:absolute;top:.2rem;right:.4rem;font-size:.55rem;color:var(--g300);text-transform:uppercase;letter-spacing:.04em}
+@media(max-width:767px){.adsense-thin.hide-mob{display:none}}
+
+/* CATEGORIES GRID — hidden on mobile */
+.cats-section-mid{}
+@media(max-width:767px){.cats-section-mid{display:none}}
 .cats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem}
 @media(min-width:640px){.cats-grid{grid-template-columns:repeat(4,1fr)}}
 @media(min-width:1024px){.cats-grid{grid-template-columns:repeat(6,1fr)}}
@@ -605,7 +628,12 @@ body.dark .dtable th,body.dark .dtable tr:hover td{background:var(--g100)}
 body.dark .photo-zone{background:rgba(245,166,35,.08)}
 body.dark .tip-box{background:rgba(245,166,35,.12)}
 body.dark .ps-dot{background:var(--g100);border-color:var(--g300)}
-body.dark .compare-box{background:var(--g50)}
+body.dark .adsense-thin{background:linear-gradient(90deg,rgba(255,255,255,.03),rgba(255,255,255,.05));border-color:var(--g100);color:var(--g500)}
+body.dark .unc-card{background:var(--g50);border:1px solid var(--g100)}
+body.dark .unc-title, body.dark .unc-price{color:#E8E8E4}
+body.dark .unc-loc, body.dark .unc-shop-name{color:#94A3B8}
+body.dark .unc-promo{background:var(--dark-800);border-color:var(--g100)}
+body.dark .unc-promo h3{color:#fff}
 /* ═══ COMPARATEUR ═══ */
 .compare-tray{position:fixed;bottom:76px;left:50%;transform:translate(-50%,150%);max-width:calc(100vw - 1.5rem);flex-wrap:wrap;justify-content:center;background:var(--dark-900);border:1px solid var(--neon-gold);border-radius:18px;padding:.5rem .7rem;display:flex;align-items:center;gap:.6rem;z-index:850;box-shadow:var(--glow-gold);transition:.35s}
 .compare-tray #trayItems{flex-wrap:wrap}
@@ -679,18 +707,7 @@ body.dark .compare-box{background:var(--g50)}
 <!-- ═══════ CATEGORY STRIP ═══════ -->
 <div class="cat-strip" id="gCatStrip">
   <div class="cat-inner">
-    <span class="cat-pill active" onclick="catGo(this)">🏠 Immobilier</span>
-    <span class="cat-pill" onclick="catGo(this)">🚗 Voitures</span>
-    <span class="cat-pill" onclick="catGo(this)">📱 Électronique</span>
-    <span class="cat-pill" onclick="catGo(this)">👗 Mode</span>
-    <span class="cat-pill" onclick="catGo(this)">💼 Emploi</span>
-    <span class="cat-pill" onclick="catGo(this)">🛋 Maison</span>
-    <span class="cat-pill" onclick="catGo(this)">🍎 Alimentation</span>
-    <span class="cat-pill" onclick="catGo(this)">🔧 Services</span>
-    <span class="cat-pill" onclick="catGo(this)">🐄 Animaux</span>
-    <span class="cat-pill" onclick="catGo(this)">🎓 Formation</span>
-    <span class="cat-pill" onclick="catGo(this)">🌿 Agriculture</span>
-    <span class="cat-pill" onclick="catGo(this)">⚽ Sport</span>
+    <!-- Populated dynamically from CATS data by renderCats() -->
   </div>
 </div>
 
@@ -728,22 +745,33 @@ body.dark .compare-box{background:var(--g50)}
     </div>
   </div>
 
-  <!-- AD BANNER A1 -->
-  <div class="wrap" style="margin-top:1.5rem">
-    <div class="ad-banner" onclick="T('Publicité annonceur')">
-      <div class="ad-banner-mesh"></div>
-      <span class="sponsor-tag">Publicité</span>
-      <div style="position:relative;z-index:1">
-        <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem">💳 Orange Money — Payez vos annonces en 1 clic</div>
-        <div style="font-size:.82rem;color:rgba(255,255,255,.7);margin-top:.2rem">Zone annonceur A1 · Bannière hero · Ciblage par pays</div>
+  <!-- ADSENSE THIN BANNER 1 -->
+  <div class="wrap" style="margin-top:1rem">
+    <div class="adsense-thin" onclick="T('Publicité')">
+      <span class="ad-tag">Ad</span>
+      <span>💳 Orange Money — Payez vos annonces en 1 clic · <b style="color:var(--green)">En savoir plus →</b></span>
+    </div>
+  </div>
+
+  <!-- ✦ À LA UNE — CAROUSEL BEIGE -->
+  <div class="section wrap" style="padding-top:1.5rem">
+    <div class="section-head">
+      <h2>Annonces à la Une <span class="badge b-une">✦ UNE</span></h2>
+      <a href="#" onclick="go('listing');return false">Voir tout →</a>
+    </div>
+    <div class="une-carousel-w">
+      <div class="une-carousel" id="uneGrid">
+        <!-- Rempli par renderUne() -->
       </div>
     </div>
   </div>
 
-  <!-- À LA UNE -->
-  <div class="section wrap">
-    <div class="section-head"><h2>Annonces à la Une <span class="badge b-une">✦ UNE</span></h2><a href="#" onclick="go('listing');return false">Voir tout →</a></div>
-    <div class="une-grid" id="uneGrid"></div>
+  <!-- ADSENSE THIN BANNER 2 -->
+  <div class="wrap">
+    <div class="adsense-thin hide-mob" onclick="T('Publicité')">
+      <span class="ad-tag">Sponsorisé</span>
+      <span>🏦 Votre marque ici — Bannière in-feed · 250 000 vues/mois</span>
+    </div>
   </div>
 
   <!-- PREMIUM -->
@@ -754,21 +782,17 @@ body.dark .compare-box{background:var(--g50)}
     </div>
   </div>
 
-  <!-- CATÉGORIES -->
-  <div class="section wrap">
+  <!-- CATÉGORIES — MILIEU DE PAGE, MASQUÉ SUR MOBILE -->
+  <div class="section wrap cats-section-mid">
     <div class="section-head"><h2>Explorer par catégorie</h2></div>
     <div class="cats-grid" id="catsGrid"></div>
   </div>
 
-  <!-- AD BANNER A2 -->
-  <div class="wrap section" style="padding-top:0">
-    <div class="ad-banner" style="background:linear-gradient(135deg,#1A2231,#2D6A4F)" onclick="T('Publicité annonceur')">
-      <div class="ad-banner-mesh"></div>
-      <span class="sponsor-tag">Sponsorisé</span>
-      <div style="position:relative;z-index:1">
-        <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:1.1rem">🏦 Votre marque ici — Zone annonceur A2</div>
-        <div style="font-size:.82rem;color:rgba(255,255,255,.7);margin-top:.2rem">Bannière in-feed · 250 000 vues/mois</div>
-      </div>
+  <!-- ADSENSE THIN BANNER 3 -->
+  <div class="wrap">
+    <div class="adsense-thin" onclick="T('Publicité')">
+      <span class="ad-tag">Ad</span>
+      <span>📱 Wave — Envoyez de l'argent gratuitement · <b style="color:var(--green)">Télécharger</b></span>
     </div>
   </div>
 
@@ -789,6 +813,14 @@ body.dark .compare-box{background:var(--g50)}
   <div class="section wrap" id="recentSection" style="display:none">
     <div class="section-head"><h2>🕐 Vus récemment</h2><a href="#" onclick="RECENT.length=0;renderRecent();return false">Effacer</a></div>
     <div class="prem-scroll" id="recentGrid"></div>
+  </div>
+
+  <!-- ADSENSE THIN BANNER 4 -->
+  <div class="wrap" style="margin-bottom:1rem">
+    <div class="adsense-thin hide-mob" onclick="T('Publicité')">
+      <span class="ad-tag">Ad</span>
+      <span>🎓 Formation certifiante en ligne — Boostez votre carrière</span>
+    </div>
   </div>
 
   <!-- TRUST -->
@@ -1426,15 +1458,15 @@ const I=[
 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=600&fit=crop',
 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=600&fit=crop'];
 const ADS=[
-{id:1,t:'Villa F5 piscine Almadies',p:'280 000 000 FCFA',c:'Immobilier',l:'Dakar, Almadies',d:'Auj.',prem:true,une:true,feat:true,img:I[0],desc:'Splendide villa de 350m² avec piscine, jardin paysager, 5 chambres avec salle de bain.\nGardien 24h/24. Titre foncier disponible. Idéale pour famille ou résidence de standing.',specs:{Surface:'350 m²',Chambres:'5',SDB:'4',Parking:'3 voitures',Piscine:'Oui','Titre foncier':'Oui'}},
-{id:2,t:'BMW X5 2022 Full options 18 000km',p:'45 000 000 FCFA',c:'Voitures',l:'Dakar, Plateau',d:'Auj.',prem:true,une:true,img:I[7],desc:'BMW X5 xDrive40i, toit panoramique, cuir beige, caméra 360°. Carnet d\'entretien à jour. Dédouané.',specs:{Année:'2022',Kilométrage:'18 000 km',Carburant:'Essence',Boîte:'Automatique',Couleur:'Noir',Dédouané:'Oui'}},
-{id:3,t:'iPhone 15 Pro Max 256Go Neuf',p:'750 000 FCFA',c:'Électronique',l:'Abidjan, Cocody',d:'Hier',prem:true,une:true,img:I[2],desc:'iPhone 15 Pro Max titane noir 256Go. Jamais ouvert, boîte scellée. Facture Apple Store fournie.',specs:{Marque:'Apple',Stockage:'256 Go',Couleur:'Titane noir',État:'Neuf scellé',Garantie:'1 an',Facture:'Oui'}},
-{id:4,t:'Appt meublé F3 Cocody Riviera',p:'350 000 FCFA/mois',c:'Immobilier',l:'Abidjan, Cocody',d:'2h',prem:true,img:I[6],desc:'Appartement F3 entièrement meublé, climatisé, sécurité 24h, parking privé.',specs:{Type:'F3',Meublé:'Oui',Climatisé:'Oui',Parking:'Oui',Transaction:'Location'}},
-{id:5,t:'MacBook Pro M3 14" Comme neuf',p:'1 200 000 FCFA',c:'Électronique',l:'Lomé, Tokoin',d:'3h',prem:false,img:I[1],desc:'MacBook Pro M3 14", 16Go RAM, 512Go SSD. 3 mois d\'utilisation, parfait état.',specs:{Marque:'Apple','RAM':'16 Go',Stockage:'512 Go',État:'Très bon'}},
-{id:6,t:'Toyota Land Cruiser 200 2020',p:'55 000 000 FCFA',c:'Voitures',l:'Bamako, ACI 2000',d:'5h',prem:true,img:I[4],desc:'Land Cruiser V8 2020, 85 000km, blanc, 7 places, toit ouvrant. Dédouané.',specs:{Année:'2020',Kilométrage:'85 000 km',Carburant:'Diesel',Places:'7',Dédouané:'Oui'}},
+{id:1,t:'Villa F5 piscine Almadies',p:'280 000 000 FCFA',c:'Immobilier',l:'Dakar, Almadies',d:'Auj.',prem:true,une:true,feat:true,img:I[0],oldP:'350 000 000 FCFA',disc:20,sold:78,desc:'Splendide villa de 350m² avec piscine, jardin paysager, 5 chambres avec salle de bain.\nGardien 24h/24. Titre foncier disponible. Idéale pour famille ou résidence de standing.',specs:{Surface:'350 m²',Chambres:'5',SDB:'4',Parking:'3 voitures',Piscine:'Oui','Titre foncier':'Oui'}},
+{id:2,t:'BMW X5 2022 Full options 18 000km',p:'45 000 000 FCFA',c:'Voitures',l:'Dakar, Plateau',d:'Auj.',prem:true,une:true,img:I[7],oldP:'52 000 000 FCFA',disc:13,sold:65,desc:'BMW X5 xDrive40i, toit panoramique, cuir beige, caméra 360°. Carnet d\'entretien à jour. Dédouané.',specs:{Année:'2022',Kilométrage:'18 000 km',Carburant:'Essence',Boîte:'Automatique',Couleur:'Noir',Dédouané:'Oui'}},
+{id:3,t:'iPhone 15 Pro Max 256Go Neuf',p:'750 000 FCFA',c:'Électronique',l:'Abidjan, Cocody',d:'Hier',prem:true,une:true,img:I[2],oldP:'950 000 FCFA',disc:21,sold:92,desc:'iPhone 15 Pro Max titane noir 256Go. Jamais ouvert, boîte scellée. Facture Apple Store fournie.',specs:{Marque:'Apple',Stockage:'256 Go',Couleur:'Titane noir',État:'Neuf scellé',Garantie:'1 an',Facture:'Oui'}},
+{id:4,t:'Appt meublé F3 Cocody Riviera',p:'350 000 FCFA/mois',c:'Immobilier',l:'Abidjan, Cocody',d:'2h',prem:true,une:false,img:I[6],desc:'Appartement F3 entièrement meublé, climatisé, sécurité 24h, parking privé.',specs:{Type:'F3',Meublé:'Oui',Climatisé:'Oui',Parking:'Oui',Transaction:'Location'}},
+{id:5,t:'MacBook Pro M3 14" Comme neuf',p:'1 200 000 FCFA',c:'Électronique',l:'Lomé, Tokoin',d:'3h',prem:false,img:I[1],oldP:'1 500 000 FCFA',disc:20,sold:54,desc:'MacBook Pro M3 14", 16Go RAM, 512Go SSD. 3 mois d\'utilisation, parfait état.',specs:{Marque:'Apple','RAM':'16 Go',Stockage:'512 Go',État:'Très bon'}},
+{id:6,t:'Toyota Land Cruiser 200 2020',p:'55 000 000 FCFA',c:'Voitures',l:'Bamako, ACI 2000',d:'5h',prem:true,une:true,img:I[4],oldP:'68 000 000 FCFA',disc:19,sold:45,desc:'Land Cruiser V8 2020, 85 000km, blanc, 7 places, toit ouvrant. Dédouané.',specs:{Année:'2020',Kilométrage:'85 000 km',Carburant:'Diesel',Places:'7',Dédouané:'Oui'}},
 {id:7,t:'Canapé angle velours 5p Neuf',p:'280 000 FCFA',c:'Maison',l:'Cotonou, Cadjehoun',d:'1j',prem:false,img:I[5],desc:'Canapé d\'angle 5 places en velours vert bouteille, jamais utilisé. Livraison Cotonou.',specs:{Type:'Canapé angle',Places:'5',Matière:'Velours',État:'Neuf'}},
 {id:8,t:'Terrain 500m² Bord de mer Saly',p:'18 000 000 FCFA',c:'Immobilier',l:'Saly, Mbour',d:'2j',prem:false,img:I[9],desc:'Terrain de 500m² à 200m de la mer à Saly. Titre foncier. Viabilisé eau/électricité.',specs:{Surface:'500 m²','Titre foncier':'Oui',Distance:'200m mer',Viabilisé:'Oui'}},
-{id:9,t:'Samsung Galaxy S24 Ultra',p:'620 000 FCFA',c:'Électronique',l:'Ouagadougou',d:'4h',prem:false,img:I[3],desc:'Galaxy S24 Ultra 256Go titanium. Boîte scellée. Garantie 1 an.',specs:{Marque:'Samsung',Stockage:'256 Go',État:'Neuf',Garantie:'1 an'}},
+{id:9,t:'Samsung Galaxy S24 Ultra',p:'620 000 FCFA',c:'Électronique',l:'Ouagadougou',d:'4h',prem:false,une:true,img:I[3],oldP:'850 000 FCFA',disc:27,sold:88,desc:'Galaxy S24 Ultra 256Go titanium. Boîte scellée. Garantie 1 an.',specs:{Marque:'Samsung',Stockage:'256 Go',État:'Neuf',Garantie:'1 an'}},
 {id:10,t:'Robe wax brodée sur mesure',p:'45 000 FCFA',c:'Mode',l:'Dakar, Médina',d:'6h',prem:false,img:I[8],desc:'Robe de cérémonie wax, broderie dorée, faite sur mesure.',specs:{Genre:'Femme',Matière:'Wax premium',Taille:'Sur mesure'}},
 {id:11,t:'Chef de projet IT — CDI',p:'Salaire attractif',c:'Emploi',l:'Dakar, Plateau',d:'1h',prem:true,img:I[0],desc:'Entreprise tech recherche chef de projet expérimenté. CDI, avantages.',specs:{Contrat:'CDI',Secteur:'IT',Expérience:'3 ans',Études:'Bac+4/5'}},
 {id:12,t:'Moto Yamaha YBR 125 2023',p:'680 000 FCFA',c:'Voitures',l:'Cotonou, Akpakpa',d:'8h',prem:false,img:I[7],desc:'Yamaha YBR 125 2023, 2000km, état neuf. Carte grise disponible.',specs:{Année:'2023',Kilométrage:'2 000 km','Carte grise':'Oui'}}];
@@ -1490,13 +1522,62 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-c'))closeSP(
 
 /* ═══════════ HOME RENDER ═══════════ */
 function adCard(a){return `<div class="ad-card ${a.prem?'prem':''}" data-cat="${a.c}" onclick="openAnnonce(${a.id})"><div class="ad-img-w"><img src="${a.img}" alt="${a.t}" loading="lazy"/><button class="ad-fav" onclick="event.stopPropagation();favT(this)">♡</button><div class="ad-badges">${a.prem?'<span class="badge b-prem">✦</span>':''}${a.une?'<span class="badge b-une">UNE</span>':''}</div></div><div class="ad-body"><div class="ad-cat">${a.c}</div><div class="ad-title">${a.t}</div><div class="ad-price">${a.p}</div><div class="ad-foot"><span class="ad-loc">📍 ${a.l}</span><span class="ad-date">${a.d}</span></div></div></div>`}
-function renderUne(){const u=ADS.filter(a=>a.une);document.getElementById('uneGrid').innerHTML=u.map((a,i)=>`<div class="une-card ${i===0?'feat':''}" data-cat="${a.c}" onclick="openAnnonce(${a.id})"><img src="${a.img}" alt="${a.t}"/><div class="une-tag"><span class="badge b-une">✦ À la Une</span></div><div class="une-ov"><div class="une-t">${a.t}</div><div class="une-p">${a.p}</div><div class="une-m">📍 ${a.l} · ${a.d}</div></div></div>`).join('')}
+function flashCard(a){
+  return `<div class="unc-card" data-cat="${a.c}" onclick="openAnnonce(${a.id})">
+    <div class="unc-img-w"><img src="${a.img}" alt="${a.t}" loading="lazy"/><div class="unc-badge">🏆 À la Une</div></div>
+    <div class="unc-main">
+      <div class="unc-info">
+        <div class="unc-title">${a.t}</div>
+        <div class="unc-price">${a.p}</div>
+        <div class="unc-loc">📍 ${a.l}</div>
+      </div>
+      <div class="unc-actions">
+        <button class="unc-btn tel" onclick="event.stopPropagation();T('Appel en cours...')">📞</button>
+        <button class="unc-btn wa" onclick="event.stopPropagation();T('Ouvrir WhatsApp')">💬</button>
+      </div>
+    </div>
+    <div class="unc-footer"><div class="unc-shop-icon">💼</div><div class="unc-shop-name">Vendeur vérifié</div></div>
+  </div>`;
+}
+function renderUne(){
+  const u=ADS.filter(a=>a.une);
+  const promo = `<div class="unc-card unc-promo" onclick="go('publier')">
+    <h3>Voulez-vous que votre annonce apparaisse ici ?</h3>
+    <div style="font-size:4rem;margin:1.5rem 0">🛍️</div>
+    <p>Gérez vos annonces et passez à la formule À La Une</p>
+    <button class="btn-promo">Mes annonces</button>
+  </div>`;
+  const cards = u.map(a=>flashCard(a));
+  if(cards.length > 1) cards.splice(1, 0, promo);
+  else cards.push(promo);
+  document.getElementById('uneGrid').innerHTML=cards.join('');
+}
 function renderPrem(){const p=ADS.filter(a=>a.prem);document.getElementById('premGrid').innerHTML=p.map(a=>`<div class="prem-card" data-cat="${a.c}" onclick="openAnnonce(${a.id})"><img src="${a.img}"/><div class="prem-b"><div class="prem-t">${a.t}</div><div class="prem-p">${a.p}</div><div class="prem-l">📍 ${a.l}</div></div></div>`).join('')}
 function renderHome(f){const list=f&&f!=='all'?ADS.filter(a=>a.c===f):ADS;document.getElementById('homeGrid').innerHTML=list.map(adCard).join('')}
 function filterHome(el,f){el.parentElement.querySelectorAll('.qf').forEach(x=>{x.style.background='var(--g50)';x.style.color='var(--g700)'});el.style.background='var(--green)';el.style.color='#fff';renderHome(f)}
-function renderCats(){document.getElementById('catsGrid').innerHTML=CATS.map(c=>`<div class="cat-box" onclick="go('listing')"><span class="ci">${c.e}</span><div class="cnm">${c.n}</div><div class="cc">${c.c}</div></div>`).join('')}
+function renderCats(){
+  /* Sync categories grid AND the header strip from the same CATS data */
+  document.getElementById('catsGrid').innerHTML=CATS.map(c=>`<div class="cat-box" onclick="catFilter('${c.n}')"><span class="ci">${c.e}</span><div class="cnm">${c.n}</div><div class="cc">${c.c}</div></div>`).join('');
+  /* Rebuild the strip from CATS data to stay synced */
+  const strip=document.querySelector('.cat-inner');
+  if(strip)strip.innerHTML=CATS.map((c,i)=>`<span class="cat-pill${i===0?' active':''}" onclick="catGo(this)">${c.e} ${c.n}</span>`).join('');
+}
+function catFilter(name){go('listing')}
 function renderCountries(){document.getElementById('countriesGrid').innerHTML=COUNTRIES.map(c=>`<div class="country-item" onclick="T('${c.n} sélectionné')">${c.f} ${c.n}</div>`).join('')}
 function favT(b){b.classList.toggle('active');b.textContent=b.classList.contains('active')?'♥':'♡';T(b.classList.contains('active')?'❤ Favoris':'Retiré')}
+
+/* ═══════════ COUNTDOWN TIMER (À la Une) ═══════════ */
+let flashEnd=Date.now()+5*3600*1000+42*60*1000+18*1000;
+function tickFlash(){
+  let diff=Math.max(0,flashEnd-Date.now());
+  if(diff<=0){diff=6*3600*1000;flashEnd=Date.now()+diff}/* auto reset */
+  const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+  const eH=document.getElementById('cdH'),eM=document.getElementById('cdM'),eS=document.getElementById('cdS');
+  if(eH)eH.textContent=String(h).padStart(2,'0');
+  if(eM)eM.textContent=String(m).padStart(2,'0');
+  if(eS)eS.textContent=String(s).padStart(2,'0');
+}
+setInterval(tickFlash,1000);tickFlash();
 
 /* ═══════════ ANNONCE PAGE ═══════════ */
 let annImgs=[],annIdx=0;
@@ -1570,10 +1651,58 @@ function startCD(){clearInterval(cdInt);let s=300;const el=document.getElementBy
 function otpN(el,n){if(el.value.length===1)document.getElementById(n)?.focus()}
 function verifyOTP(){const code=['o1','o2','o3','o4'].map(i=>document.getElementById(i)?.value||'').join('');if(code==='1234'){T('✅ Connexion réussie !');setTimeout(()=>go('dashboard'),1100)}else if(code.length===4){T('❌ Code incorrect — essayez 1234')}else{T('⚠ Entrez les 4 chiffres')}}
 
-/* ═══════════ PAYMENT ═══════════ */
+/* ═══════════ PAYMENT (PAYTECH API) ═══════════ */
 function selPay(el,name){document.querySelectorAll('.pay-m').forEach(m=>m.classList.remove('sel'));el.classList.add('sel');el.querySelector('input').checked=true;document.getElementById('payTitle').textContent='Paiement par '+name;document.getElementById('confMethod').textContent=name}
-function payNow(){T('📱 Notification envoyée…');setTimeout(()=>{document.getElementById('payMain').style.display='none';document.getElementById('payProg').innerHTML='<div class="pp-s done"><div class="pp-d">✓</div> Annonce</div><div class="pp-line"></div><div class="pp-s done"><div class="pp-d">✓</div> Options</div><div class="pp-line"></div><div class="pp-s done"><div class="pp-d">✓</div> Paiement</div><div class="pp-line"></div><div class="pp-s active"><div class="pp-d">4</div> Confirmation</div>';document.getElementById('confirmScreen').style.display='block';window.scrollTo({top:0,behavior:'smooth'})},2000)}
+
+async function payNow(){
+  T('🔄 Initialisation sécurisée PayTech...');
+  const btn = document.querySelector('button[onclick="payNow()"]');
+  if(btn) { btn.disabled = true; btn.innerHTML = 'Chargement...'; }
+  
+  try {
+      const payload = {
+          item_name: "Boost Annonce Premium - AnnoncesWest",
+          item_price: "9000",
+          currency: "XOF",
+          ref_command: "AW-" + Date.now(),
+          command_name: "Paiement Boost",
+          env: "test", // Mode test (passer à 'prod' en production)
+          ipn_url: window.location.origin + "/ipn",
+          success_url: window.location.href.split('?')[0] + "?payment=success",
+          cancel_url: window.location.href.split('?')[0] + "?payment=cancel",
+          custom_field: JSON.stringify({ source: 'AnnoncesWest_v4' })
+      };
+
+      const res = await fetch('https://paytech.sn/api/payment/request-payment', {
+          method: 'POST',
+          headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'API_KEY': 'bdcc2596e0c2a8ea784c16c1be45fcff7234784029fa5af5811a6aebfdddf342',
+              'API_SECRET': '9553d5bf2d20d315b29d66a5faefb92a5fe53242fa34949fc14315a5409c74d5'
+          },
+          body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      
+      if (data && data.success === 1 && data.redirect_url) {
+          // Redirection vers l'interface de paiement PayTech
+          window.location.href = data.redirect_url;
+      } else {
+          T('❌ Erreur de configuration PayTech');
+          console.error(data);
+          if(btn) { btn.disabled = false; btn.innerHTML = '🔒 Payer · 9 000 FCFA'; }
+      }
+  } catch (err) {
+      T('❌ Erreur de connexion');
+      console.error(err);
+      if(btn) { btn.disabled = false; btn.innerHTML = '🔒 Payer · 9 000 FCFA'; }
+  }
+}
+
 function payReset(){document.getElementById('payMain').style.display='';document.getElementById('confirmScreen').style.display='none';document.getElementById('payProg').innerHTML='<div class="pp-s done"><div class="pp-d">✓</div> Annonce</div><div class="pp-line"></div><div class="pp-s done"><div class="pp-d">✓</div> Options</div><div class="pp-line"></div><div class="pp-s active"><div class="pp-d">3</div> Paiement</div><div class="pp-line"></div><div class="pp-s"><div class="pp-d">4</div> Confirmation</div>'}
+
 
 /* ═══════════ DASHBOARD ═══════════ */
 const myAds=[{t:'Villa F5 piscine Almadies',c:'Immobilier',p:'280 000 000',v:1247,s:'act',img:I[0]},{t:'BMW X5 2022',c:'Voitures',p:'45 000 000',v:843,s:'act',img:I[4]},{t:'iPhone 15 Pro Max',c:'Électronique',p:'750 000',v:2134,s:'act',img:I[2]},{t:'Terrain Saly 500m²',c:'Immobilier',p:'18 000 000',v:432,s:'pen',img:I[9]},{t:'MacBook Pro M3',c:'Électronique',p:'1 200 000',v:98,s:'exp',img:I[1]}];
@@ -1707,6 +1836,28 @@ function T(m){const t=document.getElementById('toast');t.textContent=m;t.classLi
 renderPrem();renderCats();renderCountries();renderCatTiles();renderCountrySelect();renderPhotos();
 go('home');animCounters();
 setTimeout(()=>{renderUne();renderHome();initReveal()},550);
+
+// Handling PayTech return URLs
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+        go('paiement');
+        const payMain = document.getElementById('payMain');
+        const confirmScreen = document.getElementById('confirmScreen');
+        if(payMain) payMain.style.display = 'none';
+        if(confirmScreen) confirmScreen.style.display = 'block';
+        
+        const payProg = document.getElementById('payProg');
+        if(payProg) payProg.innerHTML = '<div class="pp-s done"><div class="pp-d">✓</div> Annonce</div><div class="pp-line"></div><div class="pp-s done"><div class="pp-d">✓</div> Options</div><div class="pp-line"></div><div class="pp-s done"><div class="pp-d">✓</div> Paiement</div><div class="pp-line"></div><div class="pp-s active"><div class="pp-d">4</div> Confirmation</div>';
+        
+        setTimeout(() => T('✅ Paiement PayTech réussi !'), 500);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get('payment') === 'cancel') {
+        go('paiement');
+        setTimeout(() => T('❌ Paiement annulé par l\'utilisateur'), 500);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});
 </script>
 </body>
 </html>
