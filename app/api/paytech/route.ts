@@ -8,6 +8,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { amount, itemName, refCommand } = body;
 
+    const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin).trim();
+
     const paymentData = {
       item_name: itemName || "Boost Annonce",
       item_price: amount,
@@ -15,9 +17,9 @@ export async function POST(req: Request) {
       ref_command: refCommand || `CMD-${Date.now()}`,
       command_name: "Paiement Boost Annonce.ID",
       env: "test", // Changer en "live" en production
-      ipn_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/paytech/ipn`,
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/paiement/succes`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/paiement/erreur`,
+      ipn_url: `${baseUrl}/api/paytech/ipn`,
+      success_url: `${baseUrl}/paiement/succes`,
+      cancel_url: `${baseUrl}/paiement/erreur`,
     };
 
     const response = await fetch("https://paytech.sn/api/payment/request-payment", {
