@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-const PAYTECH_API_KEY = "bdcc2596e0c2a8ea784c16c1be45fcff7234784029fa5af5811a6aebfdddf342";
-const PAYTECH_SECRET_KEY = "9553d5bf2d20d315b29d66a5faefb92a5fe53242fa34949fc14315a5409c74d5";
+const PAYTECH_API_KEY = process.env.PAYTECH_API_KEY!;
+const PAYTECH_SECRET_KEY = process.env.PAYTECH_API_SECRET!;
 
 export async function POST(req: Request) {
   try {
@@ -37,10 +37,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ redirect_url: data.redirect_url });
     } else {
       console.error("PayTech Error:", data);
-      return NextResponse.json({ error: "Erreur lors de l'initialisation du paiement PayTech." }, { status: 400 });
+      return NextResponse.json({ error: `PayTech a refusé: ${JSON.stringify(data)}` }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Payment API Error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: `Erreur interne: ${error.message}` }, { status: 500 });
   }
 }

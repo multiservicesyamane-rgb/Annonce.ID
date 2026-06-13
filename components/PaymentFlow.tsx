@@ -25,7 +25,7 @@ export default function PaymentFlow({ boost }: { boost: Boost }) {
       if (data.redirect_url) {
         window.location.href = data.redirect_url; // Redirection PayTech
       } else {
-        alert("Erreur d'initialisation du paiement");
+        alert(data.error || "Erreur d'initialisation du paiement");
         setProcessing(false);
       }
     } catch (err) {
