@@ -31,11 +31,17 @@ export default function Dashboard() {
   const [panel, setPanel] = useState<Panel>("overview");
   const [toast, setToast] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [ads, setAds] = useState<any[]>([]);
   const supabase = createClient();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setUser(user);
+      if (user) {
+        setUser(user);
+        supabase.from('listings').select('*').eq('user_id', user.id).then(({ data }) => {
+          if (data) setAds(data);
+        });
+      }
     });
   }, [supabase.auth]);
 
@@ -111,21 +117,46 @@ export default function Dashboard() {
             <h1 className="font-display text-[1.3rem] font-extrabold">Bonjour, {displayName} 👋</h1>
             <p className="mb-6 text-[.85rem] text-gray-500">Bienvenue sur votre espace vendeur</p>
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Kpi label="Annonces actives" value="0" sub="Votre vitrine" />
-              <Kpi label="Vues totales" value="0" sub="Sur vos annonces" />
+              <Kpi label="Annonces actives" value={ads.length.toString()} sub="Votre vitrine" />
+              <Kpi label="Vues totales" value={ads.reduce((acc, ad) => acc + (ad.views || 0), 0).toString()} sub="Sur vos annonces" />
               <Kpi label="Messages" value="0" sub="Boîte de réception" />
               <Kpi label="Taux réponse" value="-" sub="Pas assez de données" />
             </div>
+            
             <div className="mb-6 flex flex-col gap-2">
               <Alert color="green">💡 Astuce : Les annonces avec de belles photos se vendent 3x plus vite ! — <Link href="/publier" className="font-semibold text-green">Publier maintenant</Link></Alert>
             </div>
             
-            <div className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white py-12 text-center">
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green/10 text-[1.5rem]">📢</div>
-              <h3 className="font-display text-[1.1rem] font-bold text-gray-800">Vous n'avez pas encore d'annonce</h3>
-              <p className="mb-4 text-[.85rem] text-gray-500">Commencez à vendre vos produits à des millions d'acheteurs.</p>
-              <Link href="/publier" className="btn btn-green shadow-lg">Publier ma première annonce</Link>
-            </div>
+            {ads.length === 0 ? (
+              <div className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white py-12 text-center">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green/10 text-[1.5rem]">📢</div>
+                <h3 className="font-display text-[1.1rem] font-bold text-gray-800">Vous n'avez pas encore d'annonce</h3>
+                <p className="mb-4 text-[.85rem] text-gray-500">Commencez à vendre vos produits à des millions d'acheteurs.</p>
+                <Link href="/publier" className="btn btn-green shadow-lg">Publier ma première annonce</Link>
+              </div>
+            ) : (
+              <div className="mt-4">
+                <h3 className="mb-3 font-display text-[1.1rem] font-bold">Dernières annonces publiées</h3>
+                <div className="rounded-lg border-[1.5px] border-gray-100 bg-white p-4">
+                  {ads.slice(0, 3).map((a) => (
+                    <div key={a.id} className="flex items-center gap-3 border-b border-gray-100 py-3 last:border-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={a.image} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[.88rem] font-semibold">{a.title}</div>
+                        <div className="text-[.75rem] text-gray-500">{a.category} · {a.views || 0} vues</div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="text-[.85rem] font-bold text-green">{a.price} FCFA</div>
+                        <Link href={`/paiement?boost=premium&annonce_id=${a.id}`} className="btn btn-gold btn-sm h-7 text-[.7rem] px-2">
+                          ⭐ Booster
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
