@@ -82,9 +82,13 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
       type="button" 
       onClick={async () => {
         show("Redirection vers Google...");
+        const redirectUrl = process.env.NODE_ENV === 'development' 
+          ? 'http://localhost:3000/auth/callback' 
+          : 'https://annonce-id.vercel.app/auth/callback';
+        
         await supabase.auth.signInWithOAuth({
           provider: 'google',
-          options: { redirectTo: `${window.location.origin}/auth/callback` }
+          options: { redirectTo: redirectUrl }
         });
       }} 
       className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-gray-100 bg-white py-2.5 text-[.88rem] font-semibold text-gray-700 hover:border-gray-300 transition-colors mt-3"
