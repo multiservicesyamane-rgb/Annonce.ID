@@ -25,6 +25,7 @@ export default function PublishWizard() {
   const [toast, setToast] = useState<string | null>(null);
   
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   const supabase = createClient();
 
@@ -32,9 +33,12 @@ export default function PublishWizard() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
+        supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data, error }) => {
           if (data) setUserProfile(data);
+          setLoadingProfile(false);
         });
+      } else {
+        setLoadingProfile(false);
       }
     });
   }, [supabase]);
@@ -45,9 +49,11 @@ export default function PublishWizard() {
     setTimeout(() => setToast(null), 2200);
   };
 
-  const freeAdsRemaining = userProfile?.free_ads_remaining ?? 0;
+  // Si la colonne n'existe pas ou n'est pas encore chargée, on donne 2 par défaut pour ne pas bloquer.
+  const freeAdsRemaining = userProfile?.free_ads_remaining ?? 2;
 
   async function next() {
+    if (loadingProfile) return show("⏳ Chargement de votre profil...");
     if (step === 1 && !catSlug) return show("⚠ Choisissez une catégorie");
     
     // Bloquer si l'utilisateur essaie de continuer avec Gratuit mais n'a plus de crédit
