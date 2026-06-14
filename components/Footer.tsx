@@ -47,23 +47,7 @@ export default function Footer() {
         </FooterCol>
       </div>
 
-      {/* 27 PAYS */}
-      <div className="mx-auto mt-8 max-w-[1320px] border-t border-dark-border pt-6">
-        <h4 className="mb-3 flex items-center gap-1.5 font-display text-[.85rem] font-bold text-white">
-          🌍 Disponible dans 27 pays
-        </h4>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-5">
-          {COUNTRIES.map((c) => (
-            <Link
-              key={c.code}
-              href={`/recherche?pays=${c.code}`}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[.75rem] text-white/55 transition hover:bg-white/5 hover:text-neon-gold"
-            >
-              {c.flag} {c.name}
-            </Link>
-          ))}
-        </div>
-      </div>
+
 
       <div className="mx-auto mt-8 flex max-w-[1320px] flex-wrap items-center justify-between gap-3 border-t border-dark-border pt-4 text-[.75rem]">
         <p>© {new Date().getFullYear()} Annonce.ID by YamaneTech · Tous droits réservés</p>

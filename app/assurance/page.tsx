@@ -91,7 +91,7 @@ export default function AssurancePage() {
       {/* SUBTITLE */}
       <div className="text-center py-10 bg-white dark:bg-dark-800 border-b border-gray-200 dark:border-dark-border">
         <h2 className="text-2xl md:text-3xl font-display font-bold text-gray-900 dark:text-white px-4">
-          Simplifiez Votre Assurance Auto au Sénégal avec <span className="underline decoration-green underline-offset-4">Annonces West</span>
+          Simplifiez Votre Assurance Auto au Sénégal avec <span className="underline decoration-green underline-offset-4">Annonce.ID</span>
         </h2>
       </div>
 

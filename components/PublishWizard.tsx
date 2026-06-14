@@ -94,7 +94,7 @@ export default function PublishWizard() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const isKonnecta = userEmail.toLowerCase().includes('konnecta');
+  const isKonnecta = userEmail.toLowerCase().includes('multiservicesyamane');
   const freeAdsRemaining = isKonnecta ? 999 : (userProfile?.free_ads_remaining ?? 2);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,7 +142,7 @@ export default function PublishWizard() {
       category_slug: catSlug || "autre",
       location: commune === "Autre" ? (customCommune ? `${region} - ${customCommune}` : region) : `${region} - ${commune}`,
       image: photos.length > 0 ? photos[0] : "https://placehold.co/600x400?text=Sans+Image",
-      images: photos, // Note: The schema uses 'images', not 'photos' based on typical structure
+      photos: photos,
       status: boost === 0 ? "active" : "pending"
     };
 
@@ -176,8 +176,7 @@ export default function PublishWizard() {
         const boostKey = BOOSTS[boost].key;
         await supabase.from('listings').update({ 
           status: 'active', 
-          featured: boostKey.startsWith('une'), 
-          premium: boostKey.startsWith('premium') 
+          premium: boostKey.startsWith('premium') || boostKey.startsWith('une') 
         }).eq('id', data.id);
       }
     }

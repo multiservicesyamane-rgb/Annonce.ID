@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import { categoryBySlug, CATEGORIES } from "@/lib/constants";
-import { listingsByCategory } from "@/lib/data";
 import ListingView from "@/components/ListingView";
 import AdBanner from "@/components/AdBanner";
+import { createClient } from "@supabase/supabase-js";
+import { formatNumber } from "@/lib/utils";
 
 type Props = { params: { slug: string } };
 
@@ -22,10 +23,35 @@ export function generateMetadata({ params }: Props): Metadata {
   };
 }
 
-export default function CategoryPage({ params }: Props) {
+// Since it's dynamic data now, we probably want to revalidate occasionally
+export const revalidate = 60;
+
+export default async function CategoryPage({ params }: Props) {
   const cat = categoryBySlug(params.slug);
   if (!cat) notFound();
-  const list = listingsByCategory(cat.slug);
+  
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // Fetch real listings from Supabase based on category
+  const { data: dbListings } = await supabase
+    .from('listings')
+    .select('id, slug, title, price, location, image, category')
+    .eq('status', 'active')
+    .eq('category_slug', cat.slug)
+    .order('created_at', { ascending: false });
+
+  // Map to the format ListingView expects
+  const list = (dbListings || []).map((ad: any) => ({
+    id: ad.id,
+    slug: ad.slug,
+    title: ad.title,
+    price: ad.price ? `${formatNumber(ad.price)} FCFA` : "Gratuit",
+    location: ad.location || "Sénégal",
+    image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
+    category: ad.category || "Autre",
+  } as any));
 
   return (
     <>

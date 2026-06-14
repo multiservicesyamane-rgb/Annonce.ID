@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Bannière publicitaire annonceur. Design premium avec bouton "Call to Action".
@@ -31,15 +32,27 @@ export default function AdBanner({
   const className = `group relative block w-full overflow-hidden rounded-[16px] text-white shadow-xl transition-all hover:shadow-2xl ${bg}`;
 
   const [activeCampaign, setActiveCampaign] = useState<any>(null);
+  const supabase = createClient();
 
   useEffect(() => {
     try {
-      const camp = localStorage.getItem("annonceid_campaign");
-      if (camp) {
-        setActiveCampaign(JSON.parse(camp));
-      }
+      supabase.from('campagnes_pub').select('*').eq('status', 'active').order('created_at', { ascending: false }).limit(1).then(({ data }) => {
+        if (data && data.length > 0) {
+          setActiveCampaign({
+            hero: data[0].hero,
+            footer: data[0].footer,
+            catalogue: data[0].catalogue,
+            product: data[0].product,
+            url: data[0].url,
+            weeks: data[0].weeks,
+            startDate: data[0].start_date,
+            status: data[0].status,
+            id: data[0].id
+          });
+        }
+      });
     } catch {}
-  }, []);
+  }, [supabase]);
 
   const Inner = () => (
     <div className="flex min-h-[110px] w-full flex-col sm:flex-row items-start sm:items-center justify-between px-6 py-6 sm:px-10">

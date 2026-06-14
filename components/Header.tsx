@@ -21,9 +21,9 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-[900] border-b border-dark-border bg-dark-900/95 backdrop-blur-md">
-      <div className="mx-auto flex min-h-[64px] max-w-[1320px] flex-wrap items-center gap-3 px-4 py-2 md:flex-nowrap">
-        <Link href="/" className="flex shrink-0 items-center gap-1.5 font-display text-[1.3rem] font-extrabold text-white">
-          Annonces <span className="text-neon-gold">West</span>
+      <div className="mx-auto flex min-h-[64px] max-w-[1320px] flex-wrap items-center justify-between px-3 py-2 md:flex-nowrap md:gap-3 md:px-4">
+        <Link href="/" className="flex shrink-0 items-center gap-1.5 font-display text-[1.15rem] font-extrabold text-white md:text-[1.3rem]">
+          Annonce<span className="text-neon-gold">.ID</span>
         </Link>
 
         {!pathname.startsWith("/dashboard") && (
@@ -32,7 +32,7 @@ export default function Header() {
           </div>
         )}
 
-        <div className="ml-auto flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-1.5 md:ml-auto md:gap-3">
 
           
           {/* Dark Mode Toggle */}
@@ -93,9 +93,9 @@ export default function Header() {
             </div>
           )}
           
-          <Link href="/publier" className="btn btn-gold btn-sm px-2 md:px-4 rounded-[8px]">
+          <Link href="/publier" className="btn btn-gold btn-sm px-2 py-1.5 md:px-4 md:py-2 rounded-[8px]">
             <span className="hidden sm:inline">+ Vendre</span>
-            <span className="sm:hidden text-[.85rem] font-bold">Vendre</span>
+            <span className="sm:hidden text-[.75rem] font-bold">Vendre</span>
           </Link>
         </div>
       </div>

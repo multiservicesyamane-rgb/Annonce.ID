@@ -91,10 +91,23 @@ export default function Dashboard() {
         window.history.replaceState({}, '', window.location.pathname);
       }
       
-      // Load mock campaigns and purchases
+      // Load real campaigns from Supabase
       try {
-        const camp = localStorage.getItem('annonceid_campaign');
-        if (camp) setActiveCampaign(JSON.parse(camp));
+        supabase.from('campagnes_pub').select('*').eq('status', 'active').order('created_at', { ascending: false }).limit(1).then(({ data }) => {
+          if (data && data.length > 0) {
+            setActiveCampaign({
+              hero: data[0].hero,
+              footer: data[0].footer,
+              catalogue: data[0].catalogue,
+              product: data[0].product,
+              url: data[0].url,
+              weeks: data[0].weeks,
+              startDate: data[0].start_date,
+              status: data[0].status,
+              id: data[0].id
+            });
+          }
+        });
         
         const purch = localStorage.getItem('annonceid_purchases');
         if (purch) setPurchases(JSON.parse(purch));
@@ -175,7 +188,7 @@ export default function Dashboard() {
 
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || user?.phone || "Utilisateur";
   const displayEmail = user?.email || user?.phone || "Nouvel utilisateur";
-  const isKonnecta = typeof displayEmail === 'string' && displayEmail.toLowerCase().includes('konnecta');
+  const isKonnecta = typeof displayEmail === 'string' && displayEmail.toLowerCase().includes('multiservicesyamane');
   const avatarUrl = user?.user_metadata?.avatar_url || "https://i.pravatar.cc/96?img=12";
 
   // Favoris: fetch from Supabase based on stored IDs
@@ -997,9 +1010,12 @@ export default function Dashboard() {
                           product: fileProduct,
                           url: campaignUrl,
                           weeks: campaignWeeks,
-                          startDate: campaignStartDate,
+                          start_date: campaignStartDate,
                           status: 'active'
                         };
+                        
+                        const { data, error } = await supabase.from('campagnes_pub').insert([newCampaign]).select();
+
                         const newPurchase = {
                           id: `PUB-${Date.now()}`,
                           date: new Date().toISOString(),
@@ -1008,14 +1024,25 @@ export default function Dashboard() {
                           status: 'Complété'
                         };
                         
-                        localStorage.setItem('annonceid_campaign', JSON.stringify(newCampaign));
                         const allPurchases = [newPurchase, ...purchases];
                         localStorage.setItem('annonceid_purchases', JSON.stringify(allPurchases));
                         
-                        setActiveCampaign(newCampaign);
+                        if (data && data.length > 0) {
+                          setActiveCampaign({
+                            hero: data[0].hero,
+                            footer: data[0].footer,
+                            catalogue: data[0].catalogue,
+                            product: data[0].product,
+                            url: data[0].url,
+                            weeks: data[0].weeks,
+                            startDate: data[0].start_date,
+                            status: data[0].status,
+                            id: data[0].id
+                          });
+                        }
                         setPurchases(allPurchases);
 
-                        show("🎉 Campagne validée automatiquement (Privilège Super Admin).");
+                        show("🎉 Campagne validée et sauvegardée en base (Privilège Super Admin).");
                         setFileHero(null);
                         setFileFooter(null);
                         setFileCatalogue(null);
@@ -1095,14 +1122,16 @@ export default function Dashboard() {
                   
                   {isKonnecta && (
                     <button 
-                      onClick={() => {
-                        localStorage.removeItem('annonceid_campaign');
+                      onClick={async () => {
+                        if (activeCampaign?.id) {
+                          await supabase.from('campagnes_pub').update({ status: 'inactive' }).eq('id', activeCampaign.id);
+                        }
                         setActiveCampaign(null);
-                        show("Campagne annulée (Test).");
+                        show("Campagne arrêtée (Privilège Super Admin).");
                       }}
                       className="mt-8 text-brand-red text-sm font-bold underline hover:text-red-700"
                     >
-                      Arrêter la campagne (Bouton de Test)
+                      Arrêter la campagne
                     </button>
                   )}
                 </div>
