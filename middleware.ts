@@ -45,16 +45,27 @@ export async function middleware(request: NextRequest) {
 
   // 2. Sécurisation stricte de l'interface Administrateur (/yamanetech)
   if (isYamanetech && user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    // Si c'est le super-admin (nouveau dossier), vérifier l'email
+    if (request.nextUrl.pathname.startsWith('/yamanetech/super-admin')) {
+      const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || "multiservicesyamane@gmail.com";
+      if (user.email !== SUPER_ADMIN_EMAIL) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/'
+        return NextResponse.redirect(url)
+      }
+    } else {
+      // Pour les autres pages /yamanetech (l'ancien admin), vérifier le rôle
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
 
-    if (profile?.role !== 'admin') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
+      if (profile?.role !== 'admin') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
     }
   }
 

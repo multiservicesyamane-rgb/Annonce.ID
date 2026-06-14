@@ -3,47 +3,169 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MY_ADS, MESSAGES, LISTINGS } from "@/lib/data";
+
 import AdCard from "./AdCard";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmModal from "./ConfirmModal";
+import EmptyState from "./EmptyState";
+import { useFavorites } from "./FavButton";
+import ImageCropperModal from "./ImageCropperModal";
 
-type Panel = "overview" | "ads" | "messages" | "favorites" | "stats" | "payments" | "profile" | "security";
+type Panel = "overview" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "alerts" | "profile" | "faq" | "security";
 
-const NAV: { id: Panel; icon: string; label: string; section?: string; badge?: number }[] = [
-  { id: "overview", icon: "📊", label: "Vue d'ensemble", section: "Principal" },
-  { id: "ads", icon: "📋", label: "Mes annonces" },
-  { id: "messages", icon: "💬", label: "Messages", badge: 5 },
-  { id: "favorites", icon: "❤", label: "Favoris" },
-  { id: "stats", icon: "📈", label: "Statistiques", section: "Compte" },
-  { id: "payments", icon: "💳", label: "Paiements" },
-  { id: "profile", icon: "👤", label: "Profil", section: "Paramètres" },
-  { id: "security", icon: "🔒", label: "Sécurité" },
+const NAV: { id: string; icon: string; label: string; section?: string; badge?: number; isLink?: boolean; href?: string }[] = [
+  { id: "overview", icon: "📊", label: "Accueil", section: "Principal" },
+  { id: "ads", icon: "📋", label: "Gérer mes annonces" },
+  { id: "campaigns", icon: "🚀", label: "Mes Campagnes" },
+  { id: "publish", icon: "➕", label: "Publier une annonce", isLink: true, href: "/publier" },
+  { id: "purchases", icon: "🛒", label: "Historique de mes achats" },
+  { id: "showroom", icon: "🏪", label: "Ma Boutique" },
+  { id: "credits", icon: "🪙", label: "Acheter des crédits", section: "Interactions" },
+  { id: "favorites", icon: "❤", label: "Mes Favoris" },
+  { id: "messages", icon: "💬", label: "Messagerie & Discussions" },
+  { id: "alerts", icon: "🔔", label: "Gérer mes alertes" },
+  { id: "profile", icon: "👤", label: "Mes Profil & CV", section: "Paramètres" },
+  { id: "faq", icon: "❓", label: "FAQ" },
 ];
 
 const CHART = [120, 95, 210, 180, 340, 290, 400, 380, 320, 450, 510, 480, 390, 560];
-const STATUS: Record<string, [string, string]> = {
-  act: ["bg-[#22c55e]", "Active"],
-  pen: ["bg-gold", "En attente"],
-  exp: ["bg-gray-300", "Expirée"],
-};
 
 export default function Dashboard() {
   const [panel, setPanel] = useState<Panel>("overview");
   const [toast, setToast] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [ads, setAds] = useState<any[]>([]);
+  const [loadingAds, setLoadingAds] = useState(true);
   const supabase = createClient();
+  const { favs } = useFavorites();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [adToDelete, setAdToDelete] = useState<string | number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [adTab, setAdTab] = useState("en_ligne");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [campaignWeeks, setCampaignWeeks] = useState(1);
+  const [fileHero, setFileHero] = useState<string | null>(null);
+  const [typeHero, setTypeHero] = useState<string | null>(null);
+  
+  const [fileFooter, setFileFooter] = useState<string | null>(null);
+  const [typeFooter, setTypeFooter] = useState<string | null>(null);
+  
+  const [fileCatalogue, setFileCatalogue] = useState<string | null>(null);
+  const [typeCatalogue, setTypeCatalogue] = useState<string | null>(null);
+  
+  const [fileProduct, setFileProduct] = useState<string | null>(null);
+  const [typeProduct, setTypeProduct] = useState<string | null>(null);
+
+  const [cropModalImage, setCropModalImage] = useState<string | null>(null);
+  const [cropModalZone, setCropModalZone] = useState<"hero" | "footer" | "catalogue" | "product" | null>(null);
+  
+  const [campaignUrlType, setCampaignUrlType] = useState("custom");
+  const [campaignUrl, setCampaignUrl] = useState("");
+  
+  // Date et persistences (Local Storage Mock)
+  const [campaignStartDate, setCampaignStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [activeCampaign, setActiveCampaign] = useState<any>(null);
+  const [purchases, setPurchases] = useState<any[]>([]);
+
+  const getCampaignPrice = (weeks: number) => {
+    if (weeks === 1) return 10000;
+    if (weeks === 2) return 18000;
+    if (weeks === 3) return 25000;
+    return 30000;
+  };
+
+  const handlePanelChange = (id: string) => {
+    setPanel(id as Panel);
+    setIsMobileMenuOpen(false);
+  };
+
+  useEffect(() => {
+    // Lire le panel depuis l'URL si présent (ex: ?panel=campaigns)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const p = params.get("panel");
+      if (p && ["overview", "ads", "campaigns", "purchases", "showroom", "credits", "favorites", "messages", "alerts", "profile", "faq", "security"].includes(p)) {
+        setPanel(p as Panel);
+        // Nettoyer l'URL sans recharger
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+      
+      // Load mock campaigns and purchases
+      try {
+        const camp = localStorage.getItem('annonceid_campaign');
+        if (camp) setActiveCampaign(JSON.parse(camp));
+        
+        const purch = localStorage.getItem('annonceid_purchases');
+        if (purch) setPurchases(JSON.parse(purch));
+      } catch {}
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setUser(user);
-        supabase.from('listings').select('*').eq('user_id', user.id).then(({ data }) => {
+        supabase.from('listings').select('id, slug, title, price, location, image, category, category_slug, status, views, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data }) => {
           if (data) setAds(data);
+          setLoadingAds(false);
         });
+      } else {
+        setLoadingAds(false);
       }
     });
   }, [supabase.auth]);
+
+  // Fermer le menu au clic extérieur
+  useEffect(() => {
+    const closeMenu = (e: MouseEvent) => {
+      if ((e.target as Element).closest('.dots-btn')) return;
+      setOpenMenuId(null);
+    };
+    document.addEventListener("click", closeMenu);
+    return () => document.removeEventListener("click", closeMenu);
+  }, []);
+
+  async function toggleSold(id: number) {
+    const ad = ads.find(a => a.id === id);
+    if (!ad) return;
+    const newStatus = ad.status === 'sold' ? 'active' : 'sold';
+    
+    // Optimistic UI update
+    setAds(ads.map(a => a.id === id ? { ...a, status: newStatus } : a));
+    
+    // DB Update
+    await supabase.from('listings').update({ status: newStatus }).eq('id', id);
+    show(newStatus === 'sold' ? "✅ Annonce marquée comme vendue !" : "✅ Annonce remise en vente !");
+    setOpenMenuId(null);
+  }
+
+  async function toggleActive(id: number) {
+    const ad = ads.find(a => a.id === id);
+    if (!ad) return;
+    const newStatus = ad.status === 'inactive' ? 'active' : 'inactive';
+    
+    // Optimistic UI update
+    setAds(ads.map(a => a.id === id ? { ...a, status: newStatus } : a));
+    
+    // DB Update
+    await supabase.from('listings').update({ status: newStatus }).eq('id', id);
+    show(newStatus === 'active' ? "✅ Annonce activée !" : "⏸️ Annonce désactivée.");
+    setOpenMenuId(null);
+  }
+
+  async function handleDeleteAd() {
+    if (!adToDelete) return;
+    
+    // Optimistic UI
+    setAds(ads.filter(a => a.id !== adToDelete));
+    
+    // DB Update
+    await supabase.from('listings').delete().eq('id', adToDelete);
+    
+    show("🗑️ Annonce supprimée avec succès !");
+    setAdToDelete(null);
+  }
 
   const show = (m: string) => {
     setToast(m);
@@ -53,57 +175,170 @@ export default function Dashboard() {
 
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || user?.phone || "Utilisateur";
   const displayEmail = user?.email || user?.phone || "Nouvel utilisateur";
+  const isKonnecta = typeof displayEmail === 'string' && displayEmail.toLowerCase().includes('konnecta');
   const avatarUrl = user?.user_metadata?.avatar_url || "https://i.pravatar.cc/96?img=12";
 
+  // Favoris: fetch from Supabase based on stored IDs
+  const [favListings, setFavListings] = useState<any[]>([]);
+  const [loadingFavs, setLoadingFavs] = useState(false);
+
+  useEffect(() => {
+    if (favs.length === 0) { setFavListings([]); return; }
+    setLoadingFavs(true);
+    supabase.from('listings').select('id, slug, title, price, location, image, category').in('id', favs).then(({ data }) => {
+      if (data) setFavListings(data.map((ad: any) => ({
+        id: ad.id, slug: ad.slug, title: ad.title,
+        price: ad.price ? `${ad.price} FCFA` : 'Gratuit',
+        location: ad.location || 'Sénégal',
+        image: ad.image || 'https://placehold.co/600x400?text=Sans+Image',
+        category: ad.category || 'Autre',
+      })));
+      setLoadingFavs(false);
+    });
+  }, [favs, supabase]);
+
+  const filteredAds = ads.filter(ad => {
+    // Tab filter
+    let matchTab = false;
+    if (adTab === 'en_ligne') matchTab = ad.status === 'active' || !ad.status;
+    else if (adTab === 'hors_ligne') matchTab = ad.status === 'inactive';
+    else if (adTab === 'en_attente') matchTab = ad.status === 'pending';
+    else if (adTab === 'expirees') matchTab = ad.status === 'expired';
+    else if (adTab === 'rejetees') matchTab = ad.status === 'rejected';
+    else if (adTab === 'brouillons') matchTab = ad.status === 'draft';
+    else matchTab = true;
+
+    // Search filter
+    let matchSearch = true;
+    if (searchQuery.trim() !== "") {
+      matchSearch = ad.title?.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+
+    return matchTab && matchSearch;
+  });
+
+  const getNextMondays = () => {
+    const dates = [];
+    let d = new Date();
+    d.setDate(d.getDate() + ((1 + 7 - d.getDay()) % 7 || 7)); // Prochain Lundi
+    for (let i = 0; i < 4; i++) {
+      dates.push(new Date(d));
+      d.setDate(d.getDate() + 7);
+    }
+    return dates;
+  };
+  const availableWeeks = getNextMondays();
+
+  // Mettre à jour la date par défaut si elle n'est pas un lundi disponible
+  useEffect(() => {
+    if (availableWeeks.length > 0 && campaignStartDate === new Date().toISOString().split('T')[0]) {
+      setCampaignStartDate(availableWeeks[0].toISOString().split('T')[0]);
+    }
+  }, []);
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (file.type.startsWith('video/')) {
+        if (file.size > 1.5 * 1024 * 1024) {
+          show("❌ Vidéo trop lourde pour le test (Max: 1.5MB).");
+          return reject("File too large");
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      } else {
+        // Compression des images pour le LocalStorage
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new window.Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const maxW = 1200;
+            let w = img.width;
+            let h = img.height;
+            if (w > maxW) {
+              h = Math.round((h * maxW) / w);
+              w = maxW;
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            if (ctx) ctx.drawImage(img, 0, 0, w, h);
+            // Qualité 0.5 pour réduire le poids au maximum (spécial LocalStorage)
+            resolve(canvas.toDataURL("image/jpeg", 0.5));
+          };
+          img.src = ev.target?.result as string;
+        };
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      }
+    });
+  };
+
   return (
-    <div className="flex min-h-[calc(100vh-64px)]">
-      {/* Mobile tabs */}
-      <div className="no-scrollbar fixed left-0 right-0 top-16 z-30 flex gap-1.5 overflow-x-auto border-b border-gray-100 bg-white px-2 py-2 lg:hidden">
-        {NAV.map((n) => (
-          <button
-            key={n.id}
-            onClick={() => setPanel(n.id)}
-            className={`shrink-0 rounded-[20px] border-[1.5px] px-3 py-1.5 text-[.78rem] font-semibold ${
-              panel === n.id ? "border-green bg-green text-white" : "border-gray-100 bg-white text-gray-700"
-            }`}
-          >
-            {n.icon} {n.label}
-          </button>
-        ))}
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)] dark:bg-dark-900">
+      {/* Mobile top bar */}
+      <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-900 px-4 py-3 lg:hidden">
+        <div className="font-bold dark:text-white flex items-center gap-2">
+          <span className="text-xl">📊</span> Tableau de bord
+        </div>
+        <button onClick={() => setIsMobileMenuOpen(true)} className="text-2xl dark:text-white">☰</button>
       </div>
 
+      {/* Mobile overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 z-[1000] bg-black/60 lg:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="hidden w-[220px] shrink-0 flex-col border-r border-gray-100 bg-white lg:flex">
-        <div className="flex items-center gap-3 border-b border-gray-100 p-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={avatarUrl} alt="" className="h-11 w-11 rounded-full border-2 border-gold object-cover" />
-          <div className="min-w-0">
-            <div className="text-[.9rem] font-bold truncate">{displayName}</div>
-            <div className="text-[.72rem] text-gray-500 truncate">{displayEmail}</div>
-            <span className="badge b-verif mt-0.5">Nouveau</span>
+      <aside className={`fixed inset-y-0 left-0 z-[1001] w-[260px] flex-col border-r border-gray-100 dark:border-dark-border bg-white dark:bg-dark-900 shadow-2xl transition-transform duration-300 lg:static lg:flex lg:w-[220px] lg:translate-x-0 lg:shadow-none ${isMobileMenuOpen ? "translate-x-0 flex" : "-translate-x-full flex"}`}>
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border p-4">
+          <div className="flex items-center gap-3">
+            <img src={avatarUrl} alt="" className="h-11 w-11 rounded-full border-2 border-gold object-cover" />
+            <div className="min-w-0">
+              <div className="text-[.9rem] font-bold truncate dark:text-white">{displayName}</div>
+              <div className="text-[.72rem] text-gray-500 dark:text-white/50 truncate">{displayEmail}</div>
+            </div>
           </div>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="text-xl text-gray-400 lg:hidden">✕</button>
         </div>
-        {NAV.map((n) => (
-          <div key={n.id}>
-            {n.section && <div className="px-5 pb-1 pt-4 text-[.66rem] font-bold uppercase tracking-widest text-gray-300">{n.section}</div>}
-            <button
-              onClick={() => setPanel(n.id)}
-              className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-[.87rem] transition ${
-                panel === n.id ? "border-green bg-green/[.06] font-semibold text-green" : "border-transparent text-gray-700 hover:text-green"
-              }`}
-            >
-              <span className="w-5 text-center">{n.icon}</span> {n.label}
-              {n.badge && <span className="ml-auto rounded-[10px] bg-brand-red px-1.5 py-0.5 text-[.62rem] font-bold text-white">{n.badge}</span>}
-            </button>
-          </div>
-        ))}
-        <div className="mt-auto border-t border-gray-100 p-4">
+        <div className="flex-1 overflow-y-auto">
+          {NAV.map((n) => (
+            <div key={n.id}>
+              {n.section && <div className="px-5 pb-1 pt-4 text-[.66rem] font-bold uppercase tracking-widest text-gray-300 dark:text-white/40">{n.section}</div>}
+              {n.isLink ? (
+                <Link
+                  href={n.href!}
+                  className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-[.87rem] transition border-transparent text-gray-700 dark:text-white/70 hover:text-green`}
+                >
+                  <span className="w-5 text-center">{n.icon}</span> {n.label}
+                </Link>
+              ) : (
+                <button
+                  onClick={() => handlePanelChange(n.id)}
+                  className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-[.87rem] transition ${
+                    panel === n.id ? "border-green bg-green/[.06] font-semibold text-green" : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
+                  }`}
+                >
+                  <span className="w-5 text-center shrink-0">{n.icon}</span> 
+                  <span className="truncate">{n.label}</span>
+                  {n.badge && <span className="ml-auto rounded-[10px] bg-brand-red px-1.5 py-0.5 text-[.62rem] font-bold text-white shrink-0">{n.badge}</span>}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="border-t border-gray-100 dark:border-dark-border p-4">
           <button 
             onClick={async () => {
               await supabase.auth.signOut();
               window.location.href = "/";
             }} 
-            className="btn btn-ghost btn-sm btn-block justify-start !text-brand-red hover:bg-red-50"
+            className="btn btn-ghost btn-sm btn-block justify-start !text-brand-red dark:hover:bg-dark-800"
           >
             🚪 Déconnexion
           </button>
@@ -111,46 +346,79 @@ export default function Dashboard() {
       </aside>
 
       {/* Content */}
-      <div className="flex-1 bg-gray-50 px-4 pt-16 lg:pt-8 lg:px-6">
+      <div className="flex-1 bg-gray-50 dark:bg-dark-900 px-4 py-6 lg:p-8 overflow-y-auto">
         {panel === "overview" && (
-          <div className="animate-fadeUp">
-            <h1 className="font-display text-[1.3rem] font-extrabold">Bonjour, {displayName} 👋</h1>
-            <p className="mb-6 text-[.85rem] text-gray-500">Bienvenue sur votre espace vendeur</p>
+          <div className="animate-fadeUp max-w-[1000px] mx-auto">
+            <h1 className="font-display text-[1.3rem] font-extrabold dark:text-white">Bonjour, {displayName} 👋</h1>
+            <p className="mb-6 text-[.85rem] text-gray-500 dark:text-white/60">Bienvenue sur votre espace vendeur</p>
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Kpi label="Annonces actives" value={ads.length.toString()} sub="Votre vitrine" />
+              <Kpi label="Annonces actives" value={ads.filter(a => a.status === 'active' || !a.status).length.toString()} sub="Votre vitrine" />
               <Kpi label="Vues totales" value={ads.reduce((acc, ad) => acc + (ad.views || 0), 0).toString()} sub="Sur vos annonces" />
-              <Kpi label="Messages" value="0" sub="Boîte de réception" />
-              <Kpi label="Taux réponse" value="-" sub="Pas assez de données" />
+              <Kpi label="Favoris reçus" value={favs.length.toString()} sub="Sur vos annonces" />
+              <Kpi label="Annonces totales" value={ads.length.toString()} sub="Toutes catégories" />
             </div>
             
             <div className="mb-6 flex flex-col gap-2">
               <Alert color="green">💡 Astuce : Les annonces avec de belles photos se vendent 3x plus vite ! — <Link href="/publier" className="font-semibold text-green">Publier maintenant</Link></Alert>
             </div>
             
-            {ads.length === 0 ? (
-              <div className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white py-12 text-center">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green/10 text-[1.5rem]">📢</div>
-                <h3 className="font-display text-[1.1rem] font-bold text-gray-800">Vous n'avez pas encore d'annonce</h3>
-                <p className="mb-4 text-[.85rem] text-gray-500">Commencez à vendre vos produits à des millions d'acheteurs.</p>
-                <Link href="/publier" className="btn btn-green shadow-lg">Publier ma première annonce</Link>
+            {loadingAds ? (
+              <div className="py-12 flex justify-center items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green"></div>
               </div>
+            ) : ads.length === 0 ? (
+              <EmptyState 
+                title="Vous n'avez pas encore d'annonce"
+                description="Commencez à vendre vos produits à des millions d'acheteurs en publiant votre première annonce."
+                ctaLabel="Publier une annonce"
+                ctaHref="/publier"
+                emoji="📢"
+              />
             ) : (
               <div className="mt-4">
-                <h3 className="mb-3 font-display text-[1.1rem] font-bold">Dernières annonces publiées</h3>
-                <div className="rounded-lg border-[1.5px] border-gray-100 bg-white p-4">
+                <h3 className="mb-3 font-display text-[1.1rem] font-bold dark:text-white">Dernières annonces publiées</h3>
+                <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4">
                   {ads.slice(0, 3).map((a) => (
-                    <div key={a.id} className="flex items-center gap-3 border-b border-gray-100 py-3 last:border-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={a.image} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                    <div key={a.id} className="relative flex items-center gap-3 border-b border-gray-100 dark:border-dark-border py-4 last:border-0">
+                      <Link href={`/annonce/${a.id}/${a.slug}`} className="shrink-0 flex items-center gap-3">
+                        <img src={a.image || "https://placehold.co/150x150?text=Sans+Image"} alt="" className="h-16 w-16 rounded-lg object-cover hover:opacity-80 transition" />
+                      </Link>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[.88rem] font-semibold">{a.title}</div>
-                        <div className="text-[.75rem] text-gray-500">{a.category} · {a.views || 0} vues</div>
+                        <Link href={`/annonce/${a.id}/${a.slug}`} className="truncate block text-[.9rem] sm:text-[1rem] font-bold dark:text-white hover:text-green">
+                          {a.title}
+                        </Link>
+                        <div className="text-[.85rem] font-bold text-green mt-1">{a.price} FCFA</div>
+                        <div className="text-[.75rem] text-gray-500 dark:text-white/50 mt-1 flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${a.status === 'inactive' ? 'bg-gray-400' : a.status === 'sold' ? 'bg-brand-red' : 'bg-green'}`}></span>
+                          {a.status === 'inactive' ? 'Inactif' : a.status === 'sold' ? 'Vendu' : 'Actif'} · {a.views || 0} vues
+                        </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <div className="text-[.85rem] font-bold text-green">{a.price} FCFA</div>
-                        <Link href={`/paiement?boost=premium&annonce_id=${a.id}`} className="btn btn-gold btn-sm h-7 text-[.7rem] px-2">
+                      <div className="flex items-center gap-2 shrink-0 relative">
+                        <Link href={`/paiement?annonce_id=${a.id}`} className="btn btn-gold btn-sm h-7 text-[.7rem] px-2 whitespace-nowrap hidden sm:inline-flex">
                           ⭐ Booster
                         </Link>
+                        <button 
+                          onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === a.id ? null : a.id); }} 
+                          className="dots-btn p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-dark-900 rounded-full transition"
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                        </button>
+                        
+                        {/* Dropdown Menu */}
+                        {openMenuId === a.id && (
+                          <div className="absolute right-0 top-10 w-48 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-border py-2 z-50 animate-fadeUp">
+                            <Link href={`/publier?edit=${a.id}`} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">✏️ Modifier</Link>
+                            <button onClick={() => toggleActive(a.id)} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">
+                              {a.status === 'inactive' ? '▶️ Activer l\'annonce' : '⏸️ Désactiver l\'annonce'}
+                            </button>
+                            <button onClick={() => toggleSold(a.id)} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">
+                              {a.status === 'sold' ? '📦 Remettre en vente' : '✅ Marquer comme vendu'}
+                            </button>
+                            <Link href={`/paiement?annonce_id=${a.id}`} className="block w-full text-left px-4 py-2 text-[.85rem] text-gold font-bold hover:bg-gray-50 dark:hover:bg-dark-700 sm:hidden">⭐ Booster</Link>
+                            <div className="my-1 border-t border-gray-100 dark:border-dark-border"></div>
+                            <button onClick={() => { setAdToDelete(a.id); setOpenMenuId(null); }} className="block w-full text-left px-4 py-2 text-[.85rem] text-brand-red font-bold hover:bg-red-50 dark:hover:bg-red-900/10">🗑️ Supprimer</button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -161,23 +429,121 @@ export default function Dashboard() {
         )}
 
         {panel === "ads" && (
-          <div className="animate-fadeUp">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-display text-[1.2rem] font-extrabold">Mes annonces</h2>
-              <Link href="/publier" className="btn btn-green btn-sm">+ Nouvelle</Link>
+          <div className="animate-fadeUp max-w-[1000px] mx-auto">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-display text-[1.4rem] font-extrabold dark:text-white">Gérer mes annonces</h2>
+              <Link href="/publier" className="btn btn-green btn-sm">+ Nouveau</Link>
             </div>
             
-            {ads.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border-[1.5px] border-gray-100 bg-white py-16 text-center">
-                 <div className="text-[3rem] opacity-40 mb-2">📦</div>
-                 <div className="text-[1rem] font-bold text-gray-700">Aucune annonce trouvée</div>
-                 <div className="text-[.85rem] text-gray-400 mb-4">Vous n'avez publié aucune annonce pour le moment.</div>
-                 <Link href="/publier" className="btn btn-outline btn-sm">Créer une annonce</Link>
+            {/* TABS */}
+            <div className="flex overflow-x-auto border-b border-gray-200 dark:border-dark-border mb-6 no-scrollbar">
+              {[
+                { id: "brouillons", label: "Brouillons" },
+                { id: "en_attente", label: "En attente de validation" },
+                { id: "en_ligne", label: "En ligne" },
+                { id: "expirees", label: "Expirée(s)" },
+                { id: "hors_ligne", label: "Hors ligne" },
+                { id: "rejetees", label: "Rejetée(s)" },
+              ].map(tab => (
+                <button 
+                  key={tab.id}
+                  onClick={() => setAdTab(tab.id)}
+                  className={`px-4 py-2.5 text-[.85rem] font-bold whitespace-nowrap border-b-2 transition-colors ${adTab === tab.id ? "border-green text-gray-900 dark:text-white" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-white/60 dark:hover:text-white"}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* SEARCH AND FILTERS */}
+            <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between bg-white dark:bg-dark-800 p-4 rounded-lg border border-gray-100 dark:border-dark-border">
+              <div className="flex-1 w-full relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                <input 
+                  type="text" 
+                  placeholder="Recherche rapide..." 
+                  className="input !pl-9 w-full sm:max-w-md"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <button className="flex items-center gap-2 text-[.85rem] font-semibold text-gray-600 dark:text-gray-300">
+                ⚙ Filtrer
+              </button>
+            </div>
+            
+            {loadingAds ? (
+              <div className="py-20 flex justify-center items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green"></div>
+              </div>
+            ) : filteredAds.length === 0 ? (
+              <div className="bg-gray-100/50 dark:bg-dark-800/50 rounded-xl p-10 text-center border border-gray-100 dark:border-dark-border">
+                <h3 className="font-display text-lg font-bold mb-2 dark:text-white">Vous n'avez pas d'annonces dans cette catégorie</h3>
+                <p className="text-[.9rem] text-gray-500 mb-6 max-w-md mx-auto">Veuillez créer une annonce pour tout ce que vous souhaitez vendre sur la plateforme.</p>
+                <Link href="/publier" className="btn btn-green">Poster une annonce</Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {ads.map((ad) => (
-                  <AdCard key={ad.id} ad={ad} />
+              <div className="flex flex-col gap-3">
+                {filteredAds.map((ad) => (
+                  <div key={ad.id} className="relative group flex items-start gap-4 rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-3 sm:p-4">
+                    <Link href={`/annonce/${ad.id}/${ad.slug}`} className="shrink-0">
+                      <img src={ad.image || "https://placehold.co/150x150?text=Sans+Image"} alt="" className="h-20 w-20 sm:h-24 sm:w-24 rounded-md object-cover" />
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                        <Link href={`/annonce/${ad.id}/${ad.slug}`} className="truncate block text-[1rem] font-bold dark:text-white hover:text-green max-w-full">
+                          {ad.title}
+                        </Link>
+                        <div className="text-[.9rem] font-bold text-green dark:text-neon-green shrink-0">{ad.price} FCFA</div>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[.75rem] text-gray-500 dark:text-white/50">
+                        {ad.category} · {ad.views || 0} vues · 
+                        <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[.65rem] font-bold uppercase ${ad.status === 'inactive' ? 'bg-gray-100 text-gray-500 dark:bg-dark-700 dark:text-gray-300' : ad.status === 'sold' ? 'bg-red-50 text-brand-red dark:bg-red-900/20' : 'bg-green/10 text-green'}`}>
+                          {ad.status === 'inactive' ? '⏸️ Inactif' : ad.status === 'sold' ? '📦 Vendu' : '✓ Actif'}
+                        </span>
+                      </div>
+                      
+                      {/* Mobile stats text */}
+                      <div className="mt-2 text-[.75rem] text-gray-400 sm:hidden">
+                        Créée le {new Date(ad.created_at).toLocaleDateString('fr-FR')}
+                      </div>
+                    </div>
+
+                    {/* 3-dots Menu Button */}
+                    <div className="flex items-center gap-2 shrink-0 relative ml-auto">
+                      <Link href={`/paiement?annonce_id=${ad.id}`} className="btn btn-gold btn-sm h-7 text-[.7rem] px-2 whitespace-nowrap hidden sm:inline-flex">
+                        ⭐ Booster
+                      </Link>
+                      <button 
+                        onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === ad.id ? null : ad.id); }} 
+                        className="dots-btn p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-dark-900 rounded-full transition"
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                      </button>
+                      
+                      {/* Dropdown Menu */}
+                      {openMenuId === ad.id && (
+                        <div className="absolute right-0 top-10 w-48 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-border py-2 z-50 animate-fadeUp">
+                          <Link href={`/publier?edit=${ad.id}`} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">✏️ Modifier</Link>
+                          <button onClick={() => toggleActive(ad.id)} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">
+                            {ad.status === 'inactive' ? '▶️ Activer l\'annonce' : '⏸️ Désactiver l\'annonce'}
+                          </button>
+                          <button onClick={() => toggleSold(ad.id)} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">
+                            {ad.status === 'sold' ? '📦 Remettre en vente' : '✅ Marquer comme vendu'}
+                          </button>
+                          <Link href={`/paiement?annonce_id=${ad.id}`} className="block w-full text-left px-4 py-2 text-[.85rem] text-gold font-bold hover:bg-gray-50 dark:hover:bg-dark-700 sm:hidden">⭐ Booster</Link>
+                          <div className="my-1 border-t border-gray-100 dark:border-dark-border"></div>
+                          <button onClick={() => { setAdToDelete(ad.id); setOpenMenuId(null); }} className="block w-full text-left px-4 py-2 text-[.85rem] text-brand-red font-bold hover:bg-red-50 dark:hover:bg-red-900/10">🗑️ Supprimer</button>
+                        </div>
+                      )}
+                    </div>
+
+                    {ad.status === 'sold' && (
+                      <div className="absolute inset-0 bg-white/60 dark:bg-black/60 z-[5] flex items-center justify-center backdrop-blur-[1px] pointer-events-none rounded-[10px]">
+                        <span className="bg-brand-red text-white font-bold px-3 py-1 rounded-lg rotate-[-12deg] text-sm border-2 border-white shadow-md">VENDU</span>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -185,97 +551,913 @@ export default function Dashboard() {
         )}
 
         {panel === "messages" && (
-          <div className="animate-fadeUp">
-            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold">Messages</h2>
-            <div className="flex flex-col items-center justify-center rounded-lg border-[1.5px] border-gray-100 bg-white py-16 text-center">
-               <div className="text-[3rem] opacity-40 mb-2">💬</div>
-               <div className="text-[1rem] font-bold text-gray-700">Votre messagerie est vide</div>
-               <div className="text-[.85rem] text-gray-400">Les messages des acheteurs intéressés apparaîtront ici.</div>
-            </div>
+          <div className="animate-fadeUp max-w-[800px] mx-auto">
+            <h2 className="mb-6 font-display text-[1.4rem] font-extrabold dark:text-white">Messagerie</h2>
+            <EmptyState
+              title="Messagerie bientôt disponible"
+              description="La messagerie intégrée est en cours de développement. En attendant, les acheteurs vous contactent directement via WhatsApp ou par téléphone."
+              emoji="💬"
+            />
           </div>
         )}
 
         {panel === "favorites" && (
-          <div className="animate-fadeUp">
-            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold">Favoris</h2>
-            <div className="flex flex-col items-center justify-center rounded-lg border-[1.5px] border-gray-100 bg-white py-16 text-center">
-               <div className="text-[3rem] opacity-40 mb-2">❤️</div>
-               <div className="text-[1rem] font-bold text-gray-700">Aucun favori</div>
-               <div className="text-[.85rem] text-gray-400 mb-4">Cliquez sur le cœur d'une annonce pour la sauvegarder ici.</div>
-               <Link href="/recherche" className="btn btn-outline btn-sm">Explorer les annonces</Link>
-            </div>
+          <div className="animate-fadeUp max-w-[1000px] mx-auto">
+            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold dark:text-white">Favoris ({favListings.length})</h2>
+            {loadingFavs ? (
+              <div className="py-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green"></div></div>
+            ) : favListings.length === 0 ? (
+              <EmptyState 
+                title="Aucun favori" 
+                description="Cliquez sur le cœur d'une annonce pour la sauvegarder ici." 
+                ctaLabel="Explorer les annonces" 
+                ctaHref="/recherche" 
+                emoji="❤️" 
+              />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {favListings.map((ad) => (
+                  <AdCard key={ad.id} ad={ad} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {panel === "stats" && (
-          <div className="animate-fadeUp">
-            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold">Statistiques</h2>
-            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Kpi label="Vues ce mois" value="0" sub="-" />
-              <Kpi label="Clics contact" value="0" sub="-" />
-              <Kpi label="Conversion" value="0%" sub="-" />
-              <Kpi label="Favoris" value="0" sub="-" />
-            </div>
-            <div className="flex items-center justify-center rounded-lg border-[1.5px] border-gray-100 bg-white py-16 text-center text-[.85rem] text-gray-400">
-               Publiez des annonces pour voir vos statistiques de trafic.
-            </div>
-          </div>
-        )}
 
-        {panel === "payments" && (
-          <div className="animate-fadeUp">
-            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold">Paiements</h2>
-            <div className="flex flex-col items-center justify-center rounded-lg border-[1.5px] border-gray-100 bg-white py-16 text-center">
-               <div className="text-[3rem] opacity-40 mb-2">💳</div>
-               <div className="text-[1rem] font-bold text-gray-700">Aucun historique de paiement</div>
-               <div className="text-[.85rem] text-gray-400">Vos factures pour les boosts et annonces Premium s'afficheront ici.</div>
-            </div>
-          </div>
-        )}
 
         {panel === "profile" && (
-          <div className="animate-fadeUp">
-            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold">Mon profil</h2>
-            <div className="rounded-lg border-[1.5px] border-gray-100 bg-white p-6">
-              <div className="grid gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="label">Nom complet / Identifiant</label><input className="input" defaultValue={displayName} /></div>
-                  <div><label className="label">Contact (Email ou Tél)</label><input className="input bg-gray-50 text-gray-500" defaultValue={displayEmail} readOnly disabled /></div>
+          <div className="animate-fadeUp max-w-[800px] mx-auto">
+            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold dark:text-white">Mon profil</h2>
+            <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-6">
+              <div className="flex items-center gap-6 mb-6 pb-6 border-b border-gray-100 dark:border-dark-border">
+                <img src={avatarUrl} alt="Avatar" className="w-20 h-20 rounded-full border border-gray-200 dark:border-dark-border object-cover" />
+                <div>
+                  <button className="btn btn-outline btn-sm mb-2">Changer la photo</button>
+                  <p className="text-[.75rem] text-gray-500">JPG, PNG ou GIF. Max 2Mo.</p>
                 </div>
-                <div><label className="label">Bio</label><textarea className="input resize-y" rows={3} placeholder="Présentez-vous aux acheteurs..." /></div>
               </div>
-              <button onClick={() => show("✓ Profil sauvegardé")} className="btn btn-green mt-5">Sauvegarder les modifications</button>
+              
+              <div className="grid gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div><label className="label">Nom de la boutique / Entreprise</label><input className="input" defaultValue={displayName} /></div>
+                  <div><label className="label">Contact (Email ou Tél)</label><input className="input bg-gray-50 dark:bg-dark-900 text-gray-500" defaultValue={displayEmail} readOnly disabled /></div>
+                </div>
+                <div><label className="label">Description de la boutique</label><textarea className="input resize-y" rows={3} placeholder="Que propose votre boutique ?" /></div>
+                <div>
+                  <label className="label">Langue de communication</label>
+                  <select className="input max-w-[200px]">
+                    <option>Français</option>
+                    <option>Anglais</option>
+                    <option>Wolof</option>
+                  </select>
+                </div>
+              </div>
+              <button onClick={async () => {
+                if (!user) return;
+                const nameInput = document.querySelector<HTMLInputElement>('input[defaultValue="' + displayName + '"]');
+                const bioInput = document.querySelector<HTMLTextAreaElement>('textarea[placeholder="Que propose votre boutique ?"]');
+                await supabase.from('profiles').update({
+                  full_name: nameInput?.value || displayName,
+                  bio: bioInput?.value || '',
+                }).eq('id', user.id);
+                show("✓ Profil sauvegardé avec succès !");
+              }} className="btn btn-green mt-6">Sauvegarder les modifications</button>
             </div>
           </div>
         )}
 
         {panel === "security" && (
-          <div className="animate-fadeUp">
-            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold">Sécurité</h2>
+          <div className="animate-fadeUp max-w-[800px] mx-auto">
+            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold dark:text-white">Sécurité & Confidentialité</h2>
             <div className="flex flex-col gap-4">
-              <div className="rounded-lg border-[1.5px] border-gray-100 bg-white p-5">
-                <h3 className="mb-1 font-display text-[.95rem] font-bold">Contact vérifié ✅</h3>
-                <p className="mb-3 text-[.83rem] text-gray-500">{displayEmail}</p>
-                <button onClick={() => show("Redirection...")} className="btn btn-outline btn-sm">Modifier</button>
+              <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5 flex justify-between items-center">
+                <div>
+                  <h3 className="mb-1 font-display text-[.95rem] font-bold dark:text-white">Contact vérifié ✅</h3>
+                  <p className="text-[.83rem] text-gray-500 dark:text-white/60">{displayEmail}</p>
+                </div>
+                <button onClick={() => show("La modification de l'email n'est pas encore disponible.")} className="btn btn-outline btn-sm">Modifier</button>
               </div>
-              <div className="rounded-lg border-[1.5px] border-gray-100 bg-white p-5">
-                <h3 className="mb-1 font-display text-[.95rem] font-bold">Vérification d&apos;identité</h3>
-                <p className="mb-3 text-[.83rem] text-gray-500">Obtenez le badge « Identité vérifiée ».</p>
-                <button onClick={() => show("📎 Envoi pièce…")} className="btn btn-green btn-sm">Vérifier</button>
+              
+              <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5 flex justify-between items-center">
+                <div>
+                  <h3 className="mb-1 font-display text-[.95rem] font-bold dark:text-white">Mot de passe</h3>
+                  <p className="text-[.83rem] text-gray-500 dark:text-white/60">Sécurisez votre compte avec un mot de passe fort.</p>
+                </div>
+                <button onClick={async () => {
+                  if (user?.email) {
+                    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+                      redirectTo: window.location.origin + '/dashboard',
+                    });
+                    if (error) {
+                      show("Erreur : " + error.message);
+                    } else {
+                      show("✓ Email de réinitialisation envoyé ! Vérifiez votre boîte de réception.");
+                    }
+                  }
+                }} className="btn btn-outline btn-sm">Changer</button>
               </div>
-              <div className="rounded-lg border-[1.5px] border-[#fee2e2] bg-white p-5">
+
+              <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5 flex justify-between items-center">
+                <div>
+                  <h3 className="mb-1 font-display text-[.95rem] font-bold dark:text-white">Sessions actives</h3>
+                  <p className="text-[.83rem] text-gray-500 dark:text-white/60">1 appareil connecté actuellement.</p>
+                </div>
+                <button onClick={async () => {
+                   await supabase.auth.signOut();
+                   window.location.href = '/connexion';
+                }} className="btn btn-outline btn-sm">Déconnexion</button>
+              </div>
+
+              <div className="rounded-lg border-[1.5px] border-[#fee2e2] dark:border-brand-red/30 bg-white dark:bg-[#fee2e2]/5 p-5 mt-4">
                 <h3 className="mb-1 font-display text-[.95rem] font-bold text-brand-red">Zone dangereuse</h3>
-                <button onClick={() => show("⚠ Confirmation requise")} className="btn btn-sm bg-[#fee2e2] !text-brand-red">Supprimer le compte</button>
+                <p className="mb-4 text-[.83rem] text-gray-500 dark:text-white/60">La suppression de votre compte est irréversible et supprimera toutes vos annonces.</p>
+                <button onClick={() => setShowDeleteModal(true)} className="btn btn-sm bg-[#fee2e2] dark:bg-brand-red/20 !text-brand-red">Supprimer le compte</button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {panel === "campaigns" && (
+          <div className="animate-fadeUp max-w-[900px] mx-auto">
+            <h2 className="mb-2 font-display text-[1.6rem] font-extrabold dark:text-white">🚀 Propulsez vos ventes</h2>
+            <p className="text-gray-500 dark:text-white/70 mb-8 text-[.95rem]">
+              Ne vous contentez plus d'un seul emplacement. En réservant votre espace publicitaire, **votre bannière s'affichera partout** sur la plateforme (Accueil, Catalogue, Pages Produits). 
+              <br/><span className="text-gold font-bold">⚠️ Limité à 2 annonceurs par semaine en diaporama.</span>
+            </p>
+            
+            <div className="bg-white dark:bg-dark-800 rounded-[2rem] shadow-xl border border-gray-100 dark:border-dark-border overflow-hidden">
+              
+              {!activeCampaign ? (
+                <>
+                  {/* ETAPE 1: VISUEL SUBLIME */}
+              <div className="bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#020617] p-8 md:p-10 text-white relative">
+                <div className="absolute top-0 right-0 p-6 opacity-20 text-[4rem] pointer-events-none">✨</div>
+                <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-full bg-gold text-dark-900 flex items-center justify-center text-sm">1</span> 
+                  Où s'affichera votre annonce ?
+                </h3>
+                
+                <div className="grid md:grid-cols-3 gap-4">
+                  {/* Mockup 1 */}
+                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 text-center">
+                    <div className="w-full h-12 bg-gradient-to-r from-gold/50 to-gold rounded-lg mb-3 flex items-center justify-center">
+                      <span className="text-[.65rem] font-bold uppercase tracking-widest text-black">Bannière Hero</span>
+                    </div>
+                    <div className="font-bold text-sm">En haut de l'Accueil</div>
+                    <div className="text-[.7rem] text-white/70 mt-1">La première chose vue.</div>
+                  </div>
+                  {/* Mockup 2 */}
+                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 text-center">
+                    <div className="grid grid-cols-2 gap-2 mb-3 h-12">
+                      <div className="bg-white/20 rounded-md"></div>
+                      <div className="bg-white/20 rounded-md"></div>
+                    </div>
+                    <div className="w-full h-6 bg-gradient-to-r from-gold/50 to-gold rounded-md mb-2"></div>
+                    <div className="font-bold text-sm">Au coeur du Catalogue</div>
+                    <div className="text-[.7rem] text-white/70 mt-1">Au milieu des résultats (In-Grid).</div>
+                  </div>
+                  {/* Mockup 3 */}
+                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 text-center">
+                    <div className="w-full h-12 bg-white/20 rounded-lg mb-3 flex flex-col justify-end p-1">
+                      <div className="w-full h-4 bg-gradient-to-r from-gold/50 to-gold rounded-sm"></div>
+                    </div>
+                    <div className="font-bold text-sm">Pages Produits</div>
+                    <div className="text-[.7rem] text-white/70 mt-1">Juste avant les avis clients.</div>
+                  </div>
+                </div>
+                
+                <div className="mt-6 text-[.85rem] text-white/80 border-t border-white/10 pt-4 text-center">
+                  <span className="text-gold font-bold">Quatre visuels nécessaires</span> : Vous devrez fournir un fichier distinct et optimisé pour chacune de ces zones.
+                </div>
+              </div>
+
+              <div className="p-8 md:p-10">
+                {/* ETAPE 2: UPLOAD & DUREE */}
+                <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2 dark:text-white">
+                  <span className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white flex items-center justify-center text-sm">2</span> 
+                  Votre Fichier & Durée
+                </h3>
+                
+                <div className="grid md:grid-cols-2 gap-8 mb-8">
+                  {/* Upload Zones (4 Zones) */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Hero */}
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">1️⃣ Accueil (Haut)</label>
+                      <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
+                        <input 
+                          type="file" accept="image/*,video/mp4" className="hidden" 
+                          onChange={async (e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const f = e.target.files[0];
+                              if (f.type.startsWith('video/')) {
+                                setTypeHero(f.type);
+                                setFileHero(await fileToBase64(f));
+                              } else {
+                                setTypeHero(f.type);
+                                setCropModalZone("hero");
+                                setCropModalImage(URL.createObjectURL(f));
+                              }
+                            }
+                          }}
+                        />
+                        {fileHero ? (
+                          typeHero?.startsWith('video/') ? <video src={fileHero} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileHero} className="w-full h-full object-cover" alt="Hero" />
+                        ) : (
+                          <>
+                            <div className="font-bold text-[.75rem]">Upload Hero</div>
+                            <div className="text-[.6rem] text-gray-500">1200x300px</div>
+                          </>
+                        )}
+                      </label>
+                    </div>
+
+                    {/* Footer */}
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">2️⃣ Accueil (Bas)</label>
+                      <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
+                        <input 
+                          type="file" accept="image/*,video/mp4" className="hidden" 
+                          onChange={async (e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const f = e.target.files[0];
+                              if (f.type.startsWith('video/')) {
+                                setTypeFooter(f.type);
+                                setFileFooter(await fileToBase64(f));
+                              } else {
+                                setTypeFooter(f.type);
+                                setCropModalZone("footer");
+                                setCropModalImage(URL.createObjectURL(f));
+                              }
+                            }
+                          }}
+                        />
+                        {fileFooter ? (
+                          typeFooter?.startsWith('video/') ? <video src={fileFooter} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileFooter} className="w-full h-full object-cover" alt="Footer" />
+                        ) : (
+                          <>
+                            <div className="font-bold text-[.75rem]">Upload Footer</div>
+                            <div className="text-[.6rem] text-gray-500">1200x300px</div>
+                          </>
+                        )}
+                      </label>
+                    </div>
+
+                    {/* Catalogue */}
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">3️⃣ Catalogue</label>
+                      <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
+                        <input 
+                          type="file" accept="image/*,video/mp4" className="hidden" 
+                          onChange={async (e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const f = e.target.files[0];
+                              if (f.type.startsWith('video/')) {
+                                setTypeCatalogue(f.type);
+                                setFileCatalogue(await fileToBase64(f));
+                              } else {
+                                setTypeCatalogue(f.type);
+                                setCropModalZone("catalogue");
+                                setCropModalImage(URL.createObjectURL(f));
+                              }
+                            }
+                          }}
+                        />
+                        {fileCatalogue ? (
+                          typeCatalogue?.startsWith('video/') ? <video src={fileCatalogue} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileCatalogue} className="w-full h-full object-cover" alt="Catalogue" />
+                        ) : (
+                          <>
+                            <div className="font-bold text-[.75rem]">Upload Catalogue</div>
+                            <div className="text-[.6rem] text-gray-500">800x200px</div>
+                          </>
+                        )}
+                      </label>
+                    </div>
+
+                    {/* Product */}
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">4️⃣ Page Produit</label>
+                      <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
+                        <input 
+                          type="file" accept="image/*,video/mp4" className="hidden" 
+                          onChange={async (e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const f = e.target.files[0];
+                              if (f.type.startsWith('video/')) {
+                                setTypeProduct(f.type);
+                                setFileProduct(await fileToBase64(f));
+                              } else {
+                                setTypeProduct(f.type);
+                                setCropModalZone("product");
+                                setCropModalImage(URL.createObjectURL(f));
+                              }
+                            }
+                          }}
+                        />
+                        {fileProduct ? (
+                          typeProduct?.startsWith('video/') ? <video src={fileProduct} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileProduct} className="w-full h-full object-cover" alt="Product" />
+                        ) : (
+                          <>
+                            <div className="font-bold text-[.75rem]">Upload Produit</div>
+                            <div className="text-[.6rem] text-gray-500">800x200px</div>
+                          </>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Duration and Date selector */}
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">Durée & Réductions</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[1, 2, 3, 4].map((weeks) => (
+                          <button 
+                            key={weeks}
+                            onClick={() => setCampaignWeeks(weeks)}
+                            className={`rounded-lg font-bold border transition text-sm flex items-center justify-center py-2.5 ${campaignWeeks === weeks ? 'bg-green border-green text-white shadow-md' : 'bg-gray-50 dark:bg-dark-900 border-gray-200 dark:border-dark-border text-gray-700 dark:text-white hover:border-green'}`}
+                          >
+                            {weeks} sem.
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6 mb-6">
+                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">
+                        Lien de redirection (Optionnel)
+                      </label>
+                      <select
+                        value={campaignUrlType}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCampaignUrlType(val);
+                          if (val === "boutique") {
+                            setCampaignUrl(user ? `/boutique/${user.id}` : "/");
+                          } else if (val.startsWith("/annonce")) {
+                            setCampaignUrl(val);
+                          } else {
+                            setCampaignUrl("");
+                          }
+                        }}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-gray-700 dark:text-white focus:outline-none focus:border-green appearance-none mb-3"
+                      >
+                        <option value="custom">-- Choisir un lien de redirection --</option>
+                        <option value="boutique">🏪 Ma Boutique Complète</option>
+                        {ads.length > 0 && (
+                          <optgroup label="📦 Mes Produits">
+                            {ads.map(ad => (
+                              <option key={ad.id} value={`/annonce/${ad.id}/${ad.slug}`}>
+                                {ad.title.length > 40 ? ad.title.substring(0, 40) + '...' : ad.title}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        <option value="custom">🔗 Lien externe personnalisé</option>
+                      </select>
+                      
+                      {campaignUrlType === "custom" && (
+                        <input 
+                          type="url" 
+                          placeholder="Ex: https://wa.me/... ou https://maboutique.com" 
+                          value={campaignUrl}
+                          onChange={(e) => setCampaignUrl(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-gray-700 dark:text-white focus:outline-none focus:border-green"
+                        />
+                      )}
+                      <p className="text-[.75rem] text-gray-500 mt-1">
+                        Les utilisateurs qui cliquent sur vos bannières seront redirigés vers ce lien.
+                      </p>
+                    </div>
+
+                      <div className="flex gap-4">
+                        <div className="flex-1">
+                          <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">Début</label>
+                          <select 
+                            value={campaignStartDate}
+                            onChange={(e) => setCampaignStartDate(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-gray-700 dark:text-white focus:outline-none focus:border-green appearance-none"
+                          >
+                            {availableWeeks.map((date, i) => {
+                              // Simuler la 2ème semaine comme indisponible si on veut tester l'indisponibilité
+                              const isOccupied = purchases.some(p => p.startDate === date.toISOString().split('T')[0]);
+                              return (
+                                <option key={i} value={date.toISOString().split('T')[0]} disabled={isOccupied}>
+                                  {date.toLocaleDateString('fr-FR')} {isOccupied ? "(Occupé)" : "(Disponible)"}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                        <div className="flex-1 opacity-70">
+                          <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">Fin estimée</label>
+                          <input 
+                            type="text" 
+                            disabled
+                            value={
+                              campaignStartDate ? 
+                              new Date(new Date(campaignStartDate).getTime() + campaignWeeks * 7 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR') 
+                              : ''
+                            }
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-white cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                <hr className="border-gray-100 dark:border-dark-border mb-8" />
+
+                {/* ETAPE 3: PAIEMENT */}
+                <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2 dark:text-white">
+                  <span className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white flex items-center justify-center text-sm">3</span> 
+                  Validation & Paiement
+                </h3>
+
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50 dark:bg-dark-900 rounded-xl p-6 border border-gray-100 dark:border-dark-border">
+                  <div>
+                    <div className="text-gray-500 text-sm mb-1">Montant total pour {campaignWeeks} semaine{campaignWeeks > 1 ? 's' : ''}</div>
+                    <div className="font-display font-extrabold text-[2rem] text-gray-900 dark:text-white leading-none">
+                      {getCampaignPrice(campaignWeeks).toLocaleString('fr-FR')} <span className="text-xl text-gray-400 font-normal">FCFA</span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={async () => {
+                      if (!fileHero && !fileFooter && !fileCatalogue && !fileProduct) {
+                        show("⚠️ Veuillez uploader au moins un visuel avant de payer.");
+                        return;
+                      }
+                      
+                      if (isKonnecta) {
+                        const newCampaign = {
+                          hero: fileHero,
+                          footer: fileFooter,
+                          catalogue: fileCatalogue,
+                          product: fileProduct,
+                          url: campaignUrl,
+                          weeks: campaignWeeks,
+                          startDate: campaignStartDate,
+                          status: 'active'
+                        };
+                        const newPurchase = {
+                          id: `PUB-${Date.now()}`,
+                          date: new Date().toISOString(),
+                          type: 'Campagne Publicitaire',
+                          amount: getCampaignPrice(campaignWeeks),
+                          status: 'Complété'
+                        };
+                        
+                        localStorage.setItem('annonceid_campaign', JSON.stringify(newCampaign));
+                        const allPurchases = [newPurchase, ...purchases];
+                        localStorage.setItem('annonceid_purchases', JSON.stringify(allPurchases));
+                        
+                        setActiveCampaign(newCampaign);
+                        setPurchases(allPurchases);
+
+                        show("🎉 Campagne validée automatiquement (Privilège Super Admin).");
+                        setFileHero(null);
+                        setFileFooter(null);
+                        setFileCatalogue(null);
+                        setFileProduct(null);
+                        setCampaignWeeks(1);
+                        setTimeout(() => handlePanelChange("campaigns"), 1500);
+                        return;
+                      }
+
+                      show("Redirection vers PayTech...");
+                      try {
+                        const res = await fetch("/api/paytech", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            amount: getCampaignPrice(campaignWeeks),
+                            itemName: `Campagne Publicitaire ${campaignWeeks} semaine(s)`,
+                            refCommand: `PUB-${Date.now()}`
+                          })
+                        });
+                        const data = await res.json();
+                        if (data.redirect_url) {
+                          window.location.href = data.redirect_url;
+                        } else {
+                          show("Erreur lors de l'initialisation du paiement.");
+                        }
+                      } catch (error) {
+                        show("Erreur de connexion avec PayTech.");
+                      }
+                    }}
+                    className="btn btn-green w-full md:w-auto px-8 py-4 text-lg shadow-lg hover:shadow-xl transition-all"
+                  >
+                    Payer avec PayTech
+                  </button>
+                </div>
+                
+                <p className="text-center text-[.75rem] text-gray-400 mt-4">
+                  Votre campagne sera soumise à validation et débutera immédiatement après acceptation.
+                </p>
+              </div>
+                </>
+              ) : (
+                <div className="p-8 md:p-10 text-center animate-fadeUp">
+                  <div className="text-4xl mb-4">🚀</div>
+                  <h3 className="font-display font-bold text-2xl mb-2 text-green">Campagne Active !</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-8">Votre bannière est actuellement diffusée sur la plateforme.</p>
+                  
+                  <div className="grid md:grid-cols-2 gap-6 text-left mb-6">
+                    <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
+                      <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Accueil (Haut)</div>
+                      {activeCampaign.hero?.startsWith('data:video') ? <video src={activeCampaign.hero} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.hero} className="w-full h-24 object-cover rounded-lg" />}
+                    </div>
+                    <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
+                      <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Accueil (Bas)</div>
+                      {activeCampaign.footer?.startsWith('data:video') ? <video src={activeCampaign.footer} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.footer} className="w-full h-24 object-cover rounded-lg" />}
+                    </div>
+                    <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
+                      <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Catalogue</div>
+                      {activeCampaign.catalogue?.startsWith('data:video') ? <video src={activeCampaign.catalogue} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.catalogue} className="w-full h-24 object-cover rounded-lg" />}
+                    </div>
+                    <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
+                      <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Page Produit</div>
+                      {activeCampaign.product?.startsWith('data:video') ? <video src={activeCampaign.product} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.product} className="w-full h-24 object-cover rounded-lg" />}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border text-left">
+                     <div>
+                       <span className="text-sm font-bold text-gray-500 dark:text-gray-400">Date de début :</span>
+                       <div className="font-bold dark:text-white">{new Date(activeCampaign.startDate).toLocaleDateString('fr-FR')}</div>
+                     </div>
+                     <div>
+                       <span className="text-sm font-bold text-gray-500 dark:text-gray-400">Durée :</span>
+                       <div className="font-bold dark:text-white">{activeCampaign.weeks} semaine{activeCampaign.weeks > 1 ? 's' : ''}</div>
+                     </div>
+                  </div>
+                  
+                  {isKonnecta && (
+                    <button 
+                      onClick={() => {
+                        localStorage.removeItem('annonceid_campaign');
+                        setActiveCampaign(null);
+                        show("Campagne annulée (Test).");
+                      }}
+                      className="mt-8 text-brand-red text-sm font-bold underline hover:text-red-700"
+                    >
+                      Arrêter la campagne (Bouton de Test)
+                    </button>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
+        {panel === "purchases" && (
+          <div className="animate-fadeUp max-w-[800px] mx-auto">
+            <h2 className="mb-6 font-display text-[1.4rem] font-extrabold dark:text-white">Historique de mes achats</h2>
+            {purchases.length === 0 ? (
+              <EmptyState
+                title="Aucune transaction pour le moment"
+                description="Vos achats de boosts et de campagnes apparaîtront ici."
+                emoji="🧾"
+                ctaLabel="Booster une annonce"
+                ctaHref="/publier"
+              />
+            ) : (
+              <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-dark-900 border-b border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 text-sm">
+                      <th className="p-4 font-semibold">ID Commande</th>
+                      <th className="p-4 font-semibold">Date</th>
+                      <th className="p-4 font-semibold">Description</th>
+                      <th className="p-4 font-semibold">Montant</th>
+                      <th className="p-4 font-semibold">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchases.map((p, i) => (
+                      <tr key={i} className="border-b border-gray-100 dark:border-dark-border last:border-0 hover:bg-gray-50 dark:hover:bg-dark-900 transition">
+                        <td className="p-4 font-mono text-sm text-gray-600 dark:text-gray-300">{p.id}</td>
+                        <td className="p-4 text-sm text-gray-600 dark:text-gray-300">{new Date(p.date).toLocaleDateString('fr-FR')}</td>
+                        <td className="p-4 text-sm font-semibold text-gray-900 dark:text-white">{p.type}</td>
+                        <td className="p-4 text-sm font-bold text-gray-900 dark:text-white">{p.amount.toLocaleString('fr-FR')} FCFA</td>
+                        <td className="p-4">
+                          <span className="bg-green/10 text-green px-2.5 py-1 rounded-full text-[.75rem] font-bold border border-green/20">
+                            {p.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {panel === "showroom" && (
+          <div className="animate-fadeUp w-full max-w-[1200px] mx-auto flex flex-col lg:flex-row gap-8">
+            
+            {/* Colonne Gauche : Editeur */}
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="font-display text-[1.6rem] font-extrabold dark:text-white">Ma Boutique</h2>
+                <div className="flex items-center gap-2 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border px-4 py-2 rounded-full shadow-sm">
+                  <span className="text-sm font-semibold text-gray-500 hidden sm:inline">annonce.id/store/{displayName.toLowerCase().replace(/\s+/g, '-')}</span>
+                  <span className="text-sm font-semibold text-gray-500 sm:hidden">Lien boutique</span>
+                  <button onClick={() => show("Lien copié !")} className="text-gray-400 hover:text-green" title="Copier le lien">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-4 border-b border-gray-200 dark:border-dark-border mb-6 overflow-x-auto">
+                <button className="px-4 py-2 border-b-2 border-green text-green font-bold text-sm whitespace-nowrap">Ma Boutique</button>
+                <button className="px-4 py-2 border-b-2 border-transparent text-gray-500 font-semibold text-sm hover:text-gray-700 whitespace-nowrap">Design</button>
+              </div>
+
+              {/* Profile Card Editor */}
+              <div className="rounded-2xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6 relative">
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-dark-900 border border-gray-200 dark:border-dark-border flex items-center justify-center text-2xl shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition group relative">
+                    <img src={avatarUrl} alt="logo" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                      <span className="text-white text-[.6rem] font-bold">Modifier</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 w-full">
+                    <div className="flex justify-between items-start">
+                      <div className="w-full">
+                        <input className="showroom-name-input font-bold text-lg bg-transparent border-b border-transparent hover:border-gray-300 dark:text-white focus:outline-none focus:border-green mb-1 w-full" defaultValue={displayName} />
+                        <div className="text-sm text-gray-500">@{displayName.toLowerCase().replace(/\s+/g, '')}</div>
+                      </div>
+                      <button className="text-gray-400 hover:text-green ml-2">✏️</button>
+                    </div>
+                    
+                    <textarea 
+                      className="showroom-bio-input w-full text-sm mt-3 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-dark-border focus:border-green focus:outline-none resize-none text-gray-600 dark:text-gray-300 p-2 rounded -ml-2" 
+                      rows={2} 
+                      defaultValue="Boutique en ligne 🛍️ Vente de produits & services de qualité 📱 Commande rapide"
+                    />
+
+                    {/* Social links */}
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {['instagram', 'tiktok', 'youtube', 'whatsapp', 'facebook'].map(social => (
+                        <button key={social} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-900 flex items-center justify-center text-gray-400 hover:text-green hover:bg-green/10 transition">
+                          {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : social === 'facebook' ? 'f' : social === 'tiktok' ? '♪' : '▶'}
+                        </button>
+                      ))}
+                      <button className="w-8 h-8 rounded-full border border-dashed border-gray-300 dark:border-dark-border flex items-center justify-center text-gray-400 hover:border-green hover:text-green transition">+</button>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Save Button for Showroom */}
+                <div className="mt-6 flex justify-end">
+                  <button 
+                    onClick={async () => {
+                      if (!user) return;
+                      const nameInput = document.querySelector<HTMLInputElement>('.showroom-name-input');
+                      const bioInput = document.querySelector<HTMLTextAreaElement>('.showroom-bio-input');
+                      
+                      const { error } = await supabase.from('profiles').update({
+                        full_name: nameInput?.value || displayName,
+                        bio: bioInput?.value || '',
+                      }).eq('id', user.id);
+                      
+                      if (error) {
+                        show("Erreur lors de la sauvegarde : " + error.message);
+                      } else {
+                        show("✓ Boutique sauvegardée avec succès !");
+                      }
+                    }} 
+                    className="btn btn-green btn-sm shadow-sm"
+                  >
+                    Sauvegarder la boutique
+                  </button>
+                </div>
+              </div>
+
+              <Link href="/publier" className="w-full py-4 rounded-xl bg-green text-white font-bold text-[1.1rem] shadow-lg shadow-green/20 hover:bg-green-600 transition mb-6 flex justify-center items-center gap-2">
+                <span className="text-2xl leading-none -mt-1">+</span> Ajouter une annonce
+              </Link>
+
+              {/* Draggable Products List */}
+              <div className="space-y-3">
+                {ads.length > 0 ? ads.slice(0, 5).map((prod, idx) => (
+                  <div key={prod.id || idx} className="flex items-center gap-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border rounded-xl p-3 shadow-sm cursor-move hover:border-green transition">
+                    <div className="text-gray-300 flex flex-col gap-1 px-1">
+                      <div className="w-1 h-1 bg-current rounded-full"></div>
+                      <div className="w-1 h-1 bg-current rounded-full"></div>
+                      <div className="w-1 h-1 bg-current rounded-full"></div>
+                    </div>
+                    <img src={prod.image || "https://placehold.co/150x150?text=Sans+Image"} alt={prod.title} className="w-14 h-14 rounded-lg object-cover" />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-sm text-gray-900 dark:text-white uppercase truncate">{prod.title}</h4>
+                      <div className="text-sm font-semibold text-green mt-0.5">{prod.price} FCFA</div>
+                    </div>
+                    <button className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white">⋮</button>
+                  </div>
+                )) : (
+                  <div className="text-center p-6 bg-gray-50 dark:bg-dark-900 rounded-xl text-gray-500 text-sm">
+                    Vous n'avez pas encore d'annonces en ligne.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Colonne Droite : Live Preview */}
+            <div className="hidden lg:flex w-[350px] shrink-0 justify-center items-start pt-4 relative">
+              {/* Phone Mockup Frame */}
+              <div className="relative w-full h-[700px] bg-white dark:bg-dark-900 rounded-[3rem] border-[12px] border-gray-900 dark:border-black shadow-2xl overflow-hidden flex flex-col">
+                {/* iPhone Notch */}
+                <div className="absolute top-0 inset-x-0 h-6 flex justify-center z-50">
+                  <div className="w-32 h-6 bg-gray-900 dark:bg-black rounded-b-2xl"></div>
+                </div>
+                
+                {/* Mockup Content (The Store Page) */}
+                <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-dark-950 scrollbar-hide pt-6">
+                  {/* Banner */}
+                  <div className="h-32 bg-gradient-to-r from-orange-400 to-red-500 relative">
+                    <div className="absolute inset-0 bg-black/10 flex items-center justify-center text-white/70 text-xs font-bold uppercase tracking-widest border border-dashed border-white/30 m-4 rounded">Bannière</div>
+                  </div>
+                  
+                  {/* Profile */}
+                  <div className="px-5 pb-6 relative text-center">
+                    <img src={avatarUrl} alt="Avatar" className="w-20 h-20 rounded-full border-4 border-white dark:border-dark-950 object-cover mx-auto -mt-10 relative z-10 bg-white" />
+                    <h2 className="font-bold text-lg mt-2 text-gray-900 dark:text-white leading-tight">{displayName}</h2>
+                    <p className="text-[.65rem] text-white bg-green px-2 py-0.5 rounded-full font-bold inline-block mt-1">✓ Vendeur Pro</p>
+                    <p className="text-[.75rem] text-gray-600 dark:text-gray-400 mt-3 mb-4 leading-relaxed">
+                      Boutique en ligne 🛍️ Vente de produits & services de qualité 📱 Commande rapide
+                    </p>
+                    
+                    <div className="flex justify-center gap-2">
+                      {['whatsapp', 'instagram', 'tiktok'].map(social => (
+                         <div key={social} className="w-8 h-8 rounded-full bg-white dark:bg-dark-800 shadow-sm border border-gray-100 dark:border-dark-border flex items-center justify-center text-[.8rem] text-gray-600 hover:text-green cursor-pointer">
+                           {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : '♪'}
+                         </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Listings */}
+                  <div className="px-4 pb-8 space-y-4">
+                    {ads.length > 0 ? ads.slice(0, 5).map((prod, idx) => (
+                      <div key={prod.id || idx} className="bg-white dark:bg-dark-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-dark-border">
+                        <img src={prod.image || "https://placehold.co/400x300?text=Sans+Image"} alt={prod.title} className="w-full h-40 object-cover" />
+                        <div className="p-4">
+                          <h4 className="font-bold text-[.85rem] text-gray-900 dark:text-white uppercase leading-snug">{prod.title}</h4>
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="text-[.9rem] font-extrabold text-green">{prod.price} FCFA</div>
+                            <button className="bg-orange-500 text-white text-[.65rem] font-bold px-3 py-1.5 rounded-full">Acheter</button>
+                          </div>
+                        </div>
+                      </div>
+                    )) : (
+                       <div className="text-center p-6 text-gray-500 text-xs">
+                         Votre boutique est vide.
+                       </div>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {panel === "credits" && (
+          <div className="animate-fadeUp max-w-[1000px] mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="font-display text-[1.6rem] font-extrabold dark:text-white mb-2">Acheter des Crédits</h2>
+              <p className="text-sm text-gray-500">Obtenez plus de visibilité en utilisant vos crédits pour booster vos annonces.</p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-6">
+              {[
+                { name: "Pack Découverte", credits: 50, price: "5 000 FCFA", popular: false, color: "border-gray-200 dark:border-dark-border" },
+                { name: "Pack Pro", credits: 150, price: "12 000 FCFA", popular: true, color: "border-orange-500 shadow-lg scale-105" },
+                { name: "Pack VIP", credits: 500, price: "35 000 FCFA", popular: false, color: "border-gold" },
+              ].map((pack, idx) => (
+                <div key={idx} className={`relative rounded-2xl border-2 bg-white dark:bg-dark-800 p-6 flex flex-col ${pack.color}`}>
+                  {pack.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-3 py-1 text-[.65rem] font-bold uppercase tracking-widest rounded-full">Populaire</span>}
+                  <div className="text-center mb-6">
+                    <h3 className="font-bold text-gray-500 dark:text-gray-400 mb-2">{pack.name}</h3>
+                    <div className="text-4xl font-extrabold text-gray-900 dark:text-white mb-1">{pack.credits} <span className="text-lg">Crédits</span></div>
+                    <div className="text-xl font-bold text-green">{pack.price}</div>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-1 text-sm text-gray-600 dark:text-gray-300">
+                    <li className="flex gap-2">✓ Validité illimitée</li>
+                    <li className="flex gap-2">✓ Boosts applicables instantanément</li>
+                    <li className="flex gap-2">✓ Priorité support client</li>
+                  </ul>
+                  <button onClick={() => show(`Redirection pour l'achat de ${pack.credits} crédits`)} className={`w-full py-3 rounded-lg font-bold transition ${pack.popular ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700"}`}>Acheter maintenant</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {panel === "alerts" && (
+          <div className="animate-fadeUp max-w-[800px] mx-auto">
+            <h2 className="mb-6 font-display text-[1.4rem] font-extrabold dark:text-white">Gérer mes alertes</h2>
+            <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm">
+              <div className="space-y-6">
+                {[
+                  { title: "Nouveaux messages", desc: "Soyez alerté par email lorsqu'un acheteur vous contacte.", active: true },
+                  { title: "Annonces expirées", desc: "Recevez un rappel 48h avant l'expiration de vos annonces.", active: true },
+                  { title: "Statistiques mensuelles", desc: "Recevez un rapport complet sur les vues de vos annonces.", active: false },
+                  { title: "Alertes de recherche", desc: "Notification si une annonce correspond à vos critères enregistrés.", active: true },
+                  { title: "Promotions & Nouveautés", desc: "Actualités de la plateforme et offres spéciales sur les boosts.", active: false },
+                ].map((alert, idx) => (
+                  <div key={idx} className="flex items-center justify-between gap-4 pb-6 border-b border-gray-100 dark:border-dark-border last:border-0 last:pb-0">
+                    <div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-sm">{alert.title}</h4>
+                      <p className="text-xs text-gray-500 mt-1">{alert.desc}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input type="checkbox" className="sr-only peer" defaultChecked={alert.active} />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-dark-900 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green"></div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {panel === "faq" && (
+          <div className="animate-fadeUp max-w-[800px] mx-auto">
+            <h2 className="mb-2 font-display text-[1.4rem] font-extrabold dark:text-white">Foire Aux Questions</h2>
+            <p className="mb-6 text-sm text-gray-500">Trouvez rapidement des réponses à vos questions les plus fréquentes.</p>
+            
+            <div className="space-y-4">
+              {[
+                { q: "Comment publier une annonce gratuitement ?", a: "Vous avez droit à 2 annonces gratuites par mois. Rendez-vous dans la section 'Publier une annonce', remplissez le formulaire, et sélectionnez l'option gratuite à la dernière étape." },
+                { q: "Quels sont les avantages du mode Premium ?", a: "Le mode Premium place votre annonce en tête de liste, lui ajoute un badge 'VIP', et augmente sa visibilité de 500% par rapport à une annonce classique." },
+                { q: "Comment modifier ou supprimer mon annonce ?", a: "Allez dans 'Gérer mes annonces'. Cliquez sur les boutons 'Modifier' ou 'Supprimer' situés à côté de l'annonce concernée." },
+                { q: "Les paiements par Orange Money sont-ils sécurisés ?", a: "Oui, tous nos paiements sont cryptés et traités directement par l'API officielle de Wave et Orange Money." },
+              ].map((faq, idx) => (
+                <details key={idx} className="group rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-5 shadow-sm cursor-pointer">
+                  <summary className="font-bold text-gray-900 dark:text-white list-none flex justify-between items-center outline-none">
+                    {faq.q}
+                    <span className="transition group-open:rotate-180">▼</span>
+                  </summary>
+                  <div className="mt-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-dark-border pt-4">
+                    {faq.a}
+                  </div>
+                </details>
+              ))}
             </div>
           </div>
         )}
       </div>
 
+      <ConfirmModal 
+        open={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={() => show("Demande de suppression envoyée au support.")}
+        title="Supprimer votre compte ?"
+        description="Attention ! Cette action supprimera définitivement votre profil et toutes vos annonces. Voulez-vous continuer ?"
+        confirmLabel="Oui, supprimer"
+        danger
+      />
+
+      {/* Modal Suppression d'Annonce */}
+      <ConfirmModal 
+        open={!!adToDelete} 
+        onClose={() => setAdToDelete(null)}
+        onConfirm={handleDeleteAd}
+        title="Supprimer cette annonce ?"
+        description="Attention ! Cette action est irréversible. L'annonce sera définitivement supprimée de la plateforme."
+        confirmLabel="Oui, supprimer l'annonce"
+        danger
+      />
+
       {toast && (
-        <div className="fixed bottom-20 left-1/2 z-[9999] -translate-x-1/2 whitespace-nowrap rounded-[10px] border border-neon-gold bg-dark-900 px-5 py-2.5 text-[.88rem] font-medium text-white shadow-lg">
+        <div className="fixed bottom-20 left-1/2 z-[9999] -translate-x-1/2 whitespace-nowrap rounded-[10px] border border-neon-gold bg-dark-900 px-5 py-2.5 text-[.88rem] font-medium text-white shadow-lg animate-fadeUp">
           {toast}
         </div>
+      )}
+      {cropModalImage && cropModalZone && (
+        <ImageCropperModal
+          imageSrc={cropModalImage}
+          aspectRatio={cropModalZone === 'catalogue' || cropModalZone === 'product' ? 4 : 4} // Tous sont en 4:1 (1200x300 ou 800x200)
+          onCancel={() => {
+            setCropModalImage(null);
+            setCropModalZone(null);
+          }}
+          onCropDone={(base64) => {
+            if (cropModalZone === 'hero') setFileHero(base64);
+            if (cropModalZone === 'footer') setFileFooter(base64);
+            if (cropModalZone === 'catalogue') setFileCatalogue(base64);
+            if (cropModalZone === 'product') setFileProduct(base64);
+            setCropModalImage(null);
+            setCropModalZone(null);
+          }}
+        />
       )}
     </div>
   );
@@ -283,27 +1465,31 @@ export default function Dashboard() {
 
 function Kpi({ label, value, sub, up }: { label: string; value: string; sub: string; up?: boolean }) {
   return (
-    <div className="relative overflow-hidden rounded-lg border-[1.5px] border-gray-100 bg-white p-4">
-      <div className="text-[.75rem] text-gray-500">{label}</div>
-      <div className="my-1 font-display text-[1.6rem] font-extrabold leading-none">{value}</div>
-      <div className={`text-[.72rem] ${up ? "text-[#22c55e]" : "text-gray-500"}`}>{sub}</div>
+    <div className="relative overflow-hidden rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4">
+      <div className="text-[.75rem] text-gray-500 dark:text-white/60">{label}</div>
+      <div className="my-1 font-display text-[1.6rem] font-extrabold leading-none dark:text-white">{value}</div>
+      <div className={`text-[.72rem] ${up ? "text-green dark:text-neon-green font-bold" : "text-gray-500 dark:text-white/40"}`}>{sub}</div>
     </div>
   );
 }
+
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border-[1.5px] border-gray-100 bg-white p-5">
-      <h3 className="mb-3 font-display text-base font-bold">{title}</h3>
+    <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5">
+      <h3 className="mb-4 font-display text-base font-bold dark:text-white">{title}</h3>
       {children}
     </div>
   );
 }
-function Alert({ color, children }: { color: "red" | "green"; children: React.ReactNode }) {
-  return <div className={`flex items-center gap-2 rounded-[10px] border-l-4 bg-white px-4 py-3 text-[.83rem] ${color === "red" ? "border-brand-red" : "border-[#22c55e]"}`}>{children}</div>;
-}
+
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="border-b border-gray-100 bg-gray-50 p-3 text-left text-[.74rem] font-bold uppercase text-gray-700">{children}</th>;
+  return <th className="border-b border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-dark-900 p-3 text-left text-[.74rem] font-bold uppercase text-gray-700 dark:text-white/50">{children}</th>;
 }
-function ActBtn({ children, onClick, className = "" }: { children: React.ReactNode; onClick: () => void; className?: string }) {
-  return <button onClick={onClick} className={`rounded-md border border-gray-100 bg-white px-2.5 py-1 text-[.72rem] font-semibold text-gray-700 hover:border-gold ${className}`}>{children}</button>;
+
+function Alert({ color, children }: { color: string; children: React.ReactNode }) {
+  return (
+    <div className={`rounded-lg p-3 text-[.85rem] ${color === "green" ? "bg-green/10 text-green-dark dark:text-neon-green" : "bg-gray-100 dark:bg-dark-800 text-gray-800 dark:text-white"}`}>
+      {children}
+    </div>
+  );
 }

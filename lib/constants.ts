@@ -115,12 +115,38 @@ export const CATEGORIES: Category[] = [
     name: "Mode",
     icon: "👗",
     count: "28 900",
-    subs: ["Femme", "Homme", "Chaussures", "Sacs", "Bijoux"],
+    subs: ["Femme", "Homme", "Chaussures", "Sacs", "Accessoires"],
     fields: [
       { label: "Genre", type: "select", options: ["Femme", "Homme", "Unisexe", "Enfant"] },
       { label: "Taille", type: "select", options: ["XS", "S", "M", "L", "XL", "Sur mesure"] },
       { label: "Couleur", type: "text", placeholder: "Ex : Bleu" },
       { label: "Matière", type: "text", placeholder: "Ex : Coton wax" },
+    ],
+  },
+  {
+    slug: "montres-bijoux",
+    name: "Montres & Bijoux",
+    icon: "⌚",
+    count: "9 800",
+    subs: ["Montres", "Colliers & Pendentifs", "Bagues", "Boucles d'oreilles", "Bracelets", "Parures"],
+    fields: [
+      { label: "Type", type: "text", placeholder: "Ex : Montre automatique" },
+      { label: "Matière principale", type: "select", options: ["Or", "Argent", "Plaqué or", "Acier", "Cuir", "Autre"] },
+      { label: "Marque", type: "text", placeholder: "Ex : Rolex, Seiko..." },
+      { label: "État", type: "select", options: ["Neuf", "Très bon état", "Occasion"] },
+    ],
+  },
+  {
+    slug: "beaute-sante",
+    name: "Beauté & Santé",
+    icon: "💄",
+    count: "14 200",
+    subs: ["Parfums", "Cosmétiques", "Soins cheveux", "Soins peau", "Matériel beauté"],
+    fields: [
+      { label: "Type de produit", type: "text", placeholder: "Ex : Parfum" },
+      { label: "Marque", type: "text", placeholder: "Ex : Dior, Local..." },
+      { label: "État", type: "select", options: ["Neuf sous blister", "Neuf sans boîte", "Très bon état", "Occasion"] },
+      { label: "Contenance / Volume", type: "text", placeholder: "Ex : 100ml" },
     ],
   },
   {
@@ -226,12 +252,121 @@ export const CATEGORIES: Category[] = [
       { label: "Taille", type: "text", placeholder: "Ex : M" },
     ],
   },
+  {
+    slug: "art-artisanat",
+    name: "Art & Artisanat",
+    icon: "🎨",
+    count: "3 200",
+    subs: ["Tableaux & Peintures", "Sculptures", "Poterie", "Tissus & Wax", "Décoration locale"],
+    fields: [
+      { label: "Origine", type: "select", options: ["Fabrication locale", "Importé", "Fait main", "Industriel"] },
+      { label: "Matière", type: "text", placeholder: "Ex : Bois d'ébène, Cuir..." },
+      { label: "Style", type: "text", placeholder: "Ex : Abstrait, Traditionnel..." },
+    ],
+  },
+  {
+    slug: "loisirs",
+    name: "Loisirs & Divertissement",
+    icon: "🎸",
+    count: "5 400",
+    subs: ["Instruments de musique", "Livres & Romans", "Jeux de société", "Films & Vinyles", "Collection"],
+    fields: [
+      { label: "Type", type: "text", placeholder: "Ex : Guitare acoustique" },
+      { label: "État", type: "select", options: ["Neuf", "Très bon état", "Bon état", "Usagé"] },
+      { label: "Marque / Éditeur", type: "text", placeholder: "Ex : Yamaha, Hachette..." },
+    ],
+  },
+  {
+    slug: "bebe-enfant",
+    name: "Bébé & Enfant",
+    icon: "🧸",
+    count: "11 500",
+    subs: ["Vêtements enfant", "Jouets", "Poussettes & Sièges", "Mobilier bébé", "Puériculture"],
+    fields: [
+      { label: "Âge", type: "select", options: ["0-12 mois", "1-3 ans", "4-7 ans", "8-12 ans", "Toutes tailles"] },
+      { label: "Genre", type: "select", options: ["Fille", "Garçon", "Mixte"] },
+      { label: "État", type: "select", options: ["Neuf", "Très bon état", "Bon état", "Occasion"] },
+    ],
+  },
+  {
+    slug: "materiaux-pro",
+    name: "Matériaux & Pro",
+    icon: "🧱",
+    count: "8 900",
+    subs: ["Matériaux de construction", "Outillage manuel", "Machines industrielles", "Mobilier bureau", "Équipement médical"],
+    fields: [
+      { label: "État", type: "select", options: ["Neuf", "Occasion", "Pour pièces"] },
+      { label: "Quantité", type: "number", placeholder: "Ex : 50" },
+      { label: "Marque / Fabricant", type: "text", placeholder: "Ex : Sococim, Bosch..." },
+      { label: "Livraison", type: "select", options: ["Possible", "À récupérer sur place"] },
+    ],
+  },
 ];
 
 export const categoryBySlug = (slug: string) =>
   CATEGORIES.find((c) => c.slug === slug);
 export const categoryByName = (name: string) =>
   CATEGORIES.find((c) => c.name === name);
+
+// ───────── Villes et Régions (Sénégal) ─────────
+export const SENEGAL_REGIONS = [
+  {
+    name: "Dakar",
+    communes: ["Plateau", "Médina", "Almadies", "Parcelles Assainies", "Grand Dakar", "Pikine", "Thiaroye", "Yeumbeul", "Guédiawaye", "Rufisque", "Sangalkam", "Diamniadio", "Keur Massar", "Jaxaay", "Autre"]
+  },
+  {
+    name: "Thiès",
+    communes: ["Thiès Ville", "Mbour", "Tivaouane", "Saly", "Joal-Fadiouth", "Autre"]
+  },
+  {
+    name: "Diourbel",
+    communes: ["Diourbel Ville", "Touba", "Mbacké", "Bambey", "Autre"]
+  },
+  {
+    name: "Saint-Louis",
+    communes: ["Saint-Louis Ville", "Richard-Toll", "Dagana", "Podor", "Autre"]
+  },
+  {
+    name: "Ziguinchor",
+    communes: ["Ziguinchor Ville", "Bignona", "Oussouye", "Cap Skirring", "Autre"]
+  },
+  {
+    name: "Kaolack",
+    communes: ["Kaolack Ville", "Nioro", "Guinguinéo", "Autre"]
+  },
+  {
+    name: "Tambacounda",
+    communes: ["Tambacounda Ville", "Bakel", "Goudiry", "Koumpentoum", "Autre"]
+  },
+  {
+    name: "Fatick",
+    communes: ["Fatick Ville", "Foundiougne", "Gossas", "Autre"]
+  },
+  {
+    name: "Kolda",
+    communes: ["Kolda Ville", "Vélingara", "Médina Yoro Foulah", "Autre"]
+  },
+  {
+    name: "Louga",
+    communes: ["Louga Ville", "Kébémer", "Linguère", "Autre"]
+  },
+  {
+    name: "Matam",
+    communes: ["Matam Ville", "Kanel", "Ranérou", "Autre"]
+  },
+  {
+    name: "Kaffrine",
+    communes: ["Kaffrine Ville", "Birkelane", "Koungheul", "Malem Hodar", "Autre"]
+  },
+  {
+    name: "Kédougou",
+    communes: ["Kédougou Ville", "Salemata", "Saraya", "Autre"]
+  },
+  {
+    name: "Sédhiou",
+    communes: ["Sédhiou Ville", "Bounkiling", "Goudomp", "Autre"]
+  }
+];
 
 // ───────── Boosts (section 10.6) ─────────
 export type Boost = {

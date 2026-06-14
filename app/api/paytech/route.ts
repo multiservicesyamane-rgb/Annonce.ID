@@ -6,9 +6,12 @@ const PAYTECH_SECRET_KEY = process.env.PAYTECH_API_SECRET!;
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { amount, itemName, refCommand } = body;
+    const { amount, itemName, refCommand, listingId } = body;
 
     const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin).trim();
+
+    const isDev = process.env.NODE_ENV !== "production";
+    const prodDomain = "https://annonce-id.vercel.app";
 
     const paymentData = {
       item_name: itemName || "Boost Annonce",
@@ -17,9 +20,9 @@ export async function POST(req: Request) {
       ref_command: refCommand || `CMD-${Date.now()}`,
       command_name: "Paiement Boost Annonce.ID",
       env: "test", // Changer en "live" en production
-      ipn_url: `${baseUrl}/api/paytech/ipn`,
-      success_url: `${baseUrl}/paiement/succes`,
-      cancel_url: `${baseUrl}/paiement/erreur`,
+      ipn_url: isDev ? `${prodDomain}/api/paytech/ipn` : `${baseUrl}/api/paytech/ipn`,
+      success_url: (isDev ? `${prodDomain}/paiement/succes` : `${baseUrl}/paiement/succes`) + (listingId ? `?listing_id=${listingId}` : ""),
+      cancel_url: isDev ? `${prodDomain}/paiement/erreur` : `${baseUrl}/paiement/erreur`,
     };
 
     const response = await fetch("https://paytech.sn/api/payment/request-payment", {

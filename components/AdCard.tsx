@@ -20,15 +20,15 @@ export default function AdCard({ ad }: { ad: Listing }) {
         <Image
           src={ad.image}
           alt={ad.title}
-          width={400}
-          height={300}
+          width={300}
+          height={225}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.05]"
         />
         {/* Subtle overlay on hover to make text/buttons pop */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         
         {/* Favorite Button */}
-        <FavButton className="absolute right-3 top-3 bg-white/90 backdrop-blur-md p-1.5 rounded-full hover:bg-white text-gray-400 hover:text-red-500 shadow-sm transition-all" />
+        <FavButton adId={ad.id} className="absolute right-3 top-3 bg-white/90 backdrop-blur-md p-1.5 rounded-full hover:bg-white text-gray-400 hover:text-red-500 shadow-sm transition-all" />
         
         {/* Badges */}
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
@@ -47,29 +47,29 @@ export default function AdCard({ ad }: { ad: Listing }) {
         {/* Image count or tags can go bottom-left if needed */}
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[.65rem] font-bold uppercase tracking-wide text-gray-500">
+      <div className="flex flex-1 flex-col p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[.6rem] font-bold uppercase tracking-wide text-gray-500">
             {ad.category}
           </span>
-          <span className="shrink-0 text-[.65rem] font-medium text-gray-400">{ad.date}</span>
+          <span className="shrink-0 text-[.6rem] font-medium text-gray-400">{ad.date}</span>
         </div>
         
-        <h3 className="line-clamp-2 flex-1 text-[.95rem] font-bold leading-snug text-gray-900 group-hover:text-green transition-colors">
+        <h3 className="line-clamp-2 flex-1 text-[.85rem] font-bold leading-snug text-gray-900 group-hover:text-green transition-colors">
           {ad.title}
         </h3>
         
         <div
-          className={`mt-3 font-display text-[1.15rem] font-extrabold tracking-tight ${
+          className={`mt-2 font-display text-[1rem] font-extrabold tracking-tight ${
             ad.premium ? "text-gold-dark" : "text-gray-900"
           }`}
         >
-          {ad.price}
+          {ad.price} FCFA
         </div>
         
-        <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-          <div className="flex items-center gap-1.5 text-[.75rem] text-gray-500 font-medium">
-            <span className="text-[.9rem] opacity-70">📍</span>
+        <div className="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2.5">
+          <div className="flex items-center gap-1.5 text-[.7rem] text-gray-500 font-medium">
+            <span className="text-[.8rem] opacity-70">📍</span>
             <span className="truncate">{ad.location}</span>
           </div>
         </div>

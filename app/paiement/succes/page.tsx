@@ -1,7 +1,19 @@
-import Link from "next/link";
-import React from "react";
+"use client";
 
-export default function PaymentSuccess() {
+import Link from "next/link";
+import React, { useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+export default function PaymentSuccess({ searchParams }: { searchParams: { listing_id?: string } }) {
+  useEffect(() => {
+    if (searchParams.listing_id) {
+      const supabase = createClient();
+      supabase.from('listings').update({ status: 'active', is_premium: true }).eq('id', searchParams.listing_id).then(({ error }) => {
+        if (error) console.error("Error activating listing:", error);
+      });
+    }
+  }, [searchParams.listing_id]);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
       <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6">
@@ -9,7 +21,7 @@ export default function PaymentSuccess() {
       </div>
       <h1 className="font-display font-extrabold text-3xl text-gray-900 mb-4">Paiement Réussi !</h1>
       <p className="text-gray-500 max-w-md mx-auto mb-8">
-        Félicitations, votre paiement via PayTech a été validé avec succès. Votre annonce bénéficie désormais de son boost !
+        Félicitations, votre paiement via PayTech a été validé avec succès. Votre annonce est désormais en ligne et bénéficie de son boost !
       </p>
       <Link href="/dashboard" className="btn btn-green px-8 py-3 text-lg">
         Aller au tableau de bord

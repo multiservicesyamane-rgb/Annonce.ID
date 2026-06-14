@@ -21,6 +21,19 @@ export const metadata: Metadata = {
     description: "27 pays · 250 000+ annonces · Contact direct WhatsApp.",
   },
   robots: { index: true, follow: true },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    title: "Annonce.ID",
+    statusBarStyle: "default",
+    capable: true,
+  },
+};
+
+export const viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#1b4332" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0e14" }
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

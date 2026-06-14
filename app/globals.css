@@ -34,6 +34,47 @@ body {
   font-size: 15px;
 }
 
+/* ───────── DARK MODE ───────── */
+html.dark body {
+  background: #0A0E14;
+  color: #e8e8e4;
+}
+
+/* Dark mode overrides for common light elements */
+html.dark .bg-white { background-color: #111722 !important; }
+html.dark .bg-gray-50 { background-color: #1a2231 !important; }
+html.dark .bg-light { background-color: #0a0e14 !important; }
+html.dark .text-gray-900 { color: #e8e8e4 !important; }
+html.dark .text-gray-800 { color: #d0d0cc !important; }
+html.dark .text-gray-700 { color: #bebebb !important; }
+html.dark .text-gray-500 { color: #7c7c78 !important; }
+html.dark .border-gray-100 { border-color: #243044 !important; }
+html.dark .border-gray-200 { border-color: #243044 !important; }
+html.dark .border-gray-300 { border-color: #2a3654 !important; }
+
+/* Dark mode inputs */
+html.dark .input {
+  background-color: #1a2231 !important;
+  border-color: #243044 !important;
+  color: #e8e8e4 !important;
+}
+html.dark .input:focus {
+  background-color: #111722 !important;
+}
+
+/* Dark mode cards & sections */
+html.dark section {
+  color: #e8e8e4;
+}
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg {
+  box-shadow: 0 2px 8px rgba(0,0,0,.4) !important;
+}
+
+/* Footer, header already dark — no change needed */
+
+/* ───────── Reduced motion ───────── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -98,6 +139,27 @@ body {
     @apply w-full;
   }
 
+  /* Ripple effect on buttons */
+  .btn {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(255,255,255,.3) 10%, transparent 10%);
+    background-position: center;
+    background-size: 1000%;
+    opacity: 0;
+    transition: background-size .5s, opacity .3s;
+  }
+  .btn:active::after {
+    background-size: 100%;
+    opacity: 1;
+    transition: 0s;
+  }
+
   /* Badges */
   .badge {
     @apply inline-flex items-center gap-1 whitespace-nowrap rounded-[20px] px-2 py-0.5 text-[.68rem] font-bold uppercase tracking-wider;
@@ -141,4 +203,10 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
+
+/* ───────── Skeleton pulse animation ───────── */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }

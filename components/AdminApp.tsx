@@ -12,7 +12,7 @@ import { COUNTRIES } from "@/lib/constants";
  */
 const DEMO = { email: "admin@yamanetech.com", pass: "YamaneTech@2025", twofa: "1234" };
 
-type Panel = "overview" | "moderation" | "users" | "listings" | "ads" | "finance" | "countries" | "reports" | "settings";
+type Panel = "overview" | "moderation" | "users" | "listings" | "ads" | "finance" | "countries" | "categories" | "reports" | "logs" | "settings";
 const NAV: { id: Panel; label: string; badge?: number }[] = [
   { id: "overview", label: "📊 Vue globale" },
   { id: "moderation", label: "🛡️ Modération", badge: 8 },
@@ -21,7 +21,9 @@ const NAV: { id: Panel; label: string; badge?: number }[] = [
   { id: "ads", label: "📢 Pubs annonceurs" },
   { id: "finance", label: "💰 Finances" },
   { id: "countries", label: "🌍 Pays" },
+  { id: "categories", label: "📂 Catégories" },
   { id: "reports", label: "🚩 Signalements" },
+  { id: "logs", label: "📝 Audit Logs" },
   { id: "settings", label: "⚙ Réglages" },
 ];
 const CHART = [420, 380, 510, 490, 600, 560, 720, 680, 640, 800, 880, 820, 760, 920];
@@ -33,6 +35,13 @@ export default function AdminApp() {
   const [twofa, setTwofa] = useState("");
   const [panel, setPanel] = useState<Panel>("overview");
   const [toast, setToast] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handlePanelChange = (id: Panel) => {
+    setPanel(id);
+    setIsMobileMenuOpen(false);
+  };
+
   const show = (m: string) => {
     setToast(m);
     setTimeout(() => setToast(null), 2000);
@@ -90,33 +99,45 @@ export default function AdminApp() {
 
   return (
     <div className="min-h-screen bg-dark-900 text-white/85">
-      {/* Mobile nav */}
-      <div className="no-scrollbar flex gap-1.5 overflow-x-auto border-b border-dark-border bg-dark-800 px-2 py-2 lg:hidden">
-        {NAV.map((n) => (
-          <button key={n.id} onClick={() => setPanel(n.id)} className={`shrink-0 rounded-[20px] border px-3 py-1.5 text-[.76rem] font-semibold ${panel === n.id ? "border-neon-gold bg-neon-gold text-dark-900" : "border-dark-border bg-dark-700 text-white/70"}`}>
-            {n.label}
-          </button>
-        ))}
+      {/* Mobile top bar */}
+      <div className="sticky top-0 z-50 flex items-center justify-between border-b border-dark-border bg-dark-800 px-4 py-3 lg:hidden">
+        <div className="font-display font-extrabold text-white">🔐 Admin</div>
+        <button onClick={() => setIsMobileMenuOpen(true)} className="text-2xl text-white">☰</button>
       </div>
+
+      {/* Mobile overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 z-[1000] bg-black/60 lg:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
       <div className="flex min-h-screen">
         {/* Sidebar */}
-        <aside className="hidden w-[230px] shrink-0 flex-col border-r border-dark-border bg-dark-800 py-4 lg:flex">
-          <div className="mb-2 border-b border-dark-border px-5 pb-4">
-            <div className="font-display text-[1.1rem] font-extrabold text-white">🔐 YamaneTech</div>
-            <div className="text-[.72rem] text-neon-gold">Administration</div>
+        <aside className={`fixed inset-y-0 left-0 z-[1001] w-[260px] flex-col border-r border-dark-border bg-dark-800 shadow-2xl transition-transform duration-300 lg:static lg:flex lg:w-[230px] lg:translate-x-0 lg:shadow-none ${isMobileMenuOpen ? "translate-x-0 flex" : "-translate-x-full hidden lg:flex"}`}>
+          <div className="flex items-center justify-between border-b border-dark-border px-5 pb-4 pt-4">
+            <div>
+              <div className="font-display text-[1.1rem] font-extrabold text-white">🔐 YamaneTech</div>
+              <div className="text-[.72rem] text-neon-gold">Administration</div>
+            </div>
+            <button onClick={() => setIsMobileMenuOpen(false)} className="text-xl text-white/50 lg:hidden">✕</button>
           </div>
-          {NAV.map((n) => (
-            <button key={n.id} onClick={() => setPanel(n.id)} className={`flex items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-left text-[.85rem] transition ${panel === n.id ? "border-neon-gold bg-neon-gold/[.08] text-neon-gold" : "border-transparent text-white/65 hover:bg-white/[.04] hover:text-white"}`}>
-              {n.label}
-              {n.badge && <span className="ml-auto rounded-[10px] bg-neon-magenta px-1.5 py-0.5 text-[.6rem] text-white">{n.badge}</span>}
-            </button>
-          ))}
-          <Link href="/" className="mt-auto px-5 pt-4 text-[.82rem] text-neon-magenta">🚪 Quitter l&apos;admin</Link>
+          <div className="flex-1 overflow-y-auto py-2">
+            {NAV.map((n) => (
+              <button key={n.id} onClick={() => handlePanelChange(n.id)} className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-left text-[.85rem] transition ${panel === n.id ? "border-neon-gold bg-neon-gold/[.08] text-neon-gold" : "border-transparent text-white/65 hover:bg-white/[.04] hover:text-white"}`}>
+                {n.label}
+                {n.badge && <span className="ml-auto rounded-[10px] bg-neon-magenta px-1.5 py-0.5 text-[.6rem] text-white">{n.badge}</span>}
+              </button>
+            ))}
+          </div>
+          <div className="p-5 border-t border-dark-border">
+            <Link href="/" className="text-[.82rem] text-neon-magenta flex items-center gap-2">🚪 Quitter l&apos;admin</Link>
+          </div>
         </aside>
 
         {/* Main */}
-        <main className="flex-1 overflow-x-hidden p-5 lg:p-8">
+        <main className="flex-1 overflow-x-hidden p-5 pt-8 lg:p-8">
           {panel === "overview" && (
             <div className="animate-fadeUp">
               <H1>Vue globale de la plateforme</H1>
@@ -240,6 +261,26 @@ export default function AdminApp() {
             </div>
           )}
 
+          {panel === "categories" && (
+            <div className="animate-fadeUp">
+              <H1>📂 Gestion des catégories</H1>
+              <button onClick={() => show("+ Nouvelle catégorie")} className="btn btn-neon btn-sm mb-4">+ Nouvelle catégorie</button>
+              <ATable head={["Catégorie", "Sous-catégories", "Annonces actives", "Statut", "Actions"]}>
+                {[
+                  ["Immobilier", "Appartements, Villas, Terrains...", "85 430", "🟢 Actif"],
+                  ["Véhicules", "Voitures, Motos, Pièces...", "62 100", "🟢 Actif"],
+                  ["Électronique", "Téléphones, Ordinateurs...", "45 800", "🟢 Actif"],
+                  ["Emploi", "Offres, Demandes...", "12 500", "🟢 Actif"],
+                ].map(([c, s, a, st]) => (
+                  <tr key={c} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
+                    <Td white>{c}</Td><Td><span className="text-[.75rem] text-white/50">{s}</span></Td><Td>{a}</Td><Td><span className="text-neon-green">{st}</span></Td>
+                    <Td><div className="flex gap-1.5"><AB onClick={() => show("Éditer")}>Éditer</AB><AB no onClick={() => show("Désactiver")}>Désactiver</AB></div></Td>
+                  </tr>
+                ))}
+              </ATable>
+            </div>
+          )}
+
           {panel === "reports" && (
             <div className="animate-fadeUp">
               <H1>🚩 Signalements</H1>
@@ -248,6 +289,33 @@ export default function AdminApp() {
                   <tr key={t} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
                     <Td white>{t}</Td><Td><span className="text-neon-magenta">{r}</span></Td><Td>{b}</Td>
                     <Td><div className="flex gap-1.5"><AB ok onClick={() => show("Traité")}>Traiter</AB><AB onClick={() => show("Ignoré")}>Ignorer</AB></div></Td>
+                  </tr>
+                ))}
+              </ATable>
+            </div>
+          )}
+
+          {panel === "logs" && (
+            <div className="animate-fadeUp">
+              <H1>📝 Logs système</H1>
+              <div className="mb-4 flex items-center justify-between">
+                <input className="input !bg-dark-800 !text-white !border-dark-border max-w-[300px]" placeholder="Rechercher dans les logs..." />
+                <button className="btn btn-outline btn-sm !text-white !border-dark-border">Exporter CSV</button>
+              </div>
+              <ATable head={["Date", "Action", "Utilisateur", "Détails", "IP"]}>
+                {[
+                  ["14/06 12:30", "Login", "admin@yamanetech.com", "Connexion réussie", "192.168.1.10"],
+                  ["14/06 12:15", "Modération", "admin@yamanetech.com", "Approbation annonce #4592", "192.168.1.10"],
+                  ["14/06 11:42", "Paiement", "Système", "Webhook Wave reçu pour #4592", "API"],
+                  ["14/06 11:10", "Paramètres", "admin@yamanetech.com", "Modification tarif Premium à 3500", "192.168.1.10"],
+                  ["14/06 10:05", "Bannissement", "moderator1@yamanetech.com", "Utilisateur #8902 banni (Spam)", "10.0.0.5"],
+                ].map(([d, a, u, det, ip], i) => (
+                  <tr key={i} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
+                    <Td white>{d}</Td>
+                    <Td><span className="text-neon-cyan">{a}</span></Td>
+                    <Td>{u}</Td>
+                    <Td>{det}</Td>
+                    <Td><span className="text-[.7rem] text-white/40 font-mono">{ip}</span></Td>
                   </tr>
                 ))}
               </ATable>

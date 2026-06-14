@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import AdCard from "./AdCard";
-import { LISTINGS } from "@/lib/data";
+import { Listing } from "@/lib/types";
 
 const FILTERS = [
   { label: "Toutes", value: "all" },
@@ -12,9 +12,9 @@ const FILTERS = [
   { label: "📱 Électronique", value: "Électronique" },
 ];
 
-export default function HomeRecent() {
+export default function HomeRecent({ initialListings }: { initialListings: Listing[] }) {
   const [filter, setFilter] = useState("all");
-  const list = filter === "all" ? LISTINGS : LISTINGS.filter((a) => a.category === filter);
+  const list = filter === "all" ? initialListings : initialListings.filter((a) => a.category === filter);
 
   return (
     <>

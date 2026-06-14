@@ -5,6 +5,7 @@ import Header from "./Header";
 import CategoryStrip from "./CategoryStrip";
 import Footer from "./Footer";
 import BottomNav from "./BottomNav";
+import { ToastProvider } from "./Toast";
 
 /**
  * Décide quels éléments de chrome afficher selon la route.
@@ -35,12 +36,12 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   const isAnnoncePage = pathname.startsWith("/annonce/");
 
   return (
-    <>
+    <ToastProvider>
       <Header />
       {showCatStrip && <CategoryStrip />}
       <main className={`min-h-[40vh] ${isAnnoncePage ? 'pb-20' : 'pb-20 lg:pb-0'}`}>{children}</main>
       {!noFooter && <Footer />}
       {!isAnnoncePage && <BottomNav />}
-    </>
+    </ToastProvider>
   );
 }

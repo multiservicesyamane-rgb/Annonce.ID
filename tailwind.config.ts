@@ -5,6 +5,7 @@ import type { Config } from "tailwindcss";
  * Hybride : fond sombre néon (hero/admin) + fond clair (listings).
  */
 const config: Config = {
+  darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -105,12 +106,17 @@ const config: Config = {
           from: { opacity: "0", transform: "translateY(16px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        skeletonPulse: {
+          "0%,100%": { opacity: "1" },
+          "50%": { opacity: "0.4" },
+        },
       },
       animation: {
         neonPulse: "neonPulse 2.5s ease infinite",
         gradShift: "gradShift 6s ease infinite",
         floatBlob: "floatBlob 14s ease infinite",
         fadeUp: "fadeUp .5s ease both",
+        skeletonPulse: "skeletonPulse 1.5s ease infinite",
       },
     },
   },

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { type Boost } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
 
-export default function PaymentFlow({ boost }: { boost: Boost }) {
+export default function PaymentFlow({ boost, listingId }: { boost: Boost, listingId?: string }) {
   const [processing, setProcessing] = useState(false);
   const total = boost.price; // PayTech handles their own fees generally, or keep simple
 
@@ -18,7 +18,8 @@ export default function PaymentFlow({ boost }: { boost: Boost }) {
         body: JSON.stringify({
           amount: total,
           itemName: `Boost ${boost.name}`,
-          refCommand: `AID-${Math.floor(Math.random() * 100000)}`
+          refCommand: `AID-${Math.floor(Math.random() * 100000)}`,
+          listingId: listingId
         })
       });
       const data = await res.json();

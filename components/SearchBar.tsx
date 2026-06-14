@@ -35,6 +35,30 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
     return () => document.removeEventListener("click", onClick);
   }, []);
 
+  // Simple fuzzy match function (Levenshtein distance <= 2)
+  function fuzzyMatch(str: string, query: string) {
+    const s = str.toLowerCase();
+    const q = query.toLowerCase();
+    if (s.includes(q)) return true;
+    
+    // Check if all words are present (order-agnostic)
+    const words = q.split(/\s+/).filter(Boolean);
+    if (words.length > 1 && words.every(w => s.includes(w))) return true;
+
+    // Simple typo tolerance for single words (>4 chars)
+    if (words.length === 1 && q.length > 4) {
+      let mismatches = 0;
+      let i = 0, j = 0;
+      while (i < s.length && j < q.length) {
+        if (s[i] === q[j]) { j++; } 
+        else { mismatches++; if (mismatches > 2) return false; }
+        i++;
+      }
+      return j === q.length || j >= q.length - 1;
+    }
+    return false;
+  }
+
   function liveSearch(value: string) {
     setQ(value);
     clearTimeout(debounce.current);
@@ -43,8 +67,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
         setSuggestions([]);
         return;
       }
-      const v = value.toLowerCase();
-      setSuggestions(LISTINGS.filter((a) => a.title.toLowerCase().includes(v)).slice(0, 5));
+      setSuggestions(LISTINGS.filter((a) => fuzzyMatch(a.title, value.trim())).slice(0, 5));
     }, 250);
   }
 

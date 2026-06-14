@@ -60,8 +60,8 @@ export default function Hero() {
       <div className="pointer-events-none absolute -bottom-16 left-[5%] h-[240px] w-[240px] animate-floatBlob rounded-full bg-neon-cyan opacity-40 blur-[60px]" />
 
       {/* Desktop Hero */}
-      <div className="hidden md:block relative z-10 mx-auto max-w-[1320px] px-4 pb-12 pt-10">
-        <h1 className="mb-2.5 font-display text-[clamp(1.8rem,5vw,3.4rem)] font-extrabold leading-[1.12] text-white">
+      <div className="hidden md:block relative z-10 mx-auto max-w-[1320px] px-4 pb-8 pt-6">
+        <h1 className="mb-2.5 font-display text-[clamp(1.5rem,4vw,2.8rem)] font-extrabold leading-[1.12] text-white">
           Le marché de
           <br />
           <em className="text-grad-gold not-italic [filter:drop-shadow(0_0_20px_rgba(255,201,60,.4))]">
@@ -89,22 +89,22 @@ export default function Hero() {
         </div>
 
         <div className="mt-7 flex flex-wrap gap-7">
-          <Counter to={250000} suffix="+" label="Annonces" />
-          <Counter to={27} label="Pays" />
-          <Counter to={1200000} label="Utilisateurs" />
-          <Counter to={98} suffix="%" label="Satisfaction" />
+          <Counter to={100} suffix="%" label="Gratuit" />
+          <Counter to={0} suffix=" FCFA" label="Commission" />
+          <Counter to={24} suffix="/7" label="Modération" />
+          <Counter to={27} label="Pays Couverts" />
         </div>
       </div>
 
       {/* Mobile Strategic Hero */}
-      <div className="md:hidden relative z-10 px-4 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="font-display text-[1.3rem] font-extrabold text-white leading-tight">
+      <div className="md:hidden relative z-10 px-4 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="font-display text-[1.15rem] font-extrabold text-white leading-tight">
             Trouvez ce que <br/><span className="text-neon-gold">vous cherchez</span>
           </h1>
           <div className="text-right">
-            <div className="text-[1.2rem] font-bold text-white">250K+</div>
-            <div className="text-[.6rem] uppercase text-white/60 tracking-wider">Annonces</div>
+            <div className="text-[1.05rem] font-bold text-white">100%</div>
+            <div className="text-[.55rem] uppercase text-white/60 tracking-wider">Gratuit</div>
           </div>
         </div>
         <SearchBar variant="hero" />

@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import AdCard from "./AdCard";
 import AdBanner from "./AdBanner";
 import type { Listing } from "@/lib/types";
-import { COUNTRIES } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
+import FilterDrawer from "./FilterDrawer";
+import EmptyState from "./EmptyState";
+import { SkeletonGrid } from "./SkeletonCard";
 
 /**
- * Vue listing avec filtres (sidebar desktop / drawer mobile), tri, chips,
- * et insertion d'une carte sponsorisée tous les 8 résultats (slot A4).
+ * Vue listing avec filtres (sidebar desktop / drawer mobile), tri,
+ * pagination (charger plus) et cartes sponsorisées.
  */
 export default function ListingView({
   initial,
@@ -20,89 +23,70 @@ export default function ListingView({
   title: string;
   subtitle?: string;
 }) {
-  const [country, setCountry] = useState("");
-  const [premiumOnly, setPremiumOnly] = useState(false);
-  const [maxPrice, setMaxPrice] = useState(500_000_000);
-  const [sort, setSort] = useState("recent");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [premiumOnly, setPremiumOnly] = useState(searchParams.get("premium") === "1");
+  const [minPrice, setMinPrice] = useState(Number(searchParams.get("min")) || 0);
+  const [maxPrice, setMaxPrice] = useState(Number(searchParams.get("max")) || 5_000_000);
+  const [sort, setSort] = useState(searchParams.get("sort") || "recent");
   const [drawer, setDrawer] = useState(false);
+  
+  // Pagination
+  const [visibleCount, setVisibleCount] = useState(12);
 
   const filtered = useMemo(() => {
     let list = initial.filter((l) => {
-      if (country && l.countryCode !== country) return false;
       if (premiumOnly && !l.premium) return false;
       const num = Number(l.price.replace(/[^0-9]/g, "")) || 0;
-      if (num > maxPrice) return false;
+      if (num < minPrice || num > maxPrice) return false;
+      // condition & sellerType logic could be added here if we had those fields in mock data
       return true;
     });
     if (sort === "price-asc") list = [...list].sort((a, b) => price(a) - price(b));
     if (sort === "price-desc") list = [...list].sort((a, b) => price(b) - price(a));
     if (sort === "views") list = [...list].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
     return list;
-  }, [initial, country, premiumOnly, maxPrice, sort]);
+  }, [initial, premiumOnly, minPrice, maxPrice, sort]);
 
-  const filters = (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
-        <span className="font-display text-[.95rem] font-bold">Filtrer</span>
-        <button
-          type="button"
-          onClick={() => {
-            setCountry("");
-            setPremiumOnly(false);
-            setMaxPrice(500_000_000);
-          }}
-          className="text-[.74rem] text-gray-500 hover:text-green"
-        >
-          Réinit.
-        </button>
-      </div>
+  const visibleListings = filtered.slice(0, visibleCount);
 
-      <Field label="Pays">
-        <select value={country} onChange={(e) => setCountry(e.target.value)} className="input">
-          <option value="">Tous les pays</option>
-          {COUNTRIES.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.flag} {c.name}
-            </option>
-          ))}
-        </select>
-      </Field>
+  function handleApplyFilters(filters: any) {
+    setPremiumOnly(filters.premiumOnly);
+    setMinPrice(filters.priceRange[0]);
+    setMaxPrice(filters.priceRange[1]);
+    setVisibleCount(12); // reset pagination
 
-      <Field label={`Prix max : ${formatNumber(maxPrice)} FCFA`}>
-        <input
-          type="range"
-          min={0}
-          max={500_000_000}
-          step={5_000_000}
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(Number(e.target.value))}
-          className="w-full accent-green"
-        />
-      </Field>
+    const params = new URLSearchParams(searchParams.toString());
+    if (filters.premiumOnly) params.set("premium", "1");
+    else params.delete("premium");
+    params.set("min", filters.priceRange[0].toString());
+    params.set("max", filters.priceRange[1].toString());
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }
 
-      <label className="flex cursor-pointer items-center gap-2 text-[.83rem] text-gray-700">
-        <input type="checkbox" checked={premiumOnly} onChange={(e) => setPremiumOnly(e.target.checked)} className="accent-green" />
-        ✦ Premium uniquement
-      </label>
-
-      {/* AD A3 */}
-      <AdBanner slot="A3" title="Pub A3" subtitle="300×250 · Sidebar" variant="night" />
-    </div>
-  );
+  function handleSortChange(newSort: string) {
+    setSort(newSort);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("sort", newSort);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }
 
   return (
     <div className="wrap py-5">
-      <div className="grid items-start gap-5 lg:grid-cols-[240px_1fr]">
-        <aside className="sticky top-[calc(64px+.75rem)] hidden rounded-lg border-[1.5px] border-gray-100 bg-white p-4 lg:block">
-          {filters}
-        </aside>
+      <div className="grid items-start gap-5 lg:grid-cols-[260px_1fr]">
+        <FilterDrawer 
+          open={drawer} 
+          onClose={() => setDrawer(false)} 
+          onApply={handleApplyFilters} 
+        />
 
-        <div>
+        <div className="min-w-0">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2.5">
             <div>
-              <h1 className="font-display text-[1.2rem] font-bold">{title}</h1>
+              <h1 className="font-display text-[1.2rem] font-bold dark:text-white">{title}</h1>
               {subtitle && <p className="text-[.82rem] text-gray-500">{subtitle}</p>}
-              <span className="text-[.85rem] text-gray-700">
+              <span className="text-[.85rem] text-gray-700 dark:text-white/70">
                 <b className="text-green">{formatNumber(filtered.length)}</b> annonce{filtered.length > 1 ? "s" : ""}
               </span>
             </div>
@@ -110,14 +94,14 @@ export default function ListingView({
               <button
                 type="button"
                 onClick={() => setDrawer(true)}
-                className="flex items-center gap-1.5 rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[.82rem] font-semibold text-gray-700 lg:hidden"
+                className="flex items-center gap-1.5 rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 px-3 py-2 text-[.82rem] font-semibold text-gray-700 dark:text-white/80 lg:hidden"
               >
                 ⚙ Filtrer
               </button>
               <select
                 value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                className="rounded-lg border-[1.5px] border-gray-100 bg-white px-3 py-2 text-[.8rem] outline-none"
+                onChange={(e) => handleSortChange(e.target.value)}
+                className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 px-3 py-2 text-[.8rem] dark:text-white outline-none"
               >
                 <option value="recent">Plus récent</option>
                 <option value="price-asc">Prix ↑</option>
@@ -128,34 +112,34 @@ export default function ListingView({
           </div>
 
           {filtered.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-300 bg-white py-16 text-center text-gray-500">
-              Aucune annonce ne correspond à ces filtres.
-            </div>
+            <EmptyState 
+              title="Aucune annonce trouvée" 
+              description="Modifiez vos filtres ou effectuez une nouvelle recherche pour trouver ce que vous cherchez." 
+              ctaLabel="Effacer les filtres"
+              onCtaClick={() => handleApplyFilters({ premiumOnly: false, priceRange: [0, 5000000] })}
+            />
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {filtered.map((ad, i) => (
-                <FragmentWithAd key={ad.id} ad={ad} index={i} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {visibleListings.map((ad, i) => (
+                  <FragmentWithAd key={ad.id} ad={ad} index={i} />
+                ))}
+              </div>
+              
+              {visibleCount < filtered.length && (
+                <div className="mt-8 flex justify-center">
+                  <button 
+                    onClick={() => setVisibleCount(v => v + 12)}
+                    className="btn btn-outline"
+                  >
+                    Charger plus d'annonces
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
-
-      {/* Drawer mobile */}
-      {drawer && (
-        <div className="fixed inset-0 z-[1500] lg:hidden" onClick={() => setDrawer(false)}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className="absolute bottom-0 left-0 right-0 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-white p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {filters}
-            <button type="button" onClick={() => setDrawer(false)} className="btn btn-green btn-block mt-4">
-              Voir les résultats
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -166,7 +150,12 @@ function FragmentWithAd({ ad, index }: { ad: Listing; index: number }) {
       <AdCard ad={ad} />
       {(index + 1) % 8 === 0 && (
         <div className="col-span-2 sm:col-span-3 lg:col-span-4">
-          <AdBanner slot="A4" title="Annonce sponsorisée" subtitle="In-grid · tous les 8 résultats" label="Sponsorisé" variant="green" />
+          <AdBanner 
+            slot={`listing-grid-${index}`} 
+            title="Mettez votre annonce en avant" 
+            subtitle="Apparaissez ici pour attirer plus d'acheteurs" 
+            variant="dark" 
+          />
         </div>
       )}
     </>

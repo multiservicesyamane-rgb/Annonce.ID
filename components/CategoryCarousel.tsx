@@ -7,8 +7,11 @@ import { CATEGORIES } from "@/lib/constants";
 export default function CategoryCarousel() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Create a "Tous" category for the beginning
+  const allCategory = { slug: "tous", name: "Tous", icon: "🌍", count: "100 000+" };
+  
   // Duplicate categories to ensure smooth infinite scrolling
-  const displayCats = [...CATEGORIES, ...CATEGORIES, ...CATEGORIES];
+  const displayCats = [allCategory, ...CATEGORIES, ...CATEGORIES, ...CATEGORIES];
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -55,7 +58,7 @@ export default function CategoryCarousel() {
       {displayCats.map((c, i) => (
         <Link
           key={`${c.slug}-${i}`}
-          href={`/categorie/${c.slug}`}
+          href={c.slug === "tous" ? "/recherche" : `/categorie/${c.slug}`}
           className="shrink-0 w-[140px] rounded-xl border-[1.5px] border-gray-100 bg-white px-3 py-5 text-center transition hover:-translate-y-1 hover:border-blue-500 hover:shadow-lg"
         >
           <span className="mb-2 block text-[2.2rem]">{c.icon}</span>

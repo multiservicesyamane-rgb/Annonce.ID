@@ -18,7 +18,7 @@ export default function Gallery({ images, title }: { images: string[]; title: st
           width={900}
           height={675}
           priority
-          className="aspect-[4/3] w-full cursor-zoom-in object-cover"
+          className="w-full aspect-square md:aspect-[4/3] md:max-h-[500px] cursor-zoom-in object-contain bg-gray-50 dark:bg-dark-800"
           onClick={() => setZoom(true)}
         />
         <button

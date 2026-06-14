@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import PublishWizard from "@/components/PublishWizard";
 
 export const metadata: Metadata = {
@@ -8,8 +9,10 @@ export const metadata: Metadata = {
 
 export default function PublierPage() {
   return (
-    <div className="mx-auto my-6 max-w-[760px] px-4">
-      <PublishWizard />
+    <div className="mx-auto my-6 w-full max-w-[1600px] px-4 lg:px-8 xl:px-12">
+      <Suspense fallback={<div className="p-10 text-center animate-pulse">Chargement de l'éditeur...</div>}>
+        <PublishWizard />
+      </Suspense>
     </div>
   );
 }

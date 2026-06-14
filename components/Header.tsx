@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import SearchBar from "./SearchBar";
+import DarkToggle from "./DarkToggle";
 import { createClient } from "@/lib/supabase/client";
 
 /** Header sticky sombre translucide. Le sélecteur pays est discret (détail en footer). */
 export default function Header() {
   const [user, setUser] = useState<any>(null);
+  const pathname = usePathname();
   const supabase = createClient();
 
   useEffect(() => {
@@ -21,25 +24,19 @@ export default function Header() {
       <div className="mx-auto flex min-h-[64px] max-w-[1320px] flex-wrap items-center gap-3 px-4 py-2 md:flex-nowrap">
         <Link href="/" className="flex shrink-0 items-center gap-1.5 font-display text-[1.3rem] font-extrabold text-white">
           Annonces <span className="text-neon-gold">West</span>
-          <span className="rounded-[5px] bg-grad-gold px-1.5 py-0.5 text-[.62rem] font-bold tracking-wide text-dark-900">
-            27 PAYS
-          </span>
         </Link>
 
-        <div className="order-3 w-full md:order-none md:flex-1">
-          <SearchBar variant="header" />
-        </div>
+        {!pathname.startsWith("/dashboard") && (
+          <div className="order-3 w-full hidden lg:block md:order-none md:flex-1">
+            <SearchBar variant="header" />
+          </div>
+        )}
 
         <div className="ml-auto flex shrink-0 items-center gap-3">
-          {/* Country Selector */}
-          <button className="hidden items-center gap-1 rounded bg-dark-800 px-2.5 py-1.5 text-[.75rem] font-bold text-gray-300 hover:text-white md:flex transition-colors border border-gray-700 hover:border-gray-600">
-            🇸🇳 SN ▾
-          </button>
+
           
           {/* Dark Mode Toggle */}
-          <button className="hidden h-[34px] w-[34px] items-center justify-center rounded-full text-gold hover:bg-white/10 md:flex transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-          </button>
+          <DarkToggle />
           
           {/* Notifications Bell */}
           {user && (
@@ -69,21 +66,36 @@ export default function Header() {
           {!user ? (
             <Link
               href="/connexion"
-              className="btn btn-outline btn-sm hidden border-gray-600 bg-dark-800 !text-white hover:bg-dark-700 md:inline-flex rounded-[8px]"
+              className="flex items-center justify-center h-9 w-9 md:w-auto md:px-3 md:py-1.5 border border-gray-600 bg-dark-800 text-white hover:bg-dark-700 rounded-[8px] transition-colors"
+              title="Connexion"
             >
-              Connexion
+              <span className="text-[1.1rem] md:mr-1.5">🔐</span>
+              <span className="hidden md:inline font-bold text-[.85rem]">Connexion</span>
             </Link>
           ) : (
-            <Link
-              href="/dashboard"
-              className="btn btn-outline btn-sm hidden border-green bg-green/10 !text-green hover:bg-green hover:!text-white md:inline-flex rounded-[8px] transition-colors"
-            >
-              👤 Mon Compte
-            </Link>
+            <div className="flex items-center gap-1 md:gap-2">
+              <Link
+                href={`/boutique/${user.id}`}
+                className="flex items-center justify-center h-8 w-8 md:h-9 md:w-auto md:px-3 md:py-1.5 border-none md:border border-gold bg-gold/10 text-gold hover:bg-gold hover:text-dark-900 rounded-[8px] transition-colors"
+                title="Ma Boutique"
+              >
+                <span className="text-[1.1rem] md:mr-1.5">🏪</span>
+                <span className="hidden md:inline font-bold text-[.85rem]">Ma Boutique</span>
+              </Link>
+              <Link
+                href="/dashboard"
+                className="flex items-center justify-center h-8 w-8 md:h-9 md:w-auto md:px-3 md:py-1.5 border-none md:border border-green bg-green/10 text-green hover:bg-green hover:text-white rounded-[8px] transition-colors"
+                title="Mon Compte"
+              >
+                <span className="text-[1.1rem] md:mr-1.5">👤</span>
+                <span className="hidden md:inline font-bold text-[.85rem]">Mon Compte</span>
+              </Link>
+            </div>
           )}
           
-          <Link href="/publier" className="btn btn-gold btn-sm rounded-[8px]">
-            + Publier
+          <Link href="/publier" className="btn btn-gold btn-sm px-2 md:px-4 rounded-[8px]">
+            <span className="hidden sm:inline">+ Vendre</span>
+            <span className="sm:hidden text-[.85rem] font-bold">Vendre</span>
           </Link>
         </div>
       </div>
