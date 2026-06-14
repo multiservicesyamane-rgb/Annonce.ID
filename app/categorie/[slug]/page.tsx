@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 import { categoryBySlug, CATEGORIES } from "@/lib/constants";
 import { listingsByCategory } from "@/lib/data";
 import ListingView from "@/components/ListingView";
@@ -37,7 +38,9 @@ export default function CategoryPage({ params }: Props) {
           <AdBanner slot="A9" title={`${cat.icon} ${cat.name}`} subtitle="Bannière en tête de catégorie" />
         </div>
       </div>
-      <ListingView initial={list} title={`${cat.icon} ${cat.name}`} subtitle={`${cat.subs.join(" · ")}`} />
+      <Suspense fallback={<div className="wrap py-10 text-center">Chargement des annonces...</div>}>
+        <ListingView initial={list} title={`${cat.icon} ${cat.name}`} subtitle={`${cat.subs.join(" · ")}`} />
+      </Suspense>
     </>
   );
 }
