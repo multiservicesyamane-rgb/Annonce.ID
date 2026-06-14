@@ -289,7 +289,7 @@ export default async function AnnoncePage({ params }: Props) {
         <h2 className="mb-5 font-display text-[1.25rem] font-bold text-gray-900">Annonces similaires</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {similar.map((s) => (
-            <AdCard key={s.id} ad={s} />
+            <AdCard key={s.id} ad={s as any} />
           ))}
         </div>
       </section>
