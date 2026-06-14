@@ -6,7 +6,7 @@ import { formatNumber } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Paiement" };
 
-export default function PaiementPage({ searchParams }: { searchParams: { boost?: string, annonce_id?: string } }) {
+export default function PaiementPage({ searchParams }: { searchParams: { boost?: string, annonce_id?: string, listing_id?: string } }) {
   if (!searchParams.boost) {
     return (
       <div className="mx-auto my-12 max-w-[800px] px-4">
