@@ -37,7 +37,7 @@ export default async function SearchPage({ searchParams }: Props) {
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
-  }));
+  } as any));
 
   const country = COUNTRIES.find((c) => c.code === pays);
   const title = q
