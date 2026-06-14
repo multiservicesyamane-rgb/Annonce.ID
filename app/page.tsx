@@ -42,7 +42,7 @@ export default async function HomePage() {
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
-  }));
+  } as any));
 
   const une = formattedListings.slice(0, 10);
   const prem = formattedListings.slice(0, 8); // Currently using recent for premium
