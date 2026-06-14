@@ -176,8 +176,8 @@ export default function PublishWizard() {
         const boostKey = BOOSTS[boost].key;
         await supabase.from('listings').update({ 
           status: 'active', 
-          featured: boostKey === 'une', 
-          premium: boostKey === 'premium' 
+          featured: boostKey.startsWith('une'), 
+          premium: boostKey.startsWith('premium') 
         }).eq('id', data.id);
       }
     }
