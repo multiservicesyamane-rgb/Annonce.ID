@@ -171,7 +171,7 @@ export default async function AnnoncePage({ params }: Props) {
               {Object.entries(ad.specs).map(([k, v]) => (
                 <div key={k} className="flex justify-between rounded-lg bg-gray-50 px-3 py-2 text-[.83rem]">
                   <span className="text-gray-500">{k}</span>
-                  <span className="font-semibold text-gray-900">{v}</span>
+                  <span className="font-semibold text-gray-900">{String(v)}</span>
                 </div>
               ))}
             </div>
