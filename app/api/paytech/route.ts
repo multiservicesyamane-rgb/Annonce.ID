@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       currency: "XOF",
       ref_command: refCommand || `CMD-${Date.now()}`,
       command_name: "Paiement Boost Annonce.ID",
-      env: "test", // Changer en "live" en production
+      env: isDev ? "test" : "live",
       ipn_url: isDev ? `${prodDomain}/api/paytech/ipn` : `${baseUrl}/api/paytech/ipn`,
       success_url: (isDev ? `${prodDomain}/paiement/succes` : `${baseUrl}/paiement/succes`) + (listingId ? `?listing_id=${listingId}` : ""),
       cancel_url: isDev ? `${prodDomain}/paiement/erreur` : `${baseUrl}/paiement/erreur`,
