@@ -14,15 +14,18 @@ export default function ContactActions({ phone = "+221770000000", title }: { pho
 
   return (
     <>
-      <div className="flex flex-col gap-2">
-        <a href={wa} target="_blank" rel="noopener noreferrer" className="btn btn-wa btn-lg">
-          💬 Contacter sur WhatsApp
+      <div className="flex flex-col gap-3">
+        <button type="button" onClick={() => show("🛒 Redirection vers l'achat (Bientôt disponible)")} className="btn btn-gold w-full py-4 text-[1.1rem] font-extrabold shadow-lg hover:shadow-xl transition-all">
+          🛒 Acheter maintenant
+        </button>
+        <a href={wa} target="_blank" rel="noopener noreferrer" className="btn btn-wa w-full py-3.5 text-[1.05rem] font-bold">
+          💬 Discuter sur WhatsApp
         </a>
-        <a href={`tel:${phone.replace(/\s/g, "")}`} className="btn btn-green btn-lg">
+        <a href={`tel:${phone.replace(/\s/g, "")}`} className="btn btn-green w-full py-3.5 text-[1.05rem] font-bold">
           📞 Appeler le vendeur
         </a>
-        <button type="button" onClick={() => show("✉ Message envoyé")} className="btn btn-outline">
-          ✉ Envoyer un message
+        <button type="button" onClick={() => show("✉ Messagerie interne (Bientôt disponible)")} className="btn w-full py-3.5 text-[1.05rem] font-bold border-2 border-gray-200 text-gray-700 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
+          ✉ Discuter sur la plateforme
         </button>
       </div>
 
