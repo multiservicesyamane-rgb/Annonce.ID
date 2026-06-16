@@ -1,31 +1,30 @@
 import { NextResponse } from "next/server";
 
-// SECURITE: 6.2 Rate Limiting basique pour OTP
 const otpRateLimitMap = new Map<string, { count: number, timestamp: number }>();
-const OTP_RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
-const OTP_MAX_REQUESTS = 5; // 5 requêtes max par 15 min par IP
+const OTP_RATE_LIMIT_WINDOW = 15 * 60 * 1000;
+const OTP_MAX_REQUESTS = 5;
 
 const DEMO_CODE = "1234";
 const isSmsConfigured = Boolean(process.env.AFRICASTALKING_API_KEY);
 
 export async function POST(req: Request) {
-  // 1. Rate Limiting Check
+  // 1. Rate Limiting
   const ip = req.headers.get("x-forwarded-for") || "unknown";
   const now = Date.now();
   const windowStart = now - OTP_RATE_LIMIT_WINDOW;
-  
+
   let rateData = otpRateLimitMap.get(ip);
   if (!rateData || rateData.timestamp < windowStart) {
     rateData = { count: 0, timestamp: now };
   }
-  
+
   if (rateData.count >= OTP_MAX_REQUESTS) {
     return NextResponse.json({ error: "Trop de requêtes SMS. Veuillez patienter 15 minutes." }, { status: 429 });
   }
-  
+
   otpRateLimitMap.set(ip, { count: rateData.count + 1, timestamp: rateData.timestamp });
 
-  // 2. SECURITE: 4.1 Validation de Schéma (remplacement de Zod)
+  // 2. Validation
   const body = await req.json().catch(() => ({}));
   const { phone, code } = body;
 
@@ -35,18 +34,19 @@ export async function POST(req: Request) {
   if (code !== undefined && (typeof code !== 'string' || code.length > 10)) {
     return NextResponse.json({ ok: false, error: "Format du code invalide" }, { status: 400 });
   }
+
+  // 3. Vérification du code
+  if (code !== undefined) {
     const valid = isSmsConfigured
-      ? false /* TODO: comparer avec otp_codes en base */
+      ? false // TODO: comparer avec otp_codes en base
       : code === DEMO_CODE;
     return NextResponse.json({ ok: valid, verified: valid });
   }
 
-  // Envoi d'un code
+  // 4. Envoi d'un code
   if (!isSmsConfigured) {
     return NextResponse.json({ ok: true, demo: true, demoCode: DEMO_CODE });
   }
 
-  // TODO production : générer un code aléatoire, l'envoyer via Africa's Talking,
-  // le stocker dans `otp_codes`. Voir README.
   return NextResponse.json({ ok: true, demo: false });
 }
