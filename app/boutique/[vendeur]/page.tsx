@@ -23,7 +23,7 @@ export default async function BoutiquePage({ params }: Props) {
   const { data: profile } = await supabase.from('profiles').select('id, full_name, avatar_url, phone, role, created_at').eq('id', sellerId).single();
   
   // Fetch their active listings
-  const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, location, image, category').eq('user_id', sellerId).eq('status', 'active').order('created_at', { ascending: false });
+  const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, location, image, category, views').eq('user_id', sellerId).eq('status', 'active').order('created_at', { ascending: false });
 
   let name = profile?.full_name || "Boutique Pro";
   if (name.includes('@')) {
@@ -41,6 +41,7 @@ export default async function BoutiquePage({ params }: Props) {
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
+    views: ad.views ?? 0,
   }));
 
   return (

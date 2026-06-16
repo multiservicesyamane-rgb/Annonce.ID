@@ -16,7 +16,7 @@ export default async function SearchPage({ searchParams }: Props) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  let query = supabase.from('listings').select('id, slug, title, price, location, image, category, description, created_at, premium, specs, profiles!inner(role)').eq('status', 'active');
+  let query = supabase.from('listings').select('id, slug, title, price, location, image, category, description, views, created_at, premium, specs, profiles!inner(role)').eq('status', 'active');
 
   if (q) {
     query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%,location.ilike.%${q}%`);
@@ -37,6 +37,7 @@ export default async function SearchPage({ searchParams }: Props) {
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
+    views: ad.views ?? 0,
     premium: ad.premium || false,
     specs: ad.specs || {},
     seller: {

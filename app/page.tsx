@@ -28,7 +28,7 @@ export default async function HomePage() {
   // Fetch recent active listings — only lightweight columns (NOT photos/description which are huge base64)
   const { data: recentListings } = await supabase
     .from('listings')
-    .select('id, slug, title, price, location, image, category, created_at')
+    .select('id, slug, title, price, location, image, category, views, created_at')
     .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(20);
@@ -42,6 +42,7 @@ export default async function HomePage() {
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
+    views: ad.views ?? 0,
   } as any));
 
   const une = formattedListings.slice(0, 10);

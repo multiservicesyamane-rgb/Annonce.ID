@@ -19,16 +19,22 @@ export default function ContactActions({ phone, title, adId, sellerId }: { phone
     
     // On utilise une API route ou un simple update pour incrémenter les vues
     const incrementView = async () => {
-      // Pour éviter les écritures multiples lors du développement (React StrictMode)
+      // Éviter de compter plusieurs fois dans la même session (et React StrictMode)
       const viewed = sessionStorage.getItem(`viewed_${adId}`);
       if (viewed) return;
-      
+      sessionStorage.setItem(`viewed_${adId}`, 'true');
+
       try {
-        // Obtenir la valeur actuelle (cette méthode simple peut avoir de légères race conditions mais suffit pour un compteur de vues basique)
-        const { data } = await supabase.from('listings').select('views').eq('id', adId).single();
-        if (data) {
-          await supabase.from('listings').update({ views: (data.views || 0) + 1 }).eq('id', adId);
-          sessionStorage.setItem(`viewed_${adId}`, 'true');
+        // Méthode fiable : fonction SQL atomique (SECURITY DEFINER) qui contourne
+        // les règles RLS pour ce compteur. Voir la fonction increment_views en base.
+        const { error } = await supabase.rpc('increment_views', { listing_id: adId });
+
+        // Repli si la fonction n'existe pas encore en base (lecture + update)
+        if (error) {
+          const { data } = await supabase.from('listings').select('views').eq('id', adId).single();
+          if (data) {
+            await supabase.from('listings').update({ views: (data.views || 0) + 1 }).eq('id', adId);
+          }
         }
       } catch (err) {
         console.error("Erreur incrementation vue:", err);
