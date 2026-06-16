@@ -80,8 +80,8 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0B1526]/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute top-1.5 left-1.5 md:top-2 md:left-2 bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] text-black text-[9px] md:text-[10px] font-extrabold px-2 md:px-3 py-1 md:py-1.5 rounded-full tracking-widest uppercase shadow-md flex items-center gap-1">
-                <span className="text-[10px] md:text-xs">✨</span> À la Une
+              <div className="absolute top-1.5 left-1.5 bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] text-black text-[8px] md:text-[9px] font-extrabold px-1.5 md:px-2 py-0.5 rounded-full tracking-wide uppercase shadow-md flex items-center gap-0.5">
+                <span className="text-[9px] md:text-[10px]">✨</span> À la Une
               </div>
             </div>
 
