@@ -142,10 +142,10 @@ export default async function HomePage() {
               <Link
                 key={ad.id}
                 href={`/annonce/${ad.id}/${ad.slug}`}
-                className="w-[180px] md:w-[260px] shrink-0 overflow-hidden rounded-[16px] bg-white dark:bg-[#1A1A1A]/80 backdrop-blur-md border border-gray-100 dark:border-white/10 shadow-sm dark:shadow-none transition-all duration-300 hover:-translate-y-2 hover:border-gold/50 dark:hover:border-gold/50 hover:shadow-[0_12px_30px_rgba(212,175,55,0.15)] snap-start group"
+                className="w-[200px] md:w-[290px] shrink-0 overflow-hidden rounded-[16px] bg-white dark:bg-[#1A1A1A]/80 backdrop-blur-md border border-gray-100 dark:border-white/10 shadow-sm dark:shadow-none transition-all duration-300 hover:-translate-y-2 hover:border-gold/50 dark:hover:border-gold/50 hover:shadow-[0_12px_30px_rgba(212,175,55,0.15)] snap-start group"
               >
                 <div className="relative w-full aspect-square overflow-hidden bg-gray-100 dark:bg-black/50">
-                  <Image src={ad.image} alt={ad.title} width={400} height={300} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-100" />
+                  <Image src={ad.image} alt={ad.title} width={400} height={400} sizes="(max-width: 768px) 200px, 290px" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-100" />
                   
                   {/* VIP Tag over image */}
                   <div className="absolute top-3 right-3">

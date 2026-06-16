@@ -69,9 +69,9 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
         <React.Fragment key={ad.id}>
           <Link
             href={`/annonce/${ad.id}/${ad.slug}`}
-            className="group relative flex flex-col shrink-0 w-[150px] md:w-[220px] bg-gradient-to-br from-[#0B1526] to-[#040A14] border border-[#1E3050] rounded-[14px] p-2 md:p-3 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(212,175,55,0.15)] hover:border-[#D4AF37]"
+            className="group relative flex flex-col shrink-0 w-[185px] md:w-[260px] bg-gradient-to-br from-[#0B1526] to-[#040A14] border border-[#1E3050] rounded-[14px] p-1.5 md:p-2 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(212,175,55,0.15)] hover:border-[#D4AF37]"
           >
-            <div className="relative w-full aspect-square rounded-[8px] overflow-hidden mb-2 md:mb-3">
+            <div className="relative w-full aspect-square rounded-[8px] overflow-hidden mb-1.5 md:mb-2">
               <Image
                 src={ad.image}
                 alt={ad.title}
@@ -109,7 +109,7 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
           {i === 0 && (
             <Link
               href="/publier"
-              className="group shrink-0 w-[150px] md:w-[220px] bg-gradient-to-br from-[#121A2F] to-[#0B1526] border border-[#1E3050] rounded-[14px] p-3 md:p-5 flex flex-col items-center justify-center text-center shadow-lg hover:-translate-y-2 transition-all duration-300 hover:border-[#D4AF37] hover:shadow-[0_10px_30px_rgba(212,175,55,0.15)] relative overflow-hidden"
+              className="group shrink-0 w-[185px] md:w-[260px] bg-gradient-to-br from-[#121A2F] to-[#0B1526] border border-[#1E3050] rounded-[14px] p-3 md:p-5 flex flex-col items-center justify-center text-center shadow-lg hover:-translate-y-2 transition-all duration-300 hover:border-[#D4AF37] hover:shadow-[0_10px_30px_rgba(212,175,55,0.15)] relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.1)_0%,transparent_70%)] pointer-events-none"></div>
               <h3 className="font-display font-bold text-white text-[.85rem] md:text-[1rem] mb-2 md:mb-3 leading-snug relative z-10 group-hover:text-[#D4AF37] transition-colors">
