@@ -26,7 +26,8 @@ export default async function SearchPage({ searchParams }: Props) {
   // If `pays` is provided, we can map it or just rely on location string
   // For now we will fetch all and filter in memory if needed, or if location contains country.
 
-  const { data: dbListings } = await query.order('created_at', { ascending: false });
+  // Limite serveur : indispensable à l'échelle (sinon on télécharge toutes les annonces)
+  const { data: dbListings } = await query.order('created_at', { ascending: false }).limit(60);
 
   // Format to match Listing interface expected by ListingView
   const results = (dbListings || []).map((ad: any) => ({

@@ -40,7 +40,8 @@ export default async function CategoryPage({ params }: Props) {
     .select('id, slug, title, price, location, image, category, views, premium, specs, profiles!inner(role)')
     .eq('status', 'active')
     .eq('category_slug', cat.slug)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(60);
 
   // Map to the format ListingView expects
   const list = (dbListings || []).map((ad: any) => ({
