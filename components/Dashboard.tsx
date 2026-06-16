@@ -1521,7 +1521,7 @@ export default function Dashboard() {
                     </p>
 
                     <div className="flex justify-center gap-2">
-                      {Object.entries(showroomSocials).map(([social, link]) => (
+                      {Object.entries(showroomSocials as Record<string, string>).map(([social, link]) => (
                         link && (
                           <a key={social} href={String(link)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-white dark:bg-dark-800 shadow-sm border border-gray-100 dark:border-dark-border flex items-center justify-center text-[.8rem] text-gray-600 hover:text-green cursor-pointer">
                             {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : social === 'facebook' ? 'f' : social === 'tiktok' ? '♪' : '▶'}
