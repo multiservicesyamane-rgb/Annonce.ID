@@ -1206,7 +1206,7 @@ export default function Dashboard() {
                                 if (data.redirect_url) {
                                   window.location.href = data.redirect_url;
                                 } else {
-                                  show("Erreur lors de l'initialisation du paiement.");
+                                  show(`❌ ${data.error || "Erreur lors de l'initialisation du paiement."}`);
                                 }
                               } catch (error) {
                                 show("Erreur de connexion avec PayTech.");
@@ -1602,7 +1602,7 @@ export default function Dashboard() {
                         if (data.redirect_url) {
                           window.location.href = data.redirect_url;
                         } else {
-                          show("❌ Erreur lors de l'initialisation du paiement.");
+                          show(`❌ ${data.error || "Erreur lors de l'initialisation du paiement."}`);
                         }
                       } catch (error) {
                         show("❌ Erreur de connexion avec PayTech.");
