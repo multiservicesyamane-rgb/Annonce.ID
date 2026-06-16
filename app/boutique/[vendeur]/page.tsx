@@ -84,7 +84,7 @@ export default async function BoutiquePage({ params }: Props) {
             Ce vendeur n'a pas encore d'annonces en ligne.
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {ads.map((a: any) => (
               <Link key={a.id} href={`/annonce/${a.slug}`} className="block hover:opacity-90 transition-opacity">
                 <AdCard ad={a} />

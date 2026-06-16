@@ -36,7 +36,7 @@ export default function RecentlyViewed() {
       <h2 className="mb-6 font-display text-[1.25rem] font-bold text-gray-900 dark:text-white">
         Vus récemment
       </h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {viewed.map((ad) => (
           <AdCard key={ad.id} ad={ad} />
         ))}

@@ -141,7 +141,7 @@ export default function ListingView({
             />
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                 {visibleListings.map((ad, i) => (
                   <FragmentWithAd key={ad.id} ad={ad} index={i} />
                 ))}

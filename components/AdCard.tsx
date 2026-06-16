@@ -19,13 +19,14 @@ export default function AdCard({ ad }: { ad: Listing }) {
           : "border border-gray-100 dark:border-white/5 bg-white dark:bg-[#111722]/80 shadow-sm dark:shadow-none hover:border-gray-300 dark:hover:border-white/20 hover:shadow-lg"
       }`}
     >
-      {/* Image Container - Aspect ratio dynamique : Carré pour Premium, Standard pour les autres */}
-      <div className={`relative overflow-hidden w-full ${isPremium ? 'aspect-square' : 'aspect-[4/3]'} bg-gray-100 dark:bg-black/50`}>
+      {/* Image Container - Carré uniforme (galerie) pour maximiser la taille de l'image */}
+      <div className="relative overflow-hidden w-full aspect-square bg-gray-100 dark:bg-black/50">
         <Image
           src={ad.image}
           alt={ad.title}
           width={400}
-          height={isPremium ? 400 : 300}
+          height={400}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 16vw"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.05]"
         />
         
@@ -50,40 +51,32 @@ export default function AdCard({ ad }: { ad: Listing }) {
         <FavButton adId={ad.id} className="absolute right-2 top-2 bg-white/90 dark:bg-black/60 backdrop-blur-md p-1.5 rounded-full hover:bg-white text-gray-400 hover:text-red-500 transition-all border border-transparent dark:border-white/10" />
       </div>
 
-      {/* Zone Texte en bas - Padding réduit pour maximiser l'image */}
-      <div className="flex flex-1 flex-col p-2">
-        {/* Catégorie & Date */}
-        <div className="flex items-center justify-between mb-1">
-          <span className={`rounded-md px-1.5 py-0.5 text-[.55rem] font-bold uppercase tracking-wide ${isPremium ? 'bg-neon-gold/10 text-neon-gold dark:text-[#ffca58]' : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400'}`}>
-            {ad.category}
-          </span>
-          <span className="shrink-0 text-[.55rem] font-medium text-gray-400 dark:text-gray-500">{ad.date}</span>
-        </div>
-        
+      {/* Zone Texte compacte - on maximise l'image, on minimise l'espace vide */}
+      <div className="flex flex-1 flex-col gap-0.5 p-1.5">
         {/* Titre */}
-        <h3 className={`line-clamp-2 flex-1 text-[.75rem] md:text-[.85rem] font-bold leading-snug transition-colors ${isPremium ? 'text-gray-900 dark:text-white group-hover:text-neon-gold' : 'text-gray-900 dark:text-gray-200 group-hover:text-green-500 dark:group-hover:text-green-400'}`}>
+        <h3 className={`line-clamp-1 text-[.72rem] md:text-[.8rem] font-bold leading-snug transition-colors ${isPremium ? 'text-gray-900 dark:text-white group-hover:text-neon-gold' : 'text-gray-900 dark:text-gray-200 group-hover:text-green-500 dark:group-hover:text-green-400'}`}>
           {ad.title}
         </h3>
-        
+
         {/* Prix */}
         <div
-          className={`mt-1.5 font-display text-[.9rem] md:text-[1.05rem] font-extrabold tracking-tight ${
+          className={`font-display text-[.85rem] md:text-[.95rem] font-extrabold tracking-tight ${
             isPremium ? "text-neon-gold dark:drop-shadow-[0_0_5px_rgba(245,166,35,0.5)]" : "text-green dark:text-green-400"
           }`}
         >
           {ad.price} FCFA
         </div>
-        
+
         {/* Localisation & Vues */}
-        <div className="mt-2 flex items-center justify-between border-t border-gray-100 dark:border-white/10 pt-2">
-          <div className="flex items-center gap-1.5 text-[.65rem] text-gray-500 dark:text-gray-400 font-medium">
-            <span className={`text-[.75rem] ${isPremium ? 'text-neon-gold' : 'opacity-70'}`}>📍</span>
+        <div className="mt-auto flex items-center justify-between pt-0.5 text-[.6rem] text-gray-500 dark:text-gray-400">
+          <span className="flex items-center gap-1 truncate font-medium">
+            <span className={isPremium ? 'text-neon-gold' : 'opacity-70'}>📍</span>
             <span className="truncate">{ad.location}</span>
-          </div>
-          <div className="flex items-center gap-1 text-[.6rem] text-gray-400 font-bold">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            <span>{ad.views || 0}</span>
-          </div>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 font-bold text-gray-400">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            {ad.views || 0}
+          </span>
         </div>
       </div>
     </Link>

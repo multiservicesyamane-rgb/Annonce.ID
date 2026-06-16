@@ -78,7 +78,7 @@ export default async function SeoLandingPage({ params }: Props) {
         <p className="text-gray-700 dark:text-gray-300 text-[1.1rem] max-w-2xl mx-auto">{pageDesc}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {listings.length > 0 ? (
           listings.map((ad: any) => (
             <AdCard key={ad.id} ad={ad} />
