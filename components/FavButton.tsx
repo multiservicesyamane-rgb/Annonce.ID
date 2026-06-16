@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 
 const STORAGE_KEY = "annonceid_favs";
 
-/** Lire les favoris depuis localStorage — supporte UUID (string) et number */
 function readFavs(): string[] {
   if (typeof window === "undefined") return [];
   try {
@@ -19,21 +18,18 @@ function readFavs(): string[] {
   }
 }
 
-/** Sauvegarder les favoris dans localStorage */
 function saveFavs(ids: string[]) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-  } catch { /* ignore */ }
+  } catch { }
 }
 
-/** Hook global pour les favoris persistants — compatible UUID et connecté à Supabase */
 export function useFavorites() {
   const [favs, setFavs] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const supabase = createClient();
 
-  // 1. Initialisation : vérifier la session
   useEffect(() => {
     let local = readFavs();
     setFavs(local);
@@ -43,21 +39,20 @@ export function useFavorites() {
       if (data.session?.user) {
         setUserId(data.session.user.id);
 
-        // Charger les favoris depuis la BDD
         const { data: dbFavs } = await supabase.from('favorites').select('listing_id').eq('user_id', data.session.user.id);
         if (dbFavs) {
           const dbIds = dbFavs.map(f => String(f.listing_id));
-          // Fusionner local + DB
           const merged = Array.from(new Set([...local, ...dbIds]));
           setFavs(merged);
-          saveFavs(merged); // sync back to local for speed
+          saveFavs(merged);
 
-          // Sauvegarder les locaux non présents en DB
           const missingInDb = local.filter(id => !dbIds.includes(id));
           if (missingInDb.length > 0) {
-            await supabase.from('favorites').insert(
-              missingInDb.map(id => ({ user_id: data.session.user.id, listing_id: id }))
-            ).then(() => { }).catch !== undefined; // ignore duplicates
+            try {
+              await supabase.from('favorites').insert(
+                missingInDb.map(id => ({ user_id: data.session.user.id, listing_id: id }))
+              );
+            } catch { /* ignore duplicates */ }
           }
         }
       }
@@ -74,22 +69,20 @@ export function useFavorites() {
       return next;
     });
 
-    // Synchronisation en arrière-plan avec Supabase
     const { data } = await supabase.auth.getSession();
     if (data.session?.user) {
       if (favs.includes(strId)) {
-        // Enlever
         await supabase.from('favorites').delete().eq('user_id', data.session.user.id).eq('listing_id', strId);
       } else {
-        // Ajouter
-        await supabase.from('favorites').insert({ user_id: data.session.user.id, listing_id: strId }).catch(() => { });
+        try {
+          await supabase.from('favorites').insert({ user_id: data.session.user.id, listing_id: strId });
+        } catch { /* ignore duplicates */ }
       }
     }
   }, [supabase, favs]);
 
   const isFav = useCallback((id: string | number) => favs.includes(String(id)), [favs]);
 
-  // Écouter les changements depuis d'autres composants
   useEffect(() => {
     const handler = (e: Event) => {
       const custom = e as CustomEvent<string[]>;
@@ -102,10 +95,6 @@ export function useFavorites() {
   return { favs, toggle, isFav };
 }
 
-/**
- * Bouton favori avec cœur animé. Persistant via localStorage.
- * Passer `adId` pour traquer quel annonce est mise en favori.
- */
 export default function FavButton({
   adId,
   className = "",
@@ -124,25 +113,25 @@ export default function FavButton({
         e.stopPropagation();
         if (adId !== undefined) toggle(adId);
       }}
-      className={`transition-all duration-200 ${className}`}
-      aria-label={active ? "Retirer des favoris" : "Ajouter aux favoris"}
+      className={transition - all duration-200 ${className}}
+aria - label={ active ? "Retirer des favoris" : "Ajouter aux favoris" }
     >
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill={active ? "#E63946" : "none"}
-        stroke={active ? "#E63946" : "currentColor"}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{
-          transform: active ? "scale(1.15)" : "scale(1)",
-          transition: "transform .2s ease, fill .2s ease",
-        }}
-      >
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-      </svg>
-    </button>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill={active ? "#E63946" : "none"}
+    stroke={active ? "#E63946" : "currentColor"}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{
+      transform: active ? "scale(1.15)" : "scale(1)",
+      transition: "transform .2s ease, fill .2s ease",
+    }}
+  >
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+    </button >
   );
 }
