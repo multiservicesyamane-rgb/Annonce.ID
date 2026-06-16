@@ -6,10 +6,10 @@
 :root {
   --font-sora: "Sora", system-ui, sans-serif;
   --font-inter: "Inter", system-ui, sans-serif;
-  --dark-900: #0a0e14;
-  --dark-800: #111722;
-  --dark-700: #1a2231;
-  --dark-border: #243044;
+  --dark-900: #030712;
+  --dark-800: #0B1120;
+  --dark-700: #111827;
+  --dark-border: #1F2937;
   --gold: #f5a623;
   --gold-d: #d4891a;
   --green: #1b4332;
@@ -27,8 +27,8 @@ html {
 }
 
 body {
-  background: #fafaf8;
-  color: #141412;
+  background: #f4f5f7;
+  color: #0f172a;
   line-height: 1.6;
   overflow-x: hidden;
   font-size: 15px;
@@ -36,30 +36,31 @@ body {
 
 /* ───────── DARK MODE ───────── */
 html.dark body {
-  background: #0A0E14;
-  color: #e8e8e4;
+  background: #030712;
+  color: #F9FAFB;
 }
 
 /* Dark mode overrides for common light elements */
-html.dark .bg-white { background-color: #111722 !important; }
-html.dark .bg-gray-50 { background-color: #1a2231 !important; }
-html.dark .bg-light { background-color: #0a0e14 !important; }
-html.dark .text-gray-900 { color: #e8e8e4 !important; }
-html.dark .text-gray-800 { color: #d0d0cc !important; }
-html.dark .text-gray-700 { color: #bebebb !important; }
-html.dark .text-gray-500 { color: #7c7c78 !important; }
-html.dark .border-gray-100 { border-color: #243044 !important; }
-html.dark .border-gray-200 { border-color: #243044 !important; }
-html.dark .border-gray-300 { border-color: #2a3654 !important; }
+html.dark .bg-white { background-color: #0B1120 !important; }
+html.dark .bg-gray-50 { background-color: #111827 !important; }
+html.dark .bg-light { background-color: #030712 !important; }
+html.dark .text-gray-900 { color: #F9FAFB !important; }
+html.dark .text-gray-800 { color: #F3F4F6 !important; }
+html.dark .text-gray-700 { color: #E5E7EB !important; }
+html.dark .text-gray-600 { color: #D1D5DB !important; }
+html.dark .text-gray-500 { color: #9CA3AF !important; }
+html.dark .border-gray-100 { border-color: #1F2937 !important; }
+html.dark .border-gray-200 { border-color: #1F2937 !important; }
+html.dark .border-gray-300 { border-color: #374151 !important; }
 
 /* Dark mode inputs */
 html.dark .input {
-  background-color: #1a2231 !important;
-  border-color: #243044 !important;
-  color: #e8e8e4 !important;
+  background-color: #111827 !important;
+  border-color: #1F2937 !important;
+  color: #F9FAFB !important;
 }
 html.dark .input:focus {
-  background-color: #111722 !important;
+  background-color: #0B1120 !important;
 }
 
 /* Dark mode cards & sections */
@@ -95,15 +96,32 @@ html.dark .shadow-lg {
   }
 
   .glass {
-    background: rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(11, 17, 32, 0.7);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 20px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  }
+
+  .neon-border-gold {
+    border: 1px solid rgba(245, 166, 35, 0.5);
+    box-shadow: inset 0 0 10px rgba(245, 166, 35, 0.15), 0 0 10px rgba(245, 166, 35, 0.15);
+  }
+
+  .neon-border-green {
+    border: 1px solid rgba(0, 168, 89, 0.5);
+    box-shadow: inset 0 0 10px rgba(0, 168, 89, 0.15), 0 0 10px rgba(0, 168, 89, 0.15);
   }
 
   .text-grad-gold {
     @apply bg-grad-gold bg-clip-text text-transparent;
+  }
+
+  .text-grad-brand {
+    background: linear-gradient(135deg, #00A859 0%, #F5A623 50%, #ffffff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
   /* Boutons */
@@ -111,7 +129,13 @@ html.dark .shadow-lg {
     @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border-2 border-transparent px-5 py-2.5 text-[.88rem] font-semibold transition-all;
   }
   .btn-green {
-    @apply bg-green text-white hover:bg-green-mid hover:-translate-y-px;
+    @apply font-bold text-white shadow-[0_4px_15px_rgba(0,168,89,0.3)] hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(0,168,89,0.4)];
+    background: linear-gradient(135deg, #00C66B 0%, #00A859 50%, #007F43 100%);
+    background-size: 200% auto;
+    transition: all 0.3s ease;
+  }
+  .btn-green:hover {
+    background-position: right center;
   }
   .btn-gold {
     @apply bg-grad-gold font-bold text-dark-900 shadow-glow-gold hover:-translate-y-px;

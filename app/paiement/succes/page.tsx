@@ -8,7 +8,7 @@ export default function PaymentSuccess({ searchParams }: { searchParams: { listi
   useEffect(() => {
     if (searchParams.listing_id) {
       const supabase = createClient();
-      supabase.from('listings').update({ status: 'active', is_premium: true }).eq('id', searchParams.listing_id).then(({ error }) => {
+      supabase.from('listings').update({ status: 'active', premium: true }).eq('id', searchParams.listing_id).then(({ error }) => {
         if (error) console.error("Error activating listing:", error);
       });
     }

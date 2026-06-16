@@ -63,6 +63,9 @@ export default async function BoutiquePage({ params }: Props) {
                 🗓️ Membre depuis {memberSince}
               </span>
               <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm">
+                ⭐ <span className="font-bold text-gold">4.8/5</span> (12 avis)
+              </span>
+              <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm">
                 📦 {ads.length} annonces actives
               </span>
             </div>

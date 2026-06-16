@@ -29,6 +29,8 @@ export default function ListingView({
   const [premiumOnly, setPremiumOnly] = useState(searchParams.get("premium") === "1");
   const [minPrice, setMinPrice] = useState(Number(searchParams.get("min")) || 0);
   const [maxPrice, setMaxPrice] = useState(Number(searchParams.get("max")) || 5_000_000);
+  const [condition, setCondition] = useState(searchParams.get("condition") || "Tous");
+  const [sellerType, setSellerType] = useState(searchParams.get("sellerType") || "Tous");
   const [sort, setSort] = useState(searchParams.get("sort") || "recent");
   const [drawer, setDrawer] = useState(false);
   
@@ -40,14 +42,24 @@ export default function ListingView({
       if (premiumOnly && !l.premium) return false;
       const num = Number(l.price.replace(/[^0-9]/g, "")) || 0;
       if (num < minPrice || num > maxPrice) return false;
-      // condition & sellerType logic could be added here if we had those fields in mock data
+      
+      // Filter by condition if specs exist
+      if (condition !== "Tous" && l.specs && l.specs['État'] !== condition) return false;
+      
+      // Filter by sellerType
+      if (sellerType !== "Tous" && l.seller) {
+          const isPro = l.seller.isPro;
+          if (sellerType === "Professionnels vérifiés" && !isPro) return false;
+          if (sellerType === "Particuliers" && isPro) return false;
+      }
+      
       return true;
     });
     if (sort === "price-asc") list = [...list].sort((a, b) => price(a) - price(b));
     if (sort === "price-desc") list = [...list].sort((a, b) => price(b) - price(a));
     if (sort === "views") list = [...list].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
     return list;
-  }, [initial, premiumOnly, minPrice, maxPrice, sort]);
+  }, [initial, premiumOnly, minPrice, maxPrice, condition, sellerType, sort]);
 
   const visibleListings = filtered.slice(0, visibleCount);
 
@@ -55,6 +67,8 @@ export default function ListingView({
     setPremiumOnly(filters.premiumOnly);
     setMinPrice(filters.priceRange[0]);
     setMaxPrice(filters.priceRange[1]);
+    setCondition(filters.condition || "Tous");
+    setSellerType(filters.sellerType || "Tous");
     setVisibleCount(12); // reset pagination
 
     const params = new URLSearchParams(searchParams.toString());
@@ -62,6 +76,13 @@ export default function ListingView({
     else params.delete("premium");
     params.set("min", filters.priceRange[0].toString());
     params.set("max", filters.priceRange[1].toString());
+    
+    if (filters.condition && filters.condition !== "Tous") params.set("condition", filters.condition);
+    else params.delete("condition");
+    
+    if (filters.sellerType && filters.sellerType !== "Tous") params.set("sellerType", filters.sellerType);
+    else params.delete("sellerType");
+    
     router.replace(`?${params.toString()}`, { scroll: false });
   }
 

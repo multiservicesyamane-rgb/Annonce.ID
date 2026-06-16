@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import { LISTINGS } from "@/lib/data";
 import { COUNTRIES } from "@/lib/constants";
 
@@ -36,6 +37,58 @@ export default function AdminApp() {
   const [panel, setPanel] = useState<Panel>("overview");
   const [toast, setToast] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // DB States
+  const supabase = createClient();
+  const [users, setUsers] = useState<any[]>([]);
+  const [listings, setListings] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (authed) {
+      fetchData();
+    }
+  }, [authed]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const { data: u } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+    if (u) setUsers(u);
+    
+    const { data: l } = await supabase.from('listings').select('*, profiles(full_name)').order('created_at', { ascending: false });
+    if (l) setListings(l);
+
+    const { data: c } = await supabase.from('categories').select('*');
+    if (c) setCategories(c);
+
+    const { data: r } = await supabase.from('reports').select('*, listings(title), profiles(full_name)');
+    if (r) setReports(r);
+    
+    setLoading(false);
+  };
+
+  const handleApprove = async (id: string) => {
+    setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'active' } : l));
+    show("✓ Annonce approuvée");
+    try { await supabase.from('listings').update({ status: 'active' }).eq('id', id); } catch(e) {}
+  };
+  const handleReject = async (id: string) => {
+    setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'rejected' } : l));
+    show("✗ Annonce rejetée");
+    try { await supabase.from('listings').update({ status: 'rejected' }).eq('id', id); } catch(e) {}
+  };
+  const handleBan = async (id: string) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, role: 'banned' } : u));
+    show("🚫 Utilisateur banni");
+    try { await supabase.from('profiles').update({ role: 'banned' }).eq('id', id); } catch(e) {}
+  };
+  const handleTreatReport = async (id: string) => {
+    setReports(prev => prev.filter(r => r.id !== id));
+    show("✓ Signalement traité");
+    try { await supabase.from('reports').update({ status: 'resolved' }).eq('id', id); } catch(e) {}
+  };
 
   const handlePanelChange = (id: Panel) => {
     setPanel(id);
@@ -142,10 +195,10 @@ export default function AdminApp() {
             <div className="animate-fadeUp">
               <H1>Vue globale de la plateforme</H1>
               <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-                <AKpi label="Utilisateurs" value="48 320" sub="↑ +1 240 ce mois" neon />
-                <AKpi label="Annonces actives" value="256 891" sub="↑ +8 450" />
+                <AKpi label="Utilisateurs" value={users.length.toString()} sub="Inscrits" neon />
+                <AKpi label="Annonces actives" value={listings.filter(l=>l.status==='active').length.toString()} sub="Total publiées" />
                 <AKpi label="Revenus du mois" value="12,4M FCFA" sub="↑ +18%" neon />
-                <AKpi label="À modérer" value="8" sub="En attente" magenta />
+                <AKpi label="À modérer" value={listings.filter(l=>l.status==='pending').length.toString()} sub="En attente" magenta />
               </div>
               <ACard title="📈 Revenus 14 derniers jours">
                 <div className="flex h-20 items-end gap-[3px]">
@@ -172,15 +225,18 @@ export default function AdminApp() {
 
           {panel === "moderation" && (
             <div className="animate-fadeUp">
-              <H1>🛡️ File de modération (8)</H1>
-              <ATable head={["Annonce", "Vendeur", "Catégorie", "Statut", "Actions"]}>
-                {[["Villa luxe Ngor", "Aïcha Sow", "Immobilier"], ["iPhone 13 occasion", "Karim Touré", "Électronique"], ["Toyota Yaris 2019", "Bineta Fall", "Véhicules"], ["Offre emploi suspecte", "Anonyme", "Emploi"]].map(([t, u, c]) => (
-                  <tr key={t} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
-                    <Td white>{t}</Td><Td>{u}</Td><Td>{c}</Td>
+              <H1>🛡️ File de modération ({listings.filter(l=>l.status==='pending').length})</H1>
+              <ATable head={["Annonce", "Vendeur", "Prix", "Statut", "Actions"]}>
+                {listings.filter(l=>l.status==='pending').map((l) => (
+                  <tr key={l.id} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
+                    <Td white>{l.title}</Td><Td>{l.profiles?.full_name || 'Inconnu'}</Td><Td>{l.price}</Td>
                     <Td><span className="text-gold">⏳ En attente</span></Td>
-                    <Td><div className="flex gap-1.5"><AB ok onClick={() => show("✓ Approuvé")}>Approuver</AB><AB no onClick={() => show("✗ Rejeté")}>Rejeter</AB></div></Td>
+                    <Td><div className="flex gap-1.5"><AB ok onClick={() => handleApprove(l.id)}>Approuver</AB><AB no onClick={() => handleReject(l.id)}>Rejeter</AB></div></Td>
                   </tr>
                 ))}
+                {listings.filter(l=>l.status==='pending').length === 0 && (
+                  <tr><td colSpan={5} className="p-4 text-center text-white/50 text-[.85rem]">Aucune annonce à modérer.</td></tr>
+                )}
               </ATable>
             </div>
           )}
@@ -188,12 +244,12 @@ export default function AdminApp() {
           {panel === "users" && (
             <div className="animate-fadeUp">
               <H1>👥 Utilisateurs</H1>
-              <ATable head={["Nom", "Téléphone", "Pays", "Annonces", "Statut", "Actions"]}>
-                {[["Moussa Diallo", "+221 77 123 45 67", "🇸🇳 SN", "12", "Pro"], ["Aminata Koné", "+225 07 88 99 00", "🇨🇮 CI", "5", "Vérifié"], ["Kwame Mensah", "+233 24 555 12 34", "🇬🇭 GH", "8", "Actif"], ["Ibrahim Traoré", "+223 76 44 55 66", "🇲🇱 ML", "3", "Actif"]].map(([n, p, c, a, s]) => (
-                  <tr key={n} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
-                    <Td white>{n}</Td><Td>{p}</Td><Td>{c}</Td><Td>{a}</Td>
-                    <Td><span className="text-neon-green">{s}</span></Td>
-                    <Td><div className="flex gap-1.5"><AB onClick={() => show("Voir profil")}>Voir</AB><AB no onClick={() => show("🚫 Banni")}>Bannir</AB></div></Td>
+              <ATable head={["Nom", "Téléphone", "Date inscript.", "Statut", "Actions"]}>
+                {users.map((u) => (
+                  <tr key={u.id} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
+                    <Td white>{u.full_name || 'Sans nom'}</Td><Td>{u.phone || 'Non renseigné'}</Td><Td>{new Date(u.created_at).toLocaleDateString()}</Td>
+                    <Td><span className={u.role === 'banned' ? "text-neon-magenta" : "text-neon-green"}>{u.role || 'user'}</span></Td>
+                    <Td><div className="flex gap-1.5"><AB no onClick={() => handleBan(u.id)}>Bannir</AB></div></Td>
                   </tr>
                 ))}
               </ATable>
@@ -203,12 +259,11 @@ export default function AdminApp() {
           {panel === "listings" && (
             <div className="animate-fadeUp">
               <H1>📋 Toutes les annonces</H1>
-              <ATable head={["Titre", "Catégorie", "Prix", "Vues", "Boost", "Actions"]}>
-                {LISTINGS.slice(0, 8).map((a) => (
+              <ATable head={["Titre", "Vendeur", "Catégorie", "Prix", "Vues", "Statut"]}>
+                {listings.map((a) => (
                   <tr key={a.id} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
-                    <Td white>{a.title}</Td><Td>{a.category}</Td><Td>{a.price}</Td><Td>{a.views ?? "—"}</Td>
-                    <Td>{a.premium ? <span className="text-neon-gold">✦ Premium</span> : "Standard"}</Td>
-                    <Td><div className="flex gap-1.5"><AB onClick={() => show("Voir")}>👁</AB><AB no onClick={() => show("Suspendu")}>⏸</AB></div></Td>
+                    <Td white>{a.title}</Td><Td>{a.profiles?.full_name || 'Inconnu'}</Td><Td>{a.category}</Td><Td>{a.price}</Td><Td>{a.views ?? 0}</Td>
+                    <Td>{a.status === 'active' ? <span className="text-neon-green">Actif</span> : a.status === 'rejected' ? <span className="text-neon-magenta">Rejeté</span> : <span className="text-gold">Attente</span>}</Td>
                   </tr>
                 ))}
               </ATable>
@@ -264,17 +319,31 @@ export default function AdminApp() {
           {panel === "categories" && (
             <div className="animate-fadeUp">
               <H1>📂 Gestion des catégories</H1>
-              <button onClick={() => show("+ Nouvelle catégorie")} className="btn btn-neon btn-sm mb-4">+ Nouvelle catégorie</button>
+              <button 
+                onClick={() => {
+                  const name = prompt("Nom de la nouvelle catégorie ?");
+                  if (name) {
+                    setCategories([...categories, { id: Date.now().toString(), name, slug: name.toLowerCase().replace(/\s+/g, '-') }]);
+                    show("✓ Catégorie ajoutée");
+                  }
+                }} 
+                className="btn btn-neon btn-sm mb-4"
+              >
+                + Nouvelle catégorie
+              </button>
               <ATable head={["Catégorie", "Sous-catégories", "Annonces actives", "Statut", "Actions"]}>
-                {[
-                  ["Immobilier", "Appartements, Villas, Terrains...", "85 430", "🟢 Actif"],
-                  ["Véhicules", "Voitures, Motos, Pièces...", "62 100", "🟢 Actif"],
-                  ["Électronique", "Téléphones, Ordinateurs...", "45 800", "🟢 Actif"],
-                  ["Emploi", "Offres, Demandes...", "12 500", "🟢 Actif"],
-                ].map(([c, s, a, st]) => (
-                  <tr key={c} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
-                    <Td white>{c}</Td><Td><span className="text-[.75rem] text-white/50">{s}</span></Td><Td>{a}</Td><Td><span className="text-neon-green">{st}</span></Td>
-                    <Td><div className="flex gap-1.5"><AB onClick={() => show("Éditer")}>Éditer</AB><AB no onClick={() => show("Désactiver")}>Désactiver</AB></div></Td>
+                {categories.map((c) => (
+                  <tr key={c.id} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
+                    <Td white>{c.name}</Td><Td><span className="text-[.75rem] text-white/50">{c.slug}</span></Td><Td>{listings.filter(l=>l.category === c.name).length}</Td><Td><span className="text-neon-green">🟢 Actif</span></Td>
+                    <Td>
+                      <div className="flex gap-1.5">
+                        <AB onClick={() => show("Édition bientôt disponible")}>Éditer</AB>
+                        <AB no onClick={() => {
+                          setCategories(categories.filter(cat => cat.id !== c.id));
+                          show("✓ Catégorie désactivée");
+                        }}>Désactiver</AB>
+                      </div>
+                    </Td>
                   </tr>
                 ))}
               </ATable>
@@ -285,12 +354,15 @@ export default function AdminApp() {
             <div className="animate-fadeUp">
               <H1>🚩 Signalements</H1>
               <ATable head={["Annonce", "Raison", "Signalé par", "Actions"]}>
-                {[["iPhone trop bon marché", "Arnaque possible", "3 utilisateurs"], ["Annonce dupliquée", "Spam", "1 utilisateur"], ["Contenu inapproprié", "Modération", "2 utilisateurs"]].map(([t, r, b]) => (
-                  <tr key={t} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
-                    <Td white>{t}</Td><Td><span className="text-neon-magenta">{r}</span></Td><Td>{b}</Td>
-                    <Td><div className="flex gap-1.5"><AB ok onClick={() => show("Traité")}>Traiter</AB><AB onClick={() => show("Ignoré")}>Ignorer</AB></div></Td>
+                {reports.map((r) => (
+                  <tr key={r.id} className="border-b border-dark-border last:border-0 hover:bg-white/[.03]">
+                    <Td white>{r.listings?.title || 'Inconnue'}</Td><Td><span className="text-neon-magenta">{r.reason}</span></Td><Td>{r.profiles?.full_name || 'Anonyme'}</Td>
+                    <Td><div className="flex gap-1.5"><AB ok onClick={() => handleTreatReport(r.id)}>Traiter</AB><AB onClick={() => handleTreatReport(r.id)}>Ignorer</AB></div></Td>
                   </tr>
                 ))}
+                {reports.length === 0 && (
+                   <tr><td colSpan={4} className="p-4 text-center text-white/50 text-[.85rem]">Aucun signalement.</td></tr>
+                )}
               </ATable>
             </div>
           )}

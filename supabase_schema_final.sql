@@ -9,9 +9,13 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     full_name VARCHAR(255),
     avatar_url TEXT,
     phone VARCHAR(50),
+    bio TEXT,
+    social_links JSONB DEFAULT '{}'::jsonb,
     free_ads_remaining INTEGER DEFAULT 2,
+    credits INTEGER DEFAULT 0,
     role VARCHAR(50) DEFAULT 'user',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    CONSTRAINT avatar_size_check CHECK (length(avatar_url) < 200000)
 );
 
 -- Trigger pour créer automatiquement un profil à l'inscription
@@ -76,6 +80,8 @@ CREATE TABLE IF NOT EXISTS public.messages (
     sender_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     receiver_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     content TEXT NOT NULL,
+    type VARCHAR(50) DEFAULT 'text',
+    media_url TEXT,
     is_read BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
@@ -131,3 +137,33 @@ CREATE POLICY "Les utilisateurs peuvent supprimer leurs favoris" ON public.favor
 CREATE POLICY "Les utilisateurs voient leurs propres messages" ON public.messages FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
 CREATE POLICY "Les utilisateurs peuvent envoyer des messages" ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
 CREATE POLICY "Les destinataires peuvent marquer comme lu" ON public.messages FOR UPDATE USING (auth.uid() = receiver_id) WITH CHECK (auth.uid() = receiver_id);
+
+-- Categories
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Les categories sont publiques" ON public.categories FOR SELECT USING (true);
+-- Seul un admin pourra insérer/modifier via le Service Role ou des droits spécifiques.
+
+-- Reviews
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Les avis sont publics" ON public.reviews FOR SELECT USING (true);
+CREATE POLICY "Les utilisateurs authentifiés peuvent ajouter des avis" ON public.reviews FOR INSERT WITH CHECK (auth.uid() = reviewer_id);
+
+-- Reports
+ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Les utilisateurs authentifiés peuvent signaler" ON public.reports FOR INSERT WITH CHECK (auth.uid() = reporter_id);
+-- Les signalements ne sont lisibles que par un admin (via le Service Role)
+
+-- 8. Table PURCHASES
+CREATE TABLE IF NOT EXISTS public.purchases (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    amount INTEGER NOT NULL,
+    ref_command VARCHAR(255) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    type VARCHAR(50) DEFAULT 'boost',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.purchases ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Les utilisateurs peuvent voir leurs achats" ON public.purchases FOR SELECT USING (auth.uid() = user_id);
+-- (L'insertion se fait via le webhook IPN en Service Role, donc pas besoin de policy publique d'INSERT)

@@ -13,6 +13,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
   const router = useRouter();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<typeof LISTINGS>([]);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -98,45 +99,70 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
   return (
     <div ref={wrapRef} className={`relative ${big ? "max-w-[620px]" : "mx-auto w-full max-w-[680px] flex-1"}`}>
       <div
-        className={`flex overflow-hidden rounded-[10px] border-2 border-transparent bg-white transition focus-within:border-neon-gold focus-within:shadow-glow-gold ${
+        className={`flex items-center overflow-hidden rounded-full border border-transparent bg-gradient-to-r from-neon-cyan/40 via-neon-magenta/20 to-neon-magenta/50 p-[1px] transition-all focus-within:shadow-[0_0_20px_rgba(255,42,109,0.3)] ${
           big ? "shadow-lg" : "shadow-sm"
         }`}
       >
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => liveSearch(e.target.value)}
-          onFocus={() => setOpen(true)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
-          placeholder={big ? "Ex: iPhone 14, Villa Dakar, Toyota…" : "Que recherchez-vous ?"}
-          autoComplete="off"
-          aria-label="Rechercher une annonce"
-          className="min-w-0 flex-1 px-3.5 py-2.5 text-[.88rem] text-gray-900 outline-none"
-        />
-        <div className="my-1.5 hidden w-px bg-gray-100 sm:block" />
-        <select
-          aria-label="Catégorie"
-          className="hidden cursor-pointer border-none px-2 py-2.5 text-[.78rem] text-gray-700 outline-none sm:block"
-          onChange={(e) => e.target.value && router.push(`/categorie/${e.target.value}`)}
-        >
-          <option value="">Catégorie</option>
-          {CATEGORIES.map((c) => (
-            <option key={c.slug} value={c.slug}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={() => submit()}
-          className="flex items-center gap-1 bg-gold px-4 py-2.5 text-[.85rem] font-bold text-dark-900 hover:bg-gold-dark"
-        >
-          🔍{big && <span>Chercher</span>}
-        </button>
+        <div className="flex w-full items-center bg-[#0A0E14]/90 backdrop-blur-md rounded-full px-4 py-2 sm:py-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neon-cyan mr-3">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="text"
+            value={q}
+            onChange={(e) => liveSearch(e.target.value)}
+            onFocus={() => setOpen(true)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            placeholder="Rechercher une annonce..."
+            autoComplete="off"
+            aria-label="Rechercher une annonce"
+            className="min-w-0 flex-1 bg-transparent text-[.95rem] text-white placeholder-gray-400 outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => setFilterOpen(!filterOpen)}
+            className="ml-2 text-neon-magenta hover:text-white transition-colors relative"
+            aria-label="Filtres"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"></line>
+              <line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line>
+              <line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line>
+              <line x1="9" y1="8" x2="15" y2="8"></line>
+              <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 animate-fadeUp rounded-lg border border-gray-100 bg-white p-3 shadow-lg">
+      {filterOpen && (
+        <div className="absolute right-0 top-[calc(100%+6px)] z-50 animate-fadeUp rounded-[16px] border border-white/10 bg-[#0A0E14]/95 backdrop-blur-xl p-2 shadow-2xl w-[200px]">
+          <div className="px-3 py-2 text-[.75rem] font-bold uppercase tracking-wider text-gray-500">
+            Catégories
+          </div>
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.slug}
+              type="button"
+              className="w-full text-left px-3 py-2 text-[.85rem] text-white hover:bg-white/10 rounded-lg transition-colors flex items-center gap-2"
+              onClick={() => {
+                setFilterOpen(false);
+                router.push(`/categorie/${c.slug}`);
+              }}
+            >
+              <span className="text-[1.1rem]">{c.icon}</span> {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {open && !filterOpen && (
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 animate-fadeUp rounded-lg border border-gray-100 dark:border-white/10 bg-white dark:bg-[#111722] p-3 shadow-lg">
           {recent.length > 0 && (
             <section className="mb-3">
               <div className="mb-1.5 flex items-center gap-1 text-[.68rem] font-bold uppercase tracking-wider text-gray-500">
@@ -146,7 +172,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
                 <div
                   key={r}
                   onClick={() => submit(r)}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[.85rem] text-gray-700 hover:bg-gray-50"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                 >
                   🔍 {r}
                   <span
@@ -169,7 +195,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
                 <span
                   key={t}
                   onClick={() => submit(t)}
-                  className="cursor-pointer rounded-[20px] border border-gray-100 bg-gray-50 px-2.5 py-1 text-[.78rem] text-gray-700 transition hover:border-gold hover:bg-gold-pale hover:text-green"
+                  className="cursor-pointer rounded-[20px] border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-2.5 py-1 text-[.78rem] text-gray-700 dark:text-gray-300 transition hover:border-gold dark:hover:border-neon-cyan hover:bg-gold-pale dark:hover:bg-neon-cyan/20 hover:text-green dark:hover:text-white"
                 >
                   {t}
                 </span>
@@ -186,10 +212,10 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
                 <div
                   key={a.id}
                   onClick={() => router.push(`/annonce/${a.id}/${a.slug}`)}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[.85rem] text-gray-700 hover:bg-gray-50"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                 >
                   🔎 {a.title}
-                  <span className="ml-auto text-[.72rem] text-gray-300">{a.category}</span>
+                  <span className="ml-auto text-[.72rem] text-gray-400">{a.category}</span>
                 </div>
               ))}
             </section>

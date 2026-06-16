@@ -7,7 +7,6 @@ import SearchBar from "./SearchBar";
 import DarkToggle from "./DarkToggle";
 import { createClient } from "@/lib/supabase/client";
 
-/** Header sticky sombre translucide. Le sélecteur pays est discret (détail en footer). */
 export default function Header() {
   const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
@@ -20,83 +19,104 @@ export default function Header() {
   }, [supabase.auth]);
 
   return (
-    <header className="sticky top-0 z-[900] border-b border-dark-border bg-dark-900/95 backdrop-blur-md">
-      <div className="mx-auto flex min-h-[64px] max-w-[1320px] flex-wrap items-center justify-between px-3 py-2 md:flex-nowrap md:gap-3 md:px-4">
-        <Link href="/" className="flex shrink-0 items-center gap-1.5 font-display text-[1.15rem] font-extrabold text-white md:text-[1.3rem]">
-          Annonce<span className="text-neon-gold">.ID</span>
-        </Link>
-
-        {!pathname.startsWith("/dashboard") && (
-          <div className="order-3 w-full hidden lg:block md:order-none md:flex-1">
-            <SearchBar variant="header" />
-          </div>
-        )}
-
-        <div className="flex shrink-0 items-center gap-1.5 md:ml-auto md:gap-3">
-
+    <header className="sticky top-0 z-[900] w-full bg-[#0A0E14]/95 backdrop-blur-md border-b border-white/5 transition-colors">
+      <div className="mx-auto max-w-[1320px] px-3 md:px-4 py-2 md:py-3">
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
           
-          {/* Dark Mode Toggle */}
-          <DarkToggle />
-          
-          {/* Notifications Bell */}
-          {user && (
-            <div className="relative group hidden md:block">
-              <button className="relative h-[34px] w-[34px] flex items-center justify-center rounded-full text-gold hover:bg-white/10 transition-colors">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
-                <span className="absolute top-1.5 right-2 w-2 h-2 bg-[#E9437E] rounded-full"></span>
-              </button>
-              
-              {/* Notifications Dropdown (Hover) */}
-              <div className="absolute right-0 top-full mt-2 w-[320px] rounded-xl bg-white shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[999] border border-gray-100 overflow-hidden">
-                <div className="flex justify-between items-center p-4 border-b border-gray-100">
-                  <span className="font-bold text-gray-800 text-[.9rem]">Notifications</span>
-                  <span className="text-[.75rem] font-bold text-green cursor-pointer hover:underline">Tout lire</span>
-                </div>
-                <div className="max-h-[300px] overflow-y-auto">
-                  <div className="flex flex-col items-center justify-center p-6 text-center text-gray-400">
-                    <span className="text-2xl mb-2">📭</span>
-                    <span className="text-[.8rem]">Aucune notification</span>
-                  </div>
-                </div>
+          {/* Top Row on Mobile (Logo + Icons), Left side on PC */}
+          <div className="flex w-full md:w-auto items-center justify-between">
+            
+            {/* Logo */}
+            <div className="flex flex-col">
+              <Link href="/" className="flex items-center">
+                <img src="/annoncesn.jpeg" alt="Annonce.Sn" className="h-[35px] md:h-[45px] w-auto object-contain rounded-md" />
+              </Link>
+              <div className="hidden md:flex items-center gap-1 mt-0.5 text-[.75rem] text-gray-400 font-medium ml-1">
+                Achetez, vendez, trouvez facilement
               </div>
             </div>
-          )}
 
-          {/* Buttons */}
-          {!user ? (
-            <Link
-              href="/connexion"
-              className="flex items-center justify-center h-9 w-9 md:w-auto md:px-3 md:py-1.5 border border-gray-600 bg-dark-800 text-white hover:bg-dark-700 rounded-[8px] transition-colors"
-              title="Connexion"
-            >
-              <span className="text-[1.1rem] md:mr-1.5">🔐</span>
-              <span className="hidden md:inline font-bold text-[.85rem]">Connexion</span>
-            </Link>
-          ) : (
-            <div className="flex items-center gap-1 md:gap-2">
-              <Link
-                href={`/boutique/${user.id}`}
-                className="flex items-center justify-center h-8 w-8 md:h-9 md:w-auto md:px-3 md:py-1.5 border-none md:border border-gold bg-gold/10 text-gold hover:bg-gold hover:text-dark-900 rounded-[8px] transition-colors"
-                title="Ma Boutique"
-              >
-                <span className="text-[1.1rem] md:mr-1.5">🏪</span>
-                <span className="hidden md:inline font-bold text-[.85rem]">Ma Boutique</span>
-              </Link>
-              <Link
-                href="/dashboard"
-                className="flex items-center justify-center h-8 w-8 md:h-9 md:w-auto md:px-3 md:py-1.5 border-none md:border border-green bg-green/10 text-green hover:bg-green hover:text-white rounded-[8px] transition-colors"
-                title="Mon Compte"
-              >
-                <span className="text-[1.1rem] md:mr-1.5">👤</span>
-                <span className="hidden md:inline font-bold text-[.85rem]">Mon Compte</span>
+            {/* Mobile-only right side (Icons) */}
+            <div className="flex md:hidden items-center gap-4">
+              <DarkToggle />
+              
+              {/* Bell Icon (Only if logged in) */}
+              {user && (
+                <Link href="/dashboard" className="text-white hover:text-neon-gold relative group">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                  </svg>
+                  <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-neon-gold border-[1.5px] border-[#0A0E14]"></span>
+                </Link>
+              )}
+
+              {/* Account / User Icon (Always visible) */}
+              <Link href={user ? "/dashboard" : "/connexion"} className="text-white hover:text-green-400 transition-colors">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
               </Link>
             </div>
+          </div>
+
+          {/* Search Bar - Center on PC, Hidden on Mobile */}
+          {!pathname.startsWith("/dashboard") && (
+            <div className="hidden md:flex flex-1 md:max-w-[600px] order-3 md:order-none">
+              <SearchBar variant="header" />
+            </div>
           )}
-          
-          <Link href="/publier" className="btn btn-gold btn-sm px-2 py-1.5 md:px-4 md:py-2 rounded-[8px]">
-            <span className="hidden sm:inline">+ Vendre</span>
-            <span className="sm:hidden text-[.75rem] font-bold">Vendre</span>
-          </Link>
+
+          {/* Right Icons & Auth - PC Only (Mobile handled above) */}
+          <div className="hidden md:flex shrink-0 items-center gap-4 order-2 md:order-none">
+            <DarkToggle />
+            
+            {/* Desktop Notification Bell */}
+            {user && (
+              <div className="relative group cursor-pointer text-white hover:text-neon-gold transition-colors">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-neon-gold border-[1.5px] border-[#0A0E14] shadow-[0_0_10px_rgba(245,166,35,0.8)]"></span>
+              </div>
+            )}
+
+            {/* Desktop Buttons */}
+            {!user ? (
+              <Link
+                href="/connexion"
+                className="flex items-center justify-center gap-1.5 px-4 py-2 border border-white/20 bg-white/5 text-white hover:bg-white/10 hover:border-green-400 rounded-[12px] transition-colors font-bold text-[.9rem]"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span>Connexion</span>
+              </Link>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/boutique/${user.id}`}
+                  className="flex items-center justify-center px-3 py-1.5 border border-gold bg-gold/10 text-gold hover:bg-gold hover:text-dark-900 rounded-[10px] transition-colors font-bold text-[.85rem]"
+                >
+                  🏪 Ma Boutique
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="flex items-center justify-center px-3 py-1.5 border border-green-500 bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white rounded-[10px] transition-colors font-bold text-[.85rem]"
+                >
+                  👤 Mon Compte
+                </Link>
+              </div>
+            )}
+            
+            <Link href="/publier" className="flex items-center justify-center px-4 py-2 bg-gradient-to-r from-green-500 to-[#F5A623] text-white hover:scale-105 rounded-[12px] transition-transform font-bold text-[.9rem] shadow-[0_0_15px_rgba(0,168,89,0.5)]">
+              + Vendre
+            </Link>
+          </div>
         </div>
       </div>
     </header>

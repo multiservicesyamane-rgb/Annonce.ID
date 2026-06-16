@@ -1,28 +1,40 @@
 import { NextResponse } from "next/server";
 
-/**
- * Route OTP.
- * - DÉMO : si aucun fournisseur SMS configuré, renvoie le code fixe 1234.
- * - PRODUCTION : brancher Africa's Talking / Twilio / Orange SMS API ici,
- *   insérer le code dans la table `otp_codes` (expires_at 5min, rate limit 5/15min).
- *
- * POST /api/otp { phone }            → envoie un code
- * POST /api/otp { phone, code }      → vérifie un code
- */
+// SECURITE: 6.2 Rate Limiting basique pour OTP
+const otpRateLimitMap = new Map<string, { count: number, timestamp: number }>();
+const OTP_RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const OTP_MAX_REQUESTS = 5; // 5 requêtes max par 15 min par IP
 
 const DEMO_CODE = "1234";
 const isSmsConfigured = Boolean(process.env.AFRICASTALKING_API_KEY);
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const { phone, code } = body as { phone?: string; code?: string };
-
-  if (!phone) {
-    return NextResponse.json({ ok: false, error: "Numéro requis" }, { status: 400 });
+  // 1. Rate Limiting Check
+  const ip = req.headers.get("x-forwarded-for") || "unknown";
+  const now = Date.now();
+  const windowStart = now - OTP_RATE_LIMIT_WINDOW;
+  
+  let rateData = otpRateLimitMap.get(ip);
+  if (!rateData || rateData.timestamp < windowStart) {
+    rateData = { count: 0, timestamp: now };
   }
+  
+  if (rateData.count >= OTP_MAX_REQUESTS) {
+    return NextResponse.json({ error: "Trop de requêtes SMS. Veuillez patienter 15 minutes." }, { status: 429 });
+  }
+  
+  otpRateLimitMap.set(ip, { count: rateData.count + 1, timestamp: rateData.timestamp });
 
-  // Vérification d'un code
-  if (code !== undefined) {
+  // 2. SECURITE: 4.1 Validation de Schéma (remplacement de Zod)
+  const body = await req.json().catch(() => ({}));
+  const { phone, code } = body;
+
+  if (!phone || typeof phone !== 'string' || phone.length < 8 || phone.length > 20) {
+    return NextResponse.json({ ok: false, error: "Numéro de téléphone invalide" }, { status: 400 });
+  }
+  if (code !== undefined && (typeof code !== 'string' || code.length > 10)) {
+    return NextResponse.json({ ok: false, error: "Format du code invalide" }, { status: 400 });
+  }
     const valid = isSmsConfigured
       ? false /* TODO: comparer avec otp_codes en base */
       : code === DEMO_CODE;

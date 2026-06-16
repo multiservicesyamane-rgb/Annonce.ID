@@ -2,50 +2,97 @@
 
 import { useEffect, useState, useCallback } from "react";
 
+import { createClient } from "@/lib/supabase/client";
+
 const STORAGE_KEY = "annonceid_favs";
 
-/** Lire les favoris depuis localStorage */
-function readFavs(): number[] {
+/** Lire les favoris depuis localStorage — supporte UUID (string) et number */
+function readFavs(): string[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
   } catch {
     return [];
   }
 }
 
 /** Sauvegarder les favoris dans localStorage */
-function saveFavs(ids: number[]) {
+function saveFavs(ids: string[]) {
+  if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
   } catch { /* ignore */ }
 }
 
-/** Hook global pour les favoris persistants */
+/** Hook global pour les favoris persistants — compatible UUID et connecté à Supabase */
 export function useFavorites() {
-  const [favs, setFavs] = useState<number[]>([]);
+  const [favs, setFavs] = useState<string[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const supabase = createClient();
 
+  // 1. Initialisation : vérifier la session
   useEffect(() => {
-    setFavs(readFavs());
-  }, []);
+    let local = readFavs();
+    setFavs(local);
 
-  const toggle = useCallback((id: number) => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        setUserId(data.session.user.id);
+        
+        // Charger les favoris depuis la BDD
+        const { data: dbFavs } = await supabase.from('favorites').select('listing_id').eq('user_id', data.session.user.id);
+        if (dbFavs) {
+          const dbIds = dbFavs.map(f => String(f.listing_id));
+          // Fusionner local + DB
+          const merged = Array.from(new Set([...local, ...dbIds]));
+          setFavs(merged);
+          saveFavs(merged); // sync back to local for speed
+          
+          // Sauvegarder les locaux non présents en DB
+          const missingInDb = local.filter(id => !dbIds.includes(id));
+          if (missingInDb.length > 0) {
+            await supabase.from('favorites').insert(
+              missingInDb.map(id => ({ user_id: data.session.user.id, listing_id: id }))
+            ).catch(() => {}); // ignore duplicates
+          }
+        }
+      }
+    };
+    checkSession();
+  }, [supabase]);
+
+  const toggle = useCallback(async (id: string | number) => {
+    const strId = String(id);
     setFavs((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      const next = prev.includes(strId) ? prev.filter((x) => x !== strId) : [...prev, strId];
       saveFavs(next);
-      // Dispatch custom event pour synchroniser les autres composants
       window.dispatchEvent(new CustomEvent("favs-updated", { detail: next }));
       return next;
     });
-  }, []);
 
-  const isFav = useCallback((id: number) => favs.includes(id), [favs]);
+    // Synchronisation en arrière-plan avec Supabase
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.user) {
+      if (favs.includes(strId)) {
+        // Enlever
+        await supabase.from('favorites').delete().eq('user_id', data.session.user.id).eq('listing_id', strId);
+      } else {
+        // Ajouter
+        await supabase.from('favorites').insert({ user_id: data.session.user.id, listing_id: strId }).catch(() => {});
+      }
+    }
+  }, [supabase, favs]);
+
+  const isFav = useCallback((id: string | number) => favs.includes(String(id)), [favs]);
 
   // Écouter les changements depuis d'autres composants
   useEffect(() => {
     const handler = (e: Event) => {
-      const custom = e as CustomEvent<number[]>;
+      const custom = e as CustomEvent<string[]>;
       setFavs(custom.detail);
     };
     window.addEventListener("favs-updated", handler);
@@ -63,7 +110,7 @@ export default function FavButton({
   adId,
   className = "",
 }: {
-  adId?: number;
+  adId?: string | number;
   className?: string;
 }) {
   const { isFav, toggle } = useFavorites();

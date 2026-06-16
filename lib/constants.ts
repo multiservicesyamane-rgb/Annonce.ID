@@ -301,6 +301,19 @@ export const CATEGORIES: Category[] = [
       { label: "Livraison", type: "select", options: ["Possible", "À récupérer sur place"] },
     ],
   },
+  {
+    slug: "produits-digitaux",
+    name: "Produits Digitaux",
+    icon: "💻",
+    count: "4 200",
+    subs: ["Logiciels", "E-books & Formations", "Abonnements", "Templates & Scripts", "Cartes cadeaux", "Création Web"],
+    fields: [
+      { label: "Type de produit", type: "text", placeholder: "Ex : Clé Windows, E-book PDF, Compte Netflix..." },
+      { label: "Livraison", type: "select", options: ["Immédiate (Auto)", "Lien par Email", "Clé d'activation par message", "Transfert de compte"] },
+      { label: "Licence / Durée", type: "select", options: ["À vie", "1 an", "1 mois", "Autre"] },
+      { label: "Garantie / Support", type: "select", options: ["Oui (inclus)", "Non"] },
+    ],
+  },
 ];
 
 export const categoryBySlug = (slug: string) =>
@@ -370,7 +383,7 @@ export const SENEGAL_REGIONS = [
 
 // ───────── Boosts (section 10.6) ─────────
 export type Boost = {
-  key: "gratuit" | "premium_1w" | "premium_1m" | "une_1w" | "une_1m";
+  key: string;
   name: string;
   price: number;
   duration: string;
@@ -379,11 +392,11 @@ export type Boost = {
 };
 
 export const BOOSTS: Boost[] = [
-  { key: "gratuit", name: "🆓 Gratuit", price: 0, duration: "30 jours", features: ["2 annonces incluses", "Position standard"] },
-  { key: "premium_1w", name: "⭐ Premium (1 Semaine)", price: 500, duration: "7 jours", features: ["Top résultats", "Badge exclusif"], popular: true },
-  { key: "premium_1m", name: "⭐ Premium (1 Mois)", price: 5000, duration: "30 jours", features: ["Top résultats", "Badge exclusif"] },
-  { key: "une_1w", name: "🔝 À la Une (1 Semaine)", price: 1000, duration: "7 jours", features: ["Page d'accueil", "Design Marque"] },
-  { key: "une_1m", name: "🔝 À la Une (1 Mois)", price: 10000, duration: "30 jours", features: ["Page d'accueil", "Design Marque"] },
+  { key: "gratuit", name: "🆓 Gratuit (Basique)", price: 0, duration: "Illimité", features: ["Publication immédiate", "Position standard"] },
+  { key: "basic", name: "🚀 Standard", price: 1000, duration: "7 jours", features: ["Mise en avant légère"] },
+  { key: "premium", name: "⭐ Premium", price: 2500, duration: "14 jours", features: ["Mise en avant", "Badge exclusif"], popular: true },
+  { key: "alaune", name: "🔥 À la Une", price: 5000, duration: "30 jours", features: ["Top de page", "Badge À la Une", "Forte visibilité"] },
+  { key: "vip", name: "👑 VIP", price: 10000, duration: "60 jours", features: ["Top de catégorie", "Badge VIP", "Maximum de visibilité"] },
 ];
 
 // ───────── Méthodes de paiement (section 13) ─────────

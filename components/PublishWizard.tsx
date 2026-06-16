@@ -25,6 +25,9 @@ export default function PublishWizard() {
   const [region, setRegion] = useState("Dakar");
   const [commune, setCommune] = useState("Plateau");
   const [customCommune, setCustomCommune] = useState("");
+  const [subCategory, setSubCategory] = useState("");
+  const [priceType, setPriceType] = useState("Prix Fixe");
+  const [specs, setSpecs] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [cropQueue, setCropQueue] = useState<string[]>([]);
   
@@ -53,13 +56,16 @@ export default function PublishWizard() {
       supabase.from('listings').select('*').eq('id', editId).single().then(({ data }) => {
         if (data) {
           setCatSlug(data.category_slug);
+          setSubCategory(data.category);
           setTitle(data.title);
           setDesc(data.description);
-          setPrice(data.price.toString());
-          setPhotos(data.images || []);
-          setRegion(data.region);
+          setPrice(data.price?.toString() || "");
+          setPriceType(data.price_type || "Prix Fixe");
+          setPhotos(data.photos || []);
+          setRegion(data.region || "Dakar");
           setCommune(data.commune);
           setCustomCommune(data.custom_commune || "");
+          setSpecs(data.specs || {});
         }
       });
     } else {
@@ -68,13 +74,16 @@ export default function PublishWizard() {
         try {
           const d = JSON.parse(draft);
           if (d.catSlug) setCatSlug(d.catSlug);
+          if (d.subCategory) setSubCategory(d.subCategory);
           if (d.title) setTitle(d.title);
           if (d.desc) setDesc(d.desc);
           if (d.price) setPrice(d.price);
+          if (d.priceType) setPriceType(d.priceType);
           if (d.photos) setPhotos(d.photos);
           if (d.region) setRegion(d.region);
           if (d.commune) setCommune(d.commune);
           if (d.customCommune) setCustomCommune(d.customCommune);
+          if (d.specs) setSpecs(d.specs);
         } catch { /* ignore */ }
       }
     }
@@ -83,10 +92,10 @@ export default function PublishWizard() {
   useEffect(() => {
     if (!catSlug && !title && !desc && !price && photos.length === 0) return;
     const t = setTimeout(() => {
-      localStorage.setItem("annonceid_draft", JSON.stringify({ catSlug, title, desc, price, photos, region, commune, customCommune }));
+      localStorage.setItem("annonceid_draft", JSON.stringify({ catSlug, subCategory, title, desc, price, priceType, photos, region, commune, customCommune, specs }));
     }, 1000);
     return () => clearTimeout(t);
-  }, [catSlug, title, desc, price, photos, region, commune, customCommune]);
+  }, [catSlug, subCategory, title, desc, price, priceType, photos, region, commune, customCommune, specs]);
 
   const cat = CATEGORIES.find((c) => c.slug === catSlug);
   const show = (m: string) => {
@@ -95,7 +104,7 @@ export default function PublishWizard() {
   };
 
   const isKonnecta = userEmail.toLowerCase().includes('multiservicesyamane');
-  const freeAdsRemaining = isKonnecta ? 999 : (userProfile?.free_ads_remaining ?? 2);
+  const freeAdsRemaining = isKonnecta ? 999 : (userProfile?.free_ads_remaining ?? 3);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -106,11 +115,27 @@ export default function PublishWizard() {
   };
 
   const handleNext = () => {
-    if (step === 1 && !catSlug) return show("⚠ Veuillez choisir une catégorie.");
+    if (step === 1) {
+      if (!catSlug) return show("⚠ Veuillez choisir une catégorie principale.");
+      if (cat?.subs && cat.subs.length > 0 && (!subCategory || subCategory === "Choisir…")) return show("⚠ Veuillez choisir une sous-catégorie.");
+      if (commune === "Autre" && !customCommune.trim()) return show("⚠ Veuillez préciser votre lieu exact (champ obligatoire).");
+    }
+    if (step === 2) {
+      if (photos.length === 0) return show("⚠ Vous devez ajouter au moins une photo pour continuer.");
+    }
     if (step === 3) {
       if (!title || title.trim().length < 10) return show("⚠ Le titre doit faire au moins 10 caractères.");
-      if (!desc || desc.trim().length < 30) return show("⚠ La description doit faire au moins 30 caractères.");
       if (!price) return show("⚠ Veuillez indiquer un prix.");
+      if (!desc || desc.trim().length < 30) return show("⚠ La description doit faire au moins 30 caractères.");
+      
+      // Vérifier les champs de spécifications obligatoires
+      if (cat?.fields) {
+        for (const field of cat.fields) {
+          if (!specs[field.label] || specs[field.label] === "Choisir...") {
+            return show(`⚠ Le champ "${field.label}" est obligatoire pour cette catégorie.`);
+          }
+        }
+      }
     }
     setStep(s => s + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -138,11 +163,16 @@ export default function PublishWizard() {
       slug: (title || "annonce").toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now(),
       description: desc || "Pas de description",
       price: price || "0",
-      category: cat?.name || "Autre",
+      price_type: priceType,
+      category: subCategory || cat?.name || "Autre",
       category_slug: catSlug || "autre",
       location: commune === "Autre" ? (customCommune ? `${region} - ${customCommune}` : region) : `${region} - ${commune}`,
+      region: region,
+      commune: commune,
+      custom_commune: customCommune,
       image: photos.length > 0 ? photos[0] : "https://placehold.co/600x400?text=Sans+Image",
       photos: photos,
+      specs: specs,
       status: boost === 0 ? "active" : "pending"
     };
 
@@ -176,7 +206,7 @@ export default function PublishWizard() {
         const boostKey = BOOSTS[boost].key;
         await supabase.from('listings').update({ 
           status: 'active', 
-          premium: boostKey.startsWith('premium') || boostKey.startsWith('une') 
+          premium: boostKey === 'premium' || boostKey === 'vip' 
         }).eq('id', data.id);
       }
     }
@@ -200,31 +230,42 @@ export default function PublishWizard() {
         <p className="text-gray-500 dark:text-gray-400 text-[.95rem]">Suivez les étapes. Le rendu s'affiche en temps réel sur la droite.</p>
       </div>
 
-      {/* STEPS HEADER */}
-      <div className="flex items-center gap-1 sm:gap-2 mb-8 overflow-x-auto no-scrollbar pb-2">
-        {STEPS.map((s, i) => {
-          const num = i + 1;
-          const isCompleted = step > num;
-          const isActive = step === num;
-          
-          return (
-            <div key={s} className={`flex items-center gap-2 shrink-0 ${isActive ? "text-green font-bold" : isCompleted ? "text-gray-800 dark:text-gray-200" : "text-gray-400"}`}>
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${isActive ? "bg-green text-white" : isCompleted ? "bg-gold text-dark-900" : "bg-gray-200 dark:bg-dark-border"}`}>
-                {isCompleted ? "✓" : num}
-              </span>
-              <span className="text-[.85rem]">{s}</span>
-              {i < STEPS.length - 1 && <span className="mx-1 sm:mx-3 text-gray-300">›</span>}
-            </div>
-          );
-        })}
+      {/* STEPS HEADER - Premium Progress Bar */}
+      <div className="relative mb-10 w-full">
+        {/* Ligne de fond */}
+        <div className="absolute top-1/2 left-0 w-full h-[2px] bg-gray-200 dark:bg-white/10 -translate-y-1/2 rounded-full z-0"></div>
+        {/* Ligne de progression */}
+        <div 
+          className="absolute top-1/2 left-0 h-[3px] bg-gradient-to-r from-green-500 to-neon-gold -translate-y-1/2 rounded-full z-0 transition-all duration-500 shadow-[0_0_10px_rgba(245,166,35,0.5)]"
+          style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
+        ></div>
+        
+        <div className="relative z-10 flex items-center justify-between">
+          {STEPS.map((s, i) => {
+            const num = i + 1;
+            const isCompleted = step > num;
+            const isActive = step === num;
+            
+            return (
+              <div key={s} className="flex flex-col items-center gap-2">
+                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-[.85rem] font-bold transition-all duration-500 ${isActive ? "bg-gradient-to-br from-green-400 to-neon-gold text-dark-900 shadow-[0_0_15px_rgba(245,166,35,0.6)] scale-110" : isCompleted ? "bg-neon-gold text-dark-900" : "bg-white dark:bg-dark-900 border-2 border-gray-200 dark:border-white/20 text-gray-400"}`}>
+                  {isCompleted ? "✓" : num}
+                </div>
+                <span className={`text-[.7rem] md:text-[.85rem] font-bold absolute -bottom-6 whitespace-nowrap transition-colors ${isActive ? "text-neon-gold" : isCompleted ? "text-gray-800 dark:text-gray-200" : "text-gray-400"}`}>
+                  {s}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 items-start relative">
+      <div className="flex flex-col lg:flex-row gap-8 items-start relative mt-8">
         
         {/* GAUCHE : ÉDITEUR WIZARD */}
         <div className="flex-1 w-full pb-24">
 
-        <div className="bg-white dark:bg-dark-800 rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-dark-border">
+        <div className="bg-white dark:bg-[#111722]/80 dark:backdrop-blur-xl rounded-[24px] p-6 md:p-8 shadow-lg border border-gray-100 dark:border-white/10">
           
           {/* SECTION 1 : Catégorie */}
           {step === 1 && (
@@ -251,10 +292,10 @@ export default function PublishWizard() {
                 {cat && (
                   <div className="animate-fadeUp">
                     <label className="label">Sous-catégorie <span className="text-brand-red">*</span></label>
-                    <select className="input cursor-pointer">
-                      <option>Choisir…</option>
+                    <select className="input cursor-pointer" value={subCategory} onChange={(e) => setSubCategory(e.target.value)}>
+                      <option disabled value="">Choisir…</option>
                       {cat.subs.map((s) => (
-                        <option key={s}>{s}</option>
+                        <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
                   </div>
@@ -305,12 +346,19 @@ export default function PublishWizard() {
               <h2 className="font-display text-[1.2rem] font-bold mb-2 dark:text-white">Photos de l'article</h2>
               <p className="text-[.85rem] text-gray-500 mb-6">Les annonces avec photos attirent 5x plus d'acheteurs. (Max 10 photos)</p>
 
-              <label className="block w-full cursor-pointer rounded-xl border-2 border-dashed border-gold/50 bg-gold/5 hover:bg-gold/10 transition-colors px-4 py-8 text-center">
+              <label className="block w-full cursor-pointer rounded-[20px] border-[2px] border-dashed border-neon-gold/40 dark:border-neon-gold/30 bg-gold/5 dark:bg-black/40 hover:bg-gold/10 hover:border-neon-gold/60 transition-all duration-300 px-4 py-12 text-center shadow-[inset_0_0_20px_rgba(245,166,35,0.05)] group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-neon-gold/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                 <input type="file" multiple accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                <div className="text-[2.5rem] mb-2">📸</div>
-                <div className="font-bold text-gray-800 dark:text-white text-[1rem]">Cliquez pour ajouter vos photos</div>
-                <div className="text-[.8rem] text-gray-500 mt-1">Formats acceptés : JPG, PNG (Max 5 Mo/photo)</div>
+                <div className="w-16 h-16 mx-auto bg-gradient-to-br from-neon-gold to-[#D4891A] rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-[0_5px_15px_rgba(245,166,35,0.4)] transform group-hover:-translate-y-1 transition-transform">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-dark-900"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </div>
+                <div className="font-display font-bold text-gray-900 dark:text-white text-[1.2rem]">Glissez-déposez vos photos ici</div>
+                <div className="text-[.85rem] text-gray-500 mt-2">ou cliquez pour parcourir (JPG, PNG · Jusqu'à 10 Mo)</div>
               </label>
+
+              <div className="mt-4 flex items-center gap-2 bg-neon-gold/10 border border-neon-gold/20 rounded-lg p-3 text-[.8rem] text-gray-700 dark:text-white/80">
+                <span className="text-neon-gold">✨</span> Astuce : Utilisez la lumière naturelle pour obtenir les meilleurs résultats et vendre plus vite.
+              </div>
 
               {photos.length > 0 && (
                 <div className="mt-6 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
@@ -358,10 +406,10 @@ export default function PublishWizard() {
                 </div>
                 <div>
                   <label className="label">Type de prix</label>
-                  <select className="input">
-                    <option>Prix Fixe</option>
-                    <option>Négociable</option>
-                    <option>Sur devis</option>
+                  <select className="input" value={priceType} onChange={(e) => setPriceType(e.target.value)}>
+                    <option value="Prix Fixe">Prix Fixe</option>
+                    <option value="Négociable">Négociable</option>
+                    <option value="Sur devis">Sur devis</option>
                   </select>
                 </div>
               </div>
@@ -386,9 +434,12 @@ export default function PublishWizard() {
                       <div key={f.label}>
                         <label className="label">{f.label}</label>
                         {f.type === 'select' ? (
-                          <select className="input"><option>Choisir...</option>{f.options?.map(o => <option key={o}>{o}</option>)}</select>
+                          <select className="input" value={specs[f.label] || ""} onChange={(e) => setSpecs({...specs, [f.label]: e.target.value})}>
+                            <option value="">Choisir...</option>
+                            {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
                         ) : (
-                          <input type={f.type} className="input" placeholder={f.placeholder} />
+                          <input type={f.type} className="input" placeholder={f.placeholder} value={specs[f.label] || ""} onChange={(e) => setSpecs({...specs, [f.label]: e.target.value})} />
                         )}
                       </div>
                     ))}
@@ -439,15 +490,15 @@ export default function PublishWizard() {
           )}
 
           {/* FOOTER WIZARD BUTTONS */}
-          <div className="mt-8 pt-6 border-t border-gray-100 dark:border-dark-border flex items-center justify-between gap-4">
+          <div className="mt-8 pt-6 border-t border-gray-100 dark:border-white/10 flex items-center justify-between gap-4">
             {step > 1 ? (
-              <button onClick={() => setStep(s => s - 1)} className="btn bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700 px-6">
+              <button onClick={() => setStep(s => s - 1)} className="btn bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 px-6 rounded-xl border border-transparent dark:border-white/10">
                 ← Précédent
               </button>
             ) : <div></div>}
 
             {step < 4 ? (
-              <button onClick={handleNext} className="btn btn-green px-8">
+              <button onClick={handleNext} className="btn bg-gradient-to-r from-green-500 to-neon-gold text-white font-bold px-8 rounded-xl shadow-[0_4px_15px_rgba(0,168,89,0.3)] hover:scale-105 transition-transform">
                 Suivant →
               </button>
             ) : (

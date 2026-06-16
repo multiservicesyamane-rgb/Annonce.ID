@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import SiteShell from "@/components/SiteShell";
+import WhatsAppFloat from "@/components/WhatsAppFloat";
+import CookieBanner from "@/components/CookieBanner";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://annonce.id";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://annonces.sn";
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: {
-    default: "Annonce.ID — Petites Annonces Premium Afrique de l'Ouest",
-    template: "%s · Annonce.ID",
+    default: "Annonces.sn — Petites Annonces Premium au Sénégal",
+    template: "%s · Annonces.sn",
   },
   description:
     "Achetez, vendez, louez en Afrique de l'Ouest. 27 pays, 250 000+ annonces. Contact direct WhatsApp, sans intermédiaire.",
@@ -16,16 +18,21 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    siteName: "Annonce.ID",
-    title: "Annonce.ID — Petites Annonces Premium Afrique de l'Ouest",
-    description: "27 pays · 250 000+ annonces · Contact direct WhatsApp.",
+    siteName: "Annonces.sn",
+    title: "Annonces.sn — Petites Annonces Premium au Sénégal",
+    description: "Tout le Sénégal à portée de main · Achetez et vendez facilement.",
   },
   robots: { index: true, follow: true },
   manifest: "/manifest.json",
   appleWebApp: {
-    title: "Annonce.ID",
+    title: "Annonces.sn",
     statusBarStyle: "default",
     capable: true,
+  },
+  icons: {
+    icon: "/logonavi.jpeg",
+    shortcut: "/logonavi.jpeg",
+    apple: "/logonavi.jpeg",
   },
 };
 
@@ -50,6 +57,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-body antialiased">
         <SiteShell>{children}</SiteShell>
+        <WhatsAppFloat />
+        <CookieBanner />
       </body>
     </html>
   );

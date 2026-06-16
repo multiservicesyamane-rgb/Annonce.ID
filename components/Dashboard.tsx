@@ -10,21 +10,22 @@ import ConfirmModal from "./ConfirmModal";
 import EmptyState from "./EmptyState";
 import { useFavorites } from "./FavButton";
 import ImageCropperModal from "./ImageCropperModal";
-
+import ChatInterface from "./ChatInterface";
+import MarketingPanel from "./MarketingPanel";
 type Panel = "overview" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "alerts" | "profile" | "faq" | "security";
 
 const NAV: { id: string; icon: string; label: string; section?: string; badge?: number; isLink?: boolean; href?: string }[] = [
   { id: "overview", icon: "📊", label: "Accueil", section: "Principal" },
   { id: "ads", icon: "📋", label: "Gérer mes annonces" },
-  { id: "campaigns", icon: "🚀", label: "Mes Campagnes" },
+  { id: "campaigns", icon: "🚀", label: "Marketing & Pub" },
   { id: "publish", icon: "➕", label: "Publier une annonce", isLink: true, href: "/publier" },
-  { id: "purchases", icon: "🛒", label: "Historique de mes achats" },
+  { id: "purchases", icon: "🛒", label: "Historique d'achats" },
   { id: "showroom", icon: "🏪", label: "Ma Boutique" },
-  { id: "credits", icon: "🪙", label: "Acheter des crédits", section: "Interactions" },
-  { id: "favorites", icon: "❤", label: "Mes Favoris" },
-  { id: "messages", icon: "💬", label: "Messagerie & Discussions" },
+  { id: "favorites", icon: "❤", label: "Mes Favoris", section: "Interactions" },
+  { id: "messages", icon: "💬", label: "Messagerie & Chat" },
   { id: "alerts", icon: "🔔", label: "Gérer mes alertes" },
-  { id: "profile", icon: "👤", label: "Mes Profil & CV", section: "Paramètres" },
+  { id: "profile", icon: "👤", label: "Mon Profil & CV", section: "Paramètres" },
+  { id: "security", icon: "🔒", label: "Sécurité & Vie privée" },
   { id: "faq", icon: "❓", label: "FAQ" },
 ];
 
@@ -34,6 +35,23 @@ export default function Dashboard() {
   const [panel, setPanel] = useState<Panel>("overview");
   const [toast, setToast] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [profileName, setProfileName] = useState("");
+  const [profileBio, setProfileBio] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profileLanguage, setProfileLanguage] = useState("Français");
+  
+  // Security Panel States
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  
+  const [showroomName, setShowroomName] = useState("");
+  const [showroomBio, setShowroomBio] = useState("");
+  const [showroomSocials, setShowroomSocials] = useState<any>({});
+  const [editingSocial, setEditingSocial] = useState<string | null>(null);
+  const [alertPrefs, setAlertPrefs] = useState<any>({ messages: true, expired: true, stats: false, search: true, promos: false });
+  const [receivedFavsCount, setReceivedFavsCount] = useState(0);
   const [ads, setAds] = useState<any[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
   const supabase = createClient();
@@ -44,6 +62,7 @@ export default function Dashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [adTab, setAdTab] = useState("en_ligne");
   const [searchQuery, setSearchQuery] = useState("");
+  const [marketingTab, setMarketingTab] = useState("whatsapp");
   const [campaignWeeks, setCampaignWeeks] = useState(1);
   const [fileHero, setFileHero] = useState<string | null>(null);
   const [typeHero, setTypeHero] = useState<string | null>(null);
@@ -58,7 +77,7 @@ export default function Dashboard() {
   const [typeProduct, setTypeProduct] = useState<string | null>(null);
 
   const [cropModalImage, setCropModalImage] = useState<string | null>(null);
-  const [cropModalZone, setCropModalZone] = useState<"hero" | "footer" | "catalogue" | "product" | null>(null);
+  const [cropModalZone, setCropModalZone] = useState<"hero" | "footer" | "catalogue" | "product" | "avatar" | null>(null);
   
   const [campaignUrlType, setCampaignUrlType] = useState("custom");
   const [campaignUrl, setCampaignUrl] = useState("");
@@ -66,6 +85,7 @@ export default function Dashboard() {
   // Date et persistences (Local Storage Mock)
   const [campaignStartDate, setCampaignStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeCampaign, setActiveCampaign] = useState<any>(null);
+  const [editingCampaignId, setEditingCampaignId] = useState<number | null>(null);
   const [purchases, setPurchases] = useState<any[]>([]);
 
   const getCampaignPrice = (weeks: number) => {
@@ -119,15 +139,59 @@ export default function Dashboard() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setUser(user);
+        
+        // Fetch user profile from profiles table
+        supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data: profData }) => {
+          if (profData) {
+            setProfile(profData);
+            setProfileName(profData.full_name || "");
+            setProfileBio(profData.bio || "");
+            setProfilePhone(profData.phone || "");
+            setShowroomName(profData.full_name || "");
+            setShowroomBio(profData.bio || "");
+            setShowroomSocials(profData.social_links || {});
+            setAlertPrefs(profData.alert_prefs || { messages: true, expired: true, stats: false, search: true, promos: false });
+          }
+        });
+
+        // Fetch listings
         supabase.from('listings').select('id, slug, title, price, location, image, category, category_slug, status, views, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data }) => {
           if (data) setAds(data);
           setLoadingAds(false);
+        });
+
+        // Fetch purchases from DB with fallback to localStorage
+        supabase.from('purchases').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data: dbPurchases }) => {
+          if (dbPurchases && dbPurchases.length > 0) {
+            setPurchases(dbPurchases.map(p => ({
+              id: p.ref_command || p.id,
+              date: p.created_at,
+              type: p.type,
+              amount: p.amount,
+              status: p.status
+            })));
+          } else {
+            const purch = localStorage.getItem('annonceid_purchases');
+            if (purch) setPurchases(JSON.parse(purch));
+          }
         });
       } else {
         setLoadingAds(false);
       }
     });
   }, [supabase.auth]);
+
+  // Fetch count of favorites received on user's listings
+  useEffect(() => {
+    if (user && ads.length > 0) {
+      const listingIds = ads.map(a => a.id);
+      supabase.from('favorites').select('id', { count: 'exact', head: true }).in('listing_id', listingIds).then(({ count, error }) => {
+        if (!error && count !== null) {
+          setReceivedFavsCount(count);
+        }
+      });
+    }
+  }, [ads, user, supabase]);
 
   // Fermer le menu au clic extérieur
   useEffect(() => {
@@ -186,10 +250,10 @@ export default function Dashboard() {
   };
   const max = Math.max(...CHART);
 
-  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || user?.phone || "Utilisateur";
+  const displayName = profileName || profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || user?.phone || "Utilisateur";
   const displayEmail = user?.email || user?.phone || "Nouvel utilisateur";
   const isKonnecta = typeof displayEmail === 'string' && displayEmail.toLowerCase().includes('multiservicesyamane');
-  const avatarUrl = user?.user_metadata?.avatar_url || "https://i.pravatar.cc/96?img=12";
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || "https://i.pravatar.cc/96?img=12";
 
   // Favoris: fetch from Supabase based on stored IDs
   const [favListings, setFavListings] = useState<any[]>([]);
@@ -249,8 +313,8 @@ export default function Dashboard() {
     }
   }, []);
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
+  const fileToBase64 = (file: File) => {
+    return new Promise<string>((resolve, reject) => {
       if (file.type.startsWith('video/')) {
         if (file.size > 1.5 * 1024 * 1024) {
           show("❌ Vidéo trop lourde pour le test (Max: 1.5MB).");
@@ -367,7 +431,7 @@ export default function Dashboard() {
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Kpi label="Annonces actives" value={ads.filter(a => a.status === 'active' || !a.status).length.toString()} sub="Votre vitrine" />
               <Kpi label="Vues totales" value={ads.reduce((acc, ad) => acc + (ad.views || 0), 0).toString()} sub="Sur vos annonces" />
-              <Kpi label="Favoris reçus" value={favs.length.toString()} sub="Sur vos annonces" />
+              <Kpi label="Favoris reçus" value={receivedFavsCount.toString()} sub="Sur vos annonces" />
               <Kpi label="Annonces totales" value={ads.length.toString()} sub="Toutes catégories" />
             </div>
             
@@ -564,13 +628,8 @@ export default function Dashboard() {
         )}
 
         {panel === "messages" && (
-          <div className="animate-fadeUp max-w-[800px] mx-auto">
-            <h2 className="mb-6 font-display text-[1.4rem] font-extrabold dark:text-white">Messagerie</h2>
-            <EmptyState
-              title="Messagerie bientôt disponible"
-              description="La messagerie intégrée est en cours de développement. En attendant, les acheteurs vous contactent directement via WhatsApp ou par téléphone."
-              emoji="💬"
-            />
+          <div className="animate-fadeUp h-[calc(100vh-120px)] w-full">
+            <ChatInterface />
           </div>
         )}
 
@@ -606,36 +665,81 @@ export default function Dashboard() {
               <div className="flex items-center gap-6 mb-6 pb-6 border-b border-gray-100 dark:border-dark-border">
                 <img src={avatarUrl} alt="Avatar" className="w-20 h-20 rounded-full border border-gray-200 dark:border-dark-border object-cover" />
                 <div>
-                  <button className="btn btn-outline btn-sm mb-2">Changer la photo</button>
+                  <label className="btn btn-outline btn-sm mb-2 cursor-pointer inline-block">
+                    Changer la photo
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setCropModalZone("avatar");
+                        setCropModalImage(URL.createObjectURL(e.target.files[0]));
+                      }
+                    }} />
+                  </label>
                   <p className="text-[.75rem] text-gray-500">JPG, PNG ou GIF. Max 2Mo.</p>
                 </div>
               </div>
               
               <div className="grid gap-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div><label className="label">Nom de la boutique / Entreprise</label><input className="input" defaultValue={displayName} /></div>
-                  <div><label className="label">Contact (Email ou Tél)</label><input className="input bg-gray-50 dark:bg-dark-900 text-gray-500" defaultValue={displayEmail} readOnly disabled /></div>
+                  <div>
+                    <label className="label">Nom de la boutique / Entreprise</label>
+                    <input 
+                      className="input" 
+                      value={profileName} 
+                      onChange={(e) => setProfileName(e.target.value)} 
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Numéro de téléphone</label>
+                    <input 
+                      className="input" 
+                      placeholder="+221 77 000 00 00"
+                      value={profilePhone} 
+                      onChange={(e) => setProfilePhone(e.target.value)} 
+                    />
+                  </div>
                 </div>
-                <div><label className="label">Description de la boutique</label><textarea className="input resize-y" rows={3} placeholder="Que propose votre boutique ?" /></div>
+                <div>
+                  <label className="label">Description de la boutique</label>
+                  <textarea 
+                    className="input resize-y" 
+                    rows={3} 
+                    placeholder="Que propose votre boutique ?" 
+                    value={profileBio}
+                    onChange={(e) => setProfileBio(e.target.value)}
+                  />
+                </div>
                 <div>
                   <label className="label">Langue de communication</label>
-                  <select className="input max-w-[200px]">
-                    <option>Français</option>
-                    <option>Anglais</option>
-                    <option>Wolof</option>
+                  <select 
+                    className="input max-w-[200px]"
+                    value={profileLanguage}
+                    onChange={(e) => setProfileLanguage(e.target.value)}
+                  >
+                    <option value="Français">Français</option>
+                    <option value="Anglais">Anglais</option>
+                    <option value="Wolof">Wolof</option>
                   </select>
                 </div>
               </div>
-              <button onClick={async () => {
-                if (!user) return;
-                const nameInput = document.querySelector<HTMLInputElement>('input[defaultValue="' + displayName + '"]');
-                const bioInput = document.querySelector<HTMLTextAreaElement>('textarea[placeholder="Que propose votre boutique ?"]');
-                await supabase.from('profiles').update({
-                  full_name: nameInput?.value || displayName,
-                  bio: bioInput?.value || '',
-                }).eq('id', user.id);
-                show("✓ Profil sauvegardé avec succès !");
-              }} className="btn btn-green mt-6">Sauvegarder les modifications</button>
+              <button 
+                onClick={async () => {
+                  if (!user) return;
+                  const { error } = await supabase.from('profiles').update({
+                    full_name: profileName,
+                    bio: profileBio,
+                    phone: profilePhone
+                  }).eq('id', user.id);
+                  if (error) {
+                    show("❌ Erreur : " + error.message);
+                  } else {
+                    show("✓ Profil sauvegardé avec succès !");
+                    setProfile(prev => prev ? { ...prev, full_name: profileName, bio: profileBio, phone: profilePhone } : { full_name: profileName, bio: profileBio, phone: profilePhone });
+                  }
+                }} 
+                className="btn btn-green mt-6"
+              >
+                Sauvegarder les modifications
+              </button>
             </div>
           </div>
         )}
@@ -692,18 +796,41 @@ export default function Dashboard() {
         )}
 
         {panel === "campaigns" && (
-          <div className="animate-fadeUp max-w-[900px] mx-auto">
-            <h2 className="mb-2 font-display text-[1.6rem] font-extrabold dark:text-white">🚀 Propulsez vos ventes</h2>
-            <p className="text-gray-500 dark:text-white/70 mb-8 text-[.95rem]">
-              Ne vous contentez plus d'un seul emplacement. En réservant votre espace publicitaire, **votre bannière s'affichera partout** sur la plateforme (Accueil, Catalogue, Pages Produits). 
-              <br/><span className="text-gold font-bold">⚠️ Limité à 2 annonceurs par semaine en diaporama.</span>
-            </p>
-            
-            <div className="bg-white dark:bg-dark-800 rounded-[2rem] shadow-xl border border-gray-100 dark:border-dark-border overflow-hidden">
-              
-              {!activeCampaign ? (
-                <>
-                  {/* ETAPE 1: VISUEL SUBLIME */}
+          <div className="animate-fadeUp max-w-[1200px] mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="font-display text-[1.6rem] font-extrabold dark:text-white">Marketing & Publicité</h2>
+            </div>
+
+            {/* Tabs for Marketing vs Banner Ads */}
+            <div className="flex gap-4 border-b border-gray-200 dark:border-dark-border mb-8 overflow-x-auto">
+              <button 
+                onClick={() => setMarketingTab("whatsapp")}
+                className={`px-4 py-3 font-bold text-sm whitespace-nowrap border-b-2 transition ${marketingTab === "whatsapp" ? 'border-green text-green' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+              >
+                📱 Marketing WhatsApp
+              </button>
+              <button 
+                onClick={() => setMarketingTab("banners")}
+                className={`px-4 py-3 font-bold text-sm whitespace-nowrap border-b-2 transition ${marketingTab === "banners" ? 'border-green text-green' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+              >
+                🖼️ Bannières Publicitaires
+              </button>
+            </div>
+
+            {marketingTab === "whatsapp" ? (
+              <MarketingPanel ads={ads} user={user} />
+            ) : (
+              <div className="max-w-[900px] mx-auto">
+                <p className="text-gray-500 dark:text-white/70 mb-8 text-[.95rem]">
+                  Ne vous contentez plus d'un seul emplacement. En réservant votre espace publicitaire, **votre bannière s'affichera partout** sur la plateforme (Accueil, Catalogue, Pages Produits). 
+                  <br/><span className="text-gold font-bold">⚠️ Limité à 2 annonceurs par semaine en diaporama.</span>
+                </p>
+                
+                <div className="bg-white dark:bg-dark-800 rounded-[2rem] shadow-xl border border-gray-100 dark:border-dark-border overflow-hidden">
+                  
+                  {!activeCampaign ? (
+                    <>
+                      {/* ETAPE 1: VISUEL SUBLIME */}
               <div className="bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#020617] p-8 md:p-10 text-white relative">
                 <div className="absolute top-0 right-0 p-6 opacity-20 text-[4rem] pointer-events-none">✨</div>
                 <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
@@ -1014,18 +1141,32 @@ export default function Dashboard() {
                           status: 'active'
                         };
                         
-                        const { data, error } = await supabase.from('campagnes_pub').insert([newCampaign]).select();
-
-                        const newPurchase = {
-                          id: `PUB-${Date.now()}`,
-                          date: new Date().toISOString(),
-                          type: 'Campagne Publicitaire',
-                          amount: getCampaignPrice(campaignWeeks),
-                          status: 'Complété'
-                        };
+                        let data, error;
                         
-                        const allPurchases = [newPurchase, ...purchases];
-                        localStorage.setItem('annonceid_purchases', JSON.stringify(allPurchases));
+                        if (editingCampaignId) {
+                          const res = await supabase.from('campagnes_pub').update(newCampaign).eq('id', editingCampaignId).select();
+                          data = res.data;
+                          error = res.error;
+                          setEditingCampaignId(null);
+                          show("✅ Campagne mise à jour avec succès !");
+                        } else {
+                          const res = await supabase.from('campagnes_pub').insert([newCampaign]).select();
+                          data = res.data;
+                          error = res.error;
+                          
+                          const newPurchase = {
+                            id: `PUB-${Date.now()}`,
+                            date: new Date().toISOString(),
+                            type: 'Campagne Publicitaire',
+                            amount: getCampaignPrice(campaignWeeks),
+                            status: 'Complété'
+                          };
+                          
+                          const allPurchases = [newPurchase, ...purchases];
+                          localStorage.setItem('annonceid_purchases', JSON.stringify(allPurchases));
+                          setPurchases(allPurchases);
+                          show("🎉 Nouvelle campagne activée (Privilège Super Admin).");
+                        }
                         
                         if (data && data.length > 0) {
                           setActiveCampaign({
@@ -1040,7 +1181,6 @@ export default function Dashboard() {
                             id: data[0].id
                           });
                         }
-                        setPurchases(allPurchases);
 
                         show("🎉 Campagne validée et sauvegardée en base (Privilège Super Admin).");
                         setFileHero(null);
@@ -1121,23 +1261,42 @@ export default function Dashboard() {
                   </div>
                   
                   {isKonnecta && (
-                    <button 
-                      onClick={async () => {
-                        if (activeCampaign?.id) {
-                          await supabase.from('campagnes_pub').update({ status: 'inactive' }).eq('id', activeCampaign.id);
-                        }
-                        setActiveCampaign(null);
-                        show("Campagne arrêtée (Privilège Super Admin).");
-                      }}
-                      className="mt-8 text-brand-red text-sm font-bold underline hover:text-red-700"
-                    >
-                      Arrêter la campagne
-                    </button>
+                    <div className="mt-8 flex flex-col items-center justify-center gap-4">
+                      <button 
+                        onClick={() => {
+                          setFileHero(activeCampaign.hero);
+                          setFileFooter(activeCampaign.footer);
+                          setFileCatalogue(activeCampaign.catalogue);
+                          setFileProduct(activeCampaign.product);
+                          setCampaignUrl(activeCampaign.url || "");
+                          setCampaignUrlType("custom");
+                          setCampaignWeeks(activeCampaign.weeks);
+                          setEditingCampaignId(activeCampaign.id);
+                          setActiveCampaign(null);
+                        }}
+                        className="btn btn-outline"
+                      >
+                        ✏️ Modifier la campagne
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (activeCampaign?.id) {
+                            await supabase.from('campagnes_pub').update({ status: 'inactive' }).eq('id', activeCampaign.id);
+                          }
+                          setActiveCampaign(null);
+                          show("Campagne arrêtée (Privilège Super Admin).");
+                        }}
+                        className="text-brand-red text-sm font-bold underline hover:text-red-700"
+                      >
+                        Arrêter la campagne
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
-
-            </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {panel === "purchases" && (
@@ -1192,9 +1351,20 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-8">
                 <h2 className="font-display text-[1.6rem] font-extrabold dark:text-white">Ma Boutique</h2>
                 <div className="flex items-center gap-2 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border px-4 py-2 rounded-full shadow-sm">
-                  <span className="text-sm font-semibold text-gray-500 hidden sm:inline">annonce.id/store/{displayName.toLowerCase().replace(/\s+/g, '-')}</span>
+                  <span className="text-sm font-semibold text-gray-500 hidden sm:inline">
+                    {typeof window !== 'undefined' ? `${window.location.origin}/boutique/${user?.id || ''}` : `boutique/${user?.id || ''}`}
+                  </span>
                   <span className="text-sm font-semibold text-gray-500 sm:hidden">Lien boutique</span>
-                  <button onClick={() => show("Lien copié !")} className="text-gray-400 hover:text-green" title="Copier le lien">
+                  <button 
+                    onClick={() => {
+                      if (typeof window !== 'undefined' && user?.id) {
+                        navigator.clipboard.writeText(`${window.location.origin}/boutique/${user.id}`);
+                        show("📋 Lien de la boutique copié !");
+                      }
+                    }} 
+                    className="text-gray-400 hover:text-green" 
+                    title="Copier le lien"
+                  >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                   </button>
                 </div>
@@ -1209,17 +1379,27 @@ export default function Dashboard() {
               {/* Profile Card Editor */}
               <div className="rounded-2xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6 relative">
                 <div className="flex flex-col sm:flex-row items-start gap-4">
-                  <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-dark-900 border border-gray-200 dark:border-dark-border flex items-center justify-center text-2xl shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition group relative">
+                  <label className="w-16 h-16 rounded-full bg-gray-100 dark:bg-dark-900 border border-gray-200 dark:border-dark-border flex items-center justify-center text-2xl shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition group relative">
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setCropModalZone("avatar");
+                        setCropModalImage(URL.createObjectURL(e.target.files[0]));
+                      }
+                    }} />
                     <img src={avatarUrl} alt="logo" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                       <span className="text-white text-[.6rem] font-bold">Modifier</span>
                     </div>
-                  </div>
+                  </label>
                   <div className="flex-1 w-full">
                     <div className="flex justify-between items-start">
                       <div className="w-full">
-                        <input className="showroom-name-input font-bold text-lg bg-transparent border-b border-transparent hover:border-gray-300 dark:text-white focus:outline-none focus:border-green mb-1 w-full" defaultValue={displayName} />
-                        <div className="text-sm text-gray-500">@{displayName.toLowerCase().replace(/\s+/g, '')}</div>
+                        <input 
+                          className="showroom-name-input font-bold text-lg bg-transparent border-b border-transparent hover:border-gray-300 dark:text-white focus:outline-none focus:border-green mb-1 w-full" 
+                          value={showroomName} 
+                          onChange={(e) => setShowroomName(e.target.value)} 
+                        />
+                        <div className="text-sm text-gray-500">@{showroomName.toLowerCase().replace(/\s+/g, '')}</div>
                       </div>
                       <button className="text-gray-400 hover:text-green ml-2">✏️</button>
                     </div>
@@ -1227,17 +1407,37 @@ export default function Dashboard() {
                     <textarea 
                       className="showroom-bio-input w-full text-sm mt-3 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-dark-border focus:border-green focus:outline-none resize-none text-gray-600 dark:text-gray-300 p-2 rounded -ml-2" 
                       rows={2} 
-                      defaultValue="Boutique en ligne 🛍️ Vente de produits & services de qualité 📱 Commande rapide"
+                      value={showroomBio}
+                      onChange={(e) => setShowroomBio(e.target.value)}
                     />
 
                     {/* Social links */}
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {['instagram', 'tiktok', 'youtube', 'whatsapp', 'facebook'].map(social => (
-                        <button key={social} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-900 flex items-center justify-center text-gray-400 hover:text-green hover:bg-green/10 transition">
-                          {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : social === 'facebook' ? 'f' : social === 'tiktok' ? '♪' : '▶'}
-                        </button>
-                      ))}
-                      <button className="w-8 h-8 rounded-full border border-dashed border-gray-300 dark:border-dark-border flex items-center justify-center text-gray-400 hover:border-green hover:text-green transition">+</button>
+                    <div className="flex flex-wrap items-center gap-2 mt-4">
+                      {['instagram', 'tiktok', 'youtube', 'whatsapp', 'facebook'].map(social => {
+                        const hasLink = !!showroomSocials[social];
+                        return (
+                          <div key={social} className="flex items-center gap-1">
+                            <button 
+                              onClick={() => setEditingSocial(editingSocial === social ? null : social)}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center transition ${hasLink ? 'bg-green/10 text-green font-bold' : 'bg-gray-100 dark:bg-dark-900 text-gray-400 hover:text-green hover:bg-green/10'}`}
+                              title={hasLink ? `${social}: ${showroomSocials[social]}` : `Ajouter un lien ${social}`}
+                            >
+                              {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : social === 'facebook' ? 'f' : social === 'tiktok' ? '♪' : '▶'}
+                            </button>
+                            {editingSocial === social && (
+                              <input 
+                                type="text"
+                                placeholder={`Lien ${social}...`}
+                                className="input py-1 px-2 text-xs w-32"
+                                value={showroomSocials[social] || ""}
+                                onChange={(e) => {
+                                  setShowroomSocials({ ...showroomSocials, [social]: e.target.value });
+                                }}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1247,18 +1447,18 @@ export default function Dashboard() {
                   <button 
                     onClick={async () => {
                       if (!user) return;
-                      const nameInput = document.querySelector<HTMLInputElement>('.showroom-name-input');
-                      const bioInput = document.querySelector<HTMLTextAreaElement>('.showroom-bio-input');
                       
                       const { error } = await supabase.from('profiles').update({
-                        full_name: nameInput?.value || displayName,
-                        bio: bioInput?.value || '',
+                        full_name: showroomName,
+                        bio: showroomBio,
+                        social_links: showroomSocials
                       }).eq('id', user.id);
                       
                       if (error) {
-                        show("Erreur lors de la sauvegarde : " + error.message);
+                        show("❌ Erreur lors de la sauvegarde : " + error.message);
                       } else {
                         show("✓ Boutique sauvegardée avec succès !");
+                        setProfile(prev => prev ? { ...prev, full_name: showroomName, bio: showroomBio, social_links: showroomSocials } : { full_name: showroomName, bio: showroomBio, social_links: showroomSocials });
                       }
                     }} 
                     className="btn btn-green btn-sm shadow-sm"
@@ -1274,7 +1474,7 @@ export default function Dashboard() {
 
               {/* Draggable Products List */}
               <div className="space-y-3">
-                {ads.length > 0 ? ads.slice(0, 5).map((prod, idx) => (
+                {ads.length > 0 ? ads.map((prod, idx) => (
                   <div key={prod.id || idx} className="flex items-center gap-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border rounded-xl p-3 shadow-sm cursor-move hover:border-green transition">
                     <div className="text-gray-300 flex flex-col gap-1 px-1">
                       <div className="w-1 h-1 bg-current rounded-full"></div>
@@ -1297,7 +1497,7 @@ export default function Dashboard() {
             </div>
 
             {/* Colonne Droite : Live Preview */}
-            <div className="hidden lg:flex w-[350px] shrink-0 justify-center items-start pt-4 relative">
+            <div className="flex w-full max-w-[350px] mx-auto lg:mx-0 lg:w-[350px] shrink-0 justify-center items-start pt-4 relative">
               {/* Phone Mockup Frame */}
               <div className="relative w-full h-[700px] bg-white dark:bg-dark-900 rounded-[3rem] border-[12px] border-gray-900 dark:border-black shadow-2xl overflow-hidden flex flex-col">
                 {/* iPhone Notch */}
@@ -1315,24 +1515,26 @@ export default function Dashboard() {
                   {/* Profile */}
                   <div className="px-5 pb-6 relative text-center">
                     <img src={avatarUrl} alt="Avatar" className="w-20 h-20 rounded-full border-4 border-white dark:border-dark-950 object-cover mx-auto -mt-10 relative z-10 bg-white" />
-                    <h2 className="font-bold text-lg mt-2 text-gray-900 dark:text-white leading-tight">{displayName}</h2>
-                    <p className="text-[.65rem] text-white bg-green px-2 py-0.5 rounded-full font-bold inline-block mt-1">✓ Vendeur Pro</p>
+                    <h2 className="font-bold text-lg mt-2 text-gray-900 dark:text-white leading-tight">{showroomName || displayName}</h2>
+                    <p className="text-[.65rem] text-white bg-green px-2 py-0.5 rounded-full font-bold inline-block mt-1">✓ Vendeur Vérifié</p>
                     <p className="text-[.75rem] text-gray-600 dark:text-gray-400 mt-3 mb-4 leading-relaxed">
-                      Boutique en ligne 🛍️ Vente de produits & services de qualité 📱 Commande rapide
+                      {showroomBio || "Boutique en ligne 🛍️ Vente de produits & services de qualité 📱 Commande rapide"}
                     </p>
                     
                     <div className="flex justify-center gap-2">
-                      {['whatsapp', 'instagram', 'tiktok'].map(social => (
-                         <div key={social} className="w-8 h-8 rounded-full bg-white dark:bg-dark-800 shadow-sm border border-gray-100 dark:border-dark-border flex items-center justify-center text-[.8rem] text-gray-600 hover:text-green cursor-pointer">
-                           {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : '♪'}
-                         </div>
+                      {Object.entries(showroomSocials).map(([social, link]) => (
+                         link && (
+                           <a key={social} href={String(link)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-white dark:bg-dark-800 shadow-sm border border-gray-100 dark:border-dark-border flex items-center justify-center text-[.8rem] text-gray-600 hover:text-green cursor-pointer">
+                             {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : social === 'facebook' ? 'f' : social === 'tiktok' ? '♪' : '▶'}
+                           </a>
+                         )
                       ))}
                     </div>
                   </div>
 
                   {/* Listings */}
                   <div className="px-4 pb-8 space-y-4">
-                    {ads.length > 0 ? ads.slice(0, 5).map((prod, idx) => (
+                    {ads.length > 0 ? ads.map((prod, idx) => (
                       <div key={prod.id || idx} className="bg-white dark:bg-dark-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-dark-border">
                         <img src={prod.image || "https://placehold.co/400x300?text=Sans+Image"} alt={prod.title} className="w-full h-40 object-cover" />
                         <div className="p-4">
@@ -1382,9 +1584,95 @@ export default function Dashboard() {
                     <li className="flex gap-2">✓ Boosts applicables instantanément</li>
                     <li className="flex gap-2">✓ Priorité support client</li>
                   </ul>
-                  <button onClick={() => show(`Redirection pour l'achat de ${pack.credits} crédits`)} className={`w-full py-3 rounded-lg font-bold transition ${pack.popular ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700"}`}>Acheter maintenant</button>
+                  <button 
+                    onClick={async () => {
+                      const numericPrice = pack.credits === 50 ? 5000 : pack.credits === 150 ? 12000 : 35000;
+                      show("Redirection vers PayTech...");
+                      try {
+                        const res = await fetch("/api/paytech", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            amount: numericPrice,
+                            itemName: `Achat de ${pack.credits} Crédits - ${pack.name}`,
+                            refCommand: `CRE-${Date.now()}`,
+                            userId: user?.id
+                          })
+                        });
+                        const data = await res.json();
+                        if (data.redirect_url) {
+                          window.location.href = data.redirect_url;
+                        } else {
+                          show("❌ Erreur lors de l'initialisation du paiement.");
+                        }
+                      } catch (error) {
+                        show("❌ Erreur de connexion avec PayTech.");
+                      }
+                    }} 
+                    className={`w-full py-3 rounded-lg font-bold transition ${pack.popular ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700"}`}
+                  >
+                    Acheter maintenant
+                  </button>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {panel === "messages" && (
+          <div className="animate-fadeUp max-w-[1000px] mx-auto h-[700px] flex flex-col">
+            <h2 className="mb-4 font-display text-[1.4rem] font-extrabold dark:text-white shrink-0">Messagerie & Discussions</h2>
+            <div className="flex-1 bg-white dark:bg-dark-800 rounded-2xl border border-gray-200 dark:border-dark-border overflow-hidden">
+              <ChatInterface />
+            </div>
+          </div>
+        )}
+
+
+        {panel === "security" && (
+          <div className="animate-fadeUp max-w-[800px] mx-auto">
+            <h2 className="mb-6 font-display text-[1.4rem] font-extrabold dark:text-white">Sécurité & Vie privée</h2>
+            <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6">
+              <h3 className="font-bold text-lg mb-4 dark:text-white">Modifier le mot de passe</h3>
+              <div className="space-y-4 max-w-md">
+                <div>
+                  <label className="text-[.8rem] text-gray-500 font-bold mb-1 block">Nouveau mot de passe</label>
+                  <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" className="w-full bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-border rounded-lg px-4 py-2.5 text-sm outline-none focus:border-green" />
+                </div>
+                <div>
+                  <label className="text-[.8rem] text-gray-500 font-bold mb-1 block">Confirmer le nouveau mot de passe</label>
+                  <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className="w-full bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-border rounded-lg px-4 py-2.5 text-sm outline-none focus:border-green" />
+                </div>
+                <button 
+                  className="btn btn-green w-full" 
+                  onClick={async () => {
+                    if (!newPassword || newPassword !== confirmPassword) {
+                      show("❌ Les mots de passe ne correspondent pas");
+                      return;
+                    }
+                    if (newPassword.length < 6) {
+                      show("❌ Le mot de passe doit faire au moins 6 caractères");
+                      return;
+                    }
+                    const { error } = await supabase.auth.updateUser({ password: newPassword });
+                    if (error) {
+                      show("❌ Erreur: " + error.message);
+                    } else {
+                      show("✓ Mot de passe mis à jour");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                    }
+                  }}
+                >
+                  Mettre à jour le mot de passe
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
+              <h3 className="font-bold text-lg mb-2 text-brand-red">Zone de danger</h3>
+              <p className="text-sm text-red-700/80 mb-4">La suppression de votre compte est définitive et entraînera la perte de toutes vos données, annonces, et achats.</p>
+              <button onClick={() => show("⚠️ Pour supprimer votre compte, veuillez nous contacter à contact@annonce.id avec votre adresse email.")} className="btn btn-outline text-brand-red border-brand-red hover:bg-brand-red hover:text-white">Supprimer mon compte</button>
             </div>
           </div>
         )}
@@ -1395,23 +1683,43 @@ export default function Dashboard() {
             <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm">
               <div className="space-y-6">
                 {[
-                  { title: "Nouveaux messages", desc: "Soyez alerté par email lorsqu'un acheteur vous contacte.", active: true },
-                  { title: "Annonces expirées", desc: "Recevez un rappel 48h avant l'expiration de vos annonces.", active: true },
-                  { title: "Statistiques mensuelles", desc: "Recevez un rapport complet sur les vues de vos annonces.", active: false },
-                  { title: "Alertes de recherche", desc: "Notification si une annonce correspond à vos critères enregistrés.", active: true },
-                  { title: "Promotions & Nouveautés", desc: "Actualités de la plateforme et offres spéciales sur les boosts.", active: false },
-                ].map((alert, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-4 pb-6 border-b border-gray-100 dark:border-dark-border last:border-0 last:pb-0">
-                    <div>
-                      <h4 className="font-bold text-gray-900 dark:text-white text-sm">{alert.title}</h4>
-                      <p className="text-xs text-gray-500 mt-1">{alert.desc}</p>
+                  { key: "messages", title: "Nouveaux messages", desc: "Soyez alerté par email lorsqu'un acheteur vous contacte." },
+                  { key: "expired", title: "Annonces expirées", desc: "Recevez un rappel 48h avant l'expiration de vos annonces." },
+                  { key: "stats", title: "Statistiques mensuelles", desc: "Recevez un rapport complet sur les vues de vos annonces." },
+                  { key: "search", title: "Alertes de recherche", desc: "Notification si une annonce correspond à vos critères enregistrés." },
+                  { key: "promos", title: "Promotions & Nouveautés", desc: "Actualités de la plateforme et offres spéciales sur les boosts." },
+                ].map((item, idx) => {
+                  const isActive = !!alertPrefs[item.key];
+                  return (
+                    <div key={idx} className="flex items-center justify-between gap-4 pb-6 border-b border-gray-100 dark:border-dark-border last:border-0 last:pb-0">
+                      <div>
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">{item.title}</h4>
+                        <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer" 
+                          checked={isActive} 
+                          onChange={async () => {
+                            if (!user) return;
+                            const newPrefs = { ...alertPrefs, [item.key]: !isActive };
+                            setAlertPrefs(newPrefs);
+                            const { error } = await supabase.from('profiles').update({
+                              alert_prefs: newPrefs
+                            }).eq('id', user.id);
+                            if (error) {
+                              show("❌ Erreur sauvegarde préférences");
+                            } else {
+                              show("✓ Préférence d'alerte mise à jour !");
+                            }
+                          }}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-dark-900 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green"></div>
+                      </label>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                      <input type="checkbox" className="sr-only peer" defaultChecked={alert.active} />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-dark-900 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green"></div>
-                    </label>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1424,7 +1732,7 @@ export default function Dashboard() {
             
             <div className="space-y-4">
               {[
-                { q: "Comment publier une annonce gratuitement ?", a: "Vous avez droit à 2 annonces gratuites par mois. Rendez-vous dans la section 'Publier une annonce', remplissez le formulaire, et sélectionnez l'option gratuite à la dernière étape." },
+                { q: "Comment publier une annonce gratuitement ?", a: "Vous avez droit à 3 annonces gratuites par mois. Rendez-vous dans la section 'Publier une annonce', remplissez le formulaire, et sélectionnez l'option gratuite à la dernière étape." },
                 { q: "Quels sont les avantages du mode Premium ?", a: "Le mode Premium place votre annonce en tête de liste, lui ajoute un badge 'VIP', et augmente sa visibilité de 500% par rapport à une annonce classique." },
                 { q: "Comment modifier ou supprimer mon annonce ?", a: "Allez dans 'Gérer mes annonces'. Cliquez sur les boutons 'Modifier' ou 'Supprimer' situés à côté de l'annonce concernée." },
                 { q: "Les paiements par Orange Money sont-ils sécurisés ?", a: "Oui, tous nos paiements sont cryptés et traités directement par l'API officielle de Wave et Orange Money." },
@@ -1473,16 +1781,35 @@ export default function Dashboard() {
       {cropModalImage && cropModalZone && (
         <ImageCropperModal
           imageSrc={cropModalImage}
-          aspectRatio={cropModalZone === 'catalogue' || cropModalZone === 'product' ? 4 : 4} // Tous sont en 4:1 (1200x300 ou 800x200)
+          maxWidth={cropModalZone === 'avatar' ? 256 : 1200}
+          aspectRatio={cropModalZone === 'catalogue' || cropModalZone === 'product' ? 4 : cropModalZone === 'avatar' ? 1 : 4} // Tous sont en 4:1 (1200x300 ou 800x200) sauf avatar (1:1)
           onCancel={() => {
             setCropModalImage(null);
             setCropModalZone(null);
           }}
-          onCropDone={(base64) => {
+          onCropDone={async (base64) => {
             if (cropModalZone === 'hero') setFileHero(base64);
             if (cropModalZone === 'footer') setFileFooter(base64);
             if (cropModalZone === 'catalogue') setFileCatalogue(base64);
             if (cropModalZone === 'product') setFileProduct(base64);
+            if (cropModalZone === 'avatar') {
+              if (user) {
+                try {
+                  const { error: authError } = await supabase.auth.updateUser({ data: { avatar_url: base64 } });
+                  if (authError) throw authError;
+                  const { error: dbError } = await supabase.from('profiles').update({ avatar_url: base64 }).eq('id', user.id);
+                  if (dbError) throw dbError;
+                  
+                  const { data } = await supabase.auth.getUser();
+                  if (data?.user) setUser(data.user);
+                  setProfile((prev: any) => prev ? { ...prev, avatar_url: base64 } : { avatar_url: base64 });
+                  show("✓ Photo mise à jour !");
+                } catch (e: any) {
+                  show("❌ Erreur: L'image est peut-être trop volumineuse (Max 1 Mo suggéré).");
+                  console.error(e);
+                }
+              }
+            }
             setCropModalImage(null);
             setCropModalZone(null);
           }}

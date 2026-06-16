@@ -16,11 +16,12 @@ interface Area {
 interface ImageCropperModalProps {
   imageSrc: string;
   aspectRatio: number;
+  maxWidth?: number;
   onCropDone: (croppedImageBase64: string) => void;
   onCancel: () => void;
 }
 
-export default function ImageCropperModal({ imageSrc, aspectRatio, onCropDone, onCancel }: ImageCropperModalProps) {
+export default function ImageCropperModal({ imageSrc, aspectRatio, maxWidth = 1200, onCropDone, onCancel }: ImageCropperModalProps) {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -42,7 +43,7 @@ export default function ImageCropperModal({ imageSrc, aspectRatio, onCropDone, o
       if (!ctx) return;
 
       // Set canvas size to the cropped size (or a max to prevent huge files)
-      const MAX_W = 1200;
+      const MAX_W = maxWidth;
       let finalW = croppedAreaPixels.width;
       let finalH = croppedAreaPixels.height;
       if (finalW > MAX_W) {

@@ -15,19 +15,19 @@ const config: Config = {
     extend: {
       colors: {
         dark: {
-          900: "#0A0E14",
-          800: "#111722",
-          700: "#1A2231",
-          border: "#243044",
+          900: "#030712", // Very deep midnight blue/black
+          800: "#0B1120", // Slightly lighter for cards
+          700: "#111827", // Hover states
+          border: "#1F2937", // Crisp dark borders
         },
-        light: "#FAFAF8",
+        light: "#FFFFFF",
         gray: {
-          50: "#F4F4F2",
-          100: "#E8E8E4",
-          300: "#BEBEBB",
-          500: "#7C7C78",
-          700: "#3A3A37",
-          900: "#141412",
+          50: "#F9FAFB",
+          100: "#F3F4F6",
+          300: "#D1D5DB",
+          500: "#6B7280",
+          700: "#374151",
+          900: "#111827",
         },
         gold: {
           DEFAULT: "#F5A623",
@@ -36,19 +36,20 @@ const config: Config = {
           pale: "#FEF3DC",
         },
         green: {
-          DEFAULT: "#1B4332",
-          mid: "#2D6A4F",
-          pale: "#D8F3DC",
+          DEFAULT: "#00A859", // Vert dynamique
+          mid: "#007F43",
+          pale: "#E6F6ED",
         },
         neon: {
-          gold: "#FFC93C",
-          cyan: "#2DE2E6",
-          magenta: "#FF2A6D",
-          green: "#05FFA1",
+          gold: "#F5A623", 
+          cyan: "#00A859", 
+          magenta: "#F5A623", 
+          green: "#00A859",
+          purple: "#00A859",
         },
         brand: {
-          red: "#E63946",
-          blue: "#2563EB",
+          red: "#E63946", // Keep for errors
+          blue: "#00A859", 
           wa: "#25D366",
         },
       },
@@ -58,18 +59,22 @@ const config: Config = {
       },
       backgroundImage: {
         "grad-hero":
-          "linear-gradient(135deg,#0A0E14 0%,#1A2231 50%,#1B4332 100%)",
+          "linear-gradient(135deg,#0A0E14 0%,#111722 50%,#000000 100%)",
         "grad-gold":
           "linear-gradient(135deg,#F5A623 0%,#FFD166 50%,#F5A623 100%)",
         "grad-neon":
-          "linear-gradient(135deg,#FF2A6D 0%,#F5A623 50%,#2DE2E6 100%)",
-        "grad-premium": "linear-gradient(135deg,#FFC93C 0%,#FF8C42 100%)",
+          "linear-gradient(135deg,#00A859 0%,#F5A623 100%)", // 2 colors only
+        "grad-premium": "linear-gradient(135deg,#F5A623 0%,#D4891A 100%)",
       },
       boxShadow: {
         "glow-gold":
-          "0 0 5px rgba(255,201,60,.5),0 0 20px rgba(255,201,60,.3),0 0 40px rgba(255,201,60,.12)",
+          "0 0 5px rgba(245,166,35,.5),0 0 20px rgba(245,166,35,.3),0 0 40px rgba(245,166,35,.12)",
         "glow-cyan":
-          "0 0 5px rgba(45,226,230,.5),0 0 20px rgba(45,226,230,.25)",
+          "0 0 5px rgba(0,168,89,.5),0 0 20px rgba(0,168,89,.25)",
+        "glow-magenta": 
+          "0 0 8px rgba(245,166,35,.5), 0 0 20px rgba(245,166,35,.3)",
+        "glow-purple": 
+          "0 0 8px rgba(0,168,89,.5), 0 0 20px rgba(0,168,89,.3)",
         "glow-wa": "0 0 20px rgba(37,211,102,.5)",
         xs: "0 1px 3px rgba(0,0,0,.06)",
         sm: "0 2px 8px rgba(0,0,0,.08)",

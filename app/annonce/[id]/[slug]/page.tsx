@@ -22,7 +22,7 @@ async function fetchAd(idParam: string) {
     if (isNaN(Number(idParam))) return null;
   }
 
-  const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url)').eq('id', idParam).single();
+  const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url, phone)').eq('id', idParam).single();
   if (data) {
     return {
       id: data.id,
@@ -30,7 +30,7 @@ async function fetchAd(idParam: string) {
       slug: data.slug,
       description: data.description,
       price: data.price ? formatNumber(data.price) + " FCFA" : "Gratuit",
-      priceType: "fixe",
+      priceType: data.price_type || "Prix Fixe",
       category: data.category,
       categorySlug: data.category_slug,
       location: data.location,
@@ -40,10 +40,12 @@ async function fetchAd(idParam: string) {
       views: data.views,
       favorites: 0,
       date: new Date(data.created_at).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' }),
-      specs: {},
+      specs: data.specs || {},
       seller: {
+        id: data.user_id,
         name: data.profiles?.full_name || "Vendeur",
         avatar: data.profiles?.avatar_url || "https://placehold.co/100x100?text=V",
+        phone: data.profiles?.phone || "+221770000000",
         rating: "Nouveau",
         sales: 0,
         isPro: false
@@ -135,43 +137,50 @@ export default async function AnnoncePage({ params }: Props) {
           <Gallery images={images} title={ad.title} />
 
           {/* MOBILE ONLY: Title & Price immediately after image */}
-          <div className="lg:hidden mt-4 bg-white dark:bg-dark-800 p-4 rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border shadow-sm">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[.65rem] font-bold uppercase tracking-wider text-white bg-gold-dark px-2 py-0.5 rounded-sm">{ad.category}</span>
-              <span className="text-[.75rem] text-gray-500">📍 {ad.location}</span>
+          <div className="lg:hidden mt-4 bg-white dark:bg-dark-800 p-4 rounded-xl border-[1.5px] border-gray-100 dark:border-dark-border shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[.65rem] font-bold uppercase tracking-wider text-dark-900 bg-neon-gold px-2.5 py-0.5 rounded-sm shadow-[0_0_10px_rgba(245,166,35,0.3)]">{ad.category}</span>
+              <span className="text-[.75rem] text-gray-500 font-medium">📍 {ad.location}</span>
             </div>
-            <h1 className="font-display text-[1.15rem] font-bold leading-snug dark:text-white mb-3 text-gray-900">{ad.title}</h1>
+            <h1 className="font-display text-[1.25rem] font-bold leading-tight dark:text-white mb-4 text-gray-900">{ad.title}</h1>
             
-            {/* Price Banner style e-commerce (adapté aux couleurs du site) */}
-            <div className="rounded-md overflow-hidden border border-green mb-3">
-              <div className="bg-green text-white px-3 py-1 flex items-center justify-between">
-                <span className="font-bold text-[.75rem] uppercase flex items-center gap-1.5">⚡ Prix de l'Annonce</span>
-                <span className="text-[.65rem] opacity-90">Postée le {ad.date}</span>
+            {/* Price Banner style premium */}
+            <div className="rounded-[16px] overflow-hidden border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-black/40 shadow-sm mb-4 relative">
+              <div className="absolute top-0 right-0 p-3 opacity-10 dark:opacity-20 text-green-500">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
               </div>
-              <div className="bg-green/5 dark:bg-green/10 p-3 flex flex-col justify-center border-b border-green/10">
-                <div className="font-display text-[1.6rem] font-extrabold text-green leading-none">{ad.price}</div>
-                {ad.priceType === "negociable" && <div className="text-[.7rem] font-semibold text-green/70 mt-1 uppercase tracking-wide">↔ Négociable</div>}
+              <div className="p-4 flex flex-col justify-center relative z-10">
+                <div className="text-[.7rem] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-1">Prix Exclusif</div>
+                <div className={`font-display text-[1.8rem] font-extrabold leading-none ${ad.premium ? 'text-transparent bg-clip-text bg-gradient-to-r from-neon-gold to-white drop-shadow-[0_0_15px_rgba(245,166,35,0.4)]' : 'text-green-600 dark:text-green-400'}`}>
+                  {ad.price}
+                </div>
+                {ad.priceType === "negociable" && <div className="text-[.7rem] font-semibold text-gray-400 mt-2 flex items-center gap-1"><span>🤝</span> Négociable avec le vendeur</div>}
               </div>
             </div>
             
-            <div className="flex items-center justify-between text-[.75rem] text-gray-500">
-              <div className="flex items-center gap-1 text-gold font-bold">⭐⭐⭐⭐⭐ <span className="text-gray-400 font-normal">(Aucun avis)</span></div>
+            <div className="flex items-center justify-between text-[.75rem] text-gray-500 mb-2">
+              <div className="flex items-center gap-1 text-neon-gold font-bold">⭐⭐⭐⭐⭐ <span className="text-gray-400 font-normal ml-1">(Vendeur fiable)</span></div>
               <ShareButton title={ad.title} />
             </div>
+            
+
           </div>
 
-          <section className="mt-5 rounded-lg border-[1.5px] border-gray-100 bg-white p-5">
-            <h3 className="mb-3 font-display text-[1.05rem] font-bold">Description</h3>
-            <p className="whitespace-pre-line text-[.9rem] leading-loose text-gray-700">{ad.description}</p>
+          <section className="mt-5 rounded-xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm">
+            <h3 className="mb-4 font-display text-[1.1rem] font-bold uppercase tracking-wider text-gray-900 dark:text-white">Description du produit</h3>
+            <p className="whitespace-pre-line text-[.95rem] leading-[1.8] text-gray-700 dark:text-gray-300">{ad.description}</p>
           </section>
 
-          <section className="mt-5 rounded-lg border-[1.5px] border-gray-100 bg-white p-5">
-            <h3 className="mb-3 font-display text-[1.05rem] font-bold">Caractéristiques</h3>
-            <div className="grid gap-2 sm:grid-cols-2">
+          <section className="mt-5 rounded-xl border border-gray-100 dark:border-white/5 bg-white dark:bg-[#111722]/80 dark:backdrop-blur-xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display text-[1.1rem] font-bold text-gray-900 dark:text-white uppercase tracking-wider">Caractéristiques Techniques</h3>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
               {Object.entries(ad.specs).map(([k, v]) => (
-                <div key={k} className="flex justify-between rounded-lg bg-gray-50 px-3 py-2 text-[.83rem]">
-                  <span className="text-gray-500">{k}</span>
-                  <span className="font-semibold text-gray-900">{String(v)}</span>
+                <div key={k} className="flex flex-col rounded-[12px] bg-gray-50 dark:bg-black/40 border border-gray-100 dark:border-white/5 p-4 transition-all hover:border-green-500/30">
+                  <span className="text-[.65rem] font-bold uppercase tracking-wider text-gray-500 mb-1">{k}</span>
+                  <span className="font-display font-bold text-[.95rem] text-gray-900 dark:text-white">{String(v)}</span>
                 </div>
               ))}
             </div>
@@ -196,56 +205,51 @@ export default async function AnnoncePage({ params }: Props) {
             />
           </div>
 
-          {/* AVIS (Mock) */}
-          <section className="mt-5 rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5 mb-5 lg:mb-0">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-[1.05rem] font-bold dark:text-white">Avis sur le vendeur</h3>
-              <div className="text-[.85rem] font-bold text-gold">⭐ 4.8/5 (12 avis)</div>
-            </div>
-            <div className="flex flex-col gap-4">
-              <div className="border-b border-gray-50 dark:border-dark-border pb-4">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-bold text-[.85rem] dark:text-white">Ousmane S.</span>
-                  <span className="text-[.7rem] text-gray-400">Il y a 2 jours</span>
-                </div>
-                <div className="text-gold text-[.7rem] mb-1">⭐⭐⭐⭐⭐</div>
-                <p className="text-[.85rem] text-gray-600 dark:text-white/70">Vendeur très sérieux, produit conforme à la description. Je recommande !</p>
-              </div>
-            </div>
-            <button className="btn btn-outline btn-sm btn-block mt-4">Laisser un avis</button>
-          </section>
+
         </div>
 
         {/* DROITE : panneau contact sticky */}
         <div>
-          <div className="flex flex-col gap-3.5 rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5 lg:sticky lg:top-[calc(64px+1rem)]">
+          <div className="flex flex-col gap-4 rounded-[20px] border border-gray-100 dark:border-white/5 bg-white dark:bg-[#111722]/80 dark:backdrop-blur-xl p-6 lg:sticky lg:top-[calc(64px+1.5rem)] shadow-lg">
             {ad.premium && (
-              <div className="flex items-center gap-1.5 rounded-[10px] bg-grad-gold px-3 py-2 text-[.78rem] font-bold text-dark-900 shadow-glow-gold">
-                ✦ PREMIUM · Vendeur Vérifié ✅
+              <div className="flex items-center gap-2 rounded-[12px] bg-gradient-to-r from-neon-gold/20 to-[#D4891A]/10 border border-neon-gold/30 px-3 py-2 text-[.75rem] font-bold text-neon-gold uppercase tracking-widest shadow-[0_0_15px_rgba(245,166,35,0.15)] w-max">
+                <span className="animate-pulse">✨</span> Premium Collection
               </div>
             )}
             
-            {/* DESKTOP ONLY: Title & Price are hidden on mobile since they appear under gallery */}
+            {/* DESKTOP ONLY: Title & Price */}
             <div className="hidden lg:block">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start justify-between gap-4 mb-2">
                 <div>
-                  <div className="text-[.68rem] font-bold uppercase tracking-wider text-gold-dark">{ad.category}</div>
-                  <h1 className="mt-1 font-display text-[1.2rem] font-bold leading-snug dark:text-white">{ad.title}</h1>
+                  <div className="text-[.68rem] font-bold uppercase tracking-widest text-gray-400 mb-1">{ad.category}</div>
+                  <h1 className="font-display text-[1.4rem] font-bold leading-tight dark:text-white">{ad.title}</h1>
                 </div>
-                <ShareButton title={ad.title} />
-              </div>
-              <div className="mt-3">
-                <div className="font-display text-[1.9rem] font-extrabold leading-none text-grad-gold">{ad.price}</div>
-                <div className="mt-1 text-[.78rem] text-gray-500">
-                  {ad.priceType === "negociable" ? "↔ Prix négociable" : ad.priceType === "fixe" ? "Prix fixe" : ad.priceType}
+                <div className="shrink-0">
+                  <ShareButton title={ad.title} />
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-3 text-[.78rem] text-gray-500">
-                <span>📍 {ad.location}</span>
-                <span>📅 {ad.date}</span>
-                <span>👁 {(ad.views ?? 0).toLocaleString("fr-FR")} vues</span>
-                <span>❤ {ad.favorites ?? 0}</span>
+              
+              <div className="mt-4 mb-4 p-5 rounded-[16px] bg-gray-50 dark:bg-black/40 border border-gray-100 dark:border-white/5 relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 text-green-500/10 dark:text-neon-gold/5 rotate-12 transition-transform group-hover:scale-110">
+                   <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                </div>
+                <div className="relative z-10 flex flex-col items-center text-center">
+                  <div className={`font-display text-[2.2rem] font-extrabold leading-none ${ad.premium ? 'text-transparent bg-clip-text bg-gradient-to-r from-neon-gold to-white drop-shadow-[0_0_15px_rgba(245,166,35,0.4)]' : 'text-green-600 dark:text-green-400'}`}>
+                    {ad.price}
+                  </div>
+                  <div className="mt-2 text-[.75rem] font-bold uppercase tracking-widest text-gray-500 bg-black/5 dark:bg-white/5 px-3 py-1 rounded-full w-max">
+                    {ad.priceType === "negociable" ? "🤝 Négociable" : ad.priceType === "fixe" ? "🔒 Ex-Showroom" : ad.priceType}
+                  </div>
+                </div>
               </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 text-[.75rem] text-gray-500 font-medium bg-gray-50 dark:bg-black/20 p-3 rounded-xl border border-gray-100 dark:border-white/5">
+                <span className="flex items-center gap-1.5"><span className="text-neon-gold">📍</span> {ad.location}</span>
+                <span className="flex items-center gap-1.5"><span className="text-green-400">📅</span> {ad.date}</span>
+                <span className="flex items-center gap-1.5"><span className="text-gray-400">👁</span> {(ad.views ?? 0).toLocaleString("fr-FR")} vues</span>
+              </div>
+              
+
             </div>
 
             <div className="my-2 hidden lg:block border-t border-gray-100 dark:border-dark-border"></div>
@@ -265,16 +269,12 @@ export default async function AnnoncePage({ params }: Props) {
               </div>
             )}
 
-            <ContactActions title={ad.title} />
+            <ContactActions title={ad.title} adId={ad.id} sellerId={ad.seller.id} phone={seller?.phone} />
 
             <div className="rounded-[10px] border border-[#fde68a] bg-[#fffbeb] dark:bg-gold-pale/10 dark:border-gold-pale/20 p-3 text-[.76rem] text-[#92400e] dark:text-gold mt-2">
               <b className="mb-1 block">🛡️ Conseils de sécurité</b>
               Ne payez jamais à l&apos;avance. Rencontrez le vendeur dans un lieu public. Vérifiez le produit avant de payer.
             </div>
-            
-            <button className="text-[.75rem] text-gray-400 hover:text-brand-red flex items-center gap-1.5 justify-center mt-1 transition-colors">
-              ⚠️ Signaler cette annonce
-            </button>
           </div>
 
           {/* AD A5 */}
@@ -300,18 +300,18 @@ export default async function AnnoncePage({ params }: Props) {
       </div>
 
       {/* Barre contact sticky mobile (Style Jumia/E-commerce) */}
-      <div className="fixed inset-x-0 bottom-0 z-[700] flex gap-2 border-t border-gray-200 bg-white dark:bg-dark-900 dark:border-dark-border p-2 shadow-[0_-4px_20px_rgba(0,0,0,.1)] lg:hidden pb-safe">
-        <Link href="/" className="w-[3.5rem] flex flex-col items-center justify-center rounded-lg border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-dark-800 shrink-0 shadow-sm transition hover:text-green">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      <div className="fixed inset-x-0 bottom-0 z-[700] flex gap-2.5 border-t border-gray-200 bg-white dark:bg-dark-900 dark:border-dark-border px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,.15)] lg:hidden">
+        <Link href="/" className="w-[3.8rem] h-[3.4rem] flex flex-col items-center justify-center rounded-xl border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-dark-800 shrink-0 shadow-sm transition hover:text-green">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
         </Link>
-        <a href="tel:+221770000000" className="w-[3.5rem] flex flex-col items-center justify-center rounded-lg border border-gray-200 dark:border-dark-border text-brand-red bg-red-50 dark:bg-red-900/20 shrink-0 shadow-sm transition hover:bg-red-100">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        <a href={`tel:${(seller?.phone || "+221770000000").replace(/\s/g, "")}`} className="w-[3.8rem] h-[3.4rem] flex flex-col items-center justify-center rounded-xl border border-green-200 dark:border-green-900/30 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/10 shrink-0 shadow-sm transition hover:bg-green-100">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
         </a>
         <a
-          href={`https://wa.me/221770000000?text=${encodeURIComponent(`Bonjour, votre annonce "${ad.title}" est-elle toujours disponible ?`)}`}
+          href={`https://wa.me/${(seller?.phone || "+221770000000").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Bonjour, votre annonce "${ad.title}" est-elle toujours disponible ?`)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 rounded-lg bg-orange-500 text-white font-bold text-[.95rem] flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+          className="flex-1 h-[3.4rem] rounded-xl bg-gradient-to-r from-green-500 to-[#F5A623] text-white font-bold text-[1.05rem] flex items-center justify-center shadow-[0_4px_15px_rgba(0,168,89,0.3)] active:scale-95 transition-transform"
         >
           Acheter / Discuter
         </a>

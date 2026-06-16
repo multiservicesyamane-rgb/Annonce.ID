@@ -1,56 +1,122 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import FavButton from "./FavButton";
 
-/** Boutons de contact direct (WhatsApp / Appel / Message) + partage/favori/signaler.
+/** Boutons de contact direct (WhatsApp / Appel / Message) + partage/favori.
  *  PAS de panier — mise en relation directe (contrainte du brief). */
-export default function ContactActions({ phone = "+221770000000", title }: { phone?: string; title: string }) {
+export default function ContactActions({ phone, title, adId, sellerId }: { phone?: string; title: string; adId?: string; sellerId?: string }) {
   const [toast, setToast] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
+
+  // Incrémenter les vues au montage du composant
+  useEffect(() => {
+    if (!adId) return;
+    
+    // On utilise une API route ou un simple update pour incrémenter les vues
+    const incrementView = async () => {
+      // Pour éviter les écritures multiples lors du développement (React StrictMode)
+      const viewed = sessionStorage.getItem(`viewed_${adId}`);
+      if (viewed) return;
+      
+      try {
+        // Obtenir la valeur actuelle (cette méthode simple peut avoir de légères race conditions mais suffit pour un compteur de vues basique)
+        const { data } = await supabase.from('listings').select('views').eq('id', adId).single();
+        if (data) {
+          await supabase.from('listings').update({ views: (data.views || 0) + 1 }).eq('id', adId);
+          sessionStorage.setItem(`viewed_${adId}`, 'true');
+        }
+      } catch (err) {
+        console.error("Erreur incrementation vue:", err);
+      }
+    };
+    
+    incrementView();
+  }, [adId, supabase]);
+
   const show = (m: string) => {
     setToast(m);
     setTimeout(() => setToast(null), 2200);
   };
-  const wa = `https://wa.me/${phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Bonjour, votre annonce "${title}" est-elle toujours disponible ?`)}`;
+  
+  const formattedPhone = phone ? phone.replace(/[^0-9+]/g, "") : "";
+  const wa = formattedPhone ? `https://wa.me/${formattedPhone.replace("+", "")}?text=${encodeURIComponent(`Bonjour, votre annonce "${title}" est-elle toujours disponible ?`)}` : "#";
+
+  const handleStartChat = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!sellerId || !adId) {
+      show("Impossible de contacter le vendeur.");
+      return;
+    }
+    
+    setIsSending(true);
+    const { data: sessionData } = await supabase.auth.getSession();
+    
+    if (!sessionData?.session) {
+      router.push("/connexion");
+      return;
+    }
+
+    // Auto-send the first message
+    const msg = `Bonjour, l'annonce "${title}" m'intéresse. Est-elle toujours disponible ?`;
+    
+    const { error } = await supabase.from("messages").insert([{
+      sender_id: sessionData.session.user.id,
+      receiver_id: sellerId,
+      listing_id: adId,
+      content: msg,
+      type: "text"
+    }]);
+
+    if (error) {
+      show("Erreur SQL: " + error.message);
+      setIsSending(false);
+      return;
+    }
+
+    router.push("/dashboard?panel=messages");
+  };
 
   return (
     <>
       <div className="flex flex-col gap-3">
-        <button type="button" onClick={() => show("🛒 Redirection vers l'achat (Bientôt disponible)")} className="btn btn-gold w-full py-4 text-[1.1rem] font-extrabold shadow-lg hover:shadow-xl transition-all">
-          🛒 Acheter maintenant
-        </button>
-        <a href={wa} target="_blank" rel="noopener noreferrer" className="btn btn-wa w-full py-3.5 text-[1.05rem] font-bold">
-          💬 Discuter sur WhatsApp
-        </a>
-        <a href={`tel:${phone.replace(/\s/g, "")}`} className="btn btn-green w-full py-3.5 text-[1.05rem] font-bold">
-          📞 Appeler le vendeur
-        </a>
-        <button type="button" onClick={() => show("✉ Messagerie interne (Bientôt disponible)")} className="btn w-full py-3.5 text-[1.05rem] font-bold border-2 border-gray-200 text-gray-700 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
-          ✉ Discuter sur la plateforme
+        {formattedPhone && (
+          <>
+            <a href={wa} target="_blank" rel="noopener noreferrer" className="btn btn-wa w-full py-3.5 text-[1.05rem] font-bold">
+              💬 Discuter sur WhatsApp
+            </a>
+            <a href={`tel:${formattedPhone}`} className="btn btn-green w-full py-3.5 text-[1.05rem] font-bold">
+              📞 Appeler le vendeur
+            </a>
+          </>
+        )}
+        <button type="button" onClick={handleStartChat} disabled={isSending} className="btn w-full py-3.5 text-[1.05rem] font-bold border-2 border-green text-green hover:bg-green hover:text-white transition-colors flex items-center justify-center gap-2">
+          {isSending ? "Ouverture..." : "✉ Discuter avec le vendeur"}
         </button>
       </div>
 
-      <div className="flex gap-1.5">
-        {[
-          { ic: "🔗 Partager", msg: "🔗 Lien copié" },
-          { ic: "♡ Favoris", msg: "❤ Ajouté aux favoris" },
-          { ic: "🚩 Signaler", msg: "🚩 Annonce signalée" },
-        ].map((b) => (
-          <button
-            key={b.ic}
-            type="button"
-            onClick={() => {
-              if (b.ic.includes("Partager") && typeof navigator !== "undefined" && navigator.share) {
-                navigator.share({ title, url: window.location.href }).catch(() => {});
-              } else if (b.ic.includes("Partager")) {
-                navigator.clipboard?.writeText(window.location.href);
-              }
-              show(b.msg);
-            }}
-            className="flex-1 rounded-lg border-[1.5px] border-gray-100 bg-white py-2 text-[.74rem] font-semibold text-gray-700 transition hover:border-gold hover:text-green"
-          >
-            {b.ic}
-          </button>
-        ))}
+      <div className="flex gap-1.5 mt-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof navigator !== "undefined" && navigator.share) {
+              navigator.share({ title, url: window.location.href }).catch(() => {});
+            } else {
+              navigator.clipboard?.writeText(window.location.href);
+            }
+            show("🔗 Lien copié");
+          }}
+          className="flex-1 rounded-lg border-[1.5px] border-gray-100 bg-white py-2 text-[.74rem] font-semibold text-gray-700 transition hover:border-gold hover:text-green flex items-center justify-center gap-1.5"
+        >
+          🔗 Partager
+        </button>
+        <div className="flex-1 flex items-center justify-center rounded-lg border-[1.5px] border-gray-100 bg-white py-2 text-[.74rem] font-semibold text-gray-700 transition hover:border-gold hover:text-red-500">
+          <FavButton adId={adId} /> <span className="ml-1">Favoris</span>
+        </div>
       </div>
 
       {toast && (

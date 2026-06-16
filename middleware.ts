@@ -7,9 +7,9 @@ export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // Si les clés ne sont pas encore configurées, on laisse passer pour le design
+  // SECURITE: 1.6 Validation au démarrage (Fail-fast)
   if (!supabaseUrl || !supabaseKey) {
-    return supabaseResponse
+    throw new Error("CRITICAL: Variables d'environnement Supabase manquantes. L'application ne peut pas démarrer de manière sécurisée.");
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
@@ -29,54 +29,36 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isYamanetech = request.nextUrl.pathname.startsWith('/yamanetech')
-  const isDashboard = request.nextUrl.pathname.startsWith('/dashboard')
-  const isPublier = request.nextUrl.pathname.startsWith('/publier')
-  const isPaiement = request.nextUrl.pathname.startsWith('/paiement')
+  const pathname = request.nextUrl.pathname;
 
-  const needsAuth = isYamanetech || isDashboard || isPublier || isPaiement
+  // SECURITE: 3.2 Liste Blanche (Whitelist routing) au lieu de Liste Noire
+  // On définit explicitement ce qui est public, TOUT LE RESTE est bloqué par défaut.
+  const isPublicRoute = 
+    pathname === '/' ||
+    pathname === '/connexion' ||
+    pathname === '/yamanetech' || // La page de login admin
+    pathname.startsWith('/auth/callback') ||
+    pathname.startsWith('/recherche') ||
+    pathname.startsWith('/categorie') ||
+    pathname.startsWith('/blog') ||
+    pathname.startsWith('/annonces') ||
+    pathname.startsWith('/annonce') ||
+    pathname.startsWith('/boutique') ||
+    pathname.startsWith('/aide') ||
+    pathname.startsWith('/securite') ||
+    pathname.startsWith('/cgu') ||
+    pathname.startsWith('/api'); // Les APIs ont leurs propres vérifications d'auth
 
-  // 1. Rediriger vers la connexion si l'utilisateur n'est pas connecté
-  if (needsAuth && !user) {
+  if (!isPublicRoute && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/connexion'
     return NextResponse.redirect(url)
-  }
-
-  // 2. Sécurisation stricte de l'interface Administrateur (/yamanetech)
-  if (isYamanetech && user) {
-    // Si c'est le super-admin (nouveau dossier), vérifier l'email
-    if (request.nextUrl.pathname.startsWith('/yamanetech/super-admin')) {
-      const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || "multiservicesyamane@gmail.com";
-      if (user.email !== SUPER_ADMIN_EMAIL) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/'
-        return NextResponse.redirect(url)
-      }
-    } else {
-      // Pour les autres pages /yamanetech (l'ancien admin), vérifier le rôle
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-      if (profile?.role !== 'admin') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard'
-        return NextResponse.redirect(url)
-      }
-    }
   }
 
   return supabaseResponse
 }
 
 export const config = {
-  matcher: [
-    '/yamanetech/:path*',
-    '/dashboard/:path*',
-    '/publier/:path*',
-    '/paiement/:path*'
-  ],
+  // Matcher global pour intercepter toutes les requêtes (sauf les fichiers statiques Next.js et les images)
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
