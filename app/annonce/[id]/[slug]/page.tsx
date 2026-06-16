@@ -246,7 +246,6 @@ export default async function AnnoncePage({ params }: Props) {
               <div className="flex flex-wrap items-center justify-between gap-3 text-[.75rem] text-gray-500 font-medium bg-gray-50 dark:bg-black/20 p-3 rounded-xl border border-gray-100 dark:border-white/5">
                 <span className="flex items-center gap-1.5"><span className="text-neon-gold">📍</span> {ad.location}</span>
                 <span className="flex items-center gap-1.5"><span className="text-green-400">📅</span> {ad.date}</span>
-                <span className="flex items-center gap-1.5"><span className="text-gray-400">👁</span> {(ad.views ?? 0).toLocaleString("fr-FR")} vues</span>
               </div>
               
 

@@ -67,15 +67,11 @@ export default function AdCard({ ad }: { ad: Listing }) {
           {ad.price} FCFA
         </div>
 
-        {/* Localisation & Vues */}
-        <div className="mt-auto flex items-center justify-between pt-0.5 text-[.6rem] text-gray-500 dark:text-gray-400">
+        {/* Localisation (les vues ne sont visibles que par le propriétaire, côté tableau de bord) */}
+        <div className="mt-auto flex items-center pt-0.5 text-[.6rem] text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1 truncate font-medium">
             <span className={isPremium ? 'text-neon-gold' : 'opacity-70'}>📍</span>
             <span className="truncate">{ad.location}</span>
-          </span>
-          <span className="flex shrink-0 items-center gap-1 font-bold text-gray-400">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            {ad.views || 0}
           </span>
         </div>
       </div>

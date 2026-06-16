@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import PriceSlider from "./PriceSlider";
+import { CATEGORIES } from "@/lib/constants";
 
 /**
  * Tiroir de filtres (slide depuis la droite sur mobile, statique sur desktop).
@@ -53,6 +55,24 @@ export default function FilterDrawer({
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-5">
+            {/* Catégories (en premier) */}
+            <div className="mb-6">
+              <h3 className="mb-3 text-[.85rem] font-bold text-gray-900 dark:text-white">Catégories</h3>
+              <div className="flex flex-col gap-1">
+                {CATEGORIES.map((c) => (
+                  <Link
+                    key={c.slug}
+                    href={`/categorie/${c.slug}`}
+                    onClick={onClose}
+                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[.85rem] font-medium text-gray-700 dark:text-white/80 hover:bg-green/10 hover:text-green dark:hover:text-green-400 transition-colors"
+                  >
+                    <span className="text-[1.05rem]">{c.icon}</span>
+                    <span className="truncate">{c.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
             {/* Prix */}
             <div className="mb-6">
               <h3 className="mb-3 text-[.85rem] font-bold text-gray-900 dark:text-white">Prix</h3>
