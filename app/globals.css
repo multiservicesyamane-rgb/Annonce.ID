@@ -10,11 +10,35 @@
   --dark-800: #0B1120;
   --dark-700: #111827;
   --dark-border: #1F2937;
-  --gold: #f5a623;
-  --gold-d: #d4891a;
-  --green: #1b4332;
-  --neon-gold: #ffc93c;
+  /* Accent principal remappé en indigo AnnoncesWest */
+  --gold: #F59E0B;
+  --gold-d: #B45309;
+  --green: #6366F1;
+  --neon-gold: #818CF8;
   --hh: 64px;
+
+  /* ── Design system AnnoncesWest (indigo) ── */
+  --bg: #F0F2F8;
+  --surf: #FFFFFF;
+  --surf2: #F7F9FC;
+  --line: #E8ECF4;
+  --ink: #1A1F36;
+  --ink2: #6B7280;
+  --ink3: #A0AEC0;
+  --p: #6366F1;
+  --pd: #4F46E5;
+  --pl: #EEF2FF;
+  --amber: #F59E0B;
+  --g1: linear-gradient(135deg, #667EEA, #764BA2);
+  --g2: linear-gradient(135deg, #F093FB, #F5576C);
+  --g3: linear-gradient(135deg, #4FACFE, #00F2FE);
+  --g4: linear-gradient(135deg, #43E97B, #38F9D7);
+  --g5: linear-gradient(135deg, #FA709A, #FEE140);
+  --g6: linear-gradient(135deg, #FF9A56, #FF6A88);
+  --g7: linear-gradient(135deg, #A18CD1, #FBC2EB);
+  --g8: linear-gradient(135deg, #0BA360, #3CBA92);
+  --sh: 0 2px 8px rgba(20,30,80,.07);
+  --sh-lg: 0 12px 40px rgba(20,30,80,.12);
 }
 
 * {
@@ -27,8 +51,8 @@ html {
 }
 
 body {
-  background: #f4f5f7;
-  color: #0f172a;
+  background: #F0F2F8;
+  color: #1A1F36;
   line-height: 1.6;
   overflow-x: hidden;
   font-size: 15px;
@@ -119,7 +143,7 @@ html.dark .shadow-lg {
   }
 
   .text-grad-brand {
-    background: linear-gradient(135deg, #00A859 0%, #F5A623 50%, #ffffff 100%);
+    background: linear-gradient(135deg, #6366F1 0%, #764BA2 50%, #A18CD1 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
@@ -129,8 +153,8 @@ html.dark .shadow-lg {
     @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border-2 border-transparent px-5 py-2.5 text-[.88rem] font-semibold transition-all;
   }
   .btn-green {
-    @apply font-bold text-white shadow-[0_4px_15px_rgba(0,168,89,0.3)] hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(0,168,89,0.4)];
-    background: linear-gradient(135deg, #00C66B 0%, #00A859 50%, #007F43 100%);
+    @apply font-bold text-white shadow-[0_4px_15px_rgba(99,102,241,0.3)] hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(99,102,241,0.4)];
+    background: linear-gradient(135deg, #818CF8 0%, #6366F1 50%, #4F46E5 100%);
     background-size: 200% auto;
     transition: all 0.3s ease;
   }

@@ -35,21 +35,28 @@ const config: Config = {
           dark: "#D4891A",
           pale: "#FEF3DC",
         },
+        // AnnoncesWest : accent principal indigo (l'ancien "green" est remappé en indigo
+        // pour recolorer tout le site sans toucher chaque classe utilitaire).
         green: {
-          DEFAULT: "#00A859", // Vert dynamique
-          mid: "#007F43",
-          pale: "#E6F6ED",
+          DEFAULT: "#6366F1", // indigo principal (--p)
+          mid: "#4F46E5",     // indigo foncé (--pd)
+          pale: "#EEF2FF",    // indigo pâle (--pl)
+        },
+        indigo: {
+          DEFAULT: "#6366F1",
+          dark: "#4F46E5",
+          pale: "#EEF2FF",
         },
         neon: {
-          gold: "#F5A623", 
-          cyan: "#00A859", 
-          magenta: "#F5A623", 
-          green: "#00A859",
-          purple: "#00A859",
+          gold: "#F59E0B",
+          cyan: "#6366F1",
+          magenta: "#8B5CF6",
+          green: "#6366F1",
+          purple: "#8B5CF6",
         },
         brand: {
-          red: "#E63946", // Keep for errors
-          blue: "#00A859", 
+          red: "#EF4444", // erreurs
+          blue: "#6366F1",
           wa: "#25D366",
         },
       },
@@ -59,12 +66,20 @@ const config: Config = {
       },
       backgroundImage: {
         "grad-hero":
-          "linear-gradient(135deg,#0A0E14 0%,#111722 50%,#000000 100%)",
+          "linear-gradient(135deg,#1E1B4B 0%,#312E81 50%,#0F0A2E 100%)",
         "grad-gold":
-          "linear-gradient(135deg,#F5A623 0%,#FFD166 50%,#F5A623 100%)",
+          "linear-gradient(135deg,#FA709A 0%,#FEE140 100%)",
         "grad-neon":
-          "linear-gradient(135deg,#00A859 0%,#F5A623 100%)", // 2 colors only
-        "grad-premium": "linear-gradient(135deg,#F5A623 0%,#D4891A 100%)",
+          "linear-gradient(135deg,#667EEA 0%,#764BA2 100%)", // indigo-violet (--g1)
+        "grad-premium": "linear-gradient(135deg,#667EEA 0%,#4F46E5 100%)",
+        "g1": "linear-gradient(135deg,#667EEA,#764BA2)",
+        "g2": "linear-gradient(135deg,#F093FB,#F5576C)",
+        "g3": "linear-gradient(135deg,#4FACFE,#00F2FE)",
+        "g4": "linear-gradient(135deg,#43E97B,#38F9D7)",
+        "g5": "linear-gradient(135deg,#FA709A,#FEE140)",
+        "g6": "linear-gradient(135deg,#FF9A56,#FF6A88)",
+        "g7": "linear-gradient(135deg,#A18CD1,#FBC2EB)",
+        "g8": "linear-gradient(135deg,#0BA360,#3CBA92)",
       },
       boxShadow: {
         "glow-gold":
