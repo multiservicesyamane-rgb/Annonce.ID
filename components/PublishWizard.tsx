@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CATEGORIES, COUNTRIES, BOOSTS, SENEGAL_REGIONS } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { uploadImages } from "@/lib/storage";
 import Link from "next/link";
 import ImageCropperModal from "./ImageCropperModal";
 
@@ -157,6 +158,11 @@ export default function PublishWizard() {
       return;
     }
 
+    // Envoi des photos vers Supabase Storage (les base64 deviennent des URLs ;
+    // les photos déjà sous forme d'URL en mode édition sont conservées telles quelles)
+    show("📤 Envoi des photos...");
+    const uploadedPhotos = await uploadImages(photos, "listings");
+
     const payload = {
       user_id: user.id,
       title: title || "Annonce sans titre",
@@ -170,8 +176,8 @@ export default function PublishWizard() {
       region: region,
       commune: commune,
       custom_commune: customCommune,
-      image: photos.length > 0 ? photos[0] : "https://placehold.co/600x400?text=Sans+Image",
-      photos: photos,
+      image: uploadedPhotos.length > 0 ? uploadedPhotos[0] : "https://placehold.co/600x400?text=Sans+Image",
+      photos: uploadedPhotos,
       specs: specs,
       status: boost === 0 ? "active" : "pending"
     };

@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import AdCard from "./AdCard";
 import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/storage";
 import ConfirmModal from "./ConfirmModal";
 import EmptyState from "./EmptyState";
 import { useFavorites } from "./FavButton";
@@ -1794,14 +1795,16 @@ export default function Dashboard() {
             if (cropModalZone === 'avatar') {
               if (user) {
                 try {
-                  const { error: authError } = await supabase.auth.updateUser({ data: { avatar_url: base64 } });
+                  // Envoi vers Supabase Storage (URL légère au lieu d'une base64 lourde)
+                  const avatarUrl = await uploadImage(base64, "avatars");
+                  const { error: authError } = await supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
                   if (authError) throw authError;
-                  const { error: dbError } = await supabase.from('profiles').update({ avatar_url: base64 }).eq('id', user.id);
+                  const { error: dbError } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', user.id);
                   if (dbError) throw dbError;
 
                   const { data } = await supabase.auth.getUser();
                   if (data?.user) setUser(data.user);
-                  setProfile((prev: any) => prev ? { ...prev, avatar_url: base64 } : { avatar_url: base64 });
+                  setProfile((prev: any) => prev ? { ...prev, avatar_url: avatarUrl } : { avatar_url: avatarUrl });
                   show("✓ Photo mise à jour !");
                 } catch (e: any) {
                   show("❌ Erreur: L'image est peut-être trop volumineuse (Max 1 Mo suggéré).");
