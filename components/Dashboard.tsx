@@ -1457,7 +1457,7 @@ export default function Dashboard() {
                         show("❌ Erreur lors de la sauvegarde : " + error.message);
                       } else {
                         show("✓ Boutique sauvegardée avec succès !");
-                        etProfile((prev: any) => prev ? { ...prev, full_name: showroomName, bio: showroomBio, social_links: showroomSocials } : { full_name: showroomName, bio: showroomBio, social_links: showroomSocials });
+                        setProfile((prev: any) => prev ? { ...prev, full_name: showroomName, bio: showroomBio, social_links: showroomSocials } : { full_name: showroomName, bio: showroomBio, social_links: showroomSocials });
                       }
                     }}
                     className="btn btn-green btn-sm shadow-sm"
