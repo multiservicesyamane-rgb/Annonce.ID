@@ -1,30 +1,63 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const PAYTECH_API_KEY = process.env.PAYTECH_API_KEY!;
-const PAYTECH_SECRET_KEY = process.env.PAYTECH_API_SECRET!;
+// Cette route doit toujours s'exécuter dynamiquement (jamais au build)
+export const dynamic = "force-dynamic";
 
 // SECURITE: 6.1 Rate Limiting basique (Map en mémoire)
 const rateLimitMap = new Map<string, { count: number, timestamp: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const MAX_REQUESTS = 5; // 5 requêtes max par minute par IP
 
+/**
+ * Détermine l'URL publique de base de façon fiable, y compris derrière le proxy Vercel.
+ * `new URL(req.url).origin` n'est PAS fiable sur Vercel (host interne) — on privilégie
+ * les variables d'env explicites puis les en-têtes transmis par le proxy.
+ */
+function getBaseUrl(req: Request): string {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
+  if (envUrl) return envUrl.trim().replace(/\/+$/, "");
+
+  // Variable injectée automatiquement par Vercel en production
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+
+  // Dérivation depuis les en-têtes du proxy
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  if (host) return `${proto}://${host}`;
+
+  return new URL(req.url).origin;
+}
+
 export async function POST(req: Request) {
   try {
+    // 0. Vérification de la configuration PayTech (clés indispensables)
+    const PAYTECH_API_KEY = process.env.PAYTECH_API_KEY;
+    const PAYTECH_SECRET_KEY = process.env.PAYTECH_API_SECRET;
+    if (!PAYTECH_API_KEY || !PAYTECH_SECRET_KEY) {
+      console.error("PayTech: clés API manquantes (PAYTECH_API_KEY / PAYTECH_API_SECRET).");
+      return NextResponse.json(
+        { error: "Paiement non configuré sur le serveur. Contactez l'administrateur." },
+        { status: 500 }
+      );
+    }
+
     // 1. Rate Limiting Check
     const ip = req.headers.get("x-forwarded-for") || "unknown";
     const now = Date.now();
     const windowStart = now - RATE_LIMIT_WINDOW;
-    
+
     let rateData = rateLimitMap.get(ip);
     if (!rateData || rateData.timestamp < windowStart) {
       rateData = { count: 0, timestamp: now };
     }
-    
+
     if (rateData.count >= MAX_REQUESTS) {
       return NextResponse.json({ error: "Trop de requêtes. Veuillez patienter." }, { status: 429 });
     }
-    
+
     rateLimitMap.set(ip, { count: rateData.count + 1, timestamp: rateData.timestamp });
 
     // 2. Auth Check
@@ -34,7 +67,7 @@ export async function POST(req: Request) {
     }
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     // Protection CRITIQUE: Vérifier l'identité du serveur
     if (authError || !user) {
       return NextResponse.json({ error: "Non autorisé. Veuillez vous connecter." }, { status: 401 });
@@ -59,12 +92,8 @@ export async function POST(req: Request) {
 
     const secureUserId = user.id;
 
-    const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin).trim();
-
-    const isDev = process.env.NODE_ENV !== "production";
-    const prodDomain = "https://annonce-id.vercel.app";
-    // En production, Vercel définit NODE_ENV à 'production'
-    const finalDomain = isDev ? prodDomain : baseUrl;
+    // URL publique fiable (Vercel inclus) pour les callbacks PayTech
+    const baseUrl = getBaseUrl(req);
 
     const paymentData = {
       item_name: itemName || "Boost Annonce",
@@ -74,9 +103,8 @@ export async function POST(req: Request) {
       command_name: "Paiement Annonce.ID",
       custom_field: JSON.stringify({ userId: secureUserId, listingId: listingId || "" }),
 
-      // Passage explicite en "live" pour la production (forcé à la demande)
-      env: "live",
-      ipn_url: `${finalDomain}/api/paytech/ipn`,
+      env: "prod",
+      ipn_url: `${baseUrl}/api/paytech/ipn`,
       success_url: `${baseUrl}/paiement/succes` + (listingId ? `?listing_id=${listingId}` : ""),
       cancel_url: `${baseUrl}/paiement/erreur`,
     };
@@ -98,7 +126,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ redirect_url: data.redirect_url });
     } else {
       console.error("PayTech Error:", data);
-      return NextResponse.json({ error: `PayTech a refusé: ${JSON.stringify(data)}` }, { status: 400 });
+      const reason = data?.errors ? (Array.isArray(data.errors) ? data.errors.join(", ") : data.errors) : JSON.stringify(data);
+      return NextResponse.json({ error: `PayTech a refusé la demande: ${reason}` }, { status: 400 });
     }
   } catch (error: any) {
     console.error("Payment API Error:", error);
