@@ -113,25 +113,25 @@ export default function FavButton({
         e.stopPropagation();
         if (adId !== undefined) toggle(adId);
       }}
-      className={transition - all duration-200 ${className}}
-aria - label={ active ? "Retirer des favoris" : "Ajouter aux favoris" }
+      className={`transition-all duration-200 ${className}`}
+      aria-label={active ? "Retirer des favoris" : "Ajouter aux favoris"}
     >
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill={active ? "#E63946" : "none"}
-    stroke={active ? "#E63946" : "currentColor"}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{
-      transform: active ? "scale(1.15)" : "scale(1)",
-      transition: "transform .2s ease, fill .2s ease",
-    }}
-  >
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-  </svg>
-    </button >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill={active ? "#E63946" : "none"}
+        stroke={active ? "#E63946" : "currentColor"}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{
+          transform: active ? "scale(1.15)" : "scale(1)",
+          transition: "transform .2s ease, fill .2s ease",
+        }}
+      >
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      </svg>
+    </button>
   );
 }
