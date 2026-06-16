@@ -37,7 +37,7 @@ export default async function CategoryPage({ params }: Props) {
   // Fetch real listings from Supabase based on category
   const { data: dbListings } = await supabase
     .from('listings')
-    .select('id, slug, title, price, location, image, category, views, premium, specs, profiles(role)')
+    .select('id, slug, title, price, location, image, category, views, premium, profiles(role)')
     .eq('status', 'active')
     .eq('category_slug', cat.slug)
     .order('created_at', { ascending: false })
