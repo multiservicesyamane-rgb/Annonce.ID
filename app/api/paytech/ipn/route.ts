@@ -2,15 +2,24 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
-const PAYTECH_API_SECRET = process.env.PAYTECH_API_SECRET!;
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; 
-
-// Utiliser le Service Role Key pour contourner les RLS lors de la mise à jour serveur
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Forcer le rendu dynamique : cette route ne doit pas être évaluée au build
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
+    const PAYTECH_API_SECRET = process.env.PAYTECH_API_SECRET;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    // Initialisation paresseuse (uniquement à l'exécution, pas au build)
+    if (!PAYTECH_API_SECRET || !supabaseUrl || !supabaseServiceKey) {
+      console.error("IPN Error: variables d'environnement manquantes");
+      return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+    }
+
+    // Utiliser le Service Role Key pour contourner les RLS lors de la mise à jour serveur
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     // PayTech envoie les données sous format "application/x-www-form-urlencoded"
     const text = await req.text();
     const params = new URLSearchParams(text);
