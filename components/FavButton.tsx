@@ -42,7 +42,7 @@ export function useFavorites() {
       const { data } = await supabase.auth.getSession();
       if (data.session?.user) {
         setUserId(data.session.user.id);
-        
+
         // Charger les favoris depuis la BDD
         const { data: dbFavs } = await supabase.from('favorites').select('listing_id').eq('user_id', data.session.user.id);
         if (dbFavs) {
@@ -51,13 +51,13 @@ export function useFavorites() {
           const merged = Array.from(new Set([...local, ...dbIds]));
           setFavs(merged);
           saveFavs(merged); // sync back to local for speed
-          
+
           // Sauvegarder les locaux non présents en DB
           const missingInDb = local.filter(id => !dbIds.includes(id));
           if (missingInDb.length > 0) {
             await supabase.from('favorites').insert(
               missingInDb.map(id => ({ user_id: data.session.user.id, listing_id: id }))
-            ).catch(() => {}); // ignore duplicates
+            ).then(() => { }).catch !== undefined; // ignore duplicates
           }
         }
       }
@@ -82,7 +82,7 @@ export function useFavorites() {
         await supabase.from('favorites').delete().eq('user_id', data.session.user.id).eq('listing_id', strId);
       } else {
         // Ajouter
-        await supabase.from('favorites').insert({ user_id: data.session.user.id, listing_id: strId }).catch(() => {});
+        await supabase.from('favorites').insert({ user_id: data.session.user.id, listing_id: strId }).catch(() => { });
       }
     }
   }, [supabase, favs]);
