@@ -40,12 +40,12 @@ export default function Dashboard() {
   const [profileBio, setProfileBio] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
   const [profileLanguage, setProfileLanguage] = useState("Français");
-  
+
   // Security Panel States
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
+
   const [showroomName, setShowroomName] = useState("");
   const [showroomBio, setShowroomBio] = useState("");
   const [showroomSocials, setShowroomSocials] = useState<any>({});
@@ -66,22 +66,22 @@ export default function Dashboard() {
   const [campaignWeeks, setCampaignWeeks] = useState(1);
   const [fileHero, setFileHero] = useState<string | null>(null);
   const [typeHero, setTypeHero] = useState<string | null>(null);
-  
+
   const [fileFooter, setFileFooter] = useState<string | null>(null);
   const [typeFooter, setTypeFooter] = useState<string | null>(null);
-  
+
   const [fileCatalogue, setFileCatalogue] = useState<string | null>(null);
   const [typeCatalogue, setTypeCatalogue] = useState<string | null>(null);
-  
+
   const [fileProduct, setFileProduct] = useState<string | null>(null);
   const [typeProduct, setTypeProduct] = useState<string | null>(null);
 
   const [cropModalImage, setCropModalImage] = useState<string | null>(null);
   const [cropModalZone, setCropModalZone] = useState<"hero" | "footer" | "catalogue" | "product" | "avatar" | null>(null);
-  
+
   const [campaignUrlType, setCampaignUrlType] = useState("custom");
   const [campaignUrl, setCampaignUrl] = useState("");
-  
+
   // Date et persistences (Local Storage Mock)
   const [campaignStartDate, setCampaignStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeCampaign, setActiveCampaign] = useState<any>(null);
@@ -110,7 +110,7 @@ export default function Dashboard() {
         // Nettoyer l'URL sans recharger
         window.history.replaceState({}, '', window.location.pathname);
       }
-      
+
       // Load real campaigns from Supabase
       try {
         supabase.from('campagnes_pub').select('*').eq('status', 'active').order('created_at', { ascending: false }).limit(1).then(({ data }) => {
@@ -128,10 +128,10 @@ export default function Dashboard() {
             });
           }
         });
-        
+
         const purch = localStorage.getItem('annonceid_purchases');
         if (purch) setPurchases(JSON.parse(purch));
-      } catch {}
+      } catch { }
     }
   }, []);
 
@@ -139,7 +139,7 @@ export default function Dashboard() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setUser(user);
-        
+
         // Fetch user profile from profiles table
         supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data: profData }) => {
           if (profData) {
@@ -207,10 +207,10 @@ export default function Dashboard() {
     const ad = ads.find(a => a.id === id);
     if (!ad) return;
     const newStatus = ad.status === 'sold' ? 'active' : 'sold';
-    
+
     // Optimistic UI update
     setAds(ads.map(a => a.id === id ? { ...a, status: newStatus } : a));
-    
+
     // DB Update
     await supabase.from('listings').update({ status: newStatus }).eq('id', id);
     show(newStatus === 'sold' ? "✅ Annonce marquée comme vendue !" : "✅ Annonce remise en vente !");
@@ -221,10 +221,10 @@ export default function Dashboard() {
     const ad = ads.find(a => a.id === id);
     if (!ad) return;
     const newStatus = ad.status === 'inactive' ? 'active' : 'inactive';
-    
+
     // Optimistic UI update
     setAds(ads.map(a => a.id === id ? { ...a, status: newStatus } : a));
-    
+
     // DB Update
     await supabase.from('listings').update({ status: newStatus }).eq('id', id);
     show(newStatus === 'active' ? "✅ Annonce activée !" : "⏸️ Annonce désactivée.");
@@ -233,13 +233,13 @@ export default function Dashboard() {
 
   async function handleDeleteAd() {
     if (!adToDelete) return;
-    
+
     // Optimistic UI
     setAds(ads.filter(a => a.id !== adToDelete));
-    
+
     // DB Update
     await supabase.from('listings').delete().eq('id', adToDelete);
-    
+
     show("🗑️ Annonce supprimée avec succès !");
     setAdToDelete(null);
   }
@@ -365,7 +365,7 @@ export default function Dashboard() {
 
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-[1000] bg-black/60 lg:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
         />
@@ -397,11 +397,10 @@ export default function Dashboard() {
               ) : (
                 <button
                   onClick={() => handlePanelChange(n.id)}
-                  className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-[.87rem] transition ${
-                    panel === n.id ? "border-green bg-green/[.06] font-semibold text-green" : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
-                  }`}
+                  className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-[.87rem] transition ${panel === n.id ? "border-green bg-green/[.06] font-semibold text-green" : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
+                    }`}
                 >
-                  <span className="w-5 text-center shrink-0">{n.icon}</span> 
+                  <span className="w-5 text-center shrink-0">{n.icon}</span>
                   <span className="truncate">{n.label}</span>
                   {n.badge && <span className="ml-auto rounded-[10px] bg-brand-red px-1.5 py-0.5 text-[.62rem] font-bold text-white shrink-0">{n.badge}</span>}
                 </button>
@@ -410,11 +409,11 @@ export default function Dashboard() {
           ))}
         </div>
         <div className="border-t border-gray-100 dark:border-dark-border p-4">
-          <button 
+          <button
             onClick={async () => {
               await supabase.auth.signOut();
               window.location.href = "/";
-            }} 
+            }}
             className="btn btn-ghost btn-sm btn-block justify-start !text-brand-red dark:hover:bg-dark-800"
           >
             🚪 Déconnexion
@@ -434,17 +433,17 @@ export default function Dashboard() {
               <Kpi label="Favoris reçus" value={receivedFavsCount.toString()} sub="Sur vos annonces" />
               <Kpi label="Annonces totales" value={ads.length.toString()} sub="Toutes catégories" />
             </div>
-            
+
             <div className="mb-6 flex flex-col gap-2">
               <Alert color="green">💡 Astuce : Les annonces avec de belles photos se vendent 3x plus vite ! — <Link href="/publier" className="font-semibold text-green">Publier maintenant</Link></Alert>
             </div>
-            
+
             {loadingAds ? (
               <div className="py-12 flex justify-center items-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green"></div>
               </div>
             ) : ads.length === 0 ? (
-              <EmptyState 
+              <EmptyState
                 title="Vous n'avez pas encore d'annonce"
                 description="Commencez à vendre vos produits à des millions d'acheteurs en publiant votre première annonce."
                 ctaLabel="Publier une annonce"
@@ -474,13 +473,13 @@ export default function Dashboard() {
                         <Link href={`/paiement?annonce_id=${a.id}`} className="btn btn-gold btn-sm h-7 text-[.7rem] px-2 whitespace-nowrap hidden sm:inline-flex">
                           ⭐ Booster
                         </Link>
-                        <button 
-                          onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === a.id ? null : a.id); }} 
+                        <button
+                          onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === a.id ? null : a.id); }}
                           className="dots-btn p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-dark-900 rounded-full transition"
                         >
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                         </button>
-                        
+
                         {/* Dropdown Menu */}
                         {openMenuId === a.id && (
                           <div className="absolute right-0 top-10 w-48 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-border py-2 z-50 animate-fadeUp">
@@ -511,7 +510,7 @@ export default function Dashboard() {
               <h2 className="font-display text-[1.4rem] font-extrabold dark:text-white">Gérer mes annonces</h2>
               <Link href="/publier" className="btn btn-green btn-sm">+ Nouveau</Link>
             </div>
-            
+
             {/* TABS */}
             <div className="flex overflow-x-auto border-b border-gray-200 dark:border-dark-border mb-6 no-scrollbar">
               {[
@@ -522,7 +521,7 @@ export default function Dashboard() {
                 { id: "hors_ligne", label: "Hors ligne" },
                 { id: "rejetees", label: "Rejetée(s)" },
               ].map(tab => (
-                <button 
+                <button
                   key={tab.id}
                   onClick={() => setAdTab(tab.id)}
                   className={`px-4 py-2.5 text-[.85rem] font-bold whitespace-nowrap border-b-2 transition-colors ${adTab === tab.id ? "border-green text-gray-900 dark:text-white" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-white/60 dark:hover:text-white"}`}
@@ -536,9 +535,9 @@ export default function Dashboard() {
             <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between bg-white dark:bg-dark-800 p-4 rounded-lg border border-gray-100 dark:border-dark-border">
               <div className="flex-1 w-full relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-                <input 
-                  type="text" 
-                  placeholder="Recherche rapide..." 
+                <input
+                  type="text"
+                  placeholder="Recherche rapide..."
                   className="input !pl-9 w-full sm:max-w-md"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -548,7 +547,7 @@ export default function Dashboard() {
                 ⚙ Filtrer
               </button>
             </div>
-            
+
             {loadingAds ? (
               <div className="py-20 flex justify-center items-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green"></div>
@@ -574,12 +573,12 @@ export default function Dashboard() {
                         <div className="text-[.9rem] font-bold text-green dark:text-neon-green shrink-0">{ad.price} FCFA</div>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-[.75rem] text-gray-500 dark:text-white/50">
-                        {ad.category} · {ad.views || 0} vues · 
+                        {ad.category} · {ad.views || 0} vues ·
                         <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[.65rem] font-bold uppercase ${ad.status === 'inactive' ? 'bg-gray-100 text-gray-500 dark:bg-dark-700 dark:text-gray-300' : ad.status === 'sold' ? 'bg-red-50 text-brand-red dark:bg-red-900/20' : 'bg-green/10 text-green'}`}>
                           {ad.status === 'inactive' ? '⏸️ Inactif' : ad.status === 'sold' ? '📦 Vendu' : '✓ Actif'}
                         </span>
                       </div>
-                      
+
                       {/* Mobile stats text */}
                       <div className="mt-2 text-[.75rem] text-gray-400 sm:hidden">
                         Créée le {new Date(ad.created_at).toLocaleDateString('fr-FR')}
@@ -591,13 +590,13 @@ export default function Dashboard() {
                       <Link href={`/paiement?annonce_id=${ad.id}`} className="btn btn-gold btn-sm h-7 text-[.7rem] px-2 whitespace-nowrap hidden sm:inline-flex">
                         ⭐ Booster
                       </Link>
-                      <button 
-                        onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === ad.id ? null : ad.id); }} 
+                      <button
+                        onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === ad.id ? null : ad.id); }}
                         className="dots-btn p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-dark-900 rounded-full transition"
                       >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                       </button>
-                      
+
                       {/* Dropdown Menu */}
                       {openMenuId === ad.id && (
                         <div className="absolute right-0 top-10 w-48 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-border py-2 z-50 animate-fadeUp">
@@ -639,12 +638,12 @@ export default function Dashboard() {
             {loadingFavs ? (
               <div className="py-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green"></div></div>
             ) : favListings.length === 0 ? (
-              <EmptyState 
-                title="Aucun favori" 
-                description="Cliquez sur le cœur d'une annonce pour la sauvegarder ici." 
-                ctaLabel="Explorer les annonces" 
-                ctaHref="/recherche" 
-                emoji="❤️" 
+              <EmptyState
+                title="Aucun favori"
+                description="Cliquez sur le cœur d'une annonce pour la sauvegarder ici."
+                ctaLabel="Explorer les annonces"
+                ctaHref="/recherche"
+                emoji="❤️"
               />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -677,40 +676,40 @@ export default function Dashboard() {
                   <p className="text-[.75rem] text-gray-500">JPG, PNG ou GIF. Max 2Mo.</p>
                 </div>
               </div>
-              
+
               <div className="grid gap-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className="label">Nom de la boutique / Entreprise</label>
-                    <input 
-                      className="input" 
-                      value={profileName} 
-                      onChange={(e) => setProfileName(e.target.value)} 
+                    <input
+                      className="input"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
                     />
                   </div>
                   <div>
                     <label className="label">Numéro de téléphone</label>
-                    <input 
-                      className="input" 
+                    <input
+                      className="input"
                       placeholder="+221 77 000 00 00"
-                      value={profilePhone} 
-                      onChange={(e) => setProfilePhone(e.target.value)} 
+                      value={profilePhone}
+                      onChange={(e) => setProfilePhone(e.target.value)}
                     />
                   </div>
                 </div>
                 <div>
                   <label className="label">Description de la boutique</label>
-                  <textarea 
-                    className="input resize-y" 
-                    rows={3} 
-                    placeholder="Que propose votre boutique ?" 
+                  <textarea
+                    className="input resize-y"
+                    rows={3}
+                    placeholder="Que propose votre boutique ?"
                     value={profileBio}
                     onChange={(e) => setProfileBio(e.target.value)}
                   />
                 </div>
                 <div>
                   <label className="label">Langue de communication</label>
-                  <select 
+                  <select
                     className="input max-w-[200px]"
                     value={profileLanguage}
                     onChange={(e) => setProfileLanguage(e.target.value)}
@@ -721,7 +720,7 @@ export default function Dashboard() {
                   </select>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={async () => {
                   if (!user) return;
                   const { error } = await supabase.from('profiles').update({
@@ -733,9 +732,9 @@ export default function Dashboard() {
                     show("❌ Erreur : " + error.message);
                   } else {
                     show("✓ Profil sauvegardé avec succès !");
-                    setProfile(prev => prev ? { ...prev, full_name: profileName, bio: profileBio, phone: profilePhone } : { full_name: profileName, bio: profileBio, phone: profilePhone });
+                    setProfile((prev: any) => prev ? { ...prev, full_name: profileName, bio: profileBio, phone: profilePhone } : { full_name: profileName, bio: profileBio, phone: profilePhone });
                   }
-                }} 
+                }}
                 className="btn btn-green mt-6"
               >
                 Sauvegarder les modifications
@@ -755,7 +754,7 @@ export default function Dashboard() {
                 </div>
                 <button onClick={() => show("La modification de l'email n'est pas encore disponible.")} className="btn btn-outline btn-sm">Modifier</button>
               </div>
-              
+
               <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5 flex justify-between items-center">
                 <div>
                   <h3 className="mb-1 font-display text-[.95rem] font-bold dark:text-white">Mot de passe</h3>
@@ -781,8 +780,8 @@ export default function Dashboard() {
                   <p className="text-[.83rem] text-gray-500 dark:text-white/60">1 appareil connecté actuellement.</p>
                 </div>
                 <button onClick={async () => {
-                   await supabase.auth.signOut();
-                   window.location.href = '/connexion';
+                  await supabase.auth.signOut();
+                  window.location.href = '/connexion';
                 }} className="btn btn-outline btn-sm">Déconnexion</button>
               </div>
 
@@ -803,13 +802,13 @@ export default function Dashboard() {
 
             {/* Tabs for Marketing vs Banner Ads */}
             <div className="flex gap-4 border-b border-gray-200 dark:border-dark-border mb-8 overflow-x-auto">
-              <button 
+              <button
                 onClick={() => setMarketingTab("whatsapp")}
                 className={`px-4 py-3 font-bold text-sm whitespace-nowrap border-b-2 transition ${marketingTab === "whatsapp" ? 'border-green text-green' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
               >
                 📱 Marketing WhatsApp
               </button>
-              <button 
+              <button
                 onClick={() => setMarketingTab("banners")}
                 className={`px-4 py-3 font-bold text-sm whitespace-nowrap border-b-2 transition ${marketingTab === "banners" ? 'border-green text-green' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
               >
@@ -822,478 +821,478 @@ export default function Dashboard() {
             ) : (
               <div className="max-w-[900px] mx-auto">
                 <p className="text-gray-500 dark:text-white/70 mb-8 text-[.95rem]">
-                  Ne vous contentez plus d'un seul emplacement. En réservant votre espace publicitaire, **votre bannière s'affichera partout** sur la plateforme (Accueil, Catalogue, Pages Produits). 
-                  <br/><span className="text-gold font-bold">⚠️ Limité à 2 annonceurs par semaine en diaporama.</span>
+                  Ne vous contentez plus d'un seul emplacement. En réservant votre espace publicitaire, **votre bannière s'affichera partout** sur la plateforme (Accueil, Catalogue, Pages Produits).
+                  <br /><span className="text-gold font-bold">⚠️ Limité à 2 annonceurs par semaine en diaporama.</span>
                 </p>
-                
+
                 <div className="bg-white dark:bg-dark-800 rounded-[2rem] shadow-xl border border-gray-100 dark:border-dark-border overflow-hidden">
-                  
+
                   {!activeCampaign ? (
                     <>
                       {/* ETAPE 1: VISUEL SUBLIME */}
-              <div className="bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#020617] p-8 md:p-10 text-white relative">
-                <div className="absolute top-0 right-0 p-6 opacity-20 text-[4rem] pointer-events-none">✨</div>
-                <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-full bg-gold text-dark-900 flex items-center justify-center text-sm">1</span> 
-                  Où s'affichera votre annonce ?
-                </h3>
-                
-                <div className="grid md:grid-cols-3 gap-4">
-                  {/* Mockup 1 */}
-                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 text-center">
-                    <div className="w-full h-12 bg-gradient-to-r from-gold/50 to-gold rounded-lg mb-3 flex items-center justify-center">
-                      <span className="text-[.65rem] font-bold uppercase tracking-widest text-black">Bannière Hero</span>
-                    </div>
-                    <div className="font-bold text-sm">En haut de l'Accueil</div>
-                    <div className="text-[.7rem] text-white/70 mt-1">La première chose vue.</div>
-                  </div>
-                  {/* Mockup 2 */}
-                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 text-center">
-                    <div className="grid grid-cols-2 gap-2 mb-3 h-12">
-                      <div className="bg-white/20 rounded-md"></div>
-                      <div className="bg-white/20 rounded-md"></div>
-                    </div>
-                    <div className="w-full h-6 bg-gradient-to-r from-gold/50 to-gold rounded-md mb-2"></div>
-                    <div className="font-bold text-sm">Au coeur du Catalogue</div>
-                    <div className="text-[.7rem] text-white/70 mt-1">Au milieu des résultats (In-Grid).</div>
-                  </div>
-                  {/* Mockup 3 */}
-                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 text-center">
-                    <div className="w-full h-12 bg-white/20 rounded-lg mb-3 flex flex-col justify-end p-1">
-                      <div className="w-full h-4 bg-gradient-to-r from-gold/50 to-gold rounded-sm"></div>
-                    </div>
-                    <div className="font-bold text-sm">Pages Produits</div>
-                    <div className="text-[.7rem] text-white/70 mt-1">Juste avant les avis clients.</div>
-                  </div>
-                </div>
-                
-                <div className="mt-6 text-[.85rem] text-white/80 border-t border-white/10 pt-4 text-center">
-                  <span className="text-gold font-bold">Quatre visuels nécessaires</span> : Vous devrez fournir un fichier distinct et optimisé pour chacune de ces zones.
-                </div>
-              </div>
+                      <div className="bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#020617] p-8 md:p-10 text-white relative">
+                        <div className="absolute top-0 right-0 p-6 opacity-20 text-[4rem] pointer-events-none">✨</div>
+                        <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2">
+                          <span className="w-8 h-8 rounded-full bg-gold text-dark-900 flex items-center justify-center text-sm">1</span>
+                          Où s'affichera votre annonce ?
+                        </h3>
 
-              <div className="p-8 md:p-10">
-                {/* ETAPE 2: UPLOAD & DUREE */}
-                <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2 dark:text-white">
-                  <span className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white flex items-center justify-center text-sm">2</span> 
-                  Votre Fichier & Durée
-                </h3>
-                
-                <div className="grid md:grid-cols-2 gap-8 mb-8">
-                  {/* Upload Zones (4 Zones) */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Hero */}
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">1️⃣ Accueil (Haut)</label>
-                      <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
-                        <input 
-                          type="file" accept="image/*,video/mp4" className="hidden" 
-                          onChange={async (e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              const f = e.target.files[0];
-                              if (f.type.startsWith('video/')) {
-                                setTypeHero(f.type);
-                                setFileHero(await fileToBase64(f));
-                              } else {
-                                setTypeHero(f.type);
-                                setCropModalZone("hero");
-                                setCropModalImage(URL.createObjectURL(f));
+                        <div className="grid md:grid-cols-3 gap-4">
+                          {/* Mockup 1 */}
+                          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 text-center">
+                            <div className="w-full h-12 bg-gradient-to-r from-gold/50 to-gold rounded-lg mb-3 flex items-center justify-center">
+                              <span className="text-[.65rem] font-bold uppercase tracking-widest text-black">Bannière Hero</span>
+                            </div>
+                            <div className="font-bold text-sm">En haut de l'Accueil</div>
+                            <div className="text-[.7rem] text-white/70 mt-1">La première chose vue.</div>
+                          </div>
+                          {/* Mockup 2 */}
+                          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 text-center">
+                            <div className="grid grid-cols-2 gap-2 mb-3 h-12">
+                              <div className="bg-white/20 rounded-md"></div>
+                              <div className="bg-white/20 rounded-md"></div>
+                            </div>
+                            <div className="w-full h-6 bg-gradient-to-r from-gold/50 to-gold rounded-md mb-2"></div>
+                            <div className="font-bold text-sm">Au coeur du Catalogue</div>
+                            <div className="text-[.7rem] text-white/70 mt-1">Au milieu des résultats (In-Grid).</div>
+                          </div>
+                          {/* Mockup 3 */}
+                          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 text-center">
+                            <div className="w-full h-12 bg-white/20 rounded-lg mb-3 flex flex-col justify-end p-1">
+                              <div className="w-full h-4 bg-gradient-to-r from-gold/50 to-gold rounded-sm"></div>
+                            </div>
+                            <div className="font-bold text-sm">Pages Produits</div>
+                            <div className="text-[.7rem] text-white/70 mt-1">Juste avant les avis clients.</div>
+                          </div>
+                        </div>
+
+                        <div className="mt-6 text-[.85rem] text-white/80 border-t border-white/10 pt-4 text-center">
+                          <span className="text-gold font-bold">Quatre visuels nécessaires</span> : Vous devrez fournir un fichier distinct et optimisé pour chacune de ces zones.
+                        </div>
+                      </div>
+
+                      <div className="p-8 md:p-10">
+                        {/* ETAPE 2: UPLOAD & DUREE */}
+                        <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2 dark:text-white">
+                          <span className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white flex items-center justify-center text-sm">2</span>
+                          Votre Fichier & Durée
+                        </h3>
+
+                        <div className="grid md:grid-cols-2 gap-8 mb-8">
+                          {/* Upload Zones (4 Zones) */}
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Hero */}
+                            <div>
+                              <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">1️⃣ Accueil (Haut)</label>
+                              <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
+                                <input
+                                  type="file" accept="image/*,video/mp4" className="hidden"
+                                  onChange={async (e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                      const f = e.target.files[0];
+                                      if (f.type.startsWith('video/')) {
+                                        setTypeHero(f.type);
+                                        setFileHero(await fileToBase64(f));
+                                      } else {
+                                        setTypeHero(f.type);
+                                        setCropModalZone("hero");
+                                        setCropModalImage(URL.createObjectURL(f));
+                                      }
+                                    }
+                                  }}
+                                />
+                                {fileHero ? (
+                                  typeHero?.startsWith('video/') ? <video src={fileHero} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileHero} className="w-full h-full object-cover" alt="Hero" />
+                                ) : (
+                                  <>
+                                    <div className="font-bold text-[.75rem]">Upload Hero</div>
+                                    <div className="text-[.6rem] text-gray-500">1200x300px</div>
+                                  </>
+                                )}
+                              </label>
+                            </div>
+
+                            {/* Footer */}
+                            <div>
+                              <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">2️⃣ Accueil (Bas)</label>
+                              <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
+                                <input
+                                  type="file" accept="image/*,video/mp4" className="hidden"
+                                  onChange={async (e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                      const f = e.target.files[0];
+                                      if (f.type.startsWith('video/')) {
+                                        setTypeFooter(f.type);
+                                        setFileFooter(await fileToBase64(f));
+                                      } else {
+                                        setTypeFooter(f.type);
+                                        setCropModalZone("footer");
+                                        setCropModalImage(URL.createObjectURL(f));
+                                      }
+                                    }
+                                  }}
+                                />
+                                {fileFooter ? (
+                                  typeFooter?.startsWith('video/') ? <video src={fileFooter} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileFooter} className="w-full h-full object-cover" alt="Footer" />
+                                ) : (
+                                  <>
+                                    <div className="font-bold text-[.75rem]">Upload Footer</div>
+                                    <div className="text-[.6rem] text-gray-500">1200x300px</div>
+                                  </>
+                                )}
+                              </label>
+                            </div>
+
+                            {/* Catalogue */}
+                            <div>
+                              <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">3️⃣ Catalogue</label>
+                              <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
+                                <input
+                                  type="file" accept="image/*,video/mp4" className="hidden"
+                                  onChange={async (e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                      const f = e.target.files[0];
+                                      if (f.type.startsWith('video/')) {
+                                        setTypeCatalogue(f.type);
+                                        setFileCatalogue(await fileToBase64(f));
+                                      } else {
+                                        setTypeCatalogue(f.type);
+                                        setCropModalZone("catalogue");
+                                        setCropModalImage(URL.createObjectURL(f));
+                                      }
+                                    }
+                                  }}
+                                />
+                                {fileCatalogue ? (
+                                  typeCatalogue?.startsWith('video/') ? <video src={fileCatalogue} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileCatalogue} className="w-full h-full object-cover" alt="Catalogue" />
+                                ) : (
+                                  <>
+                                    <div className="font-bold text-[.75rem]">Upload Catalogue</div>
+                                    <div className="text-[.6rem] text-gray-500">800x200px</div>
+                                  </>
+                                )}
+                              </label>
+                            </div>
+
+                            {/* Product */}
+                            <div>
+                              <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">4️⃣ Page Produit</label>
+                              <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
+                                <input
+                                  type="file" accept="image/*,video/mp4" className="hidden"
+                                  onChange={async (e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                      const f = e.target.files[0];
+                                      if (f.type.startsWith('video/')) {
+                                        setTypeProduct(f.type);
+                                        setFileProduct(await fileToBase64(f));
+                                      } else {
+                                        setTypeProduct(f.type);
+                                        setCropModalZone("product");
+                                        setCropModalImage(URL.createObjectURL(f));
+                                      }
+                                    }
+                                  }}
+                                />
+                                {fileProduct ? (
+                                  typeProduct?.startsWith('video/') ? <video src={fileProduct} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileProduct} className="w-full h-full object-cover" alt="Product" />
+                                ) : (
+                                  <>
+                                    <div className="font-bold text-[.75rem]">Upload Produit</div>
+                                    <div className="text-[.6rem] text-gray-500">800x200px</div>
+                                  </>
+                                )}
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* Duration and Date selector */}
+                          <div className="flex flex-col gap-4">
+                            <div>
+                              <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">Durée & Réductions</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {[1, 2, 3, 4].map((weeks) => (
+                                  <button
+                                    key={weeks}
+                                    onClick={() => setCampaignWeeks(weeks)}
+                                    className={`rounded-lg font-bold border transition text-sm flex items-center justify-center py-2.5 ${campaignWeeks === weeks ? 'bg-green border-green text-white shadow-md' : 'bg-gray-50 dark:bg-dark-900 border-gray-200 dark:border-dark-border text-gray-700 dark:text-white hover:border-green'}`}
+                                  >
+                                    {weeks} sem.
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="mt-6 mb-6">
+                              <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">
+                                Lien de redirection (Optionnel)
+                              </label>
+                              <select
+                                value={campaignUrlType}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCampaignUrlType(val);
+                                  if (val === "boutique") {
+                                    setCampaignUrl(user ? `/boutique/${user.id}` : "/");
+                                  } else if (val.startsWith("/annonce")) {
+                                    setCampaignUrl(val);
+                                  } else {
+                                    setCampaignUrl("");
+                                  }
+                                }}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-gray-700 dark:text-white focus:outline-none focus:border-green appearance-none mb-3"
+                              >
+                                <option value="custom">-- Choisir un lien de redirection --</option>
+                                <option value="boutique">🏪 Ma Boutique Complète</option>
+                                {ads.length > 0 && (
+                                  <optgroup label="📦 Mes Produits">
+                                    {ads.map(ad => (
+                                      <option key={ad.id} value={`/annonce/${ad.id}/${ad.slug}`}>
+                                        {ad.title.length > 40 ? ad.title.substring(0, 40) + '...' : ad.title}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
+                                <option value="custom">🔗 Lien externe personnalisé</option>
+                              </select>
+
+                              {campaignUrlType === "custom" && (
+                                <input
+                                  type="url"
+                                  placeholder="Ex: https://wa.me/... ou https://maboutique.com"
+                                  value={campaignUrl}
+                                  onChange={(e) => setCampaignUrl(e.target.value)}
+                                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-gray-700 dark:text-white focus:outline-none focus:border-green"
+                                />
+                              )}
+                              <p className="text-[.75rem] text-gray-500 mt-1">
+                                Les utilisateurs qui cliquent sur vos bannières seront redirigés vers ce lien.
+                              </p>
+                            </div>
+
+                            <div className="flex gap-4">
+                              <div className="flex-1">
+                                <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">Début</label>
+                                <select
+                                  value={campaignStartDate}
+                                  onChange={(e) => setCampaignStartDate(e.target.value)}
+                                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-gray-700 dark:text-white focus:outline-none focus:border-green appearance-none"
+                                >
+                                  {availableWeeks.map((date, i) => {
+                                    // Simuler la 2ème semaine comme indisponible si on veut tester l'indisponibilité
+                                    const isOccupied = purchases.some(p => p.startDate === date.toISOString().split('T')[0]);
+                                    return (
+                                      <option key={i} value={date.toISOString().split('T')[0]} disabled={isOccupied}>
+                                        {date.toLocaleDateString('fr-FR')} {isOccupied ? "(Occupé)" : "(Disponible)"}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
+                              </div>
+                              <div className="flex-1 opacity-70">
+                                <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">Fin estimée</label>
+                                <input
+                                  type="text"
+                                  disabled
+                                  value={
+                                    campaignStartDate ?
+                                      new Date(new Date(campaignStartDate).getTime() + campaignWeeks * 7 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')
+                                      : ''
+                                  }
+                                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-white cursor-not-allowed"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <hr className="border-gray-100 dark:border-dark-border mb-8" />
+
+                        {/* ETAPE 3: PAIEMENT */}
+                        <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2 dark:text-white">
+                          <span className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white flex items-center justify-center text-sm">3</span>
+                          Validation & Paiement
+                        </h3>
+
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50 dark:bg-dark-900 rounded-xl p-6 border border-gray-100 dark:border-dark-border">
+                          <div>
+                            <div className="text-gray-500 text-sm mb-1">Montant total pour {campaignWeeks} semaine{campaignWeeks > 1 ? 's' : ''}</div>
+                            <div className="font-display font-extrabold text-[2rem] text-gray-900 dark:text-white leading-none">
+                              {getCampaignPrice(campaignWeeks).toLocaleString('fr-FR')} <span className="text-xl text-gray-400 font-normal">FCFA</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              if (!fileHero && !fileFooter && !fileCatalogue && !fileProduct) {
+                                show("⚠️ Veuillez uploader au moins un visuel avant de payer.");
+                                return;
                               }
-                            }
-                          }}
-                        />
-                        {fileHero ? (
-                          typeHero?.startsWith('video/') ? <video src={fileHero} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileHero} className="w-full h-full object-cover" alt="Hero" />
-                        ) : (
-                          <>
-                            <div className="font-bold text-[.75rem]">Upload Hero</div>
-                            <div className="text-[.6rem] text-gray-500">1200x300px</div>
-                          </>
-                        )}
-                      </label>
-                    </div>
 
-                    {/* Footer */}
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">2️⃣ Accueil (Bas)</label>
-                      <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
-                        <input 
-                          type="file" accept="image/*,video/mp4" className="hidden" 
-                          onChange={async (e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              const f = e.target.files[0];
-                              if (f.type.startsWith('video/')) {
-                                setTypeFooter(f.type);
-                                setFileFooter(await fileToBase64(f));
-                              } else {
-                                setTypeFooter(f.type);
-                                setCropModalZone("footer");
-                                setCropModalImage(URL.createObjectURL(f));
+                              if (isKonnecta) {
+                                const newCampaign = {
+                                  hero: fileHero,
+                                  footer: fileFooter,
+                                  catalogue: fileCatalogue,
+                                  product: fileProduct,
+                                  url: campaignUrl,
+                                  weeks: campaignWeeks,
+                                  start_date: campaignStartDate,
+                                  status: 'active'
+                                };
+
+                                let data, error;
+
+                                if (editingCampaignId) {
+                                  const res = await supabase.from('campagnes_pub').update(newCampaign).eq('id', editingCampaignId).select();
+                                  data = res.data;
+                                  error = res.error;
+                                  setEditingCampaignId(null);
+                                  show("✅ Campagne mise à jour avec succès !");
+                                } else {
+                                  const res = await supabase.from('campagnes_pub').insert([newCampaign]).select();
+                                  data = res.data;
+                                  error = res.error;
+
+                                  const newPurchase = {
+                                    id: `PUB-${Date.now()}`,
+                                    date: new Date().toISOString(),
+                                    type: 'Campagne Publicitaire',
+                                    amount: getCampaignPrice(campaignWeeks),
+                                    status: 'Complété'
+                                  };
+
+                                  const allPurchases = [newPurchase, ...purchases];
+                                  localStorage.setItem('annonceid_purchases', JSON.stringify(allPurchases));
+                                  setPurchases(allPurchases);
+                                  show("🎉 Nouvelle campagne activée (Privilège Super Admin).");
+                                }
+
+                                if (data && data.length > 0) {
+                                  setActiveCampaign({
+                                    hero: data[0].hero,
+                                    footer: data[0].footer,
+                                    catalogue: data[0].catalogue,
+                                    product: data[0].product,
+                                    url: data[0].url,
+                                    weeks: data[0].weeks,
+                                    startDate: data[0].start_date,
+                                    status: data[0].status,
+                                    id: data[0].id
+                                  });
+                                }
+
+                                show("🎉 Campagne validée et sauvegardée en base (Privilège Super Admin).");
+                                setFileHero(null);
+                                setFileFooter(null);
+                                setFileCatalogue(null);
+                                setFileProduct(null);
+                                setCampaignWeeks(1);
+                                setTimeout(() => handlePanelChange("campaigns"), 1500);
+                                return;
                               }
-                            }
-                          }}
-                        />
-                        {fileFooter ? (
-                          typeFooter?.startsWith('video/') ? <video src={fileFooter} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileFooter} className="w-full h-full object-cover" alt="Footer" />
-                        ) : (
-                          <>
-                            <div className="font-bold text-[.75rem]">Upload Footer</div>
-                            <div className="text-[.6rem] text-gray-500">1200x300px</div>
-                          </>
-                        )}
-                      </label>
-                    </div>
 
-                    {/* Catalogue */}
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">3️⃣ Catalogue</label>
-                      <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
-                        <input 
-                          type="file" accept="image/*,video/mp4" className="hidden" 
-                          onChange={async (e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              const f = e.target.files[0];
-                              if (f.type.startsWith('video/')) {
-                                setTypeCatalogue(f.type);
-                                setFileCatalogue(await fileToBase64(f));
-                              } else {
-                                setTypeCatalogue(f.type);
-                                setCropModalZone("catalogue");
-                                setCropModalImage(URL.createObjectURL(f));
+                              show("Redirection vers PayTech...");
+                              try {
+                                const res = await fetch("/api/paytech", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    amount: getCampaignPrice(campaignWeeks),
+                                    itemName: `Campagne Publicitaire ${campaignWeeks} semaine(s)`,
+                                    refCommand: `PUB-${Date.now()}`
+                                  })
+                                });
+                                const data = await res.json();
+                                if (data.redirect_url) {
+                                  window.location.href = data.redirect_url;
+                                } else {
+                                  show("Erreur lors de l'initialisation du paiement.");
+                                }
+                              } catch (error) {
+                                show("Erreur de connexion avec PayTech.");
                               }
-                            }
-                          }}
-                        />
-                        {fileCatalogue ? (
-                          typeCatalogue?.startsWith('video/') ? <video src={fileCatalogue} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileCatalogue} className="w-full h-full object-cover" alt="Catalogue" />
-                        ) : (
-                          <>
-                            <div className="font-bold text-[.75rem]">Upload Catalogue</div>
-                            <div className="text-[.6rem] text-gray-500">800x200px</div>
-                          </>
-                        )}
-                      </label>
-                    </div>
-
-                    {/* Product */}
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">4️⃣ Page Produit</label>
-                      <label className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl h-24 flex flex-col items-center justify-center text-center cursor-pointer hover:border-green hover:bg-green/5 transition relative group overflow-hidden">
-                        <input 
-                          type="file" accept="image/*,video/mp4" className="hidden" 
-                          onChange={async (e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              const f = e.target.files[0];
-                              if (f.type.startsWith('video/')) {
-                                setTypeProduct(f.type);
-                                setFileProduct(await fileToBase64(f));
-                              } else {
-                                setTypeProduct(f.type);
-                                setCropModalZone("product");
-                                setCropModalImage(URL.createObjectURL(f));
-                              }
-                            }
-                          }}
-                        />
-                        {fileProduct ? (
-                          typeProduct?.startsWith('video/') ? <video src={fileProduct} autoPlay loop muted playsInline className="w-full h-full object-cover" /> : <img src={fileProduct} className="w-full h-full object-cover" alt="Product" />
-                        ) : (
-                          <>
-                            <div className="font-bold text-[.75rem]">Upload Produit</div>
-                            <div className="text-[.6rem] text-gray-500">800x200px</div>
-                          </>
-                        )}
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Duration and Date selector */}
-                  <div className="flex flex-col gap-4">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">Durée & Réductions</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[1, 2, 3, 4].map((weeks) => (
-                          <button 
-                            key={weeks}
-                            onClick={() => setCampaignWeeks(weeks)}
-                            className={`rounded-lg font-bold border transition text-sm flex items-center justify-center py-2.5 ${campaignWeeks === weeks ? 'bg-green border-green text-white shadow-md' : 'bg-gray-50 dark:bg-dark-900 border-gray-200 dark:border-dark-border text-gray-700 dark:text-white hover:border-green'}`}
+                            }}
+                            className="btn btn-green w-full md:w-auto px-8 py-4 text-lg shadow-lg hover:shadow-xl transition-all"
                           >
-                            {weeks} sem.
+                            Payer avec PayTech
                           </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 mb-6">
-                      <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">
-                        Lien de redirection (Optionnel)
-                      </label>
-                      <select
-                        value={campaignUrlType}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCampaignUrlType(val);
-                          if (val === "boutique") {
-                            setCampaignUrl(user ? `/boutique/${user.id}` : "/");
-                          } else if (val.startsWith("/annonce")) {
-                            setCampaignUrl(val);
-                          } else {
-                            setCampaignUrl("");
-                          }
-                        }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-gray-700 dark:text-white focus:outline-none focus:border-green appearance-none mb-3"
-                      >
-                        <option value="custom">-- Choisir un lien de redirection --</option>
-                        <option value="boutique">🏪 Ma Boutique Complète</option>
-                        {ads.length > 0 && (
-                          <optgroup label="📦 Mes Produits">
-                            {ads.map(ad => (
-                              <option key={ad.id} value={`/annonce/${ad.id}/${ad.slug}`}>
-                                {ad.title.length > 40 ? ad.title.substring(0, 40) + '...' : ad.title}
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
-                        <option value="custom">🔗 Lien externe personnalisé</option>
-                      </select>
-                      
-                      {campaignUrlType === "custom" && (
-                        <input 
-                          type="url" 
-                          placeholder="Ex: https://wa.me/... ou https://maboutique.com" 
-                          value={campaignUrl}
-                          onChange={(e) => setCampaignUrl(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-gray-700 dark:text-white focus:outline-none focus:border-green"
-                        />
-                      )}
-                      <p className="text-[.75rem] text-gray-500 mt-1">
-                        Les utilisateurs qui cliquent sur vos bannières seront redirigés vers ce lien.
-                      </p>
-                    </div>
+                        </div>
 
-                      <div className="flex gap-4">
-                        <div className="flex-1">
-                          <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">Début</label>
-                          <select 
-                            value={campaignStartDate}
-                            onChange={(e) => setCampaignStartDate(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-gray-700 dark:text-white focus:outline-none focus:border-green appearance-none"
+                        <p className="text-center text-[.75rem] text-gray-400 mt-4">
+                          Votre campagne sera soumise à validation et débutera immédiatement après acceptation.
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-8 md:p-10 text-center animate-fadeUp">
+                      <div className="text-4xl mb-4">🚀</div>
+                      <h3 className="font-display font-bold text-2xl mb-2 text-green">Campagne Active !</h3>
+                      <p className="text-gray-500 dark:text-gray-400 mb-8">Votre bannière est actuellement diffusée sur la plateforme.</p>
+
+                      <div className="grid md:grid-cols-2 gap-6 text-left mb-6">
+                        <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
+                          <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Accueil (Haut)</div>
+                          {activeCampaign.hero?.startsWith('data:video') ? <video src={activeCampaign.hero} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.hero} className="w-full h-24 object-cover rounded-lg" />}
+                        </div>
+                        <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
+                          <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Accueil (Bas)</div>
+                          {activeCampaign.footer?.startsWith('data:video') ? <video src={activeCampaign.footer} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.footer} className="w-full h-24 object-cover rounded-lg" />}
+                        </div>
+                        <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
+                          <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Catalogue</div>
+                          {activeCampaign.catalogue?.startsWith('data:video') ? <video src={activeCampaign.catalogue} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.catalogue} className="w-full h-24 object-cover rounded-lg" />}
+                        </div>
+                        <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
+                          <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Page Produit</div>
+                          {activeCampaign.product?.startsWith('data:video') ? <video src={activeCampaign.product} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.product} className="w-full h-24 object-cover rounded-lg" />}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border text-left">
+                        <div>
+                          <span className="text-sm font-bold text-gray-500 dark:text-gray-400">Date de début :</span>
+                          <div className="font-bold dark:text-white">{new Date(activeCampaign.startDate).toLocaleDateString('fr-FR')}</div>
+                        </div>
+                        <div>
+                          <span className="text-sm font-bold text-gray-500 dark:text-gray-400">Durée :</span>
+                          <div className="font-bold dark:text-white">{activeCampaign.weeks} semaine{activeCampaign.weeks > 1 ? 's' : ''}</div>
+                        </div>
+                      </div>
+
+                      {isKonnecta && (
+                        <div className="mt-8 flex flex-col items-center justify-center gap-4">
+                          <button
+                            onClick={() => {
+                              setFileHero(activeCampaign.hero);
+                              setFileFooter(activeCampaign.footer);
+                              setFileCatalogue(activeCampaign.catalogue);
+                              setFileProduct(activeCampaign.product);
+                              setCampaignUrl(activeCampaign.url || "");
+                              setCampaignUrlType("custom");
+                              setCampaignWeeks(activeCampaign.weeks);
+                              setEditingCampaignId(activeCampaign.id);
+                              setActiveCampaign(null);
+                            }}
+                            className="btn btn-outline"
                           >
-                            {availableWeeks.map((date, i) => {
-                              // Simuler la 2ème semaine comme indisponible si on veut tester l'indisponibilité
-                              const isOccupied = purchases.some(p => p.startDate === date.toISOString().split('T')[0]);
-                              return (
-                                <option key={i} value={date.toISOString().split('T')[0]} disabled={isOccupied}>
-                                  {date.toLocaleDateString('fr-FR')} {isOccupied ? "(Occupé)" : "(Disponible)"}
-                                </option>
-                              );
-                            })}
-                          </select>
+                            ✏️ Modifier la campagne
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (activeCampaign?.id) {
+                                await supabase.from('campagnes_pub').update({ status: 'inactive' }).eq('id', activeCampaign.id);
+                              }
+                              setActiveCampaign(null);
+                              show("Campagne arrêtée (Privilège Super Admin).");
+                            }}
+                            className="text-brand-red text-sm font-bold underline hover:text-red-700"
+                          >
+                            Arrêter la campagne
+                          </button>
                         </div>
-                        <div className="flex-1 opacity-70">
-                          <label className="block text-sm font-bold text-gray-700 dark:text-white mb-2">Fin estimée</label>
-                          <input 
-                            type="text" 
-                            disabled
-                            value={
-                              campaignStartDate ? 
-                              new Date(new Date(campaignStartDate).getTime() + campaignWeeks * 7 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR') 
-                              : ''
-                            }
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-100 dark:bg-dark-800 text-gray-700 dark:text-white cursor-not-allowed"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                <hr className="border-gray-100 dark:border-dark-border mb-8" />
-
-                {/* ETAPE 3: PAIEMENT */}
-                <h3 className="font-display font-bold text-xl mb-6 flex items-center gap-2 dark:text-white">
-                  <span className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-900 text-gray-900 dark:text-white flex items-center justify-center text-sm">3</span> 
-                  Validation & Paiement
-                </h3>
-
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50 dark:bg-dark-900 rounded-xl p-6 border border-gray-100 dark:border-dark-border">
-                  <div>
-                    <div className="text-gray-500 text-sm mb-1">Montant total pour {campaignWeeks} semaine{campaignWeeks > 1 ? 's' : ''}</div>
-                    <div className="font-display font-extrabold text-[2rem] text-gray-900 dark:text-white leading-none">
-                      {getCampaignPrice(campaignWeeks).toLocaleString('fr-FR')} <span className="text-xl text-gray-400 font-normal">FCFA</span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={async () => {
-                      if (!fileHero && !fileFooter && !fileCatalogue && !fileProduct) {
-                        show("⚠️ Veuillez uploader au moins un visuel avant de payer.");
-                        return;
-                      }
-                      
-                      if (isKonnecta) {
-                        const newCampaign = {
-                          hero: fileHero,
-                          footer: fileFooter,
-                          catalogue: fileCatalogue,
-                          product: fileProduct,
-                          url: campaignUrl,
-                          weeks: campaignWeeks,
-                          start_date: campaignStartDate,
-                          status: 'active'
-                        };
-                        
-                        let data, error;
-                        
-                        if (editingCampaignId) {
-                          const res = await supabase.from('campagnes_pub').update(newCampaign).eq('id', editingCampaignId).select();
-                          data = res.data;
-                          error = res.error;
-                          setEditingCampaignId(null);
-                          show("✅ Campagne mise à jour avec succès !");
-                        } else {
-                          const res = await supabase.from('campagnes_pub').insert([newCampaign]).select();
-                          data = res.data;
-                          error = res.error;
-                          
-                          const newPurchase = {
-                            id: `PUB-${Date.now()}`,
-                            date: new Date().toISOString(),
-                            type: 'Campagne Publicitaire',
-                            amount: getCampaignPrice(campaignWeeks),
-                            status: 'Complété'
-                          };
-                          
-                          const allPurchases = [newPurchase, ...purchases];
-                          localStorage.setItem('annonceid_purchases', JSON.stringify(allPurchases));
-                          setPurchases(allPurchases);
-                          show("🎉 Nouvelle campagne activée (Privilège Super Admin).");
-                        }
-                        
-                        if (data && data.length > 0) {
-                          setActiveCampaign({
-                            hero: data[0].hero,
-                            footer: data[0].footer,
-                            catalogue: data[0].catalogue,
-                            product: data[0].product,
-                            url: data[0].url,
-                            weeks: data[0].weeks,
-                            startDate: data[0].start_date,
-                            status: data[0].status,
-                            id: data[0].id
-                          });
-                        }
-
-                        show("🎉 Campagne validée et sauvegardée en base (Privilège Super Admin).");
-                        setFileHero(null);
-                        setFileFooter(null);
-                        setFileCatalogue(null);
-                        setFileProduct(null);
-                        setCampaignWeeks(1);
-                        setTimeout(() => handlePanelChange("campaigns"), 1500);
-                        return;
-                      }
-
-                      show("Redirection vers PayTech...");
-                      try {
-                        const res = await fetch("/api/paytech", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            amount: getCampaignPrice(campaignWeeks),
-                            itemName: `Campagne Publicitaire ${campaignWeeks} semaine(s)`,
-                            refCommand: `PUB-${Date.now()}`
-                          })
-                        });
-                        const data = await res.json();
-                        if (data.redirect_url) {
-                          window.location.href = data.redirect_url;
-                        } else {
-                          show("Erreur lors de l'initialisation du paiement.");
-                        }
-                      } catch (error) {
-                        show("Erreur de connexion avec PayTech.");
-                      }
-                    }}
-                    className="btn btn-green w-full md:w-auto px-8 py-4 text-lg shadow-lg hover:shadow-xl transition-all"
-                  >
-                    Payer avec PayTech
-                  </button>
-                </div>
-                
-                <p className="text-center text-[.75rem] text-gray-400 mt-4">
-                  Votre campagne sera soumise à validation et débutera immédiatement après acceptation.
-                </p>
-              </div>
-                </>
-              ) : (
-                <div className="p-8 md:p-10 text-center animate-fadeUp">
-                  <div className="text-4xl mb-4">🚀</div>
-                  <h3 className="font-display font-bold text-2xl mb-2 text-green">Campagne Active !</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-8">Votre bannière est actuellement diffusée sur la plateforme.</p>
-                  
-                  <div className="grid md:grid-cols-2 gap-6 text-left mb-6">
-                    <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
-                      <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Accueil (Haut)</div>
-                      {activeCampaign.hero?.startsWith('data:video') ? <video src={activeCampaign.hero} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.hero} className="w-full h-24 object-cover rounded-lg" />}
-                    </div>
-                    <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
-                      <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Accueil (Bas)</div>
-                      {activeCampaign.footer?.startsWith('data:video') ? <video src={activeCampaign.footer} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.footer} className="w-full h-24 object-cover rounded-lg" />}
-                    </div>
-                    <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
-                      <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Catalogue</div>
-                      {activeCampaign.catalogue?.startsWith('data:video') ? <video src={activeCampaign.catalogue} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.catalogue} className="w-full h-24 object-cover rounded-lg" />}
-                    </div>
-                    <div className="bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border">
-                      <div className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Page Produit</div>
-                      {activeCampaign.product?.startsWith('data:video') ? <video src={activeCampaign.product} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-lg" /> : <img src={activeCampaign.product} className="w-full h-24 object-cover rounded-lg" />}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center bg-gray-50 dark:bg-dark-900 p-4 rounded-xl border border-gray-200 dark:border-dark-border text-left">
-                     <div>
-                       <span className="text-sm font-bold text-gray-500 dark:text-gray-400">Date de début :</span>
-                       <div className="font-bold dark:text-white">{new Date(activeCampaign.startDate).toLocaleDateString('fr-FR')}</div>
-                     </div>
-                     <div>
-                       <span className="text-sm font-bold text-gray-500 dark:text-gray-400">Durée :</span>
-                       <div className="font-bold dark:text-white">{activeCampaign.weeks} semaine{activeCampaign.weeks > 1 ? 's' : ''}</div>
-                     </div>
-                  </div>
-                  
-                  {isKonnecta && (
-                    <div className="mt-8 flex flex-col items-center justify-center gap-4">
-                      <button 
-                        onClick={() => {
-                          setFileHero(activeCampaign.hero);
-                          setFileFooter(activeCampaign.footer);
-                          setFileCatalogue(activeCampaign.catalogue);
-                          setFileProduct(activeCampaign.product);
-                          setCampaignUrl(activeCampaign.url || "");
-                          setCampaignUrlType("custom");
-                          setCampaignWeeks(activeCampaign.weeks);
-                          setEditingCampaignId(activeCampaign.id);
-                          setActiveCampaign(null);
-                        }}
-                        className="btn btn-outline"
-                      >
-                        ✏️ Modifier la campagne
-                      </button>
-                      <button 
-                        onClick={async () => {
-                          if (activeCampaign?.id) {
-                            await supabase.from('campagnes_pub').update({ status: 'inactive' }).eq('id', activeCampaign.id);
-                          }
-                          setActiveCampaign(null);
-                          show("Campagne arrêtée (Privilège Super Admin).");
-                        }}
-                        className="text-brand-red text-sm font-bold underline hover:text-red-700"
-                      >
-                        Arrêter la campagne
-                      </button>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
                 </div>
               </div>
             )}
@@ -1345,7 +1344,7 @@ export default function Dashboard() {
 
         {panel === "showroom" && (
           <div className="animate-fadeUp w-full max-w-[1200px] mx-auto flex flex-col lg:flex-row gap-8">
-            
+
             {/* Colonne Gauche : Editeur */}
             <div className="flex-1">
               <div className="flex items-center justify-between mb-8">
@@ -1355,14 +1354,14 @@ export default function Dashboard() {
                     {typeof window !== 'undefined' ? `${window.location.origin}/boutique/${user?.id || ''}` : `boutique/${user?.id || ''}`}
                   </span>
                   <span className="text-sm font-semibold text-gray-500 sm:hidden">Lien boutique</span>
-                  <button 
+                  <button
                     onClick={() => {
                       if (typeof window !== 'undefined' && user?.id) {
                         navigator.clipboard.writeText(`${window.location.origin}/boutique/${user.id}`);
                         show("📋 Lien de la boutique copié !");
                       }
-                    }} 
-                    className="text-gray-400 hover:text-green" 
+                    }}
+                    className="text-gray-400 hover:text-green"
                     title="Copier le lien"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -1394,19 +1393,19 @@ export default function Dashboard() {
                   <div className="flex-1 w-full">
                     <div className="flex justify-between items-start">
                       <div className="w-full">
-                        <input 
-                          className="showroom-name-input font-bold text-lg bg-transparent border-b border-transparent hover:border-gray-300 dark:text-white focus:outline-none focus:border-green mb-1 w-full" 
-                          value={showroomName} 
-                          onChange={(e) => setShowroomName(e.target.value)} 
+                        <input
+                          className="showroom-name-input font-bold text-lg bg-transparent border-b border-transparent hover:border-gray-300 dark:text-white focus:outline-none focus:border-green mb-1 w-full"
+                          value={showroomName}
+                          onChange={(e) => setShowroomName(e.target.value)}
                         />
                         <div className="text-sm text-gray-500">@{showroomName.toLowerCase().replace(/\s+/g, '')}</div>
                       </div>
                       <button className="text-gray-400 hover:text-green ml-2">✏️</button>
                     </div>
-                    
-                    <textarea 
-                      className="showroom-bio-input w-full text-sm mt-3 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-dark-border focus:border-green focus:outline-none resize-none text-gray-600 dark:text-gray-300 p-2 rounded -ml-2" 
-                      rows={2} 
+
+                    <textarea
+                      className="showroom-bio-input w-full text-sm mt-3 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-dark-border focus:border-green focus:outline-none resize-none text-gray-600 dark:text-gray-300 p-2 rounded -ml-2"
+                      rows={2}
                       value={showroomBio}
                       onChange={(e) => setShowroomBio(e.target.value)}
                     />
@@ -1417,7 +1416,7 @@ export default function Dashboard() {
                         const hasLink = !!showroomSocials[social];
                         return (
                           <div key={social} className="flex items-center gap-1">
-                            <button 
+                            <button
                               onClick={() => setEditingSocial(editingSocial === social ? null : social)}
                               className={`w-8 h-8 rounded-full flex items-center justify-center transition ${hasLink ? 'bg-green/10 text-green font-bold' : 'bg-gray-100 dark:bg-dark-900 text-gray-400 hover:text-green hover:bg-green/10'}`}
                               title={hasLink ? `${social}: ${showroomSocials[social]}` : `Ajouter un lien ${social}`}
@@ -1425,7 +1424,7 @@ export default function Dashboard() {
                               {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : social === 'facebook' ? 'f' : social === 'tiktok' ? '♪' : '▶'}
                             </button>
                             {editingSocial === social && (
-                              <input 
+                              <input
                                 type="text"
                                 placeholder={`Lien ${social}...`}
                                 className="input py-1 px-2 text-xs w-32"
@@ -1441,26 +1440,26 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Save Button for Showroom */}
                 <div className="mt-6 flex justify-end">
-                  <button 
+                  <button
                     onClick={async () => {
                       if (!user) return;
-                      
+
                       const { error } = await supabase.from('profiles').update({
                         full_name: showroomName,
                         bio: showroomBio,
                         social_links: showroomSocials
                       }).eq('id', user.id);
-                      
+
                       if (error) {
                         show("❌ Erreur lors de la sauvegarde : " + error.message);
                       } else {
                         show("✓ Boutique sauvegardée avec succès !");
                         setProfile(prev => prev ? { ...prev, full_name: showroomName, bio: showroomBio, social_links: showroomSocials } : { full_name: showroomName, bio: showroomBio, social_links: showroomSocials });
                       }
-                    }} 
+                    }}
                     className="btn btn-green btn-sm shadow-sm"
                   >
                     Sauvegarder la boutique
@@ -1504,14 +1503,14 @@ export default function Dashboard() {
                 <div className="absolute top-0 inset-x-0 h-6 flex justify-center z-50">
                   <div className="w-32 h-6 bg-gray-900 dark:bg-black rounded-b-2xl"></div>
                 </div>
-                
+
                 {/* Mockup Content (The Store Page) */}
                 <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-dark-950 scrollbar-hide pt-6">
                   {/* Banner */}
                   <div className="h-32 bg-gradient-to-r from-orange-400 to-red-500 relative">
                     <div className="absolute inset-0 bg-black/10 flex items-center justify-center text-white/70 text-xs font-bold uppercase tracking-widest border border-dashed border-white/30 m-4 rounded">Bannière</div>
                   </div>
-                  
+
                   {/* Profile */}
                   <div className="px-5 pb-6 relative text-center">
                     <img src={avatarUrl} alt="Avatar" className="w-20 h-20 rounded-full border-4 border-white dark:border-dark-950 object-cover mx-auto -mt-10 relative z-10 bg-white" />
@@ -1520,14 +1519,14 @@ export default function Dashboard() {
                     <p className="text-[.75rem] text-gray-600 dark:text-gray-400 mt-3 mb-4 leading-relaxed">
                       {showroomBio || "Boutique en ligne 🛍️ Vente de produits & services de qualité 📱 Commande rapide"}
                     </p>
-                    
+
                     <div className="flex justify-center gap-2">
                       {Object.entries(showroomSocials).map(([social, link]) => (
-                         link && (
-                           <a key={social} href={String(link)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-white dark:bg-dark-800 shadow-sm border border-gray-100 dark:border-dark-border flex items-center justify-center text-[.8rem] text-gray-600 hover:text-green cursor-pointer">
-                             {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : social === 'facebook' ? 'f' : social === 'tiktok' ? '♪' : '▶'}
-                           </a>
-                         )
+                        link && (
+                          <a key={social} href={String(link)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-white dark:bg-dark-800 shadow-sm border border-gray-100 dark:border-dark-border flex items-center justify-center text-[.8rem] text-gray-600 hover:text-green cursor-pointer">
+                            {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : social === 'facebook' ? 'f' : social === 'tiktok' ? '♪' : '▶'}
+                          </a>
+                        )
                       ))}
                     </div>
                   </div>
@@ -1546,9 +1545,9 @@ export default function Dashboard() {
                         </div>
                       </div>
                     )) : (
-                       <div className="text-center p-6 text-gray-500 text-xs">
-                         Votre boutique est vide.
-                       </div>
+                      <div className="text-center p-6 text-gray-500 text-xs">
+                        Votre boutique est vide.
+                      </div>
                     )}
                   </div>
 
@@ -1565,7 +1564,7 @@ export default function Dashboard() {
               <h2 className="font-display text-[1.6rem] font-extrabold dark:text-white mb-2">Acheter des Crédits</h2>
               <p className="text-sm text-gray-500">Obtenez plus de visibilité en utilisant vos crédits pour booster vos annonces.</p>
             </div>
-            
+
             <div className="grid md:grid-cols-3 gap-6">
               {[
                 { name: "Pack Découverte", credits: 50, price: "5 000 FCFA", popular: false, color: "border-gray-200 dark:border-dark-border" },
@@ -1584,7 +1583,7 @@ export default function Dashboard() {
                     <li className="flex gap-2">✓ Boosts applicables instantanément</li>
                     <li className="flex gap-2">✓ Priorité support client</li>
                   </ul>
-                  <button 
+                  <button
                     onClick={async () => {
                       const numericPrice = pack.credits === 50 ? 5000 : pack.credits === 150 ? 12000 : 35000;
                       show("Redirection vers PayTech...");
@@ -1608,7 +1607,7 @@ export default function Dashboard() {
                       } catch (error) {
                         show("❌ Erreur de connexion avec PayTech.");
                       }
-                    }} 
+                    }}
                     className={`w-full py-3 rounded-lg font-bold transition ${pack.popular ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700"}`}
                   >
                     Acheter maintenant
@@ -1643,8 +1642,8 @@ export default function Dashboard() {
                   <label className="text-[.8rem] text-gray-500 font-bold mb-1 block">Confirmer le nouveau mot de passe</label>
                   <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className="w-full bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-border rounded-lg px-4 py-2.5 text-sm outline-none focus:border-green" />
                 </div>
-                <button 
-                  className="btn btn-green w-full" 
+                <button
+                  className="btn btn-green w-full"
                   onClick={async () => {
                     if (!newPassword || newPassword !== confirmPassword) {
                       show("❌ Les mots de passe ne correspondent pas");
@@ -1697,10 +1696,10 @@ export default function Dashboard() {
                         <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                        <input 
-                          type="checkbox" 
-                          className="sr-only peer" 
-                          checked={isActive} 
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={isActive}
                           onChange={async () => {
                             if (!user) return;
                             const newPrefs = { ...alertPrefs, [item.key]: !isActive };
@@ -1729,7 +1728,7 @@ export default function Dashboard() {
           <div className="animate-fadeUp max-w-[800px] mx-auto">
             <h2 className="mb-2 font-display text-[1.4rem] font-extrabold dark:text-white">Foire Aux Questions</h2>
             <p className="mb-6 text-sm text-gray-500">Trouvez rapidement des réponses à vos questions les plus fréquentes.</p>
-            
+
             <div className="space-y-4">
               {[
                 { q: "Comment publier une annonce gratuitement ?", a: "Vous avez droit à 3 annonces gratuites par mois. Rendez-vous dans la section 'Publier une annonce', remplissez le formulaire, et sélectionnez l'option gratuite à la dernière étape." },
@@ -1752,8 +1751,8 @@ export default function Dashboard() {
         )}
       </div>
 
-      <ConfirmModal 
-        open={showDeleteModal} 
+      <ConfirmModal
+        open={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={() => show("Demande de suppression envoyée au support.")}
         title="Supprimer votre compte ?"
@@ -1763,8 +1762,8 @@ export default function Dashboard() {
       />
 
       {/* Modal Suppression d'Annonce */}
-      <ConfirmModal 
-        open={!!adToDelete} 
+      <ConfirmModal
+        open={!!adToDelete}
         onClose={() => setAdToDelete(null)}
         onConfirm={handleDeleteAd}
         title="Supprimer cette annonce ?"
@@ -1799,7 +1798,7 @@ export default function Dashboard() {
                   if (authError) throw authError;
                   const { error: dbError } = await supabase.from('profiles').update({ avatar_url: base64 }).eq('id', user.id);
                   if (dbError) throw dbError;
-                  
+
                   const { data } = await supabase.auth.getUser();
                   if (data?.user) setUser(data.user);
                   setProfile((prev: any) => prev ? { ...prev, avatar_url: base64 } : { avatar_url: base64 });
