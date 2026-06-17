@@ -426,13 +426,39 @@ export default function Dashboard() {
       <div className="flex-1 bg-gray-50 dark:bg-dark-900 px-4 py-6 lg:p-8 overflow-y-auto">
         {panel === "overview" && (
           <div className="animate-fadeUp max-w-[1000px] mx-auto">
-            <h1 className="font-display text-[1.3rem] font-extrabold dark:text-white">Bonjour, {displayName} 👋</h1>
-            <p className="mb-6 text-[.85rem] text-gray-500 dark:text-white/60">Bienvenue sur votre espace vendeur</p>
+            {/* Hero profil — style AnnoncesWest */}
+            <div className="mb-6 overflow-hidden rounded-[24px] border border-gray-100 dark:border-dark-border shadow-sm">
+              <div className="h-[110px] bg-g1 relative">
+                <div className="absolute inset-0 bg-[radial-gradient(at_80%_50%,rgba(255,255,255,.18),transparent_60%)]"></div>
+              </div>
+              <div className="bg-white dark:bg-dark-800 px-5 pb-5">
+                <div className="flex items-end gap-4 flex-wrap">
+                  <div className="-mt-10 h-20 w-20 shrink-0 rounded-[20px] border-4 border-white dark:border-dark-800 bg-g1 overflow-hidden shadow-lg">
+                    {avatarUrl
+                      ? <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                      : <div className="flex h-full w-full items-center justify-center text-2xl font-extrabold text-white">{(displayName || 'U').slice(0, 2).toUpperCase()}</div>}
+                  </div>
+                  <div className="flex-1 min-w-[180px] pt-2">
+                    <div className="font-display text-[1.2rem] font-extrabold dark:text-white">Bonjour, {displayName} 👋</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[.8rem] text-gray-500 dark:text-white/60">
+                      {profile?.bio && <span>🏪 {profile.bio.slice(0, 40)}</span>}
+                      <span>📅 Membre {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : '—'}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <span className="rounded-lg bg-green/10 px-2 py-0.5 text-[.7rem] font-bold text-green">✓ Vendeur vérifié</span>
+                      {(profile?.role === 'pro' || profile?.role === 'business') && <span className="rounded-lg bg-[#EDE9FE] px-2 py-0.5 text-[.7rem] font-bold text-[#7C3AED]">🏆 Pro</span>}
+                    </div>
+                  </div>
+                  <Link href="/publier" className="btn btn-green btn-sm mb-1">+ Publier</Link>
+                </div>
+              </div>
+            </div>
+
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Kpi label="Annonces actives" value={ads.filter(a => a.status === 'active' || !a.status).length.toString()} sub="Votre vitrine" />
-              <Kpi label="Vues totales" value={ads.reduce((acc, ad) => acc + (ad.views || 0), 0).toString()} sub="Sur vos annonces" />
-              <Kpi label="Favoris reçus" value={receivedFavsCount.toString()} sub="Sur vos annonces" />
-              <Kpi label="Annonces totales" value={ads.length.toString()} sub="Toutes catégories" />
+              <KpiGrad gradient="bg-g1" icon="📦" label="Annonces actives" value={ads.filter(a => a.status === 'active' || !a.status).length} />
+              <KpiGrad gradient="bg-g3" icon="👁️" label="Vues totales" value={ads.reduce((acc, ad) => acc + (ad.views || 0), 0)} />
+              <KpiGrad gradient="bg-g5" icon="❤️" label="Favoris reçus" value={receivedFavsCount} />
+              <KpiGrad gradient="bg-g4" icon="🗂️" label="Annonces totales" value={ads.length} />
             </div>
 
             <div className="mb-6 flex flex-col gap-2">
@@ -1827,6 +1853,29 @@ function Kpi({ label, value, sub, up }: { label: string; value: string; sub: str
       <div className="text-[.75rem] text-gray-500 dark:text-white/60">{label}</div>
       <div className="my-1 font-display text-[1.6rem] font-extrabold leading-none dark:text-white">{value}</div>
       <div className={`text-[.72rem] ${up ? "text-green dark:text-neon-green font-bold" : "text-gray-500 dark:text-white/40"}`}>{sub}</div>
+    </div>
+  );
+}
+
+// KPI carte gradient (style AnnoncesWest) — compteur animé
+function KpiGrad({ gradient, icon, label, value }: { gradient: string; icon: string; label: string; value: number }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let raf: number; const start = performance.now(); const dur = 700;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / dur);
+      setN(Math.round(value * p));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return (
+    <div className={`relative overflow-hidden rounded-[18px] p-4 text-white ${gradient}`}>
+      <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10"></div>
+      <div className="relative z-10 mb-2 flex h-9 w-9 items-center justify-center rounded-[11px] bg-white/20 text-[1.05rem]">{icon}</div>
+      <div className="relative z-10 font-display text-[1.6rem] font-extrabold leading-none">{n.toLocaleString('fr-FR')}</div>
+      <div className="relative z-10 mt-1 text-[.76rem] opacity-90">{label}</div>
     </div>
   );
 }
