@@ -77,21 +77,21 @@ function Kpi({ grad, icon, label, value, trend, suffix }: { grad: string; icon: 
     raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf);
   }, [value]);
   return (
-    <div className={`relative overflow-hidden rounded-[18px] p-4 ${grad}`}>
+    <div className={`relative overflow-hidden rounded-[16px] p-3 sm:p-4 ${grad}`}>
       <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
       <div className="relative z-10 flex items-center justify-between">
-        <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/20 text-[1rem]">{icon}</div>
+        <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-[10px] bg-white/20 text-[.9rem] sm:text-[1rem]">{icon}</div>
         {trend && <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[.68rem] font-bold text-white">{trend}</span>}
       </div>
-      <div className="relative z-10 mt-2 text-[1.6rem] font-extrabold leading-none text-white">{n.toLocaleString("fr-FR")}{suffix || ""}</div>
-      <div className="relative z-10 mt-1 text-[.75rem] text-white/80">{label}</div>
+      <div className="relative z-10 mt-2 text-[1.3rem] sm:text-[1.6rem] font-extrabold leading-none text-white">{n.toLocaleString("fr-FR")}{suffix || ""}</div>
+      <div className="relative z-10 mt-1 text-[.65rem] sm:text-[.75rem] text-white/80">{label}</div>
     </div>
   );
 }
 
 function Card({ title, sub, children, action }: { title?: string; sub?: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="rounded-[18px] border border-[#21262D] bg-[#161B22] p-4 overflow-hidden">
+    <div className="rounded-[18px] border border-[#21262D] bg-[#161B22] p-3 sm:p-4 overflow-hidden">
       {(title || action) && (
         <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
           <div>{title && <h3 className="text-[.93rem] font-extrabold text-white">{title}</h3>}{sub && <div className="text-[.72rem] text-[#8B949E] mt-0.5">{sub}</div>}</div>
@@ -113,9 +113,13 @@ export default function SuperAdminApp() {
   const [code, setCode] = useState("");
 
   // Données réelles
-  const [counts, setCounts] = useState({ total: 0, pending: 0, active: 0, users: 0 });
+  const [counts, setCounts] = useState({ total: 0, pending: 0, active: 0, users: 0, favorites: 0, messages: 0, reports: 0 });
   const [pendingListings, setPendingListings] = useState<any[]>([]);
+  const [allListings, setAllListings] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
   const T = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2100); };
 
@@ -123,23 +127,47 @@ export default function SuperAdminApp() {
     if (typeof window !== "undefined" && sessionStorage.getItem("sa_authed") === "1") setAuthed(true);
   }, []);
 
-  useEffect(() => {
+  // Fonction de chargement complète
+  const loadAllData = async () => {
     if (!authed) return;
+    setDataLoading(true);
     const sb = createClient();
-    (async () => {
-      const [t, p, a, u] = await Promise.all([
+    try {
+      const [t, p, a, u, fav, msg, rep] = await Promise.all([
         sb.from("listings").select("*", { count: "exact", head: true }),
         sb.from("listings").select("*", { count: "exact", head: true }).eq("status", "pending"),
         sb.from("listings").select("*", { count: "exact", head: true }).eq("status", "active"),
         sb.from("profiles").select("*", { count: "exact", head: true }),
+        sb.from("favorites").select("*", { count: "exact", head: true }),
+        sb.from("messages").select("*", { count: "exact", head: true }),
+        sb.from("reports").select("*", { count: "exact", head: true }),
       ]);
-      setCounts({ total: t.count || 0, pending: p.count || 0, active: a.count || 0, users: u.count || 0 });
-      const { data: pend } = await sb.from("listings").select("id, title, category, image, status, created_at").eq("status", "pending").order("created_at", { ascending: false }).limit(20);
+      setCounts({ total: t.count || 0, pending: p.count || 0, active: a.count || 0, users: u.count || 0, favorites: fav.count || 0, messages: msg.count || 0, reports: rep.count || 0 });
+
+      // Annonces en attente
+      const { data: pend } = await sb.from("listings").select("id, title, category, image, status, created_at, user_id").eq("status", "pending").order("created_at", { ascending: false }).limit(50);
       setPendingListings(pend || []);
-      const { data: profs } = await sb.from("profiles").select("id, full_name, role, created_at").order("created_at", { ascending: false }).limit(20);
+
+      // Toutes les annonces (pour section Ads admin)
+      const { data: allAds } = await sb.from("listings").select("id, title, slug, category, image, status, views, price, location, created_at, user_id").order("created_at", { ascending: false }).limit(100);
+      setAllListings(allAds || []);
+
+      // Profils
+      const { data: profs } = await sb.from("profiles").select("id, full_name, avatar_url, phone, role, bio, free_ads_remaining, created_at").order("created_at", { ascending: false }).limit(100);
       setProfiles(profs || []);
-    })();
-  }, [authed]);
+
+      // Achats
+      const { data: purchData } = await sb.from("purchases").select("*").order("created_at", { ascending: false }).limit(50);
+      setPurchases(purchData || []);
+
+      // Signalements
+      const { data: repData } = await sb.from("reports").select("*").order("created_at", { ascending: false }).limit(30);
+      setReports(repData || []);
+    } catch (e) { console.error("SuperAdmin load error:", e); }
+    setDataLoading(false);
+  };
+
+  useEffect(() => { loadAllData(); }, [authed]);
 
   function doLogin() {
     if (email === ADMIN_CREDS.email && pass === ADMIN_CREDS.pass && (code === "1234" || code === "")) {
@@ -161,10 +189,10 @@ export default function SuperAdminApp() {
   if (!authed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0D1117] p-4">
-        <div className="w-full max-w-[400px] rounded-[24px] border border-[#30363D] bg-[#161B22] p-8 shadow-[0_0_60px_rgba(99,102,241,.15)]">
+        <div className="w-full max-w-[400px] rounded-[24px] border border-[#30363D] bg-[#161B22] p-5 sm:p-8 shadow-[0_0_60px_rgba(99,102,241,.15)]">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-g1 text-[1.3rem] font-extrabold text-white shadow-[0_0_30px_rgba(99,102,241,.4)]">SA</div>
           <h1 className="text-center text-[1.2rem] font-extrabold text-white">Super Admin</h1>
-          <p className="mb-6 text-center text-[.82rem] text-[#8B949E]">AnnoncesWest · YamaneTech</p>
+          <p className="mb-6 text-center text-[.82rem] text-[#8B949E]">Annonce.ID · YamaneTech</p>
           <div className="mb-4 rounded-[10px] border border-dashed border-[#30363D] bg-[#0D1117] p-3 text-[.75rem] leading-7 text-[#FFC93C]">🔐 <b>Accès démo :</b><br />Email : admin@yamanetech.com<br />Mot de passe : YamaneTech@2025<br />Code 2FA : 1234</div>
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email administrateur" />
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Mot de passe" />
@@ -222,8 +250,11 @@ export default function SuperAdminApp() {
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-[1500px] p-5">
-          {page === "overview" && <Overview counts={counts} T={T} />}
+        <div className="mx-auto w-full max-w-[1500px] p-3 sm:p-5">
+          {dataLoading && page !== "overview" ? (
+            <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6366F1] border-t-transparent" /></div>
+          ) : (<>
+          {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} />}
           {page === "crm" && <CRM T={T} />}
           {page === "marketing" && <Marketing T={T} />}
           {page === "campagnes" && <Campagnes />}
@@ -231,14 +262,15 @@ export default function SuperAdminApp() {
           {page === "ambassadeurs" && <Ambassadeurs T={T} />}
           {page === "offres" && <Offres T={T} />}
           {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
-          {page === "users" && <Users profiles={profiles} T={T} />}
-          {page === "finance" && <Finance />}
-          {page === "ads" && <Ads T={T} />}
+          {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
+          {page === "finance" && <Finance purchases={purchases} counts={counts} />}
+          {page === "ads" && <AdsAdmin allListings={allListings} T={T} reload={loadAllData} />}
           {page === "ia" && <IA T={T} />}
           {page === "points" && <Points />}
           {page === "diffusion" && <Diffusion />}
-          {page === "rapports" && <Rapports T={T} />}
+          {page === "rapports" && <Rapports T={T} allListings={allListings} profiles={profiles} purchases={purchases} />}
           {page === "settings" && <Settings T={T} />}
+          </>)}
         </div>
       </div>
 
@@ -251,7 +283,7 @@ export default function SuperAdminApp() {
 function PageHead({ title, sub, children }: { title: string; sub?: string; children?: React.ReactNode }) {
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <div><h1 className="text-[1.3rem] font-extrabold">{title}</h1>{sub && <p className="mt-0.5 text-[.8rem] text-[#8B949E]">{sub}</p>}</div>
+      <div><h1 className="text-[1.1rem] sm:text-[1.3rem] font-extrabold">{title}</h1>{sub && <p className="mt-0.5 text-[.75rem] sm:text-[.8rem] text-[#8B949E]">{sub}</p>}</div>
       {children && <div className="flex flex-wrap gap-2">{children}</div>}
     </div>
   );
@@ -259,46 +291,67 @@ function PageHead({ title, sub, children }: { title: string; sub?: string; child
 const btnP = "rounded-[9px] bg-g1 px-3.5 py-2 text-[.78rem] font-bold text-white";
 const btnG = "rounded-[9px] border border-[#30363D] bg-[#21262D] px-3.5 py-2 text-[.78rem] font-bold text-[#8B949E] hover:text-white";
 
-function Overview({ counts, T }: { counts: any; T: (m: string) => void }) {
-  const mrr = [["Abonnements Pro/Premium", 52, "#667EEA"], ["Boosts annonces", 28, "#FFC93C"], ["Publicités annonceurs", 12, "#F093FB"], ["Commissions ambassadeurs", 8, "#43E97B"]] as const;
-  const pipe = [["Nouveaux", "#484F58", 50], ["Contactés", "#3B82F6", 30], ["Intéressés", "#F59E0B", 15], ["Rendez-vous", "#A78BFA", 8], ["Clients", "#10B981", 3]] as const;
+function Overview({ counts, allListings, profiles, purchases, T, loading }: { counts: any; allListings: any[]; profiles: any[]; purchases: any[]; T: (m: string) => void; loading: boolean }) {
+  const totalRevenue = purchases.reduce((s: number, p: any) => s + (p.amount || 0), 0);
+  const totalViews = allListings.reduce((s: number, a: any) => s + (a.views || 0), 0);
+
+  // Catégories réelles
+  const byCat: Record<string, number> = {};
+  allListings.forEach((a) => { const c = a.category || "Autre"; byCat[c] = (byCat[c] || 0) + 1; });
+  const catEntries = Object.entries(byCat).sort((x, y) => y[1] - x[1]).slice(0, 6);
+  const catColors = ["#667EEA", "#FFC93C", "#F093FB", "#43E97B", "#4FACFE", "#A78BFA"];
+
+  // Statuts annonces
+  const statusData = [
+    ["Actives", "#10B981", allListings.filter(a => a.status === "active").length],
+    ["En attente", "#F59E0B", counts.pending],
+    ["Inactives", "#6B7280", allListings.filter(a => a.status === "inactive").length],
+    ["Vendues", "#3B82F6", allListings.filter(a => a.status === "sold").length],
+    ["Rejetées", "#EF4444", allListings.filter(a => a.status === "rejected").length],
+  ] as const;
+
   return (
     <>
-      <PageHead title="🚀 Super Admin" sub="Vue globale · AnnoncesWest · temps réel">
-        <button className={btnG} onClick={() => T("Période")}>📅 Ce mois</button>
-        <button className={btnP} onClick={() => T("Rapport…")}>+ Rapport</button>
+      <PageHead title="🚀 Super Admin — Annonce.ID" sub="Tableau de bord temps réel · données Supabase">
+        <button className={btnG} onClick={() => T("Actualisation…")}>{loading ? "⏳" : "🔄"} Rafraîchir</button>
       </PageHead>
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi grad="bg-g1" icon="💰" label="MRR cible (FCFA)" value={1725000} trend="↑ 23%" />
-        <Kpi grad="bg-g8" icon="🏢" label="Annonces actives" value={counts.active} trend="réel" />
-        <Kpi grad="bg-g5" icon="🤝" label="Utilisateurs" value={counts.users} trend="réel" />
-        <Kpi grad="bg-g3" icon="🎯" label="Annonces totales" value={counts.total} trend="réel" />
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="📦" label="Annonces totales" value={counts.total} trend="réel" />
+        <Kpi grad="bg-g8" icon="✅" label="Annonces actives" value={counts.active} trend="réel" />
+        <Kpi grad="bg-g5" icon="👥" label="Utilisateurs" value={counts.users} trend="réel" />
+        <Kpi grad="bg-g3" icon="⏳" label="En attente" value={counts.pending} trend="réel" />
+      </div>
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <Kpi grad="bg-g4" icon="👁️" label="Vues totales" value={totalViews} />
+        <Kpi grad="bg-g7" icon="❤️" label="Favoris" value={counts.favorites} />
+        <Kpi grad="bg-g6" icon="💬" label="Messages" value={counts.messages} />
+        <Kpi grad="bg-g2" icon="💰" label="Revenus (FCFA)" value={totalRevenue} />
       </div>
       <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
-        <Card title="Répartition MRR" sub="Par type d'offre">
-          {mrr.map(([n, p, c]) => (
+        <Card title="Répartition par catégorie" sub={`${Object.keys(byCat).length} catégories`}>
+          {catEntries.length === 0 ? <div className="py-4 text-center text-[.82rem] text-[#8B949E]">Aucune annonce</div> : catEntries.map(([n, c], i) => (
             <div key={n} className="mb-2.5">
-              <div className="mb-1 flex justify-between text-[.8rem] text-[#C9D1D9]"><span>{n}</span><span className="font-extrabold">{p}%</span></div>
-              <div className="h-[7px] overflow-hidden rounded bg-[#21262D]"><div className="h-full rounded" style={{ width: `${p}%`, background: c }} /></div>
+              <div className="mb-1 flex justify-between text-[.8rem] text-[#C9D1D9]"><span>{n}</span><span className="font-extrabold">{c} annonces</span></div>
+              <div className="h-[7px] overflow-hidden rounded bg-[#21262D]"><div className="h-full rounded" style={{ width: `${(c / counts.total) * 100}%`, background: catColors[i % 6] }} /></div>
             </div>
           ))}
         </Card>
-        <Card title="Pipeline commercial">
-          {pipe.map(([n, c, v]) => (
-            <div key={n} className="mb-2 flex items-center gap-2.5">
+        <Card title="Statuts des annonces">
+          {statusData.map(([n, c, v]) => (
+            <div key={n as string} className="mb-2 flex items-center gap-2.5">
               <div className="w-[80px] text-[.76rem] font-semibold text-[#8B949E]">{n}</div>
-              <div className="relative h-6 flex-1 overflow-hidden rounded-md bg-[#0D1117]"><div className="h-full rounded-md" style={{ width: `${(v as number) / 50 * 100}%`, background: c }} /><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[.7rem] font-extrabold text-white">{v}</span></div>
+              <div className="relative h-6 flex-1 overflow-hidden rounded-md bg-[#0D1117]"><div className="h-full rounded-md" style={{ width: `${counts.total ? ((v as number) / counts.total * 100) : 0}%`, background: c as string }} /><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[.7rem] font-extrabold text-white">{v as number}</span></div>
             </div>
           ))}
         </Card>
       </div>
-      <div className="mt-3"><Card title="Meilleures performances (équipe)">
-        {EMPLOYES.map((e) => (
-          <div key={e.n} className="mb-2 flex items-center gap-2.5 rounded-[9px] bg-[#0D1117] p-2.5">
-            <div className="w-5 text-center">{e.rank}</div>
-            <div className={`flex h-8 w-8 items-center justify-center rounded-[9px] text-[.8rem] font-bold text-white ${e.g}`}>{e.n.split(" ").map((w) => w[0]).join("").slice(0, 2)}</div>
-            <div className="min-w-0 flex-1"><div className="truncate text-[.83rem] font-bold">{e.n}</div><div className="text-[.7rem] text-[#8B949E]">{e.r}</div></div>
-            <div className="text-right"><div className="text-[.85rem] font-extrabold text-[#FFC93C]">{e.com.toLocaleString("fr-FR")} F</div><div className="text-[.68rem] text-[#8B949E]">{e.cli} client(s)</div></div>
+      <div className="mt-3"><Card title="Dernières annonces publiées" sub={`${allListings.length} annonces chargées`}>
+        {allListings.slice(0, 8).map((a) => (
+          <div key={a.id} className="mb-2 flex items-center gap-2.5 rounded-[9px] bg-[#0D1117] p-2.5">
+            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-[9px] bg-[#21262D]">{a.image && <img src={a.image} alt="" className="h-full w-full object-cover" />}</div>
+            <div className="min-w-0 flex-1"><div className="truncate text-[.83rem] font-bold">{a.title}</div><div className="text-[.7rem] text-[#8B949E]">{a.category || "—"} · {a.location || "—"} · {a.views || 0} vues</div></div>
+            <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${a.status === "active" ? "bg-emerald-500/15 text-emerald-300" : a.status === "pending" ? "bg-amber-500/15 text-amber-300" : a.status === "sold" ? "bg-blue-500/15 text-blue-300" : "bg-white/10 text-gray-400"}`}>{a.status === "active" ? "✅ Active" : a.status === "pending" ? "⏳ Attente" : a.status === "sold" ? "📦 Vendu" : a.status || "—"}</span>
+            <div className="text-right shrink-0"><div className="text-[.85rem] font-extrabold text-[#FFC93C]">{a.price || "—"}</div></div>
           </div>
         ))}
       </Card></div>
@@ -368,7 +421,7 @@ function Campagnes() {
   return (
     <>
       <PageHead title="📨 Campagnes" sub="Envoi groupé email & WhatsApp" />
-      <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
         <Kpi grad="bg-g1" icon="📤" label="Emails envoyés" value={1840} />
         <Kpi grad="bg-g3" icon="💬" label="WhatsApp envoyés" value={920} />
         <Kpi grad="bg-g5" icon="👁️" label="Emails ouverts" value={515} trend="28%" />
@@ -417,7 +470,7 @@ function Ambassadeurs({ T }: { T: (m: string) => void }) {
       <PageHead title="🤝 Programme Ambassadeurs" sub="47 ambassadeurs actifs · 4 niveaux">
         <button className={btnP} onClick={() => T("Programme partagé")}>🤝 Partager</button>
       </PageHead>
-      <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
         <Kpi grad="bg-g4" icon="👥" label="Ambassadeurs actifs" value={47} />
         <Kpi grad="bg-g1" icon="💰" label="Commissions (FCFA)" value={245000} />
         <Kpi grad="bg-g5" icon="🔗" label="Clics sur liens" value={1240} />
@@ -479,57 +532,134 @@ function Moderation({ items, moderate }: { items: any[]; moderate: (id: string, 
   );
 }
 
-function Users({ profiles, T }: { profiles: any[]; T: (m: string) => void }) {
+function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => void; reload: () => void }) {
+  const [search, setSearch] = useState("");
+  const filtered = profiles.filter(u => !search || (u.full_name || "").toLowerCase().includes(search.toLowerCase()) || (u.phone || "").includes(search));
+
+  async function toggleRole(userId: string, currentRole: string) {
+    const newRole = currentRole === "pro" ? "user" : "pro";
+    const sb = createClient();
+    const { error } = await sb.from("profiles").update({ role: newRole }).eq("id", userId);
+    if (error) { T("⚠ Erreur: droits insuffisants côté base"); return; }
+    T(newRole === "pro" ? "🚀 Utilisateur passé Pro !" : "👤 Rôle remis à user");
+    reload();
+  }
+
   return (
     <>
-      <PageHead title="👥 Utilisateurs" sub={`${profiles.length} comptes affichés`} />
+      <PageHead title="👥 Utilisateurs" sub={`${profiles.length} comptes · ${filtered.length} affichés`} />
+      <div className="mb-3">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Rechercher par nom ou téléphone…" className="w-full max-w-md rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+      </div>
       <Card>
-        <Tbl head={["Utilisateur", "Rôle", "Inscrit le", "Actions"]}>
-          {profiles.length === 0 ? <tr><Td>Aucun utilisateur</Td></tr> : profiles.map((u) => (
-            <tr key={u.id} className="hover:bg-white/[.02]">
-              <Td bold>{u.full_name || "(sans nom)"}</Td>
-              <Td><span className="rounded-md bg-violet-500/15 px-2 py-0.5 text-[.68rem] font-bold text-violet-300">{u.role || "user"}</span></Td>
-              <Td>{u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "—"}</Td>
-              <Td><span onClick={() => T("Voir profil")} className="mr-1 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-white/5">👁</span><span onClick={() => T("Passer Pro")} className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-white/5">🚀</span></Td>
-            </tr>
-          ))}
-        </Tbl>
+        {filtered.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucun utilisateur trouvé</div> : (
+          <div className="space-y-2">
+            {filtered.map((u) => (
+              <div key={u.id} className="flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-3">
+                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#21262D]">
+                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[.8rem] font-bold text-white">{(u.full_name || "?")[0]}</div>}
+                </div>
+                <div className="min-w-[120px] flex-1">
+                  <div className="text-[.84rem] font-bold text-[#E6EDF3]">{u.full_name || "(sans nom)"}</div>
+                  <div className="text-[.72rem] text-[#8B949E]">{u.phone || "—"} · {u.bio ? u.bio.slice(0, 30) + "…" : "Pas de bio"} · Crédits: {u.free_ads_remaining ?? "—"}</div>
+                </div>
+                <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${u.role === "pro" || u.role === "business" ? "bg-violet-500/15 text-violet-300" : u.role === "admin" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400"}`}>{u.role || "user"}</span>
+                <div className="text-[.72rem] text-[#8B949E] shrink-0">{u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "—"}</div>
+                <div className="flex gap-1.5 shrink-0">
+                  <button onClick={() => toggleRole(u.id, u.role || "user")} className="rounded-[7px] bg-white/5 px-2.5 py-1.5 text-[.72rem] font-bold text-[#A5B4FC] hover:bg-[#6366F1]/20" title="Changer rôle">{u.role === "pro" ? "👤 → User" : "🚀 → Pro"}</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
     </>
   );
 }
 
-function Finance() {
-  const rows = [["16/06", "Moussa D.", "À la Une", "9 000 FCFA", "Orange Money"], ["16/06", "Aminata K.", "Pack Premium", "150 000 FCFA", "Wave"], ["15/06", "Kwame M.", "Pack Pro", "75 000 FCFA", "MTN MoMo"], ["15/06", "Auto Dakar+", "Enterprise", "300 000 FCFA", "Carte"]];
+function Finance({ purchases, counts }: { purchases: any[]; counts: any }) {
+  const total = purchases.reduce((s: number, p: any) => s + (p.amount || 0), 0);
+  const paid = purchases.filter(p => p.status === "paid" || p.status === "completed");
+  const paidTotal = paid.reduce((s: number, p: any) => s + (p.amount || 0), 0);
+  const pending = purchases.filter(p => p.status === "pending");
+  const pendingTotal = pending.reduce((s: number, p: any) => s + (p.amount || 0), 0);
   return (
     <>
-      <PageHead title="💰 Finances" sub="Revenus et transactions" />
-      <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi grad="bg-g1" icon="💰" label="Revenus totaux (FCFA)" value={124} suffix="M" trend="↑ 18%" />
-        <Kpi grad="bg-g8" icon="🚀" label="Revenus boosts" value={82} suffix="M" trend="↑ 22%" />
-        <Kpi grad="bg-g5" icon="📺" label="Revenus publicités" value={31} suffix="M" trend="↑ 15%" />
-        <Kpi grad="bg-g3" icon="📅" label="Abonnements Pro" value={11} suffix="M" trend="↑ 9%" />
+      <PageHead title="💰 Finances" sub={`${purchases.length} transactions · Données réelles Supabase`} />
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="💰" label="Revenus totaux (FCFA)" value={total} trend="réel" />
+        <Kpi grad="bg-g8" icon="✅" label="Payés (FCFA)" value={paidTotal} trend={`${paid.length} tx`} />
+        <Kpi grad="bg-g5" icon="⏳" label="En attente (FCFA)" value={pendingTotal} trend={`${pending.length} tx`} />
+        <Kpi grad="bg-g3" icon="📊" label="Transactions totales" value={purchases.length} />
       </div>
       <Card title="Dernières transactions">
-        <Tbl head={["Date", "Utilisateur", "Type", "Montant", "Méthode", "Statut"]}>
-          {rows.map((r, i) => <tr key={i} className="hover:bg-white/[.02]"><Td>{r[0]}</Td><Td bold>{r[1]}</Td><Td>{r[2]}</Td><Td><span className="font-extrabold text-emerald-400">{r[3]}</span></Td><Td>{r[4]}</Td><Td><span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[.68rem] font-bold text-emerald-300">✓ Payé</span></Td></tr>)}
-        </Tbl>
+        {purchases.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucune transaction enregistrée</div> : (
+          <Tbl head={["Date", "Référence", "Type", "Montant", "Statut"]}>
+            {purchases.map((p, i) => (
+              <tr key={p.id || i} className="hover:bg-white/[.02]">
+                <Td>{p.created_at ? new Date(p.created_at).toLocaleDateString("fr-FR") : "—"}</Td>
+                <Td bold>{p.ref_command || "—"}</Td>
+                <Td>{p.type || "boost"}</Td>
+                <Td><span className="font-extrabold text-emerald-400">{(p.amount || 0).toLocaleString("fr-FR")} FCFA</span></Td>
+                <Td><span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${p.status === "paid" || p.status === "completed" ? "bg-emerald-500/15 text-emerald-300" : p.status === "pending" ? "bg-amber-500/15 text-amber-300" : "bg-red-500/15 text-red-300"}`}>{p.status === "paid" || p.status === "completed" ? "✓ Payé" : p.status === "pending" ? "⏳ En attente" : p.status || "—"}</span></Td>
+              </tr>
+            ))}
+          </Tbl>
+        )}
       </Card>
     </>
   );
 }
 
-function Ads({ T }: { T: (m: string) => void }) {
-  const rows = [["A1 — Hero Banner", "Orange Money", "245 800", "2.0%"], ["A2 — In-feed Home", "Wave", "189 200", "3.0%"], ["A3 — Sidebar", "MTN MoMo", "156 700", "2.0%"], ["A4 — In-grid", "Coca-Cola", "98 400", "1.5%"], ["A5 — Page Annonce", "Airtel", "78 200", "1.4%"], ["A6 — Footer", "Banque SG", "45 600", "1.0%"]];
+function AdsAdmin({ allListings, T, reload }: { allListings: any[]; T: (m: string) => void; reload: () => void }) {
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const filtered = allListings.filter(a => {
+    if (filter !== "all" && a.status !== filter) return false;
+    if (search && !(a.title || "").toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  async function changeStatus(id: string, status: string) {
+    const sb = createClient();
+    const { error } = await sb.from("listings").update({ status }).eq("id", id);
+    if (error) { T("⚠ Erreur: droits insuffisants"); return; }
+    T(status === "active" ? "✅ Annonce activée" : status === "rejected" ? "❌ Annonce rejetée" : `📦 Statut → ${status}`);
+    reload();
+  }
+
+  const totalViews = allListings.reduce((s: number, a: any) => s + (a.views || 0), 0);
   return (
     <>
-      <PageHead title="📺 Zones publicitaires" sub="10 emplacements stratégiques">
-        <button className={btnP} onClick={() => T("+ Bannière créée")}>+ Nouvelle bannière</button>
-      </PageHead>
+      <PageHead title="📺 Gestion des annonces" sub={`${allListings.length} annonces totales · ${totalViews} vues`} />
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="📦" label="Total" value={allListings.length} />
+        <Kpi grad="bg-g8" icon="✅" label="Actives" value={allListings.filter(a => a.status === "active").length} />
+        <Kpi grad="bg-g5" icon="⏳" label="En attente" value={allListings.filter(a => a.status === "pending").length} />
+        <Kpi grad="bg-g3" icon="👁️" label="Vues totales" value={totalViews} />
+      </div>
+      <div className="mb-3 flex flex-wrap gap-2 items-center">
+        {[["all", "Toutes"], ["active", "Actives"], ["pending", "Attente"], ["inactive", "Inactives"], ["sold", "Vendues"], ["rejected", "Rejetées"]].map(([k, l]) => (
+          <button key={k} onClick={() => setFilter(k)} className={`rounded-[7px] px-3 py-1.5 text-[.76rem] font-bold transition ${filter === k ? "bg-[#6366F1] text-white" : "bg-[#21262D] text-[#8B949E] hover:text-white"}`}>{l}</button>
+        ))}
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Chercher…" className="ml-auto rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-1.5 text-[.8rem] text-white outline-none focus:border-[#6366F1] w-full sm:w-auto sm:max-w-[200px]" />
+      </div>
       <Card>
-        <Tbl head={["Zone", "Annonceur", "Impressions", "CTR", "Statut"]}>
-          {rows.map((r, i) => <tr key={i} className="hover:bg-white/[.02]"><Td><span className="font-bold text-[#A5B4FC]">{r[0]}</span></Td><Td bold>{r[1]}</Td><Td>{r[2]}</Td><Td><span className="font-bold text-emerald-400">{r[3]}</span></Td><Td><span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[.68rem] font-bold text-emerald-300">🟢 Active</span></Td></tr>)}
-        </Tbl>
+        {filtered.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucune annonce trouvée</div> : filtered.map((a) => (
+          <div key={a.id} className="mb-2 flex flex-wrap items-center gap-3 rounded-[9px] border border-[#21262D] bg-[#0D1117] p-3">
+            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-[#21262D]">{a.image && <img src={a.image} alt="" className="h-full w-full object-cover" />}</div>
+            <div className="min-w-[120px] flex-1">
+              <div className="text-[.84rem] font-bold text-[#E6EDF3] truncate">{a.title}</div>
+              <div className="text-[.72rem] text-[#8B949E]">{a.category || "—"} · {a.location || "—"} · {a.views || 0} vues · {a.price || "—"}</div>
+            </div>
+            <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${a.status === "active" ? "bg-emerald-500/15 text-emerald-300" : a.status === "pending" ? "bg-amber-500/15 text-amber-300" : a.status === "sold" ? "bg-blue-500/15 text-blue-300" : a.status === "rejected" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400"}`}>{a.status || "—"}</span>
+            <div className="flex gap-1.5 shrink-0">
+              {a.status !== "active" && <button onClick={() => changeStatus(a.id, "active")} className="rounded-[7px] bg-emerald-500/15 px-2 py-1 text-[.68rem] font-bold text-emerald-300 hover:bg-emerald-500/25">✓ Activer</button>}
+              {a.status !== "rejected" && <button onClick={() => changeStatus(a.id, "rejected")} className="rounded-[7px] bg-red-500/15 px-2 py-1 text-[.68rem] font-bold text-red-300 hover:bg-red-500/25">✕ Rejeter</button>}
+              {a.status !== "inactive" && a.status !== "rejected" && <button onClick={() => changeStatus(a.id, "inactive")} className="rounded-[7px] bg-white/5 px-2 py-1 text-[.68rem] font-bold text-gray-400 hover:text-white">⏸ Désactiver</button>}
+            </div>
+          </div>
+        ))}
       </Card>
     </>
   );
@@ -544,11 +674,11 @@ function IA({ T }: { T: (m: string) => void }) {
         <Card title="Générer un email commercial">
           <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom de l'entreprise" className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
           <input value={ville} onChange={(e) => setVille(e.target.value)} placeholder="Ville" className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
-          <button className={`${btnP} w-full`} onClick={() => setEmail(`Objet : Augmentez la visibilité de votre activité à ${ville || "[Ville]"}\n\nBonjour ${nom || "[Entreprise]"},\n\nNous avons remarqué votre activité à ${ville || "[Ville]"} et souhaitons vous présenter AnnoncesWest. Notre plateforme vous permet de toucher des acheteurs qualifiés dans 27 pays d'Afrique.\n\nSeriez-vous disponible pour une présentation de 15 minutes ?\n\nCordialement,\nL'équipe AnnoncesWest`)}>🤖 Générer l'email →</button>
+          <button className={`${btnP} w-full`} onClick={() => setEmail(`Objet : Augmentez la visibilité de votre activité à ${ville || "[Ville]"}\n\nBonjour ${nom || "[Entreprise]"},\n\nNous avons remarqué votre activité à ${ville || "[Ville]"} et souhaitons vous présenter Annonce.ID. Notre plateforme vous permet de toucher des acheteurs qualifiés dans 27 pays d'Afrique.\n\nSeriez-vous disponible pour une présentation de 15 minutes ?\n\nCordialement,\nL'équipe Annonce.ID`)}>🤖 Générer l'email →</button>
           {email && <div className="mt-3 whitespace-pre-line rounded-[9px] border-l-[3px] border-[#6366F1] bg-[#0D1117] p-3 text-[.8rem] leading-relaxed text-[#C9D1D9]">{email}<div className="mt-2"><button className={btnG} onClick={() => { navigator.clipboard?.writeText(email); T("📋 Email copié !"); }}>📋 Copier</button></div></div>}
         </Card>
         <Card title="Générer un message WhatsApp">
-          <button className={`${btnP} w-full`} onClick={() => setWa("Bonjour 👋\n\nJe me permets de vous contacter concernant la promotion de vos produits/services sur AnnoncesWest.\n\nNous aidons les entreprises à augmenter leur visibilité et générer des contacts qualifiés (Facebook & WhatsApp).\n\nPuis-je vous présenter notre offre ? 🙏")}>🤖 Générer WhatsApp →</button>
+          <button className={`${btnP} w-full`} onClick={() => setWa("Bonjour 👋\n\nJe me permets de vous contacter concernant la promotion de vos produits/services sur Annonce.ID.\n\nNous aidons les entreprises à augmenter leur visibilité et générer des contacts qualifiés (Facebook & WhatsApp).\n\nPuis-je vous présenter notre offre ? 🙏")}>🤖 Générer WhatsApp →</button>
           {wa && <div className="mt-3 whitespace-pre-line rounded-[9px] border-l-[3px] border-[#25D366] bg-[#0D1117] p-3 text-[.8rem] leading-relaxed text-[#C9D1D9]">{wa}<div className="mt-2"><button className={btnG} onClick={() => { navigator.clipboard?.writeText(wa); T("📋 Copié pour WhatsApp !"); }}>📋 Copier</button></div></div>}
         </Card>
       </div>
@@ -576,11 +706,11 @@ function Points() {
 
 function Diffusion() {
   const pages = [["📘", "Auto Sénégal", "Automobile · 12 400 abonnés", true], ["📘", "Immo Abidjan", "Immobilier · 8 900 abonnés", true], ["📘", "Tech Dakar", "Électronique · 5 200 abonnés", true], ["📘", "Emploi Mali", "Emploi · 3 800 abonnés", false]];
-  const packs = [["🆓 Basic", "Site AnnoncesWest", "Inclus"], ["➕ Plus", "Site + Facebook", "+ 10 000 FCFA/mois"], ["🚀 Premium", "Site + FB + WhatsApp", "+ 30 000 FCFA/mois"], ["👑 Elite", "Site + FB + WA + Sponsorisé", "+ 75 000 FCFA/mois"]];
+  const packs = [["🆓 Basic", "Site Annonce.ID", "Inclus"], ["➕ Plus", "Site + Facebook", "+ 10 000 FCFA/mois"], ["🚀 Premium", "Site + FB + WhatsApp", "+ 30 000 FCFA/mois"], ["👑 Elite", "Site + FB + WA + Sponsorisé", "+ 75 000 FCFA/mois"]];
   return (
     <>
       <PageHead title="📡 Diffusion multi-canaux" sub="Pages Facebook et groupes WhatsApp" />
-      <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
         <Kpi grad="bg-g1" icon="📘" label="Pages Facebook" value={12} />
         <Kpi grad="bg-g4" icon="💬" label="Groupes WhatsApp" value={28} />
         <Kpi grad="bg-g5" icon="🤖" label="Publications/mois" value={8450} />
@@ -594,18 +724,37 @@ function Diffusion() {
   );
 }
 
-function Rapports({ T }: { T: (m: string) => void }) {
-  const raps = [["📊", "Rapport MRR mensuel", "PDF · Revenus récurrents", "bg-g1"], ["🎯", "Rapport CRM & Conversions", "CSV · Pipeline", "bg-g8"], ["👨‍💼", "Performance employés", "PDF · Commissions", "bg-g5"], ["🤝", "Rapport ambassadeurs", "PDF · Performances", "bg-g3"], ["📢", "Performance campagnes", "Excel · Taux d'ouverture", "bg-g7"], ["💰", "Rapport financier", "PDF/CSV · Transactions", "bg-g4"]];
+function Rapports({ T, allListings, profiles, purchases }: { T: (m: string) => void; allListings: any[]; profiles: any[]; purchases: any[] }) {
+  function downloadCSV(filename: string, headers: string[], rows: string[][]) {
+    const bom = "\uFEFF";
+    const csv = bom + [headers.join(";"), ...rows.map(r => r.join(";"))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+    T(`✅ ${filename} téléchargé !`);
+  }
+
+  const exportAnnonces = () => downloadCSV("annonces_annonce_id.csv", ["Titre", "Catégorie", "Prix", "Lieu", "Statut", "Vues", "Date"], allListings.map(a => [a.title || "", a.category || "", a.price || "", a.location || "", a.status || "", String(a.views || 0), a.created_at ? new Date(a.created_at).toLocaleDateString("fr-FR") : ""]));
+  const exportUsers = () => downloadCSV("utilisateurs_annonce_id.csv", ["Nom", "Rôle", "Téléphone", "Crédits", "Date inscription"], profiles.map(u => [u.full_name || "", u.role || "user", u.phone || "", String(u.free_ads_remaining ?? 0), u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : ""]));
+  const exportFinances = () => downloadCSV("finances_annonce_id.csv", ["Référence", "Type", "Montant", "Statut", "Date"], purchases.map(p => [p.ref_command || "", p.type || "", String(p.amount || 0), p.status || "", p.created_at ? new Date(p.created_at).toLocaleDateString("fr-FR") : ""]));
+
+  const raps = [
+    ["📦", "Export Annonces", `CSV · ${allListings.length} annonces`, "bg-g1", exportAnnonces],
+    ["👥", "Export Utilisateurs", `CSV · ${profiles.length} comptes`, "bg-g5", exportUsers],
+    ["💰", "Export Finances", `CSV · ${purchases.length} transactions`, "bg-g4", exportFinances],
+  ] as const;
+
   return (
     <>
-      <PageHead title="📄 Rapports" sub="Génération et export" />
+      <PageHead title="📄 Rapports & Exports" sub="Export CSV de vos données réelles" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {raps.map(([ic, t, s, g]) => (
-          <div key={t} onClick={() => T("Génération du rapport…")} className="cursor-pointer rounded-[18px] border border-[#21262D] bg-[#161B22] p-4 transition hover:border-[#6366F1]">
+        {raps.map(([ic, t, s, g, fn]) => (
+          <div key={t} className="cursor-pointer rounded-[18px] border border-[#21262D] bg-[#161B22] p-4 transition hover:border-[#6366F1]">
             <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-[12px] text-[1.2rem] ${g}`}>{ic}</div>
             <h3 className="text-[.88rem] font-bold text-[#E6EDF3]">{t}</h3>
             <p className="mb-3 text-[.76rem] text-[#8B949E]">{s}</p>
-            <button className={btnP} onClick={(e) => { e.stopPropagation(); T("⬇ Téléchargement…"); }}>⬇ Générer</button>
+            <button className={btnP} onClick={() => fn()}>⬇ Télécharger CSV</button>
           </div>
         ))}
       </div>
@@ -645,7 +794,7 @@ function Settings({ T }: { T: (m: string) => void }) {
 function Tbl({ head, children }: { head: string[]; children: React.ReactNode }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
+      <table className="w-full border-collapse min-w-[600px]">
         <thead><tr>{head.map((h) => <th key={h} className="border-b border-[#21262D] px-3 py-2.5 text-left text-[.68rem] font-bold uppercase tracking-wide text-[#484F58]">{h}</th>)}</tr></thead>
         <tbody>{children}</tbody>
       </table>
