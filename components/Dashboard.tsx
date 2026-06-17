@@ -382,15 +382,30 @@ export default function Dashboard() {
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-[1001] w-[260px] flex-col border-r border-gray-100 dark:border-dark-border bg-white dark:bg-dark-900 shadow-2xl transition-transform duration-300 lg:static lg:flex lg:w-[220px] lg:translate-x-0 lg:shadow-none ${isMobileMenuOpen ? "translate-x-0 flex" : "-translate-x-full flex"}`}>
-        <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border p-4">
-          <div className="flex items-center gap-3">
-            <img src={avatarUrl} alt="" className="h-11 w-11 rounded-full border-2 border-gold object-cover" />
-            <div className="min-w-0">
-              <div className="text-[.9rem] font-bold truncate dark:text-white">{displayName}</div>
-              <div className="text-[.72rem] text-gray-500 dark:text-white/50 truncate">{displayEmail}</div>
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border px-3 pt-3">
+          <span className="text-[.8rem] font-extrabold dark:text-white">📊 Mon Espace</span>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="text-xl text-gray-400 lg:hidden">✕</button>
+        </div>
+        {/* Carte profil gradient (style AnnoncesWest) */}
+        <div className="m-3 relative overflow-hidden rounded-[18px] bg-g1 p-4 text-white">
+          <div className="absolute -right-5 -top-7 h-24 w-24 rounded-full bg-white/10" />
+          <div className="absolute -bottom-5 left-5 h-16 w-16 rounded-full bg-white/[.07]" />
+          <div className="relative z-10">
+            <div className="mb-2 h-12 w-12 overflow-hidden rounded-[14px] border-2 border-white/30 bg-white/20">
+              {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-lg font-extrabold">{(displayName || "U").slice(0, 2).toUpperCase()}</div>}
+            </div>
+            <div className="text-[.92rem] font-extrabold truncate">{displayName}</div>
+            <div className="text-[.7rem] opacity-85 truncate">📍 {profile?.location || profile?.region || "Sénégal"}</div>
+            <div className="mt-2.5 flex gap-3">
+              <div><div className="text-[1rem] font-extrabold leading-none">{ads.length}</div><div className="text-[.62rem] opacity-80">Annonces</div></div>
+              <div><div className="text-[1rem] font-extrabold leading-none">{ads.reduce((a, d) => a + (d.views || 0), 0)}</div><div className="text-[.62rem] opacity-80">Vues</div></div>
+              <div><div className="text-[1rem] font-extrabold leading-none">{receivedFavsCount}</div><div className="text-[.62rem] opacity-80">Favoris</div></div>
+            </div>
+            <div className="mt-2.5 flex flex-wrap gap-1">
+              <span className="rounded-md border border-white/30 bg-white/20 px-1.5 py-0.5 text-[.62rem] font-bold">✓ Vérifié</span>
+              {(profile?.role === "pro" || profile?.role === "business") && <span className="rounded-md border border-white/30 bg-white/20 px-1.5 py-0.5 text-[.62rem] font-bold">🏆 Pro</span>}
             </div>
           </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="text-xl text-gray-400 lg:hidden">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto">
           {NAV.map((n) => (
@@ -468,6 +483,27 @@ export default function Dashboard() {
               <KpiGrad gradient="bg-g5" icon="❤️" label="Favoris reçus" value={receivedFavsCount} />
               <KpiGrad gradient="bg-g4" icon="🗂️" label="Annonces totales" value={ads.length} />
             </div>
+
+            {ads.length > 0 && (() => {
+              const byCat: Record<string, number> = {};
+              ads.forEach((a) => { const c = a.category || "Autre"; byCat[c] = (byCat[c] || 0) + 1; });
+              const entries = Object.entries(byCat).sort((x, y) => y[1] - x[1]).slice(0, 6);
+              const cols = ["bg-g1", "bg-g3", "bg-g4", "bg-g5", "bg-g7", "bg-g8"];
+              return (
+                <div className="mb-6 rounded-[18px] border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5">
+                  <h3 className="mb-3 font-display text-[1rem] font-bold dark:text-white">Mes catégories</h3>
+                  <div className="flex flex-col gap-2.5">
+                    {entries.map(([c, n], i) => (
+                      <div key={c} className="flex items-center gap-2 text-[.8rem]">
+                        <span className="w-28 truncate text-gray-600 dark:text-white/70">{c}</span>
+                        <div className="h-2 flex-1 overflow-hidden rounded bg-gray-100 dark:bg-dark-700"><div className={`h-full rounded ${cols[i % 6]}`} style={{ width: `${n / ads.length * 100}%` }} /></div>
+                        <span className="w-6 text-right font-bold dark:text-white">{n}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="mb-6 flex flex-col gap-2">
               <Alert color="green">💡 Astuce : Les annonces avec de belles photos se vendent 3x plus vite ! — <Link href="/publier" className="font-semibold text-green">Publier maintenant</Link></Alert>
