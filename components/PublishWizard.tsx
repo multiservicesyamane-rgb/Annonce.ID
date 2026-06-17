@@ -35,6 +35,7 @@ export default function PublishWizard() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [userEmail, setUserEmail] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
+  const [aiLoading, setAiLoading] = useState("");
 
   const supabase = createClient();
 
@@ -99,6 +100,26 @@ export default function PublishWizard() {
 
   const cat = CATEGORIES.find((c) => c.slug === catSlug);
   const show = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
+
+  // Aide IA (gratuit via modèles intégrés, ou Claude si crédits dispo)
+  async function aiHelp(kind: "listing_title" | "listing_description") {
+    const topic = (title || subCategory || cat?.name || "mon article").trim();
+    setAiLoading(kind);
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, topic, city: region, tier: "user" }),
+      });
+      const data = await res.json();
+      if (data.text) {
+        if (kind === "listing_title") setTitle(data.text.replace(/^["']|["']$/g, "").slice(0, 80));
+        else setDesc(data.text.slice(0, 2000));
+        show(data.source === "ai" ? "✨ Généré par l'IA Claude" : "📝 Suggestion générée");
+      } else show("⚠ " + (data.error || "Erreur IA"));
+    } catch { show("⚠ Erreur IA"); }
+    finally { setAiLoading(""); }
+  }
 
   const isKonnecta = userEmail.toLowerCase().includes('multiservicesyamane');
   const freeAdsRemaining = isKonnecta ? 999 : (userProfile?.free_ads_remaining ?? 3);
@@ -308,7 +329,12 @@ export default function PublishWizard() {
           <div className="animate-fadeUp space-y-3">
             <h2 className="font-display text-[1rem] md:text-[1.15rem] font-bold text-gray-900 dark:text-white">Informations</h2>
             <div>
-              <label className="label">Titre <span className="text-brand-red">*</span></label>
+              <div className="flex items-center justify-between">
+                <label className="label">Titre <span className="text-brand-red">*</span></label>
+                <button type="button" onClick={() => aiHelp("listing_title")} disabled={!!aiLoading} className="mb-1 rounded-full bg-green/10 px-2.5 py-1 text-[.7rem] font-bold text-green hover:bg-green/20 transition disabled:opacity-50">
+                  {aiLoading === "listing_title" ? "⏳…" : "✨ Aide IA"}
+                </button>
+              </div>
               <input className="input font-medium" maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: iPhone 14 Pro 256Go Noir" />
               <div className="text-right text-[.65rem] text-gray-400 mt-0.5">{title.length}/80</div>
             </div>
@@ -327,7 +353,12 @@ export default function PublishWizard() {
               </div>
             </div>
             <div>
-              <label className="label">Description <span className="text-brand-red">*</span></label>
+              <div className="flex items-center justify-between">
+                <label className="label">Description <span className="text-brand-red">*</span></label>
+                <button type="button" onClick={() => aiHelp("listing_description")} disabled={!!aiLoading} className="mb-1 rounded-full bg-green/10 px-2.5 py-1 text-[.7rem] font-bold text-green hover:bg-green/20 transition disabled:opacity-50">
+                  {aiLoading === "listing_description" ? "⏳…" : "✨ Aide IA"}
+                </button>
+              </div>
               <textarea className="input resize-none min-h-[80px] md:min-h-[100px]" maxLength={2000} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Décrivez votre article..." />
               <div className="text-right text-[.65rem] text-gray-400 mt-0.5">{desc.length}/2000</div>
             </div>

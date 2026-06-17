@@ -676,10 +676,11 @@ async function callAI(payload: Record<string, any>): Promise<{ text: string; sou
 function AIBlock({ title, accent, payloadBase, fields, T }: { title: string; accent: string; payloadBase: Record<string, any>; fields: { key: string; ph: string }[]; T: (m: string) => void }) {
   const [vals, setVals] = useState<Record<string, string>>({});
   const [out, setOut] = useState<string | null>(null);
+  const [src, setSrc] = useState<string>("");
   const [loading, setLoading] = useState(false);
   async function run() {
     setLoading(true); setOut(null);
-    try { const res = await callAI({ ...payloadBase, ...vals }); setOut(res.text); }
+    try { const res = await callAI({ ...payloadBase, ...vals }); setOut(res.text); setSrc(res.source); }
     catch (e: any) { T(`❌ ${e.message}`); }
     finally { setLoading(false); }
   }
@@ -692,7 +693,10 @@ function AIBlock({ title, accent, payloadBase, fields, T }: { title: string; acc
       {out && (
         <div className="mt-3 whitespace-pre-line rounded-[9px] border-l-[3px] bg-[#0D1117] p-3 text-[.8rem] leading-relaxed text-[#C9D1D9]" style={{ borderLeftColor: accent }}>
           {out}
-          <div className="mt-2"><button className={btnG} onClick={() => { navigator.clipboard?.writeText(out); T("📋 Copié !"); }}>📋 Copier</button></div>
+          <div className="mt-2 flex items-center gap-2">
+            <button className={btnG} onClick={() => { navigator.clipboard?.writeText(out); T("📋 Copié !"); }}>📋 Copier</button>
+            <span className={`rounded-md px-1.5 py-0.5 text-[.62rem] font-bold ${src === "ai" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>{src === "ai" ? "✨ IA Claude" : "📝 Modèle gratuit"}</span>
+          </div>
         </div>
       )}
     </Card>
