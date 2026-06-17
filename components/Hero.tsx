@@ -8,7 +8,7 @@ export default function Hero() {
     <section className="w-full bg-[#0A0E14] pb-1 pt-0 md:pb-4 md:pt-2 px-3 md:px-4 transition-colors">
       <div className="mx-auto max-w-[1320px]">
         {/* The banner card: Extremely reduced padding on mobile */}
-        <div className="relative rounded-[16px] md:rounded-[24px] bg-[#111722] border border-white/5 p-2 py-3 md:p-10 shadow-2xl">
+        <div className="relative overflow-hidden rounded-[16px] md:rounded-[24px] bg-[#111722] border border-white/5 p-2 py-3 md:p-10 shadow-2xl">
           
           {/* Background Glows within the card (clipped by their own wrapper) */}
           <div className="absolute inset-0 overflow-hidden rounded-[16px] md:rounded-[24px] pointer-events-none">
