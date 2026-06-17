@@ -13,7 +13,7 @@ import { useFavorites } from "./FavButton";
 import ImageCropperModal from "./ImageCropperModal";
 import ChatInterface from "./ChatInterface";
 import MarketingPanel from "./MarketingPanel";
-type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "alerts" | "profile" | "faq" | "security";
+type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "reviews" | "alerts" | "profile" | "faq" | "security";
 
 const NAV: { id: string; icon: string; label: string; section?: string; badge?: number; isLink?: boolean; href?: string }[] = [
   { id: "overview", icon: "📊", label: "Accueil", section: "Principal" },
@@ -25,6 +25,7 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
   { id: "showroom", icon: "🏪", label: "Ma Boutique" },
   { id: "favorites", icon: "❤", label: "Mes Favoris", section: "Interactions" },
   { id: "messages", icon: "💬", label: "Messagerie & Chat" },
+  { id: "reviews", icon: "⭐", label: "Avis reçus" },
   { id: "alerts", icon: "🔔", label: "Gérer mes alertes" },
   { id: "profile", icon: "👤", label: "Mon Profil & CV", section: "Paramètres" },
   { id: "security", icon: "🔒", label: "Sécurité & Vie privée" },
@@ -53,6 +54,7 @@ export default function Dashboard() {
   const [showroomSocials, setShowroomSocials] = useState<any>({});
   const [editingSocial, setEditingSocial] = useState<string | null>(null);
   const [alertPrefs, setAlertPrefs] = useState<any>({ messages: true, expired: true, stats: false, search: true, promos: false });
+  const [reviews, setReviews] = useState<any[]>([]);
   const [receivedFavsCount, setReceivedFavsCount] = useState(0);
   const [ads, setAds] = useState<any[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
@@ -160,6 +162,11 @@ export default function Dashboard() {
         supabase.from('listings').select('id, slug, title, price, location, image, category, category_slug, status, views, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data }) => {
           if (data) setAds(data);
           setLoadingAds(false);
+        });
+
+        // Fetch reviews reçus (avis sur le vendeur)
+        supabase.from('reviews').select('rating, comment, created_at, listing_id').eq('seller_id', user.id).order('created_at', { ascending: false }).then(({ data }) => {
+          if (data) setReviews(data);
         });
 
         // Fetch purchases from DB with fallback to localStorage
@@ -580,6 +587,53 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {panel === "reviews" && (
+          <div className="animate-fadeUp max-w-[1000px] mx-auto">
+            <h1 className="font-display text-[1.3rem] font-extrabold dark:text-white">⭐ Avis reçus</h1>
+            <p className="mb-6 text-[.85rem] text-gray-500 dark:text-white/60">{reviews.length} avis · Note {reviews.length ? (reviews.reduce((a, r) => a + (r.rating || 0), 0) / reviews.length).toFixed(1) : '—'}/5</p>
+
+            {reviews.length === 0 ? (
+              <EmptyState title="Aucun avis pour l'instant" description="Vos acheteurs pourront laisser un avis après une transaction. Ils apparaîtront ici." emoji="⭐" />
+            ) : (
+              <>
+                <div className="mb-5 rounded-[18px] border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5">
+                  <div className="flex items-center gap-5 flex-wrap">
+                    <div className="text-center">
+                      <div className="font-display text-[2.6rem] font-extrabold text-green leading-none">{(reviews.reduce((a, r) => a + (r.rating || 0), 0) / reviews.length).toFixed(1)}</div>
+                      <div className="text-[1.1rem]">{'⭐'.repeat(Math.round(reviews.reduce((a, r) => a + (r.rating || 0), 0) / reviews.length))}</div>
+                      <div className="text-[.75rem] text-gray-500 mt-1">{reviews.length} avis</div>
+                    </div>
+                    <div className="flex-1 min-w-[180px]">
+                      {[5, 4, 3, 2, 1].map(n => {
+                        const c = reviews.filter(r => Math.round(r.rating) === n).length;
+                        const pct = reviews.length ? c / reviews.length * 100 : 0;
+                        return (
+                          <div key={n} className="flex items-center gap-2 mb-1 text-[.78rem]">
+                            <span className="w-3 font-bold dark:text-white">{n}</span>
+                            <div className="flex-1 h-[7px] rounded bg-gray-100 dark:bg-dark-700 overflow-hidden"><div className="h-full bg-amber" style={{ width: `${pct}%`, background: 'var(--amber)' }}></div></div>
+                            <span className="w-6 text-gray-500">{c}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-[18px] border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5">
+                  {reviews.map((r, i) => (
+                    <div key={i} className="flex gap-3 py-3 border-b border-gray-100 dark:border-dark-border last:border-0">
+                      <div className="h-10 w-10 shrink-0 rounded-xl bg-g5 flex items-center justify-center text-white font-bold">A</div>
+                      <div className="flex-1">
+                        <div className="text-[.75rem] text-gray-500">{r.created_at ? new Date(r.created_at).toLocaleDateString('fr-FR') : ''} · {'⭐'.repeat(Math.round(r.rating || 0))}</div>
+                        <div className="text-[.85rem] dark:text-white mt-1">{r.comment || '(sans commentaire)'}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
