@@ -211,13 +211,14 @@ export default function SuperAdminApp() {
       <div className="flex-1 lg:ml-[240px] flex flex-col min-w-0">
         <header className="sticky top-0 z-[100] flex items-center gap-3 border-b border-[#21262D] bg-[#161B22]/90 px-5 py-3 backdrop-blur">
           <button onClick={() => setSbOpen(true)} className="text-[1.2rem] text-[#8B949E] lg:hidden">☰</button>
-          <div className="relative max-w-[300px] flex-1">
+          <div className="relative hidden sm:block max-w-[300px] flex-1">
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[.8rem] text-[#484F58]">🔍</span>
             <input className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] py-2 pl-8 pr-3 text-[.83rem] text-white outline-none focus:border-[#6366F1]" placeholder="Rechercher prospects, campagnes…" />
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <button onClick={() => T("Recherche")} className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#30363D] bg-white/5 sm:hidden">🔍</button>
             <button onClick={() => T("3 alertes système")} className="relative flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#30363D] bg-white/5">🔔<span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-red-500" /></button>
-            <button onClick={() => T("Export global…")} className="rounded-[9px] bg-g1 px-3 py-2 text-[.78rem] font-bold text-white shadow-[0_0_20px_rgba(99,102,241,.3)]">⬇ Exporter</button>
+            <button onClick={() => T("Export global…")} className="rounded-[9px] bg-g1 px-3 py-2 text-[.78rem] font-bold text-white shadow-[0_0_20px_rgba(99,102,241,.3)]"><span className="sm:hidden">⬇</span><span className="hidden sm:inline">⬇ Exporter</span></button>
           </div>
         </header>
 
