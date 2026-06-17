@@ -157,7 +157,7 @@ export default function SuperAdminApp() {
       setAllListings(allAds || []);
 
       // Profils
-      const { data: profs } = await sb.from("profiles").select("id, full_name, avatar_url, phone, role, bio, free_ads_remaining, free_premium, created_at").order("created_at", { ascending: false }).limit(100);
+      const { data: profs } = await sb.from("profiles").select("*").order("created_at", { ascending: false }).limit(200);
       setProfiles(profs || []);
 
       // Achats
@@ -197,10 +197,10 @@ export default function SuperAdminApp() {
 
   function doLogin() {
     if (email === ADMIN_CREDS.email && pass === ADMIN_CREDS.pass && (code === "1234" || code === "")) {
-      sessionStorage.setItem("sa_authed", "1"); setAuthed(true); T("✅ Bienvenue, Super Administrateur");
+      sessionStorage.setItem("sa_authed", "1"); sessionStorage.setItem("sa_pass", pass); setAuthed(true); T("✅ Bienvenue, Super Administrateur");
     } else T("❌ Identifiants incorrects");
   }
-  function doLogout() { sessionStorage.removeItem("sa_authed"); setAuthed(false); }
+  function doLogout() { sessionStorage.removeItem("sa_authed"); sessionStorage.removeItem("sa_pass"); setAuthed(false); }
 
   async function moderate(id: string, status: string) {
     const sb = createClient();
@@ -591,54 +591,101 @@ function Moderation({ items, moderate }: { items: any[]; moderate: (id: string, 
   );
 }
 
+async function adminApi(action: string, payload: Record<string, any> = {}) {
+  const pass = typeof window !== "undefined" ? sessionStorage.getItem("sa_pass") || "" : "";
+  const res = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pass, action, ...payload }) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error || "Erreur serveur");
+  return data;
+}
+
 function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => void; reload: () => void }) {
   const [search, setSearch] = useState("");
-  const filtered = profiles.filter(u => !search || (u.full_name || "").toLowerCase().includes(search.toLowerCase()) || (u.phone || "").includes(search));
+  const [serverUsers, setServerUsers] = useState<any[] | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState<Record<string, string>>({ role: "employee" });
+  const [busy, setBusy] = useState(false);
 
-  async function toggleRole(userId: string, currentRole: string) {
-    const newRole = currentRole === "pro" ? "user" : "pro";
-    const sb = createClient();
-    const { error } = await sb.from("profiles").update({ role: newRole }).eq("id", userId);
-    if (error) { T("⚠ Erreur: droits insuffisants côté base"); return; }
-    T(newRole === "pro" ? "🚀 Utilisateur passé Pro !" : "👤 Rôle remis à user");
-    reload();
+  async function refreshList() {
+    try { const d = await adminApi("list"); setServerUsers(d.users || []); }
+    catch { setServerUsers(null); } // pas de service role → repli sur profils anon
+  }
+  useEffect(() => { refreshList(); }, []);
+
+  const source = serverUsers ?? profiles;
+  const filtered = source.filter((u: any) => !search || (u.full_name || "").toLowerCase().includes(search.toLowerCase()) || (u.email || "").toLowerCase().includes(search.toLowerCase()) || (u.phone || "").includes(search));
+
+  async function createAccount() {
+    if (!form.email || !form.password) { T("⚠ Email + mot de passe requis"); return; }
+    setBusy(true);
+    try {
+      await adminApi("create", { email: form.email, password: form.password, full_name: form.full_name || "", role: form.role || "user" });
+      T("✅ Compte créé"); setShowCreate(false); setForm({ role: "employee" }); refreshList();
+    } catch (e: any) { T(`❌ ${e.message}`); }
+    finally { setBusy(false); }
+  }
+  async function setRole(userId: string, role: string) {
+    try { await adminApi("setRole", { userId, role }); T("✅ Rôle mis à jour"); refreshList(); reload(); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+  }
+  async function setVip(userId: string, value: boolean) {
+    try { await adminApi("setVip", { userId, value }); T(value ? "🎁 VIP gratuit activé" : "VIP retiré"); refreshList(); reload(); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+  }
+  async function del(userId: string) {
+    if (!confirm("Supprimer définitivement ce compte ?")) return;
+    try { await adminApi("delete", { userId }); T("🗑️ Compte supprimé"); refreshList(); reload(); }
+    catch (e: any) { T(`❌ ${e.message}`); }
   }
 
-  // Accorder/retirer le VIP gratuit (annonces Premium offertes)
-  async function toggleVip(userId: string, current: boolean) {
-    const sb = createClient();
-    const { error } = await sb.from("profiles").update({ free_premium: !current }).eq("id", userId);
-    if (error) { T("⚠ Erreur (colonne free_premium ou droits)"); return; }
-    // Bascule aussi les annonces existantes du vendeur (si autorisé par RLS)
-    await sb.from("listings").update({ premium: !current }).eq("user_id", userId);
-    T(!current ? "🎁 VIP gratuit activé (annonces Premium)" : "VIP gratuit retiré");
-    reload();
-  }
+  const roleColor = (r: string) => r === "employee" ? "bg-blue-500/15 text-blue-300" : r === "ambassador" ? "bg-amber-500/15 text-amber-300" : r === "pro" || r === "business" ? "bg-violet-500/15 text-violet-300" : r === "admin" || r === "super_admin" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400";
 
   return (
     <>
-      <PageHead title="👥 Utilisateurs" sub={`${profiles.length} comptes · ${filtered.length} affichés`} />
+      <PageHead title="👥 Utilisateurs & Équipe" sub={`${source.length} comptes${serverUsers ? "" : " · (liste limitée — ajoutez la clé service role)"}`}>
+        <button className={btnP} onClick={() => setShowCreate((v) => !v)}>{showCreate ? "✕ Fermer" : "+ Créer un compte"}</button>
+      </PageHead>
+
+      {showCreate && (
+        <div className="mb-3"><Card title="Créer un compte (employé, ambassadeur…)">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input value={form.full_name || ""} onChange={(e) => setForm((v) => ({ ...v, full_name: e.target.value }))} placeholder="Nom complet" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+            <input value={form.email || ""} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} placeholder="Email *" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+            <input value={form.password || ""} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Mot de passe *" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+            <select value={form.role} onChange={(e) => setForm((v) => ({ ...v, role: e.target.value }))} className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none">
+              <option value="employee">👨‍💼 Employé (commercial)</option>
+              <option value="ambassador">🤝 Ambassadeur</option>
+              <option value="pro">🚀 Vendeur Pro</option>
+              <option value="user">👤 Utilisateur</option>
+            </select>
+          </div>
+          <button disabled={busy} className={`${btnP} mt-3 disabled:opacity-60`} onClick={createAccount}>{busy ? "⏳ Création…" : "Créer le compte"}</button>
+        </Card></div>
+      )}
+
       <div className="mb-3">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Rechercher par nom ou téléphone…" className="w-full max-w-md rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Rechercher par nom, email ou téléphone…" className="w-full max-w-md rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
       </div>
       <Card>
-        {filtered.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucun utilisateur trouvé</div> : (
+        {filtered.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucun utilisateur. Créez un compte ou ajoutez la clé service role pour tout voir.</div> : (
           <div className="space-y-2">
-            {filtered.map((u) => (
+            {filtered.map((u: any) => (
               <div key={u.id} className="flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-3">
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#21262D]">
-                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[.8rem] font-bold text-white">{(u.full_name || "?")[0]}</div>}
+                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[.8rem] font-bold text-white">{(u.full_name || u.email || "?")[0]?.toUpperCase()}</div>}
                 </div>
-                <div className="min-w-[120px] flex-1">
+                <div className="min-w-[140px] flex-1">
                   <div className="text-[.84rem] font-bold text-[#E6EDF3]">{u.full_name || "(sans nom)"}</div>
-                  <div className="text-[.72rem] text-[#8B949E]">{u.phone || "—"} · {u.bio ? u.bio.slice(0, 30) + "…" : "Pas de bio"} · Crédits: {u.free_ads_remaining ?? "—"}</div>
+                  <div className="text-[.72rem] text-[#8B949E]">{u.email || u.phone || "—"}</div>
                 </div>
-                <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${u.role === "pro" || u.role === "business" ? "bg-violet-500/15 text-violet-300" : u.role === "admin" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400"}`}>{u.role || "user"}</span>
-                {u.free_premium && <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[.68rem] font-bold text-amber-300">🎁 VIP gratuit</span>}
-                <div className="text-[.72rem] text-[#8B949E] shrink-0">{u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "—"}</div>
-                <div className="flex gap-1.5 shrink-0">
-                  <button onClick={() => toggleRole(u.id, u.role || "user")} className="rounded-[7px] bg-white/5 px-2.5 py-1.5 text-[.72rem] font-bold text-[#A5B4FC] hover:bg-[#6366F1]/20" title="Changer rôle">{u.role === "pro" ? "👤 → User" : "🚀 → Pro"}</button>
-                  <button onClick={() => toggleVip(u.id, !!u.free_premium)} className={`rounded-[7px] px-2.5 py-1.5 text-[.72rem] font-bold ${u.free_premium ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-[#FFC93C] hover:bg-amber-500/15"}`} title="Annonces Premium offertes">{u.free_premium ? "🎁 Retirer VIP" : "🎁 VIP gratuit"}</button>
+                <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${roleColor(u.role || "user")}`}>{u.role || "user"}</span>
+                {u.free_premium && <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[.68rem] font-bold text-amber-300">🎁 VIP</span>}
+                <div className="flex flex-wrap gap-1.5 shrink-0">
+                  <select value={u.role || "user"} onChange={(e) => setRole(u.id, e.target.value)} className="rounded-[7px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.7rem] font-bold text-[#A5B4FC] outline-none">
+                    {["user", "pro", "employee", "ambassador", "admin"].map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <button onClick={() => setVip(u.id, !u.free_premium)} className={`rounded-[7px] px-2.5 py-1 text-[.7rem] font-bold ${u.free_premium ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-[#FFC93C] hover:bg-amber-500/15"}`}>{u.free_premium ? "🎁 Retirer" : "🎁 VIP"}</button>
+                  {serverUsers && <button onClick={() => del(u.id)} className="rounded-[7px] bg-red-500/10 px-2.5 py-1 text-[.7rem] font-bold text-red-300 hover:bg-red-500/20">🗑️</button>}
                 </div>
               </div>
             ))}
