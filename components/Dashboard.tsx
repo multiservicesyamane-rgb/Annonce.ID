@@ -1818,9 +1818,9 @@ export default function Dashboard() {
         )}
 
         {panel === "messages" && (
-          <div className="animate-fadeUp max-w-[1000px] mx-auto h-[700px] flex flex-col">
-            <h2 className="mb-4 font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold dark:text-white shrink-0">Messagerie & Discussions</h2>
-            <div className="flex-1 bg-white dark:bg-dark-800 rounded-2xl border border-gray-200 dark:border-dark-border overflow-hidden">
+          <div className="animate-fadeUp max-w-[1000px] mx-auto h-[calc(100dvh-150px)] min-h-[460px] flex flex-col">
+            <h2 className="mb-3 font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold dark:text-white shrink-0">Messagerie & Discussions</h2>
+            <div className="flex-1 min-h-0 bg-white dark:bg-dark-800 rounded-2xl border border-gray-200 dark:border-dark-border overflow-hidden">
               <ChatInterface />
             </div>
           </div>

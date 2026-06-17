@@ -111,9 +111,11 @@ export async function POST(req: Request) {
       custom_field: JSON.stringify({ userId: secureUserId, listingId: listingId || "" }),
 
       env: "prod",
+      // PayTech exige des URLs HTTPS publiques. En dev (http://localhost) on bascule
+      // toutes les URLs de callback sur le domaine public HTTPS pour être accepté.
       ipn_url: `${ipnBaseUrl}/api/paytech/ipn`,
-      success_url: `${baseUrl}/paiement/succes` + (listingId ? `?listing_id=${listingId}` : ""),
-      cancel_url: `${baseUrl}/paiement/erreur`,
+      success_url: `${ipnBaseUrl}/paiement/succes` + (listingId ? `?listing_id=${listingId}` : ""),
+      cancel_url: `${ipnBaseUrl}/paiement/erreur`,
     };
 
     const response = await fetch("https://paytech.sn/api/payment/request-payment", {
