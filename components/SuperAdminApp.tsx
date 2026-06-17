@@ -214,8 +214,8 @@ export default function SuperAdminApp() {
           <div className="font-extrabold leading-tight text-[.88rem]">YamaneTech<span className="block text-[.64rem] font-semibold tracking-wide text-[#FFC93C]">SUPER ADMIN</span></div>
         </div>
         <div className="m-2.5 flex items-center gap-2.5 rounded-[11px] border border-[#6366F1]/20 bg-[#6366F1]/10 px-3 py-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-g1 text-[.85rem] font-extrabold text-white">JD</div>
-          <div><div className="text-[.84rem] font-bold">Konnecta Groupe</div><div className="text-[.68rem] font-semibold text-[#FFC93C]">Super Administrateur</div></div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-g1 text-[.85rem] font-extrabold text-white">SA</div>
+          <div><div className="text-[.84rem] font-bold">Super Administrateur</div><div className="text-[.68rem] font-semibold text-[#FFC93C]">Annonce.ID</div></div>
         </div>
         <nav className="flex-1 overflow-y-auto px-2.5 py-1">
           {NAV.map((n) => (

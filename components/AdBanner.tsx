@@ -106,7 +106,7 @@ export default function AdBanner({
         <span className="absolute left-0 top-0 z-20 rounded-br-lg bg-black/60 px-3 py-1 text-[.65rem] font-bold uppercase tracking-widest text-white/90 backdrop-blur-md">
           {label}
         </span>
-        <div className="w-full relative bg-gray-100 flex items-center justify-center aspect-[4/1]">
+        <div className="w-full relative bg-gray-100 flex items-center justify-center h-[80px] sm:h-[100px] md:h-[120px]">
           {activeImage.startsWith('data:video') ? (
              <video src={activeImage} autoPlay loop muted playsInline className="w-full h-full object-cover" />
           ) : (
