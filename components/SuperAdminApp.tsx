@@ -157,7 +157,7 @@ export default function SuperAdminApp() {
       setAllListings(allAds || []);
 
       // Profils
-      const { data: profs } = await sb.from("profiles").select("id, full_name, avatar_url, phone, role, bio, free_ads_remaining, created_at").order("created_at", { ascending: false }).limit(100);
+      const { data: profs } = await sb.from("profiles").select("id, full_name, avatar_url, phone, role, bio, free_ads_remaining, free_premium, created_at").order("created_at", { ascending: false }).limit(100);
       setProfiles(profs || []);
 
       // Achats
@@ -604,6 +604,17 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
     reload();
   }
 
+  // Accorder/retirer le VIP gratuit (annonces Premium offertes)
+  async function toggleVip(userId: string, current: boolean) {
+    const sb = createClient();
+    const { error } = await sb.from("profiles").update({ free_premium: !current }).eq("id", userId);
+    if (error) { T("⚠ Erreur (colonne free_premium ou droits)"); return; }
+    // Bascule aussi les annonces existantes du vendeur (si autorisé par RLS)
+    await sb.from("listings").update({ premium: !current }).eq("user_id", userId);
+    T(!current ? "🎁 VIP gratuit activé (annonces Premium)" : "VIP gratuit retiré");
+    reload();
+  }
+
   return (
     <>
       <PageHead title="👥 Utilisateurs" sub={`${profiles.length} comptes · ${filtered.length} affichés`} />
@@ -623,9 +634,11 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
                   <div className="text-[.72rem] text-[#8B949E]">{u.phone || "—"} · {u.bio ? u.bio.slice(0, 30) + "…" : "Pas de bio"} · Crédits: {u.free_ads_remaining ?? "—"}</div>
                 </div>
                 <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${u.role === "pro" || u.role === "business" ? "bg-violet-500/15 text-violet-300" : u.role === "admin" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400"}`}>{u.role || "user"}</span>
+                {u.free_premium && <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[.68rem] font-bold text-amber-300">🎁 VIP gratuit</span>}
                 <div className="text-[.72rem] text-[#8B949E] shrink-0">{u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "—"}</div>
                 <div className="flex gap-1.5 shrink-0">
                   <button onClick={() => toggleRole(u.id, u.role || "user")} className="rounded-[7px] bg-white/5 px-2.5 py-1.5 text-[.72rem] font-bold text-[#A5B4FC] hover:bg-[#6366F1]/20" title="Changer rôle">{u.role === "pro" ? "👤 → User" : "🚀 → Pro"}</button>
+                  <button onClick={() => toggleVip(u.id, !!u.free_premium)} className={`rounded-[7px] px-2.5 py-1.5 text-[.72rem] font-bold ${u.free_premium ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-[#FFC93C] hover:bg-amber-500/15"}`} title="Annonces Premium offertes">{u.free_premium ? "🎁 Retirer VIP" : "🎁 VIP gratuit"}</button>
                 </div>
               </div>
             ))}

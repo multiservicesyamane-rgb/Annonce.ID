@@ -158,7 +158,9 @@ export default function PublishWizard() {
 
   async function handlePublish() {
     if (loadingProfile) return show("⏳ Chargement...");
-    if (boost === 0 && freeAdsRemaining <= 0) return show("⚠ Plus d'annonces gratuites.");
+    // Comptes "VIP gratuit" : annonces Premium offertes, sans limite ni paiement
+    const isVipFree = !!userProfile?.free_premium;
+    if (!isVipFree && boost === 0 && freeAdsRemaining <= 0) return show("⚠ Plus d'annonces gratuites.");
     setIsPublishing(true);
     show("Création en cours...");
     const { data: { user } } = await supabase.auth.getUser();
@@ -180,7 +182,9 @@ export default function PublishWizard() {
       region, commune, custom_commune: customCommune,
       image: uploadedPhotos.length > 0 ? uploadedPhotos[0] : "https://placehold.co/600x400?text=Sans+Image",
       photos: uploadedPhotos, specs,
-      status: boost === 0 ? "active" : "pending"
+      // VIP gratuit → annonce Premium + active immédiatement, sans paiement
+      premium: isVipFree || undefined,
+      status: (boost === 0 || isVipFree) ? "active" : "pending"
     };
 
     async function saveAdaptive(isUpdate: boolean) {
