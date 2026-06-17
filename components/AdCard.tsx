@@ -71,7 +71,7 @@ export default function AdCard({ ad }: { ad: Listing }) {
 
         {/* Prix */}
         <div className={`font-display text-[.85rem] md:text-[.95rem] font-extrabold tracking-tight ${priceStyles}`}>
-          {ad.price} FCFA
+          {ad.price}
         </div>
 
         {/* Localisation */}

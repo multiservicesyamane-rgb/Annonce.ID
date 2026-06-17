@@ -26,7 +26,7 @@ export default function Header() {
           
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
-            <img src="/annoncesn.jpeg" alt="Annonce.Sn" className="h-[30px] md:h-[40px] w-auto object-contain rounded-md" />
+            <img src="/annoncesn.jpeg" alt="Annonce.ID" className="h-[30px] md:h-[40px] w-auto object-contain rounded-md" />
           </Link>
 
           {/* Search Bar - Center on PC, Hidden on Mobile */}
@@ -75,10 +75,10 @@ export default function Header() {
               ) : (
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/boutique/${user.id}`}
+                    href="/boutiques"
                     className="flex items-center px-3 py-1.5 border border-gold bg-gold/10 text-gold-dark dark:text-gold hover:bg-gold hover:text-dark-900 rounded-[10px] transition-colors font-bold text-[.8rem]"
                   >
-                    🏪 Boutique
+                    🏪 Boutiques
                   </Link>
                   <Link
                     href="/dashboard"

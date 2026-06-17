@@ -28,7 +28,7 @@ export default async function HomePage() {
   // Fetch recent active listings — only lightweight columns (NOT photos/description which are huge base64)
   const { data: recentListings } = await supabase
     .from('listings')
-    .select('id, slug, title, price, location, image, category, views, created_at')
+    .select('id, slug, title, price, price_type, location, image, category, views, created_at')
     .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(20);
@@ -38,7 +38,7 @@ export default async function HomePage() {
     id: ad.id,
     slug: ad.slug,
     title: ad.title,
-    price: ad.price ? `${formatNumber(ad.price)} FCFA` : "Gratuit",
+    price: ad.price_type === "Sur devis" ? "Sur devis" : (ad.price && ad.price !== "0" ? `${formatNumber(ad.price)} FCFA` : "Gratuit"),
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
@@ -48,7 +48,7 @@ export default async function HomePage() {
   // Fetch actual featured listings (À la Une)
   const { data: dbFeatured } = await supabase
     .from('listings')
-    .select('id, slug, title, price, location, image, category, views, created_at')
+    .select('id, slug, title, price, price_type, location, image, category, views, created_at')
     .eq('status', 'active')
     .or('featured.eq.true,is_featured.eq.true')
     .order('created_at', { ascending: false })
@@ -58,7 +58,7 @@ export default async function HomePage() {
     id: ad.id,
     slug: ad.slug,
     title: ad.title,
-    price: ad.price ? `${formatNumber(ad.price)} FCFA` : "Gratuit",
+    price: ad.price_type === "Sur devis" ? "Sur devis" : (ad.price && ad.price !== "0" ? `${formatNumber(ad.price)} FCFA` : "Gratuit"),
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
@@ -68,7 +68,7 @@ export default async function HomePage() {
   // Fetch actual premium listings (Premium)
   const { data: dbPremium } = await supabase
     .from('listings')
-    .select('id, slug, title, price, location, image, category, views, created_at')
+    .select('id, slug, title, price, price_type, location, image, category, views, created_at')
     .eq('status', 'active')
     .or('premium.eq.true,is_premium.eq.true')
     .order('created_at', { ascending: false })
@@ -78,7 +78,7 @@ export default async function HomePage() {
     id: ad.id,
     slug: ad.slug,
     title: ad.title,
-    price: ad.price ? `${formatNumber(ad.price)} FCFA` : "Gratuit",
+    price: ad.price_type === "Sur devis" ? "Sur devis" : (ad.price && ad.price !== "0" ? `${formatNumber(ad.price)} FCFA` : "Gratuit"),
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
@@ -137,18 +137,20 @@ export default async function HomePage() {
 
 
       {/* À LA UNE */}
-      <ScrollReveal className="wrap pt-3 pb-1 md:pt-5 md:pb-2" delay={100}>
-        <div className="mb-2 md:mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 font-display text-[1.1rem] md:text-[1.25rem] font-bold text-gray-900">
-            Annonces à la Une <span className="badge b-une">✦ UNE</span>
-          </h2>
-          <Link href="/recherche" className="text-[.82rem] font-semibold text-green hover:text-gold-dark">
-            Voir tout →
-          </Link>
-        </div>
-        
-        <UneCarousel listings={une} />
-      </ScrollReveal>
+      {une && une.length > 0 && (
+        <ScrollReveal className="wrap pt-3 pb-1 md:pt-5 md:pb-2" delay={100}>
+          <div className="mb-2 md:mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 font-display text-[1.1rem] md:text-[1.25rem] font-bold text-gray-900">
+              Annonces à la Une <span className="badge b-une">✦ UNE</span>
+            </h2>
+            <Link href="/recherche" className="text-[.82rem] font-semibold text-green hover:text-gold-dark">
+              Voir tout →
+            </Link>
+          </div>
+          
+          <UneCarousel listings={une} />
+        </ScrollReveal>
+      )}
 
       {/* ZONE STRATÉGIQUE PUB 1 : Entre À la Une et Premium */}
       <ScrollReveal className="wrap py-3" delay={150}>
@@ -161,23 +163,23 @@ export default async function HomePage() {
       </ScrollReveal>
 
       {/* PREMIUM carousel */}
-      <ScrollReveal delay={200}>
-      <section className="bg-gradient-to-b from-gray-50 to-white dark:from-[#0f172a] dark:to-black py-4 md:py-8 relative overflow-hidden transition-colors">
-        {/* Subtle glowing orb in background (Dark mode only) */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gold/5 rounded-full blur-[100px] pointer-events-none hidden dark:block"></div>
-        <div className="wrap relative z-10">
-          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="flex items-center gap-3 font-display text-[1.2rem] md:text-[1.4rem] font-bold text-gray-900 dark:text-white tracking-tight">
-              Annonces Premium <span className="bg-gradient-to-r from-gold to-[#F3E5AB] text-dark-900 px-3 py-0.5 rounded-full text-[0.65rem] font-extrabold uppercase tracking-widest shadow-[0_0_15px_rgba(212,175,55,0.3)]">VIP</span>
-            </h2>
-            <Link href="/recherche" className="text-[.85rem] font-semibold text-gold hover:text-gold-dark dark:hover:text-white transition-colors flex items-center gap-2">
-              Découvrir la sélection <span>→</span>
-            </Link>
-          </div>
-          
-          <div className="no-scrollbar flex gap-1.5 md:gap-3 overflow-x-auto pb-4 snap-x pt-2 px-1">
-            {prem.length > 0 ? (
-              prem.map((ad) => (
+      {prem && prem.length > 0 && (
+        <ScrollReveal delay={200}>
+        <section className="bg-gradient-to-b from-gray-50 to-white dark:from-[#0f172a] dark:to-black py-4 md:py-8 relative overflow-hidden transition-colors">
+          {/* Subtle glowing orb in background (Dark mode only) */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gold/5 rounded-full blur-[100px] pointer-events-none hidden dark:block"></div>
+          <div className="wrap relative z-10">
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h2 className="flex items-center gap-3 font-display text-[1.2rem] md:text-[1.4rem] font-bold text-gray-900 dark:text-white tracking-tight">
+                Annonces Premium <span className="bg-gradient-to-r from-gold to-[#F3E5AB] text-dark-900 px-3 py-0.5 rounded-full text-[0.65rem] font-extrabold uppercase tracking-widest shadow-[0_0_15px_rgba(212,175,55,0.3)]">VIP</span>
+              </h2>
+              <Link href="/recherche" className="text-[.85rem] font-semibold text-gold hover:text-gold-dark dark:hover:text-white transition-colors flex items-center gap-2">
+                Découvrir la sélection <span>→</span>
+              </Link>
+            </div>
+            
+            <div className="no-scrollbar flex gap-1.5 md:gap-3 overflow-x-auto pb-4 snap-x pt-2 px-1">
+              {prem.map((ad) => (
                 <Link
                   key={ad.id}
                   href={`/annonce/${ad.id}/${ad.slug}`}
@@ -209,34 +211,12 @@ export default async function HomePage() {
                     </div>
                   </div>
                 </Link>
-              ))
-            ) : (
-              // Beautiful placeholders when empty
-              [1, 2, 3].map((num) => (
-                <Link
-                  key={num}
-                  href="/publier"
-                  className="w-[200px] md:w-[290px] shrink-0 overflow-hidden rounded-[16px] bg-white dark:bg-[#1A1A1A]/80 border-2 border-dashed border-gold/30 hover:border-gold/80 shadow-sm transition-all duration-300 hover:-translate-y-2 snap-start flex flex-col justify-between p-6 min-h-[280px] text-center"
-                >
-                  <div className="flex flex-col items-center justify-center my-auto">
-                    <span className="text-4xl mb-4">⭐</span>
-                    <h4 className="font-display font-bold text-gray-900 dark:text-white text-[.9rem] md:text-[1rem] mb-2">
-                      Votre Annonce Premium
-                    </h4>
-                    <p className="text-[.7rem] md:text-[.8rem] text-gray-500 dark:text-gray-400 leading-relaxed max-w-[200px] mx-auto">
-                      Boostez votre annonce pour la placer ici et vendre 10x plus vite !
-                    </p>
-                  </div>
-                  <div className="w-full bg-gradient-to-r from-gold to-[#F3E5AB] text-black py-2.5 rounded-xl text-[0.75rem] font-bold uppercase tracking-wider shadow-sm mt-4">
-                    Placer mon annonce
-                  </div>
-                </Link>
-              ))
-            )}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-      </ScrollReveal>
+        </section>
+        </ScrollReveal>
+      )}
 
       {/* NOUVELLES ANNONCES (Déplacé sous Premium) */}
       <ScrollReveal className="wrap py-3 md:py-6" delay={50}>
@@ -269,7 +249,7 @@ export default async function HomePage() {
               </h2>
               <p className="text-[.85rem] text-gray-500 mt-1">Découvrez les meilleures entreprises et vendeurs pros</p>
             </div>
-            <Link href="/recherche" className="text-[.85rem] font-semibold text-green hover:text-gold-dark">
+            <Link href="/boutiques" className="text-[.85rem] font-semibold text-green hover:text-gold-dark">
               Toutes les boutiques →
             </Link>
           </div>
@@ -357,7 +337,7 @@ export default async function HomePage() {
         <div className="relative z-10 mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-6 px-4 py-10 max-sm:flex-col max-sm:text-center">
           <div>
             <h2 className="font-display text-[1.5rem] font-extrabold text-white">
-              Vendez vite avec <em className="not-italic text-neon-gold [text-shadow:0_0_16px_rgba(255,201,60,.5)]">Annonces.sn</em>
+              Vendez vite avec <em className="not-italic text-neon-gold [text-shadow:0_0_16px_rgba(255,201,60,.5)]">Annonce.ID</em>
             </h2>
             <p className="mt-1 text-[.88rem] text-white/65">Publiez gratuitement ou boostez pour des milliers de vues</p>
           </div>

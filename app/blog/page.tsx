@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Blog & Actualités | Annonces.sn",
+  title: "Blog & Actualités | Annonce.ID",
   description: "Dernières actualités sur les prix, les produits et le marché en Afrique de l'Ouest.",
 };
 

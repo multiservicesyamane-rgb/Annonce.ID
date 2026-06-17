@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!article) return { title: "Article introuvable" };
   
   return {
-    title: `${article.title} | Blog Annonces.sn`,
+    title: `${article.title} | Blog Annonce.ID`,
     description: article.excerpt,
     openGraph: {
       title: article.title,
@@ -52,7 +52,7 @@ export default function BlogPostPage({ params }: Props) {
         </h1>
         <div className="flex items-center justify-center gap-4 text-gray-500 text-[.9rem]">
           <span>📅 {article.date}</span>
-          <span>✍️ Équipe Annonces.sn</span>
+          <span>✍️ Équipe Annonce.ID</span>
           <ShareButton title={article.title} />
         </div>
       </div>
@@ -64,14 +64,14 @@ export default function BlogPostPage({ params }: Props) {
 
       {/* Content */}
       <article 
-        className="prose prose-lg dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed"
+         className="prose prose-lg dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed"
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
 
       {/* CTA Box */}
       <div className="mt-12 bg-green/10 dark:bg-green/5 border border-green/20 rounded-2xl p-8 text-center">
         <h3 className="font-bold text-[1.4rem] text-gray-900 dark:text-white mb-3">Prêt à faire de bonnes affaires ?</h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">Rejoignez des milliers de Sénégalais qui vendent et achètent chaque jour sur Annonces.sn.</p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">Rejoignez des milliers de Sénégalais qui vendent et achètent chaque jour sur Annonce.ID.</p>
         <Link href="/publier" className="btn btn-green shadow-xl">Publier une annonce gratuite</Link>
       </div>
 

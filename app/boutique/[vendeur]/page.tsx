@@ -19,11 +19,26 @@ export default async function BoutiquePage({ params }: Props) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Fetch profile
-  const { data: profile } = await supabase.from('profiles').select('id, full_name, avatar_url, phone, role, created_at, bio, social_links').eq('id', sellerId).single() as { data: any };
+  // Fetch profile — try by UUID first, then fallback to name slug match
+  let profile: any = null;
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(sellerId);
   
+  if (isUuid) {
+    const { data } = await supabase.from('profiles').select('id, full_name, avatar_url, phone, role, created_at, bio, social_links').eq('id', sellerId).single();
+    profile = data;
+  }
+  
+  // Fallback: search by name slug (ex: "boutique-pro" → matches "Boutique Pro")
+  if (!profile) {
+    const nameSearch = decodeURIComponent(sellerId).replace(/-/g, ' ');
+    const { data } = await supabase.from('profiles').select('id, full_name, avatar_url, phone, role, created_at, bio, social_links').ilike('full_name', `%${nameSearch}%`).limit(1).single();
+    profile = data;
+  }
+
+  const resolvedId = profile?.id || sellerId;
+
   // Fetch their active listings
-  const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, location, image, category, views').eq('user_id', sellerId).eq('status', 'active').order('created_at', { ascending: false });
+  const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, views').eq('user_id', resolvedId).eq('status', 'active').order('created_at', { ascending: false });
 
   let name = profile?.full_name || "Boutique Pro";
   if (name.includes('@')) {
@@ -39,7 +54,7 @@ export default async function BoutiquePage({ params }: Props) {
     id: ad.id,
     slug: ad.slug,
     title: ad.title,
-    price: ad.price ? `${formatNumber(ad.price)} FCFA` : "Gratuit",
+    price: ad.price_type === "Sur devis" ? "Sur devis" : (ad.price && ad.price !== "0" ? `${formatNumber(ad.price)} FCFA` : "Gratuit"),
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
@@ -89,9 +104,7 @@ export default async function BoutiquePage({ params }: Props) {
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {ads.map((a: any) => (
-              <Link key={a.id} href={`/annonce/${a.slug}`} className="block hover:opacity-90 transition-opacity">
-                <AdCard ad={a} />
-              </Link>
+              <AdCard key={a.id} ad={a} />
             ))}
           </div>
         )}

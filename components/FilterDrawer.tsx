@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import PriceSlider from "./PriceSlider";
 import { CATEGORIES } from "@/lib/constants";
 
@@ -17,6 +17,9 @@ export default function FilterDrawer({
   onClose: () => void;
   onApply: (filters: any) => void;
 }) {
+  const searchParams = useSearchParams();
+
+  const [category, setCategory] = useState<string>("Toutes");
   const [premiumOnly, setPremiumOnly] = useState(false);
   const [condition, setCondition] = useState<string>("Tous");
   const [sellerType, setSellerType] = useState<string>("Tous");
@@ -32,6 +35,18 @@ export default function FilterDrawer({
     }
     return () => { document.body.style.overflow = ""; };
   }, [open]);
+
+  // Sync state with URL search params
+  useEffect(() => {
+    setCategory(searchParams.get("category") || "Toutes");
+    setPremiumOnly(searchParams.get("premium") === "1");
+    setCondition(searchParams.get("condition") || "Tous");
+    setSellerType(searchParams.get("sellerType") || "Tous");
+    setLocation(searchParams.get("location") || "Toutes");
+    const min = Number(searchParams.get("min")) || 0;
+    const max = Number(searchParams.get("max")) || 5000000;
+    setPriceRange([min, max]);
+  }, [searchParams, open]);
 
   return (
     <>
@@ -56,6 +71,21 @@ export default function FilterDrawer({
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-5">
+            {/* Catégories */}
+            <div className="mb-5">
+              <h3 className="mb-2 text-[.8rem] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Catégories</h3>
+              <select 
+                value={category} 
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-[10px] border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 px-3 py-2.5 text-[.88rem] text-gray-900 dark:text-white outline-none focus:border-green transition"
+              >
+                <option value="Toutes">Toutes les catégories</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat.slug} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Localisation */}
             <div className="mb-5">
               <h3 className="mb-2 text-[.8rem] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Localisation</h3>
@@ -123,7 +153,7 @@ export default function FilterDrawer({
           <div className="border-t border-gray-100 dark:border-dark-border p-4">
             <button 
               onClick={() => {
-                onApply({ condition, sellerType, premiumOnly, priceRange, location });
+                onApply({ category, condition, sellerType, premiumOnly, priceRange, location });
                 onClose();
               }} 
               className="btn btn-green btn-block"

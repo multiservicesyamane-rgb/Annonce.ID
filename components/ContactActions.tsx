@@ -49,8 +49,15 @@ export default function ContactActions({ phone, title, adId, sellerId }: { phone
     setTimeout(() => setToast(null), 2200);
   };
   
-  const formattedPhone = phone ? phone.replace(/[^0-9+]/g, "") : "";
-  const wa = formattedPhone ? `https://wa.me/${formattedPhone.replace("+", "")}?text=${encodeURIComponent(`Bonjour, votre annonce "${title}" est-elle toujours disponible ?`)}` : "#";
+  const formattedPhone = (() => {
+    if (!phone) return "";
+    let clean = phone.replace(/[^0-9]/g, "");
+    if (clean.length === 9 && (clean.startsWith("7") || clean.startsWith("3"))) {
+      clean = "221" + clean;
+    }
+    return clean;
+  })();
+  const wa = formattedPhone ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(`Bonjour, votre annonce "${title}" est-elle toujours disponible ?`)}` : "#";
 
   const handleStartChat = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -84,7 +91,7 @@ export default function ContactActions({ phone, title, adId, sellerId }: { phone
       return;
     }
 
-    router.push("/dashboard?panel=messages");
+    router.push(`/dashboard?panel=messages&contact=${sellerId}&listing=${adId}`);
   };
 
   return (

@@ -5,9 +5,9 @@ export const ARTICLES = [
     category: "Conseils Vente",
     date: "15 Juin 2026",
     image: "https://placehold.co/800x400/10B981/FFF?text=Vendre+Vite",
-    excerpt: "Découvrez les 5 astuces imparables pour rédiger une annonce accrocheuse et conclure vos ventes en un temps record sur Annonces.sn.",
+    excerpt: "Découvrez les 5 astuces imparables pour rédiger une annonce accrocheuse et conclure vos ventes en un temps record sur Annonce.ID.",
     content: `
-Vendre un article rapidement sur internet ne s'improvise pas. Au Sénégal, la concurrence est rude et les acheteurs sont de plus en plus exigeants. Voici comment vous démarquer sur Annonces.sn.
+Vendre un article rapidement sur internet ne s'improvise pas. Au Sénégal, la concurrence est rude et les acheteurs sont de plus en plus exigeants. Voici comment vous démarquer sur Annonce.ID.
 
 ### 1. La qualité des photos fait la différence
 Une annonce avec au moins 3 photos claires et lumineuses reçoit 5 fois plus de clics. Prenez vos photos à la lumière du jour, nettoyez l'objet et montrez-le sous tous ses angles. Évitez les photos floues ou sombres.
@@ -16,7 +16,7 @@ Une annonce avec au moins 3 photos claires et lumineuses reçoit 5 fois plus de 
 Ne mettez pas juste "iPhone à vendre". Soyez précis : "iPhone 13 Pro Max 256Go Noir - Très bon état". L'acheteur sait exactement ce qu'il regarde avant même de cliquer.
 
 ### 3. Le juste prix
-Faites une recherche sur Annonces.sn pour voir à combien se vendent les articles similaires. Un prix trop haut fera fuir les acheteurs, un prix trop bas éveillera les soupçons. Si vous êtes prêt à négocier, cochez l'option "Prix Négociable".
+Faites une recherche sur Annonce.ID pour voir à combien se vendent les articles similaires. Un prix trop haut fera fuir les acheteurs, un prix trop bas éveillera les soupçons. Si vous êtes prêt à négocier, cochez l'option "Prix Négociable".
 
 ### 4. Une description détaillée
 Racontez l'histoire du produit. S'il a un défaut (une rayure par exemple), dites-le ! L'honnêteté met en confiance. Précisez si vous avez encore la facture ou la boîte d'origine.
@@ -33,7 +33,7 @@ Si vous êtes pressé, le forfait VIP (5000 FCFA) place votre annonce tout en ha
     image: "https://placehold.co/800x400/2563EB/FFF?text=Immobilier+Dakar",
     excerpt: "Appartements aux Almadies, villas à Ngor, ou terrains à Keur Massar ? Voici comment trouver la perle rare.",
     content: `
-Le marché de l'immobilier à Dakar est en pleine effervescence. Que vous cherchiez à louer un studio étudiant ou à acheter une villa de luxe, Annonces.sn regroupe les meilleures offres des particuliers et des agences.
+Le marché de l'immobilier à Dakar est en pleine effervescence. Que vous cherchiez à louer un studio étudiant ou à acheter une villa de luxe, Annonce.ID regroupe les meilleures offres des particuliers et des agences.
 
 ### Où investir en 2026 ?
 - **Keur Massar et Diamniadio :** Les nouvelles zones en pleine expansion. Idéal pour l'achat de terrains à des prix encore abordables.
@@ -41,10 +41,10 @@ Le marché de l'immobilier à Dakar est en pleine effervescence. Que vous cherch
 - **Almadies et Ngor :** Le secteur privilégié pour les villas haut de gamme avec vue sur mer.
 
 ### Agence ou Particulier ?
-Passer par un particulier permet d'éviter les frais d'agence (qui s'élèvent souvent à un mois de loyer). Annonces.sn vous permet de contacter les propriétaires directement via WhatsApp pour planifier une visite.
+Passer par un particulier permet d'éviter les frais d'agence (qui s'élèvent souvent à un mois de loyer). Annonce.ID vous permet de contacter les propriétaires directement via WhatsApp pour planifier une visite.
 
 ### Astuce de recherche
-Utilisez les filtres de recherche d'Annonces.sn pour sélectionner le nombre de chambres, la présence d'un titre foncier, et un budget maximum. Ne payez jamais de visite en avance !
+Utilisez les filtres de recherche d'Annonce.ID pour sélectionner le nombre de chambres, la présence d'un titre foncier, et un budget maximum. Ne payez jamais de visite en avance !
     `
   },
   {
@@ -65,7 +65,7 @@ Les voitures dites "venant" (importées d'Europe ou des USA) sont généralement
 2. **Le dédouanement :** Demandez le CMC (Certificat de Mise à la Consommation) pour être sûr que la voiture est en règle.
 3. **Le mécanicien :** Ne concluez jamais une vente sans avoir fait inspecter la voiture par votre propre mécanicien de confiance.
 
-### Trouver la perle rare sur Annonces.sn
+### Trouver la perle rare sur Annonce.ID
 Les voitures les plus recherchées comme la Toyota Corolla ou la Hyundai Tucson partent très vite. Activez les notifications et connectez-vous tous les jours sur la section Véhicules de la plateforme !
     `
   },
@@ -77,7 +77,7 @@ Les voitures les plus recherchées comme la Toyota Corolla ou la Hyundai Tucson 
     image: "https://placehold.co/800x400/000000/FFF?text=Securite",
     excerpt: "Apprenez à repérer les faux vendeurs et sécurisez vos transactions en ligne avec nos conseils d'experts.",
     content: `
-La sécurité de nos utilisateurs est notre priorité absolue sur Annonces.sn. Voici les règles d'or pour acheter sereinement.
+La sécurité de nos utilisateurs est notre priorité absolue sur Annonce.ID. Voici les règles d'or pour acheter sereinement.
 
 ### Règle N°1 : Pas de paiement à l'avance !
 N'envoyez JAMAIS d'argent via Wave ou Orange Money avant d'avoir vu l'objet et rencontré le vendeur. Même si le vendeur prétend avoir besoin d'argent pour le transport ou pour "réserver" l'article.
@@ -89,7 +89,7 @@ Privilégiez toujours les lieux publics en plein jour (centres commerciaux, stat
 Un iPhone 15 Pro Max neuf à 150 000 FCFA ? C'est une arnaque. Les escrocs utilisent des prix absurdement bas pour attirer les victimes. 
 
 ### Règle N°4 : Les Vendeurs Vérifiés
-Sur Annonces.sn, privilégiez les vendeurs possédant le badge "Vendeur Vérifié". Cela signifie que notre équipe a vérifié leur identité et leur numéro de téléphone.
+Sur Annonce.ID, privilégiez les vendeurs possédant le badge "Vendeur Vérifié". Cela signifie que notre équipe a vérifié leur identité et leur numéro de téléphone.
     `
   },
   {
@@ -100,7 +100,7 @@ Sur Annonces.sn, privilégiez les vendeurs possédant le badge "Vendeur Vérifi�
     image: "https://placehold.co/800x400/8B5CF6/FFF?text=Smartphones",
     excerpt: "De Samsung à Apple en passant par Xiaomi, voici les téléphones que les Sénégalais s'arrachent cette année.",
     content: `
-Le marché de la téléphonie mobile est dynamique au Sénégal. Voici les modèles qui dominent les ventes sur Annonces.sn.
+Le marché de la téléphonie mobile est dynamique au Sénégal. Voici les modèles qui dominent les ventes sur Annonce.ID.
 
 ### 1. Samsung Galaxy A54 & A55
 Le roi du milieu de gamme. Avec un écran Amoled magnifique et une batterie increvable, la série A de Samsung reste le premier choix pour ceux qui veulent la qualité sans se ruiner.
@@ -126,7 +126,7 @@ L'entrée de gamme d'Apple reste incontournable sur le marché de l'occasion. C'
     image: "https://placehold.co/800x400/F59E0B/FFF?text=Mode+Senegal",
     excerpt: "Le mix parfait entre tradition et modernité. Décryptage des tenues qui font fureur cette année.",
     content: `
-La mode sénégalaise est un savant mélange de coupes traditionnelles et d'influences urbaines modernes. Sur Annonces.sn, la catégorie Mode explose à l'approche des fêtes de Korité et de Tabaski.
+La mode sénégalaise est un savant mélange de coupes traditionnelles et d'influences urbaines modernes. Sur Annonce.ID, la catégorie Mode explose à l'approche des fêtes de Korité et de Tabaski.
 
 ### Le retour du lin et du Bazin riche
 Le Bazin reste le roi incontesté pour les grandes occasions. Les couturiers rivalisent d'ingéniosité avec des broderies de plus en plus complexes et des coupes asymétriques.
@@ -151,7 +151,7 @@ Trouver un emploi à Dakar peut être un parcours du combattant. Mais avec la bo
 ### Un CV adapté au format moderne
 Oubliez le "Curriculum Vitae" écrit en gros. Soyez concis : vos expériences récentes en premier, vos compétences techniques, et surtout vos langues parlées (l'anglais est un atout majeur).
 
-### Utilisez la catégorie Emploi d'Annonces.sn
+### Utilisez la catégorie Emploi d'Annonce.ID
 Nous mettons quotidiennement à jour des dizaines d'offres d'emploi provenant de PME locales et de grandes entreprises. N'hésitez pas à publier vous-même une annonce de "Demande d'emploi" en y attachant vos compétences !
 
 ### Le réseau avant tout
@@ -175,7 +175,7 @@ Après des années de hausse, les loyers à Dakar (Plateau, Almadies, Ouakam) se
 La nouvelle ville de Diamniadio attire les investisseurs, tout comme la Petite Côte (Mbour, Saly, Nianing). Les terrains y prennent de la valeur chaque année. C'est le moment d'investir avant que les prix ne rattrapent ceux de la capitale.
 
 ### Les logements sociaux
-L'État continue de promouvoir les logements sociaux, notamment vers Thiès et Diamniadio, permettant aux jeunes cadres d'acquérir leur première maison avec des mensualités accessibles.
+L'État continue de promouvoir les logements sociaux, notamment vers Thiès et Diamniadio, permettant aux cadres d'acquérir leur première maison avec des mensualités accessibles.
     `
   }
 ];

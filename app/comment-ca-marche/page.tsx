@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Comment ça marche | Annonces.sn",
-  description: "Découvrez comment vendre et acheter facilement sur Annonces.sn en 3 étapes simples.",
+  title: "Comment ça marche | Annonce.ID",
+  description: "Découvrez comment vendre et acheter facilement sur Annonce.ID en 3 étapes simples.",
 };
 
 export default function HowItWorksPage() {
@@ -18,7 +18,7 @@ export default function HowItWorksPage() {
           Comment ça marche ?
         </h1>
         <p className="text-[1.1rem] text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          Que vous souhaitiez faire de la place chez vous ou développer votre commerce, vendre sur Annonces.sn est un jeu d'enfant.
+          Que vous souhaitiez faire de la place chez vous ou développer votre commerce, vendre sur Annonce.ID est un jeu d'enfant.
         </p>
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type MessageType = "text" | "image" | "location" | "audio" | "document";
@@ -17,6 +18,10 @@ interface Message {
 
 
 export default function ChatInterface() {
+  const searchParams = useSearchParams();
+  const urlContactId = searchParams.get("contact");
+  const urlListingId = searchParams.get("listing");
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [contacts, setContacts] = useState<any[]>([]);
@@ -46,7 +51,7 @@ export default function ChatInterface() {
         // Récupérer les messages liés à l'utilisateur
         const { data, error } = await supabase
           .from("messages")
-          .select("sender_id, receiver_id, content, created_at, type")
+          .select("sender_id, receiver_id, content, created_at, type, listing_id")
           .or(`sender_id.eq.${myId},receiver_id.eq.${myId}`)
           .order("created_at", { ascending: false })
           .limit(200);
@@ -86,12 +91,47 @@ export default function ChatInterface() {
                 return c;
               });
               setContacts(enrichedContacts);
-              setActiveContact(enrichedContacts[0]);
+              // Auto-select contact from URL params if provided
+              if (urlContactId) {
+                const target = enrichedContacts.find((c: any) => c.id === urlContactId);
+                setActiveContact(target || enrichedContacts[0]);
+              } else {
+                setActiveContact(enrichedContacts[0]);
+              }
               return;
             }
           } catch(e) {}
           
-          setActiveContact(realContacts[0]);
+          // Auto-select contact from URL params if provided
+          if (urlContactId) {
+            const target = realContacts.find((c: any) => c.id === urlContactId);
+            setActiveContact(target || realContacts[0]);
+          } else {
+            setActiveContact(realContacts[0]);
+          }
+        } else if (urlContactId) {
+          // No existing messages but we have a URL contact — create a placeholder entry
+          const placeholderId = urlContactId;
+          const newContact = {
+            id: placeholderId,
+            listingId: urlListingId || null,
+            name: `Client ${placeholderId.substring(0, 4)}`,
+            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${placeholderId}`,
+            lastMessage: "Nouvelle conversation",
+            time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+            unread: 0,
+            online: true
+          };
+          // Fetch the profile name for this contact
+          try {
+            const { data: prof } = await supabase.from('profiles').select('id, full_name, avatar_url').eq('id', placeholderId).single();
+            if (prof) {
+              newContact.name = prof.full_name || newContact.name;
+              newContact.avatar = prof.avatar_url || newContact.avatar;
+            }
+          } catch(e) {}
+          setContacts([newContact]);
+          setActiveContact(newContact);
         } else {
           // Aucun message, on laisse la liste vide pour afficher l'Empty State
           setContacts([]);

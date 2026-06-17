@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Mentions Légales | Annonces.sn",
-  description: "Mentions légales de la plateforme Annonces.sn",
+  title: "Mentions Légales | Annonce.ID",
+  description: "Mentions légales de la plateforme Annonce.ID",
 };
 
 export default function MentionsLegalesPage() {
@@ -12,7 +12,7 @@ export default function MentionsLegalesPage() {
       
       <div className="prose prose-lg dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
         <h3 className="font-display font-bold text-[1.4rem] mt-8 mb-4 text-gray-900 dark:text-white">1. Éditeur du site</h3>
-        <p>Le site <strong>Annonces.sn</strong> est édité par la société <strong>YamaneTech</strong>.</p>
+        <p>Le site <strong>Annonce.ID</strong> est édité par la société <strong>YamaneTech</strong>.</p>
         <ul className="list-disc ml-6 mb-4">
           <li><strong>Siège social :</strong> Dakar, Sénégal</li>
           <li><strong>Email :</strong> contact@yamanetech.com</li>
@@ -29,12 +29,12 @@ export default function MentionsLegalesPage() {
 
         <h3 className="font-display font-bold text-[1.4rem] mt-8 mb-4 text-gray-900 dark:text-white">3. Propriété Intellectuelle</h3>
         <p>
-          L'ensemble du contenu (textes, images, code source, logos) présent sur le site Annonces.sn est la propriété exclusive de YamaneTech, à l'exception des contenus publiés par les utilisateurs (photos des annonces, descriptions) qui restent la propriété de leurs auteurs respectifs. Toute reproduction sans autorisation est interdite.
+          L'ensemble du contenu (textes, images, code source, logos) présent sur le site Annonce.ID est la propriété exclusive de YamaneTech, à l'exception des contenus publiés par les utilisateurs (photos des annonces, descriptions) qui restent la propriété de leurs auteurs respectifs. Toute reproduction sans autorisation est interdite.
         </p>
 
         <h3 className="font-display font-bold text-[1.4rem] mt-8 mb-4 text-gray-900 dark:text-white">4. Responsabilité</h3>
         <p>
-          Annonces.sn agit en tant que simple intermédiaire technique permettant la mise en relation entre acheteurs et vendeurs. Nous n'intervenons pas dans les transactions et ne pouvons être tenus responsables de la qualité des produits vendus ou d'éventuels litiges entre utilisateurs.
+          Annonce.ID agit en tant que simple intermédiaire technique permettant la mise en relation entre acheteurs et vendeurs. Nous n'intervenons pas dans les transactions et ne pouvons être tenus responsables de la qualité des produits vendus ou d'éventuels litiges entre utilisateurs.
         </p>
       </div>
     </div>

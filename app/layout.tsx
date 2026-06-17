@@ -3,13 +3,13 @@ import "./globals.css";
 import SiteShell from "@/components/SiteShell";
 import CookieBanner from "@/components/CookieBanner";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://annonces.sn";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://annonce.id";
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: {
-    default: "Annonces.sn — Petites Annonces Premium au Sénégal",
-    template: "%s · Annonces.sn",
+    default: "Annonce.ID — Petites Annonces Premium au Sénégal",
+    template: "%s · Annonce.ID",
   },
   description:
     "Achetez, vendez, louez en Afrique de l'Ouest. 27 pays, 250 000+ annonces. Contact direct WhatsApp, sans intermédiaire.",
@@ -17,14 +17,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    siteName: "Annonces.sn",
-    title: "Annonces.sn — Petites Annonces Premium au Sénégal",
+    siteName: "Annonce.ID",
+    title: "Annonce.ID — Petites Annonces Premium au Sénégal",
     description: "Tout le Sénégal à portée de main · Achetez et vendez facilement.",
   },
   robots: { index: true, follow: true },
   manifest: "/manifest.json",
   appleWebApp: {
-    title: "Annonces.sn",
+    title: "Annonce.ID",
     statusBarStyle: "default",
     capable: true,
   },

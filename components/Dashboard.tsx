@@ -169,8 +169,14 @@ export default function Dashboard() {
         });
 
         // Fetch listings
-        supabase.from('listings').select('id, slug, title, price, location, image, category, category_slug, status, views, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data }) => {
-          if (data) setAds(data);
+        supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, category_slug, status, views, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data }) => {
+          if (data) {
+            const formatted = data.map((d: any) => ({
+              ...d,
+              price: d.price_type === "Sur devis" ? "Sur devis" : (d.price && d.price !== "0" ? `${formatNumber(d.price)} FCFA` : "Gratuit")
+            }));
+            setAds(formatted);
+          }
           setLoadingAds(false);
         });
 
@@ -538,7 +544,7 @@ export default function Dashboard() {
                         <Link href={`/annonce/${a.id}/${a.slug}`} className="truncate block text-[.9rem] sm:text-[1rem] font-bold dark:text-white hover:text-green">
                           {a.title}
                         </Link>
-                        <div className="text-[.85rem] font-bold text-green mt-1">{a.price} FCFA</div>
+                        <div className="text-[.85rem] font-bold text-green mt-1">{a.price}</div>
                         <div className="text-[.75rem] text-gray-500 dark:text-white/50 mt-1 flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${a.status === 'inactive' ? 'bg-gray-400' : a.status === 'sold' ? 'bg-brand-red' : 'bg-green'}`}></span>
                           {a.status === 'inactive' ? 'Inactif' : a.status === 'sold' ? 'Vendu' : 'Actif'} · {a.views || 0} vues
@@ -744,7 +750,7 @@ export default function Dashboard() {
                         <Link href={`/annonce/${ad.id}/${ad.slug}`} className="truncate block text-[1rem] font-bold dark:text-white hover:text-green max-w-full">
                           {ad.title}
                         </Link>
-                        <div className="text-[.9rem] font-bold text-green dark:text-neon-green shrink-0">{ad.price} FCFA</div>
+                        <div className="text-[.9rem] font-bold text-green dark:text-neon-green shrink-0">{ad.price}</div>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-[.75rem] text-gray-500 dark:text-white/50">
                         {ad.category} · {ad.views || 0} vues ·

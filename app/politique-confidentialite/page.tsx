@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Politique de Confidentialité | Annonces.sn",
+  title: "Politique de Confidentialité | Annonce.ID",
   description: "Notre politique de confidentialité et de gestion des données personnelles.",
 };
 
@@ -12,9 +12,9 @@ export default function PrivacyPolicyPage() {
       
       <div className="prose prose-lg dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
         <p><strong>Dernière mise à jour : 15 Juin 2026</strong></p>
-
+ 
         <p>
-          Chez Annonces.sn, la confidentialité et la sécurité de vos données personnelles sont une priorité absolue. 
+          Chez Annonce.ID, la confidentialité et la sécurité de vos données personnelles sont une priorité absolue. 
           Cette politique explique comment nous recueillons, utilisons et protégeons vos informations.
         </p>
 
@@ -36,7 +36,7 @@ export default function PrivacyPolicyPage() {
 
         <h3 className="font-display font-bold text-[1.4rem] mt-8 mb-4 text-gray-900 dark:text-white">3. Publicité et Google AdSense</h3>
         <p>
-          Annonces.sn utilise Google AdSense pour diffuser des annonces publicitaires. Google, en tant que prestataire tiers, utilise des cookies (y compris le cookie DoubleClick) pour diffuser des annonces en fonction de vos visites antérieures sur notre site et sur d'autres sites web.
+          Annonce.ID utilise Google AdSense pour diffuser des annonces publicitaires. Google, en tant que prestataire tiers, utilise des cookies (y compris le cookie DoubleClick) pour diffuser des annonces en fonction de vos visites antérieures sur notre site et sur d'autres sites web.
         </p>
         <p>
           Vous pouvez désactiver la publicité ciblée par centres d'intérêt en visitant les 
@@ -45,7 +45,7 @@ export default function PrivacyPolicyPage() {
 
         <h3 className="font-display font-bold text-[1.4rem] mt-8 mb-4 text-gray-900 dark:text-white">4. Vos droits</h3>
         <p>
-          Conformément à la législation en vigueur, vous disposez d'un droit d'accès, de rectification, de suppression et d'opposition concernant vos données personnelles. Vous pouvez exercer ce droit à tout moment en supprimant votre compte depuis votre tableau de bord ou en nous contactant à <strong>privacy@annonces.sn</strong>.
+          Conformément à la législation en vigueur, vous disposez d'un droit d'accès, de rectification, de suppression et d'opposition concernant vos données personnelles. Vous pouvez exercer ce droit à tout moment en supprimant votre compte depuis votre tableau de bord ou en nous contactant à <strong>privacy@annonce.id</strong>.
         </p>
       </div>
     </div>

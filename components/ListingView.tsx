@@ -26,6 +26,7 @@ export default function ListingView({
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const [category, setCategory] = useState(searchParams.get("category") || "Toutes");
   const [premiumOnly, setPremiumOnly] = useState(searchParams.get("premium") === "1");
   const [minPrice, setMinPrice] = useState(Number(searchParams.get("min")) || 0);
   const [maxPrice, setMaxPrice] = useState(Number(searchParams.get("max")) || 5_000_000);
@@ -38,8 +39,23 @@ export default function ListingView({
   // Pagination
   const [visibleCount, setVisibleCount] = useState(12);
 
+  // Sync internal state with URL search params when they change
+  useEffect(() => {
+    setCategory(searchParams.get("category") || "Toutes");
+    setPremiumOnly(searchParams.get("premium") === "1");
+    setMinPrice(Number(searchParams.get("min")) || 0);
+    setMaxPrice(Number(searchParams.get("max")) || 5_000_000);
+    setCondition(searchParams.get("condition") || "Tous");
+    setSellerType(searchParams.get("sellerType") || "Tous");
+    setLocation(searchParams.get("location") || "Toutes");
+    setSort(searchParams.get("sort") || "recent");
+  }, [searchParams]);
+
   const filtered = useMemo(() => {
     let list = initial.filter((l) => {
+      // Filter by category
+      if (category !== "Toutes" && l.category !== category) return false;
+      
       if (premiumOnly && !l.premium) return false;
       const num = Number(l.price.replace(/[^0-9]/g, "")) || 0;
       if (num < minPrice || num > maxPrice) return false;
@@ -65,11 +81,12 @@ export default function ListingView({
     if (sort === "price-desc") list = [...list].sort((a, b) => price(b) - price(a));
     if (sort === "views") list = [...list].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
     return list;
-  }, [initial, premiumOnly, minPrice, maxPrice, condition, sellerType, location, sort]);
+  }, [initial, category, premiumOnly, minPrice, maxPrice, condition, sellerType, location, sort]);
 
   const visibleListings = filtered.slice(0, visibleCount);
 
   function handleApplyFilters(filters: any) {
+    setCategory(filters.category || "Toutes");
     setPremiumOnly(filters.premiumOnly);
     setMinPrice(filters.priceRange[0]);
     setMaxPrice(filters.priceRange[1]);
@@ -79,6 +96,10 @@ export default function ListingView({
     setVisibleCount(12); // reset pagination
 
     const params = new URLSearchParams(searchParams.toString());
+    
+    if (filters.category && filters.category !== "Toutes") params.set("category", filters.category);
+    else params.delete("category");
+    
     if (filters.premiumOnly) params.set("premium", "1");
     else params.delete("premium");
     params.set("min", filters.priceRange[0].toString());

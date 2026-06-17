@@ -10,38 +10,10 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   if (!listings || listings.length === 0) {
-    return (
-      <div className="no-scrollbar flex gap-2 md:gap-3 overflow-x-auto pb-4">
-        {[1, 2, 3].map((num) => (
-          <Link
-            key={num}
-            href="/publier"
-            className="w-[185px] md:w-[260px] shrink-0 overflow-hidden rounded-[14px] bg-white dark:bg-[#111722]/80 border-2 border-dashed border-purple-300 dark:border-purple-500/30 hover:border-purple-500 shadow-sm transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between p-4 min-h-[220px] text-center"
-          >
-            <div className="flex flex-col items-center justify-center my-auto">
-              <span className="text-3xl mb-2">🔥</span>
-              <h4 className="font-display font-bold text-gray-900 dark:text-white text-[.8rem] md:text-[0.9rem] mb-1">
-                Votre Annonce À la Une
-              </h4>
-              <p className="text-[.65rem] md:text-[.75rem] text-gray-500 dark:text-gray-400 leading-relaxed max-w-[180px] mx-auto">
-                Affichez votre annonce en haut de l'accueil pour attirer tous les regards !
-              </p>
-            </div>
-            <div className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2 rounded-xl text-[0.7rem] font-bold uppercase tracking-wider shadow-sm mt-3">
-              Défiler à la une
-            </div>
-          </Link>
-        ))}
-      </div>
-    );
+    return null;
   }
 
-  // Ensure we have at least 10 items for the loop
-  let displayListings = [...listings];
-  while (displayListings.length < 10) {
-    displayListings = [...displayListings, ...displayListings.map(u => ({ ...u, id: u.id + Math.random() }))];
-  }
-  displayListings = displayListings.slice(0, 10);
+  let displayListings = listings;
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -130,27 +102,6 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
             </div>
           </Link>
 
-          {/* Insert CTA card right after the first item */}
-          {i === 0 && (
-            <Link
-              href="/publier"
-              className="group shrink-0 w-[185px] md:w-[260px] bg-gradient-to-br from-[#121A2F] to-[#0B1526] border border-[#1E3050] rounded-[14px] p-3 md:p-5 flex flex-col items-center justify-center text-center shadow-lg hover:-translate-y-2 transition-all duration-300 hover:border-[#D4AF37] hover:shadow-[0_10px_30px_rgba(212,175,55,0.15)] relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.1)_0%,transparent_70%)] pointer-events-none"></div>
-              <h3 className="font-display font-bold text-white text-[.85rem] md:text-[1rem] mb-2 md:mb-3 leading-snug relative z-10 group-hover:text-[#D4AF37] transition-colors">
-                Propulsez vos ventes au sommet
-              </h3>
-              <div className="w-12 h-12 md:w-16 md:h-16 mb-2 md:mb-4 bg-[#1E3050]/50 rounded-full flex items-center justify-center text-xl md:text-3xl border border-[#D4AF37]/20 shadow-[0_0_20px_rgba(212,175,55,0.2)] relative z-10">
-                💎
-              </div>
-              <p className="hidden md:block text-[.75rem] text-[#8C9BB4] mb-5 leading-relaxed relative z-10">
-                Rejoignez l'élite et affichez vos annonces ici pour un maximum de visibilité.
-              </p>
-              <div className="bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] hover:from-[#F3E5AB] hover:to-[#D4AF37] text-black rounded-full font-bold px-4 py-2 md:px-6 md:py-3 transition-all duration-300 shadow-md relative z-10 w-full text-[.7rem] md:text-sm mt-auto md:mt-0">
-                Activer
-              </div>
-            </Link>
-          )}
         </React.Fragment>
       ))}
     </div>

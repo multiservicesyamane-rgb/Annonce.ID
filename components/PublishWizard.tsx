@@ -143,12 +143,14 @@ export default function PublishWizard() {
     }
     if (step === 3) {
       if (!title || title.trim().length < 10) return show("⚠ Titre: min 10 caractères.");
-      if (!price) return show("⚠ Indiquez un prix.");
+      if (priceType !== "Sur devis" && !price) return show("⚠ Indiquez un prix.");
       if (!desc || desc.trim().length < 30) return show("⚠ Description: min 30 caractères.");
       if (cat?.fields) {
         for (const field of cat.fields) {
-          if (!specs[field.label] || specs[field.label] === "Choisir...") {
-            return show(`⚠ "${field.label}" est obligatoire.`);
+          if (field.label.includes("*")) {
+            if (!specs[field.label] || specs[field.label] === "Choisir...") {
+              return show(`⚠ "${field.label}" est obligatoire.`);
+            }
           }
         }
       }
@@ -344,7 +346,7 @@ export default function PublishWizard() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Prix (FCFA) <span className="text-brand-red">*</span></label>
+                <label className="label">Prix (FCFA) {priceType !== "Sur devis" && <span className="text-brand-red">*</span>}</label>
                 <input className="input font-bold text-green" inputMode="numeric" value={price} onChange={(e) => setPrice(formatNumber(e.target.value.replace(/\D/g, "")))} placeholder="450 000" />
               </div>
               <div>

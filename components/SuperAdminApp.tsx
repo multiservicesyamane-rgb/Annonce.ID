@@ -128,7 +128,12 @@ export default function SuperAdminApp() {
   const T = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2100); };
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem("sa_authed") === "1") setAuthed(true);
+    if (typeof window !== "undefined" && sessionStorage.getItem("sa_authed") === "1") {
+      setAuthed(true);
+      if (!sessionStorage.getItem("sa_pass")) {
+        sessionStorage.setItem("sa_pass", ADMIN_CREDS.pass);
+      }
+    }
   }, []);
 
   // Fonction de chargement complète
@@ -592,7 +597,7 @@ function Moderation({ items, moderate }: { items: any[]; moderate: (id: string, 
 }
 
 async function adminApi(action: string, payload: Record<string, any> = {}) {
-  const pass = typeof window !== "undefined" ? sessionStorage.getItem("sa_pass") || "" : "";
+  const pass = (typeof window !== "undefined" && sessionStorage.getItem("sa_pass")) || ADMIN_CREDS.pass;
   const res = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pass, action, ...payload }) });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error || "Erreur serveur");
