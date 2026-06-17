@@ -6,7 +6,9 @@ import PaymentFlow from "@/components/PaymentFlow";
 import { BOOSTS, SUBSCRIPTION_PLANS } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
 
-export default function PaiementPage() {
+import { Suspense } from "react";
+
+function PaiementContent() {
   const searchParams = useSearchParams();
   const initialAnnonceId = searchParams.get("annonce_id") || searchParams.get("listing_id") || "";
   const initialBoost = searchParams.get("boost") || "";
@@ -234,3 +236,12 @@ export default function PaiementPage() {
     </div>
   );
 }
+
+export default function PaiementPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-black py-12 flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold">Chargement des formules...</div>}>
+      <PaiementContent />
+    </Suspense>
+  );
+}
+
