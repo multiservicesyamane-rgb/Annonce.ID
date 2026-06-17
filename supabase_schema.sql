@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   is_pro BOOLEAN DEFAULT false,
   rating NUMERIC(3, 2) DEFAULT 0.0,
   sales INTEGER DEFAULT 0,
-  free_ads_remaining INTEGER DEFAULT 2,
+  free_ads_remaining INTEGER DEFAULT 3,
+  subscription_plan VARCHAR(50) DEFAULT 'starter',
+  subscription_category VARCHAR(50) DEFAULT 'general',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

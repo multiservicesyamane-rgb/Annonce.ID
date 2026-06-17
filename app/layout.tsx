@@ -44,8 +44,19 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className="dark">
+    <html lang="fr" suppressHydrationWarning>
       <head>
+        {/* Anti-flash : applique le thème AVANT le rendu */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){
+            var s=localStorage.getItem('annonceid_dark');
+            var dark;
+            if(s!==null){dark=s==='true';}
+            else{var h=new Date().getHours();dark=h<6||h>=19;}
+            if(dark)document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+          })();
+        `}} />
         {/* Polices chargées via <link> (pas de fetch au build, fallback système si hors-ligne) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

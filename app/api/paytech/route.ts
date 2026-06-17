@@ -75,7 +75,7 @@ export async function POST(req: Request) {
 
     // 3. SECURITE: 4.1 Validation stricte (remplacement de Zod)
     const body = await req.json().catch(() => ({}));
-    const { amount, itemName, refCommand, listingId } = body;
+    const { amount, itemName, refCommand, listingId, boostKey, subKey, category } = body;
 
     if (typeof amount !== 'number' || amount <= 0 || amount > 10000000) {
       return NextResponse.json({ error: "Montant invalide." }, { status: 400 });
@@ -102,20 +102,29 @@ export async function POST(req: Request) {
       ? baseUrl
       : (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || PROD_FALLBACK).replace(/\/+$/, "");
 
+    const isDev = process.env.NODE_ENV === "development" || baseUrl.includes("localhost");
+    const paytechEnv = process.env.PAYTECH_ENV || (isDev ? "test" : "prod");
+
     const paymentData = {
       item_name: itemName || "Boost Annonce",
       item_price: amount,
       currency: "XOF",
       ref_command: refCommand || `CMD-${Date.now()}`,
       command_name: "Paiement Annonce.ID",
-      custom_field: JSON.stringify({ userId: secureUserId, listingId: listingId || "" }),
+      custom_field: JSON.stringify({
+        userId: secureUserId,
+        listingId: listingId || "",
+        boostKey: boostKey || "",
+        subKey: subKey || "",
+        category: category || ""
+      }),
 
-      env: "prod",
-      // PayTech exige des URLs HTTPS publiques. En dev (http://localhost) on bascule
-      // toutes les URLs de callback sur le domaine public HTTPS pour être accepté.
+      env: paytechEnv,
+      // PayTech exige des URLs HTTPS publiques pour l'IPN.
       ipn_url: `${ipnBaseUrl}/api/paytech/ipn`,
-      success_url: `${ipnBaseUrl}/paiement/succes` + (listingId ? `?listing_id=${listingId}` : ""),
-      cancel_url: `${ipnBaseUrl}/paiement/erreur`,
+      // En dev, on redirige vers localhost pour une meilleure UX de test
+      success_url: `${baseUrl}/paiement/succes` + (listingId ? `?listing_id=${listingId}` : ""),
+      cancel_url: `${baseUrl}/paiement/erreur`,
     };
 
     const response = await fetch("https://paytech.sn/api/payment/request-payment", {

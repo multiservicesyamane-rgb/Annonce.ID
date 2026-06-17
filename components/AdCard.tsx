@@ -9,15 +9,26 @@ import FavButton from "./FavButton";
  */
 export default function AdCard({ ad }: { ad: Listing }) {
   const isPremium = ad.premium;
+  const isFeatured = ad.featured;
+
+  let cardStyles = "border border-gray-100 dark:border-white/5 bg-white dark:bg-[#111722]/80 shadow-sm dark:shadow-none hover:border-gray-300 dark:hover:border-white/20 hover:shadow-lg";
+  let titleStyles = "text-gray-900 dark:text-gray-200 group-hover:text-green-500 dark:group-hover:text-green-400";
+  let priceStyles = "text-green dark:text-green-400";
+
+  if (isPremium) {
+    cardStyles = "border-[1.5px] border-neon-gold shadow-[0_8px_20px_rgba(245,166,35,0.15)] hover:shadow-[0_12px_25px_rgba(245,166,35,0.3)] bg-gradient-to-b from-white to-[#fffbeb] dark:from-[#111722] dark:to-[#1a1710]";
+    titleStyles = "text-gray-900 dark:text-white group-hover:text-neon-gold";
+    priceStyles = "text-neon-gold dark:drop-shadow-[0_0_5px_rgba(245,166,35,0.5)]";
+  } else if (isFeatured) {
+    cardStyles = "border-[1.5px] border-purple-500 dark:border-purple-400/80 shadow-[0_8px_20px_rgba(168,85,247,0.15)] hover:shadow-[0_12px_25px_rgba(168,85,247,0.3)] bg-gradient-to-b from-white to-[#faf5ff] dark:from-[#111722] dark:to-[#17101a]";
+    titleStyles = "text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400";
+    priceStyles = "text-purple-600 dark:text-purple-400 dark:drop-shadow-[0_0_5px_rgba(168,85,247,0.5)]";
+  }
 
   return (
     <Link
       href={`/annonce/${ad.id}/${ad.slug}`}
-      className={`group flex flex-col overflow-hidden rounded-[16px] transition-all duration-300 hover:-translate-y-1 w-full ${
-        isPremium
-          ? "border-[1.5px] border-neon-gold shadow-[0_8px_20px_rgba(245,166,35,0.15)] hover:shadow-[0_12px_25px_rgba(245,166,35,0.3)] bg-gradient-to-b from-white to-[#fffbeb] dark:from-[#111722] dark:to-[#1a1710]"
-          : "border border-gray-100 dark:border-white/5 bg-white dark:bg-[#111722]/80 shadow-sm dark:shadow-none hover:border-gray-300 dark:hover:border-white/20 hover:shadow-lg"
-      }`}
+      className={`group flex flex-col overflow-hidden rounded-[16px] transition-all duration-300 hover:-translate-y-1 w-full ${cardStyles}`}
     >
       {/* Image Container - Carré uniforme (galerie) pour maximiser la taille de l'image */}
       <div className="relative overflow-hidden w-full aspect-square bg-gray-100 dark:bg-black/50">
@@ -40,9 +51,9 @@ export default function AdCard({ ad }: { ad: Listing }) {
               ★ Premium
             </span>
           )}
-          {!isPremium && ad.featured && (
-            <span className="bg-black/60 backdrop-blur-md text-white text-[.6rem] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider border border-white/20">
-              En vue
+          {isFeatured && (
+            <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[.6rem] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider shadow-[0_2px_10px_rgba(168,85,247,0.5)] animate-pulse">
+              ✦ À la Une
             </span>
           )}
         </div>
@@ -51,26 +62,22 @@ export default function AdCard({ ad }: { ad: Listing }) {
         <FavButton adId={ad.id} className="absolute right-2 top-2 bg-white/90 dark:bg-black/60 backdrop-blur-md p-1.5 rounded-full hover:bg-white text-gray-400 hover:text-red-500 transition-all border border-transparent dark:border-white/10" />
       </div>
 
-      {/* Zone Texte compacte - on maximise l'image, on minimise l'espace vide */}
+      {/* Zone Texte compacte */}
       <div className="flex flex-1 flex-col gap-0.5 p-1.5">
         {/* Titre */}
-        <h3 className={`line-clamp-1 text-[.72rem] md:text-[.8rem] font-bold leading-snug transition-colors ${isPremium ? 'text-gray-900 dark:text-white group-hover:text-neon-gold' : 'text-gray-900 dark:text-gray-200 group-hover:text-green-500 dark:group-hover:text-green-400'}`}>
+        <h3 className={`line-clamp-1 text-[.72rem] md:text-[.8rem] font-bold leading-snug transition-colors ${titleStyles}`}>
           {ad.title}
         </h3>
 
         {/* Prix */}
-        <div
-          className={`font-display text-[.85rem] md:text-[.95rem] font-extrabold tracking-tight ${
-            isPremium ? "text-neon-gold dark:drop-shadow-[0_0_5px_rgba(245,166,35,0.5)]" : "text-green dark:text-green-400"
-          }`}
-        >
+        <div className={`font-display text-[.85rem] md:text-[.95rem] font-extrabold tracking-tight ${priceStyles}`}>
           {ad.price} FCFA
         </div>
 
-        {/* Localisation (les vues ne sont visibles que par le propriétaire, côté tableau de bord) */}
+        {/* Localisation */}
         <div className="mt-auto flex items-center pt-0.5 text-[.6rem] text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1 truncate font-medium">
-            <span className={isPremium ? 'text-neon-gold' : 'opacity-70'}>📍</span>
+            <span className={isPremium ? 'text-neon-gold' : isFeatured ? 'text-purple-500' : 'opacity-70'}>📍</span>
             <span className="truncate">{ad.location}</span>
           </span>
         </div>

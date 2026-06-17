@@ -157,3 +157,9 @@ $$;
 grant execute on function increment_views(text) to anon, authenticated;
 
 -- FIN — Après exécution, le super admin et la publication sont 100% opérationnels.
+
+-- ============================================================
+-- Colonnes d'abonnement boutique Pro
+-- ============================================================
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR(50) DEFAULT 'starter';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS subscription_category VARCHAR(50) DEFAULT 'general';

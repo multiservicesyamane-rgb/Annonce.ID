@@ -45,8 +45,45 @@ export default async function HomePage() {
     views: ad.views ?? 0,
   } as any));
 
-  const une = formattedListings.slice(0, 10);
-  const prem = formattedListings.slice(0, 8); // Currently using recent for premium
+  // Fetch actual featured listings (À la Une)
+  const { data: dbFeatured } = await supabase
+    .from('listings')
+    .select('id, slug, title, price, location, image, category, views, created_at')
+    .eq('status', 'active')
+    .or('featured.eq.true,is_featured.eq.true')
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  const une = (dbFeatured || []).map((ad: any) => ({
+    id: ad.id,
+    slug: ad.slug,
+    title: ad.title,
+    price: ad.price ? `${formatNumber(ad.price)} FCFA` : "Gratuit",
+    location: ad.location || "Sénégal",
+    image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
+    category: ad.category || "Autre",
+    views: ad.views ?? 0,
+  } as any));
+
+  // Fetch actual premium listings (Premium)
+  const { data: dbPremium } = await supabase
+    .from('listings')
+    .select('id, slug, title, price, location, image, category, views, created_at')
+    .eq('status', 'active')
+    .or('premium.eq.true,is_premium.eq.true')
+    .order('created_at', { ascending: false })
+    .limit(8);
+
+  const prem = (dbPremium || []).map((ad: any) => ({
+    id: ad.id,
+    slug: ad.slug,
+    title: ad.title,
+    price: ad.price ? `${formatNumber(ad.price)} FCFA` : "Gratuit",
+    location: ad.location || "Sénégal",
+    image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
+    category: ad.category || "Autre",
+    views: ad.views ?? 0,
+  } as any));
 
   // Fetch boutiques (profils avec avatar)
   const { data: allBoutiques } = await supabase
@@ -139,39 +176,63 @@ export default async function HomePage() {
           </div>
           
           <div className="no-scrollbar flex gap-1.5 md:gap-3 overflow-x-auto pb-4 snap-x pt-2 px-1">
-            {prem.map((ad) => (
-              <Link
-                key={ad.id}
-                href={`/annonce/${ad.id}/${ad.slug}`}
-                className="w-[200px] md:w-[290px] shrink-0 overflow-hidden rounded-[16px] bg-white dark:bg-[#1A1A1A]/80 backdrop-blur-md border border-gray-100 dark:border-white/10 shadow-sm dark:shadow-none transition-all duration-300 hover:-translate-y-2 hover:border-gold/50 dark:hover:border-gold/50 hover:shadow-[0_12px_30px_rgba(212,175,55,0.15)] snap-start group"
-              >
-                <div className="relative w-full aspect-square overflow-hidden bg-gray-100 dark:bg-black/50">
-                  <Image src={ad.image} alt={ad.title} width={400} height={400} sizes="(max-width: 768px) 200px, 290px" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-100" />
+            {prem.length > 0 ? (
+              prem.map((ad) => (
+                <Link
+                  key={ad.id}
+                  href={`/annonce/${ad.id}/${ad.slug}`}
+                  className="w-[200px] md:w-[290px] shrink-0 overflow-hidden rounded-[16px] bg-white dark:bg-[#1A1A1A]/80 backdrop-blur-md border border-gray-100 dark:border-white/10 shadow-sm dark:shadow-none transition-all duration-300 hover:-translate-y-2 hover:border-gold/50 dark:hover:border-gold/50 hover:shadow-[0_12px_30px_rgba(212,175,55,0.15)] snap-start group"
+                >
+                  <div className="relative w-full aspect-square overflow-hidden bg-gray-100 dark:bg-black/50">
+                    <Image src={ad.image} alt={ad.title} width={400} height={400} sizes="(max-width: 768px) 200px, 290px" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-100" />
+                    
+                    {/* VIP Tag over image */}
+                    <div className="absolute top-3 right-3">
+                      <span className="bg-white/90 dark:bg-black/60 backdrop-blur-md text-gold-dark dark:text-gold text-[.6rem] font-bold px-2.5 py-1 rounded-full border border-gold/30 uppercase tracking-widest shadow-sm dark:shadow-lg">
+                        ⭐ Top
+                      </span>
+                    </div>
+                  </div>
                   
-                  {/* VIP Tag over image */}
-                  <div className="absolute top-3 right-3">
-                    <span className="bg-white/90 dark:bg-black/60 backdrop-blur-md text-gold-dark dark:text-gold text-[.6rem] font-bold px-2.5 py-1 rounded-full border border-gold/30 uppercase tracking-widest shadow-sm dark:shadow-lg">
-                      ⭐ Top
-                    </span>
+                  <div className="p-1.5 md:p-3">
+                    <div className="flex items-center justify-between mb-0.5 md:mb-1.5">
+                      <span className="text-[.5rem] md:text-[.6rem] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">{ad.category}</span>
+                    </div>
+                    <h3 className="line-clamp-2 text-[.7rem] md:text-[.85rem] font-bold text-gray-900 dark:text-white leading-tight mb-1 md:mb-2 group-hover:text-gold dark:group-hover:text-gold transition-colors">
+                      {ad.title}
+                    </h3>
+                    <div className="font-display text-[.8rem] md:text-[1.05rem] font-extrabold text-gold mb-0.5">
+                      {ad.price}
+                    </div>
+                    <div className="text-[.55rem] md:text-[.7rem] text-gray-500 dark:text-gray-400 font-medium">
+                      <span className="opacity-70">📍</span> {ad.location}
+                    </div>
                   </div>
-                </div>
-                
-                <div className="p-1.5 md:p-3">
-                  <div className="flex items-center justify-between mb-0.5 md:mb-1.5">
-                    <span className="text-[.5rem] md:text-[.6rem] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">{ad.category}</span>
+                </Link>
+              ))
+            ) : (
+              // Beautiful placeholders when empty
+              [1, 2, 3].map((num) => (
+                <Link
+                  key={num}
+                  href="/publier"
+                  className="w-[200px] md:w-[290px] shrink-0 overflow-hidden rounded-[16px] bg-white dark:bg-[#1A1A1A]/80 border-2 border-dashed border-gold/30 hover:border-gold/80 shadow-sm transition-all duration-300 hover:-translate-y-2 snap-start flex flex-col justify-between p-6 min-h-[280px] text-center"
+                >
+                  <div className="flex flex-col items-center justify-center my-auto">
+                    <span className="text-4xl mb-4">⭐</span>
+                    <h4 className="font-display font-bold text-gray-900 dark:text-white text-[.9rem] md:text-[1rem] mb-2">
+                      Votre Annonce Premium
+                    </h4>
+                    <p className="text-[.7rem] md:text-[.8rem] text-gray-500 dark:text-gray-400 leading-relaxed max-w-[200px] mx-auto">
+                      Boostez votre annonce pour la placer ici et vendre 10x plus vite !
+                    </p>
                   </div>
-                  <h3 className="line-clamp-2 text-[.7rem] md:text-[.85rem] font-bold text-gray-900 dark:text-white leading-tight mb-1 md:mb-2 group-hover:text-gold dark:group-hover:text-gold transition-colors">
-                    {ad.title}
-                  </h3>
-                  <div className="font-display text-[.8rem] md:text-[1.05rem] font-extrabold text-gold mb-0.5">
-                    {ad.price}
+                  <div className="w-full bg-gradient-to-r from-gold to-[#F3E5AB] text-black py-2.5 rounded-xl text-[0.75rem] font-bold uppercase tracking-wider shadow-sm mt-4">
+                    Placer mon annonce
                   </div>
-                  <div className="text-[.55rem] md:text-[.7rem] text-gray-500 dark:text-gray-400 font-medium">
-                    <span className="opacity-70">📍</span> {ad.location}
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </section>

@@ -10,12 +10,11 @@
   --dark-800: #0B1120;
   --dark-700: #111827;
   --dark-border: #1F2937;
-  /* Accent principal remappé en indigo AnnoncesWest */
   --gold: #F59E0B;
   --gold-d: #B45309;
   --green: #6366F1;
   --neon-gold: #818CF8;
-  --hh: 64px;
+  --hh: 56px;
 
   /* ── Design system AnnoncesWest (indigo) ── */
   --bg: #F0F2F8;
@@ -50,6 +49,7 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* ───────── LIGHT MODE (default) ───────── */
 body {
   background: #F0F2F8;
   color: #1A1F36;
@@ -117,7 +117,79 @@ html.dark .shadow-lg {
   box-shadow: 0 2px 8px rgba(0,0,0,.4) !important;
 }
 
-/* Footer, header already dark — no change needed */
+/* ═══════════ LIGHT MODE – Header & Hero adapt ═══════════ */
+/* Header: force light bg when not dark */
+html:not(.dark) .header-shell {
+  background: rgba(255,255,255,.97) !important;
+  border-bottom-color: #E8ECF4 !important;
+  backdrop-filter: blur(12px);
+}
+html:not(.dark) .header-shell * {
+  --tw-text-opacity: 1;
+}
+html:not(.dark) .header-shell .text-white {
+  color: #1A1F36 !important;
+}
+html:not(.dark) .header-shell .text-gray-400 {
+  color: #6B7280 !important;
+}
+html:not(.dark) .header-shell .border-white\/5 {
+  border-color: #E8ECF4 !important;
+}
+html:not(.dark) .header-shell .border-white\/20 {
+  border-color: #D1D5DB !important;
+}
+html:not(.dark) .header-shell .bg-white\/5 {
+  background-color: rgba(99,102,241,0.06) !important;
+}
+html:not(.dark) .header-shell .bg-white\/10 {
+  background-color: rgba(99,102,241,0.08) !important;
+}
+html:not(.dark) .header-shell .hover\:bg-white\/10:hover {
+  background-color: rgba(99,102,241,0.12) !important;
+}
+html:not(.dark) .header-shell .hover\:bg-white\/20:hover {
+  background-color: rgba(99,102,241,0.15) !important;
+}
+
+/* Hero: light mode adaptation */
+html:not(.dark) .hero-shell {
+  background: #F0F2F8 !important;
+}
+html:not(.dark) .hero-card {
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #F0F2F8 100%) !important;
+  border-color: #C7D2FE !important;
+}
+html:not(.dark) .hero-card .text-white {
+  color: #1E1B4B !important;
+}
+html:not(.dark) .hero-card .text-gray-400 {
+  color: #6B7280 !important;
+}
+html:not(.dark) .hero-card .border-gray-600 {
+  border-color: #6366F1 !important;
+}
+
+/* Search bar light mode */
+html:not(.dark) .search-shell {
+  background: white !important;
+  border: 1px solid #E8ECF4 !important;
+  box-shadow: 0 2px 8px rgba(20,30,80,.07) !important;
+}
+html:not(.dark) .search-shell input {
+  color: #1A1F36 !important;
+}
+html:not(.dark) .search-shell input::placeholder {
+  color: #A0AEC0 !important;
+}
+
+/* Category strip light mode */
+html:not(.dark) .cat-strip {
+  background: white !important;
+  border-bottom-color: #E8ECF4 !important;
+}
+
+/* Bottom nav light mode — already correct */
 
 /* ───────── Reduced motion ───────── */
 @media (prefers-reduced-motion: reduce) {
@@ -132,7 +204,7 @@ html.dark .shadow-lg {
 /* ───────── COMPOSANTS RÉUTILISABLES ───────── */
 @layer components {
   .wrap {
-    @apply mx-auto w-full max-w-[1320px] px-4;
+    @apply mx-auto w-full max-w-[1320px] px-3 sm:px-4;
   }
 
   .neon-text {
@@ -170,7 +242,7 @@ html.dark .shadow-lg {
 
   /* Boutons */
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border-2 border-transparent px-5 py-2.5 text-[.88rem] font-semibold transition-all;
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border-2 border-transparent px-4 py-2 text-[.85rem] font-semibold transition-all;
   }
   .btn-green {
     @apply font-bold text-white shadow-[0_4px_15px_rgba(99,102,241,0.3)] hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(99,102,241,0.4)];
@@ -198,10 +270,10 @@ html.dark .shadow-lg {
     @apply bg-brand-wa font-bold text-white hover:-translate-y-px hover:shadow-glow-wa;
   }
   .btn-sm {
-    @apply px-3.5 py-2 text-[.8rem];
+    @apply px-3 py-1.5 text-[.78rem];
   }
   .btn-lg {
-    @apply px-7 py-3.5 text-base;
+    @apply px-6 py-3 text-[.9rem];
   }
   .btn-block {
     @apply w-full;
@@ -251,10 +323,10 @@ html.dark .shadow-lg {
 
   /* Inputs */
   .input {
-    @apply w-full rounded-[10px] border-2 border-gray-100 bg-gray-50 px-3.5 py-2.5 text-[.9rem] text-gray-900 outline-none transition focus:border-green focus:bg-white focus:ring-4 focus:ring-green/10;
+    @apply w-full rounded-[10px] border-2 border-gray-100 bg-gray-50 px-3 py-2 text-[.88rem] text-gray-900 outline-none transition focus:border-green focus:bg-white focus:ring-4 focus:ring-green/10;
   }
   .label {
-    @apply mb-1.5 block text-[.8rem] font-semibold text-gray-700;
+    @apply mb-1 block text-[.78rem] font-semibold text-gray-700;
   }
 
   /* Carte annonce */
@@ -270,6 +342,14 @@ html.dark .shadow-lg {
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+}
+
+/* ───────── Mobile-first: reduce vertical space ───────── */
+@media (max-width: 640px) {
+  .wrap {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 }
 

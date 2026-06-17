@@ -9,12 +9,37 @@ import AdCard from "./AdCard";
 export default function UneCarousel({ listings }: { listings: Listing[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Ensure we have at least 10 items
+  if (!listings || listings.length === 0) {
+    return (
+      <div className="no-scrollbar flex gap-2 md:gap-3 overflow-x-auto pb-4">
+        {[1, 2, 3].map((num) => (
+          <Link
+            key={num}
+            href="/publier"
+            className="w-[185px] md:w-[260px] shrink-0 overflow-hidden rounded-[14px] bg-white dark:bg-[#111722]/80 border-2 border-dashed border-purple-300 dark:border-purple-500/30 hover:border-purple-500 shadow-sm transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between p-4 min-h-[220px] text-center"
+          >
+            <div className="flex flex-col items-center justify-center my-auto">
+              <span className="text-3xl mb-2">🔥</span>
+              <h4 className="font-display font-bold text-gray-900 dark:text-white text-[.8rem] md:text-[0.9rem] mb-1">
+                Votre Annonce À la Une
+              </h4>
+              <p className="text-[.65rem] md:text-[.75rem] text-gray-500 dark:text-gray-400 leading-relaxed max-w-[180px] mx-auto">
+                Affichez votre annonce en haut de l'accueil pour attirer tous les regards !
+              </p>
+            </div>
+            <div className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2 rounded-xl text-[0.7rem] font-bold uppercase tracking-wider shadow-sm mt-3">
+              Défiler à la une
+            </div>
+          </Link>
+        ))}
+      </div>
+    );
+  }
+
+  // Ensure we have at least 10 items for the loop
   let displayListings = [...listings];
-  if (displayListings.length > 0) {
-    while (displayListings.length < 10) {
-      displayListings = [...displayListings, ...displayListings.map(u => ({ ...u, id: u.id + Math.random() }))];
-    }
+  while (displayListings.length < 10) {
+    displayListings = [...displayListings, ...displayListings.map(u => ({ ...u, id: u.id + Math.random() }))];
   }
   displayListings = displayListings.slice(0, 10);
 

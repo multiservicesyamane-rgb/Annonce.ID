@@ -392,11 +392,11 @@ export type Boost = {
 };
 
 export const BOOSTS: Boost[] = [
-  { key: "gratuit", name: "🆓 Gratuit (Basique)", price: 0, duration: "Illimité", features: ["Publication immédiate", "Position standard"] },
-  { key: "basic", name: "🚀 Standard", price: 1000, duration: "7 jours", features: ["Mise en avant légère"] },
-  { key: "premium", name: "⭐ Premium", price: 2500, duration: "14 jours", features: ["Mise en avant", "Badge exclusif"], popular: true },
-  { key: "alaune", name: "🔥 À la Une", price: 5000, duration: "30 jours", features: ["Top de page", "Badge À la Une", "Forte visibilité"] },
-  { key: "vip", name: "👑 VIP", price: 10000, duration: "60 jours", features: ["Top de catégorie", "Badge VIP", "Maximum de visibilité"] },
+  { key: "gratuit", name: "🆓 Gratuit (Basique)", price: 0, duration: "Illimité", features: ["Publication immédiate", "1 photo maximum", "Position standard"] },
+  { key: "basic", name: "🚀 Standard", price: 1500, duration: "7 jours", features: ["Mise en avant", "Jusqu'à 3 photos", "Badge Standard"] },
+  { key: "premium", name: "⭐ Premium", price: 3500, duration: "14 jours", features: ["Mise en avant prioritaire", "Jusqu'à 5 photos", "Badge Premium exclusif"], popular: true },
+  { key: "alaune", name: "🔥 À la Une", price: 7500, duration: "30 jours", features: ["Affichage Accueil (À la Une)", "Jusqu'à 8 photos", "Badge À la Une", "Forte visibilité"] },
+  { key: "vip", name: "👑 VIP", price: 15000, duration: "60 jours", features: ["Affichage Accueil & Recherche", "Photos illimitées", "Badge VIP", "Visibilité maximale"] },
 ];
 
 // ───────── Méthodes de paiement (section 13) ─────────
@@ -429,3 +429,42 @@ export const AD_SLOTS = [
   { slot: "A9", label: "Catégorie sponsor", format: "Bannière" },
   { slot: "A10", label: "Notification push", format: "—" },
 ] as const;
+
+export type SubPlan = {
+  key: string;
+  name: string;
+  price: number;
+  duration: string;
+  limits: {
+    activeAds: number;
+    photos: number;
+  };
+  features: string[];
+};
+
+export const SUBSCRIPTION_PLANS: Record<string, SubPlan[]> = {
+  vehicules: [
+    { key: "starter", name: "Starter (Gratuit)", price: 0, duration: "1 mois", limits: { activeAds: 1, photos: 1 }, features: ["Positionnement standard"] },
+    { key: "standard", name: "Standard Auto", price: 10000, duration: "1 mois", limits: { activeAds: 5, photos: 3 }, features: ["Positionnement standard"] },
+    { key: "premium", name: "Premium Auto", price: 25000, duration: "1 mois", limits: { activeAds: 15, photos: 5 }, features: ["1 boost Standard / mois", "Vitrine personnalisée", "Bouton WhatsApp direct"] },
+    { key: "vip", name: "VIP Auto", price: 50000, duration: "1 mois", limits: { activeAds: 50, photos: 8 }, features: ["1 boost Premium / mois", "Badge Vérifié", "Statistiques basiques"] }
+  ],
+  immobilier: [
+    { key: "starter", name: "Starter (Gratuit)", price: 0, duration: "1 mois", limits: { activeAds: 1, photos: 1 }, features: ["Positionnement standard"] },
+    { key: "standard", name: "Standard Immo", price: 15000, duration: "1 mois", limits: { activeAds: 5, photos: 3 }, features: ["Positionnement standard"] },
+    { key: "premium", name: "Premium Immo", price: 35000, duration: "1 mois", limits: { activeAds: 15, photos: 5 }, features: ["1 boost Standard / mois", "Vitrine personnalisée", "Bouton WhatsApp direct", "Géolocalisation"] },
+    { key: "vip", name: "VIP Immo", price: 75000, duration: "1 mois", limits: { activeAds: 40, photos: 8 }, features: ["1 boost Premium / mois", "Badge Vérifié", "Statistiques basiques"] }
+  ],
+  electronique: [
+    { key: "starter", name: "Starter (Gratuit)", price: 0, duration: "1 mois", limits: { activeAds: 1, photos: 1 }, features: ["Positionnement standard"] },
+    { key: "standard", name: "Standard Tech", price: 7500, duration: "1 mois", limits: { activeAds: 10, photos: 3 }, features: ["Positionnement standard"] },
+    { key: "premium", name: "Premium Tech", price: 15000, duration: "1 mois", limits: { activeAds: 30, photos: 5 }, features: ["1 boost Standard / mois", "Vitrine personnalisée", "Bouton WhatsApp direct"] },
+    { key: "vip", name: "VIP Tech", price: 30000, duration: "1 mois", limits: { activeAds: 80, photos: 8 }, features: ["1 boost Premium / mois", "Badge Vérifié", "Statistiques basiques"] }
+  ],
+  general: [
+    { key: "starter", name: "Starter (Gratuit)", price: 0, duration: "1 mois", limits: { activeAds: 1, photos: 1 }, features: ["Positionnement standard"] },
+    { key: "standard", name: "Standard Boutique", price: 5000, duration: "1 mois", limits: { activeAds: 15, photos: 3 }, features: ["Positionnement standard"] },
+    { key: "premium", name: "Premium Boutique", price: 10000, duration: "1 mois", limits: { activeAds: 50, photos: 5 }, features: ["1 boost Standard / mois", "Vitrine personnalisée"] },
+    { key: "vip", name: "VIP Boutique", price: 20000, duration: "1 mois", limits: { activeAds: 120, photos: 8 }, features: ["1 boost Premium / mois", "Badge Vérifié"] }
+  ]
+};

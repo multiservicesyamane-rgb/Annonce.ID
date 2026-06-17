@@ -44,7 +44,7 @@ export async function POST(req: Request) {
         payload = { userId: custom_field };
       }
 
-      const { userId, listingId } = payload;
+      const { userId, listingId, boostKey, subKey, category } = payload;
 
       if (userId || listingId) {
         // 2. Ajouter la transaction dans la table "purchases"
@@ -58,10 +58,37 @@ export async function POST(req: Request) {
 
         // 3. Activer le Boost de l'annonce si un listingId est fourni
         if (listingId) {
-          await supabase.from("listings").update({
-            status: "active",
-            premium: true
-          }).eq("id", listingId);
+          const updateData: any = { status: "active" };
+          
+          if (boostKey === "premium") {
+            updateData.premium = true;
+            updateData.is_premium = true;
+          } else if (boostKey === "alaune") {
+            updateData.featured = true;
+            updateData.is_featured = true;
+          } else if (boostKey === "vip") {
+            updateData.premium = true;
+            updateData.is_premium = true;
+            updateData.featured = true;
+            updateData.is_featured = true;
+          } else if (boostKey === "basic") {
+            // basic boost - standard active position
+          } else {
+            // fallback to premium
+            updateData.premium = true;
+            updateData.is_premium = true;
+          }
+
+          await supabase.from("listings").update(updateData).eq("id", listingId);
+        } else if (subKey && userId) {
+          // Activer la formule d'abonnement boutique sur le profil de l'utilisateur
+          await supabase.from("profiles").update({
+            role: "pro",
+            is_pro: true,
+            subscription_plan: subKey,
+            subscription_category: category || "general",
+            free_ads_remaining: subKey === "standard" ? 5 : subKey === "premium" ? 15 : 50
+          }).eq("id", userId);
         } else if (userId) {
           // Sinon créditer le compte (logique originale des crédits)
           const { data: profile } = await supabase.from("profiles").select("credits").eq("id", userId).single();
