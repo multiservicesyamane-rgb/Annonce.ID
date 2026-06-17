@@ -95,6 +95,13 @@ export async function POST(req: Request) {
     // URL publique fiable (Vercel inclus) pour les callbacks PayTech
     const baseUrl = getBaseUrl(req);
 
+    // PayTech exige que ipn_url soit une URL HTTPS PUBLIQUE (callback serveur-à-serveur).
+    // localhost n'est jamais joignable : en dev on bascule sur le domaine de production.
+    const PROD_FALLBACK = "https://annonce-id.vercel.app";
+    const ipnBaseUrl = baseUrl.startsWith("https://")
+      ? baseUrl
+      : (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || PROD_FALLBACK).replace(/\/+$/, "");
+
     const paymentData = {
       item_name: itemName || "Boost Annonce",
       item_price: amount,
@@ -104,7 +111,7 @@ export async function POST(req: Request) {
       custom_field: JSON.stringify({ userId: secureUserId, listingId: listingId || "" }),
 
       env: "prod",
-      ipn_url: `${baseUrl}/api/paytech/ipn`,
+      ipn_url: `${ipnBaseUrl}/api/paytech/ipn`,
       success_url: `${baseUrl}/paiement/succes` + (listingId ? `?listing_id=${listingId}` : ""),
       cancel_url: `${baseUrl}/paiement/erreur`,
     };

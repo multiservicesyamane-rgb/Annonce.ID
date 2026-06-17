@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -35,7 +36,8 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
 const CHART = [120, 95, 210, 180, 340, 290, 400, 380, 320, 450, 510, 480, 390, 560];
 
 export default function Dashboard() {
-  const [panel, setPanel] = useState<Panel>("overview");
+  const searchParams = useSearchParams();
+  const [panel, setPanel] = useState<Panel>((searchParams.get("panel") as Panel) || "overview");
   const [toast, setToast] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -52,12 +54,14 @@ export default function Dashboard() {
   const [showroomName, setShowroomName] = useState("");
   const [showroomBio, setShowroomBio] = useState("");
   const [showroomSocials, setShowroomSocials] = useState<any>({});
+  const [livePreviewOpen, setLivePreviewOpen] = useState(false);
   const [editingSocial, setEditingSocial] = useState<string | null>(null);
   const [alertPrefs, setAlertPrefs] = useState<any>({ messages: true, expired: true, stats: false, search: true, promos: false });
   const [reviews, setReviews] = useState<any[]>([]);
   const [receivedFavsCount, setReceivedFavsCount] = useState(0);
   const [ads, setAds] = useState<any[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const supabase = createClient();
   const { favs } = useFavorites();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -146,16 +150,22 @@ export default function Dashboard() {
 
         // Fetch user profile from profiles table
         supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data: profData }) => {
+          const defaultName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || "Ma Boutique";
           if (profData) {
             setProfile(profData);
-            setProfileName(profData.full_name || "");
-            setProfileBio(profData.bio || "");
+            setProfileName(profData.full_name || defaultName);
+            setProfileBio(profData.bio || "La référence en bonnes affaires");
             setProfilePhone(profData.phone || "");
-            setShowroomName(profData.full_name || "");
-            setShowroomBio(profData.bio || "");
+            setShowroomName(profData.full_name || defaultName);
+            setShowroomBio(profData.bio || "La référence en bonnes affaires");
             setShowroomSocials(profData.social_links || {});
             setAlertPrefs(profData.alert_prefs || { messages: true, expired: true, stats: false, search: true, promos: false });
+          } else {
+            setProfileName(defaultName);
+            setShowroomName(defaultName);
+            setShowroomBio("La référence en bonnes affaires");
           }
+          setLoadingProfile(false);
         });
 
         // Fetch listings
@@ -392,9 +402,9 @@ export default function Dashboard() {
           <div className="absolute -bottom-5 left-5 h-16 w-16 rounded-full bg-white/[.07]" />
           <div className="relative z-10">
             <div className="mb-2 h-12 w-12 overflow-hidden rounded-[14px] border-2 border-white/30 bg-white/20">
-              {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-lg font-extrabold">{(displayName || "U").slice(0, 2).toUpperCase()}</div>}
+              {loadingProfile ? <div className="h-full w-full animate-pulse bg-white/20"></div> : avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-lg font-extrabold">{(displayName || "U").slice(0, 2).toUpperCase()}</div>}
             </div>
-            <div className="text-[.92rem] font-extrabold truncate">{displayName}</div>
+            <div className="text-[.92rem] font-extrabold truncate">{loadingProfile ? "Chargement..." : displayName}</div>
             <div className="text-[.7rem] opacity-85 truncate">📍 {profile?.location || profile?.region || "Sénégal"}</div>
             <div className="mt-2.5 flex gap-3">
               <div><div className="text-[1rem] font-extrabold leading-none">{ads.length}</div><div className="text-[.62rem] opacity-80">Annonces</div></div>
@@ -446,35 +456,29 @@ export default function Dashboard() {
       </aside>
 
       {/* Content */}
-      <div className="flex-1 bg-gray-50 dark:bg-dark-900 px-4 py-6 lg:p-8 overflow-y-auto">
+      <div className="flex-1 min-w-0 bg-gray-50 dark:bg-dark-900 px-4 py-6 lg:p-8 overflow-y-auto w-full">
         {panel === "overview" && (
           <div className="animate-fadeUp max-w-[1000px] mx-auto">
-            {/* Hero profil — style AnnoncesWest */}
-            <div className="mb-6 overflow-hidden rounded-[24px] border border-gray-100 dark:border-dark-border shadow-sm">
-              <div className="h-[110px] bg-g1 relative">
-                <div className="absolute inset-0 bg-[radial-gradient(at_80%_50%,rgba(255,255,255,.18),transparent_60%)]"></div>
-              </div>
-              <div className="bg-white dark:bg-dark-800 px-5 pb-5">
-                <div className="flex items-end gap-4 flex-wrap">
-                  <div className="-mt-10 h-20 w-20 shrink-0 rounded-[20px] border-4 border-white dark:border-dark-800 bg-g1 overflow-hidden shadow-lg">
-                    {avatarUrl
-                      ? <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
-                      : <div className="flex h-full w-full items-center justify-center text-2xl font-extrabold text-white">{(displayName || 'U').slice(0, 2).toUpperCase()}</div>}
+            {/* Hero profil — Compact (Transport Style) */}
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-[16px] border border-gray-100 dark:border-dark-border bg-white dark:bg-[#161B22] p-5 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 shrink-0 rounded-full border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-[#0D1117] overflow-hidden shadow-sm">
+                  {loadingProfile ? <div className="h-full w-full animate-pulse bg-gray-200 dark:bg-dark-800"></div> : avatarUrl
+                    ? <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                    : <div className="flex h-full w-full items-center justify-center text-[1.2rem] font-extrabold text-gray-400">{(displayName || 'U').slice(0, 2).toUpperCase()}</div>}
+                </div>
+                <div>
+                  <div className="font-display text-[1.2rem] sm:text-[1.3rem] font-extrabold dark:text-white leading-tight">
+                    {loadingProfile ? "Chargement du profil..." : `Bonjour, ${displayName} 👋`}
                   </div>
-                  <div className="flex-1 min-w-[180px] pt-2">
-                    <div className="font-display text-[1.2rem] font-extrabold dark:text-white">Bonjour, {displayName} 👋</div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[.8rem] text-gray-500 dark:text-white/60">
-                      {profile?.bio && <span>🏪 {profile.bio.slice(0, 40)}</span>}
-                      <span>📅 Membre {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : '—'}</span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      <span className="rounded-lg bg-green/10 px-2 py-0.5 text-[.7rem] font-bold text-green">✓ Vendeur vérifié</span>
-                      {(profile?.role === 'pro' || profile?.role === 'business') && <span className="rounded-lg bg-[#EDE9FE] px-2 py-0.5 text-[.7rem] font-bold text-[#7C3AED]">🏆 Pro</span>}
-                    </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[.75rem] text-gray-500 dark:text-[#8B949E]">
+                    <span className="capitalize">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    <span className="hidden sm:inline">•</span>
+                    <span className="rounded bg-green/10 px-1.5 py-0.5 font-bold text-green">✓ Vendeur vérifié</span>
                   </div>
-                  <Link href="/publier" className="btn btn-green btn-sm mb-1">+ Publier</Link>
                 </div>
               </div>
+              <Link href="/publier" className="btn btn-green h-10 px-5 w-full sm:w-auto text-[.85rem] shrink-0 font-bold">+ Publier</Link>
             </div>
 
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -796,15 +800,10 @@ export default function Dashboard() {
           </div>
         )}
 
-        {panel === "messages" && (
-          <div className="animate-fadeUp h-[calc(100vh-120px)] w-full">
-            <ChatInterface />
-          </div>
-        )}
-
         {panel === "favorites" && (
           <div className="animate-fadeUp max-w-[1000px] mx-auto">
-            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold dark:text-white">Favoris ({favListings.length})</h2>
+            <h2 className="mb-1 font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold dark:text-white">❤️ Mes favoris</h2>
+            <p className="mb-6 text-[.85rem] text-gray-500 dark:text-white/60">{favListings.length} annonce(s) sauvegardée(s)</p>
             {loadingFavs ? (
               <div className="py-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green"></div></div>
             ) : favListings.length === 0 ? (
@@ -816,7 +815,7 @@ export default function Dashboard() {
                 emoji="❤️"
               />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {favListings.map((ad) => (
                   <AdCard key={ad.id} ad={ad} />
                 ))}
@@ -1480,8 +1479,8 @@ export default function Dashboard() {
                 ctaHref="/publier"
               />
             ) : (
-              <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden">
-                <table className="w-full text-left border-collapse">
+              <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-border overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[600px]">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-dark-900 border-b border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 text-sm">
                       <th className="p-4 font-semibold">ID Commande</th>
@@ -1517,33 +1516,34 @@ export default function Dashboard() {
 
             {/* Colonne Gauche : Editeur */}
             <div className="flex-1">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="font-display text-[1.6rem] font-extrabold dark:text-white">Ma Boutique</h2>
-                <div className="flex items-center gap-2 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border px-4 py-2 rounded-full shadow-sm">
-                  <span className="text-sm font-semibold text-gray-500 hidden sm:inline">
-                    {typeof window !== 'undefined' ? `${window.location.origin}/boutique/${user?.id || ''}` : `boutique/${user?.id || ''}`}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-500 sm:hidden">Lien boutique</span>
-                  <button
-                    onClick={() => {
-                      if (typeof window !== 'undefined' && user?.id) {
-                        navigator.clipboard.writeText(`${window.location.origin}/boutique/${user.id}`);
-                        show("📋 Lien de la boutique copié !");
-                      }
-                    }}
-                    className="text-gray-400 hover:text-green"
-                    title="Copier le lien"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-display text-[1.3rem] sm:text-[1.6rem] font-extrabold dark:text-white">Ma Boutique</h2>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setLivePreviewOpen(true)} className="lg:hidden flex items-center gap-2 bg-dark-900 text-white dark:bg-white dark:text-black font-bold px-4 py-2 rounded-xl text-sm shadow-sm">
+                    👁️ Aperçu
                   </button>
+                  <div className="flex items-center gap-2 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border px-4 py-2 rounded-xl shadow-sm">
+                    <span className="text-sm font-semibold text-gray-500 hidden sm:inline">
+                      {typeof window !== 'undefined' ? `${window.location.origin}/boutique/${user?.id || ''}` : `boutique/${user?.id || ''}`}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-500 sm:hidden">Lien</span>
+                    <button
+                      onClick={() => {
+                        if (typeof window !== 'undefined' && user?.id) {
+                          navigator.clipboard.writeText(`${window.location.origin}/boutique/${user.id}`);
+                          show("📋 Lien de la boutique copié !");
+                        }
+                      }}
+                      className="text-gray-400 hover:text-green"
+                      title="Copier le lien"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Tabs */}
-              <div className="flex gap-4 border-b border-gray-200 dark:border-dark-border mb-6 overflow-x-auto">
-                <button className="px-4 py-2 border-b-2 border-green text-green font-bold text-sm whitespace-nowrap">Ma Boutique</button>
-                <button className="px-4 py-2 border-b-2 border-transparent text-gray-500 font-semibold text-sm hover:text-gray-700 whitespace-nowrap">Design</button>
-              </div>
+              {/* Tabs enlevées: 'Ma Boutique' & 'Design' n'existent plus. */}
 
               {/* Profile Card Editor */}
               <div className="rounded-2xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6 relative">
@@ -1666,61 +1666,90 @@ export default function Dashboard() {
             </div>
 
             {/* Colonne Droite : Live Preview */}
-            <div className="flex w-full max-w-[350px] mx-auto lg:mx-0 lg:w-[350px] shrink-0 justify-center items-start pt-4 relative">
+            <div className={`fixed inset-0 z-[900] bg-black/80 lg:bg-transparent lg:static lg:flex lg:w-[350px] lg:shrink-0 justify-center items-start lg:pt-4 ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
+              {/* Mobile Close Button */}
+              {livePreviewOpen && (
+                <button onClick={() => setLivePreviewOpen(false)} className="lg:hidden absolute top-4 right-4 text-white bg-white/10 rounded-full w-10 h-10 flex items-center justify-center text-xl backdrop-blur-md z-50">
+                  ✕
+                </button>
+              )}
               {/* Phone Mockup Frame */}
-              <div className="relative w-full h-[700px] bg-white dark:bg-dark-900 rounded-[3rem] border-[12px] border-gray-900 dark:border-black shadow-2xl overflow-hidden flex flex-col">
-                {/* iPhone Notch */}
-                <div className="absolute top-0 inset-x-0 h-6 flex justify-center z-50">
-                  <div className="w-32 h-6 bg-gray-900 dark:bg-black rounded-b-2xl"></div>
-                </div>
-
+              <div className="relative w-full h-full lg:max-w-[350px] lg:h-[700px] bg-[#0A0E14] lg:rounded-[3rem] lg:border-[10px] lg:border-gray-900 lg:dark:border-black shadow-2xl overflow-hidden flex flex-col mx-auto mt-0 lg:mt-0">
                 {/* Mockup Content (The Store Page) */}
-                <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-dark-950 scrollbar-hide pt-6">
-                  {/* Banner */}
-                  <div className="h-32 bg-gradient-to-r from-orange-400 to-red-500 relative">
-                    <div className="absolute inset-0 bg-black/10 flex items-center justify-center text-white/70 text-xs font-bold uppercase tracking-widest border border-dashed border-white/30 m-4 rounded">Bannière</div>
-                  </div>
+                <div className="flex-1 overflow-y-auto bg-[#0A0E14] scrollbar-hide flex flex-col pt-6 lg:pt-0">
+                  {/* Banner & Profile Section */}
+                  <div className="relative bg-gradient-to-b from-[#1c2333] to-[#0A0E14] pb-4 shrink-0">
+                    <div className="pt-4 px-4">
+                      {/* Avatar */}
+                      <div className="w-16 h-16 rounded-full bg-[#E65100] border-[2px] border-[#FFB300] flex items-center justify-center overflow-hidden shadow-lg mb-2">
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white text-[2rem] font-display font-bold">{(showroomName || displayName || 'Y').charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
+                      
+                      <h2 className="font-display font-black text-white text-[1.2rem] uppercase tracking-wide leading-tight">
+                        {showroomName || displayName || "Ma Boutique"}
+                      </h2>
+                      <p className="text-[#8B949E] text-[.8rem] mt-0.5 mb-3 leading-tight">
+                        {showroomBio || "La référence en bonnes affaires"}
+                      </p>
 
-                  {/* Profile */}
-                  <div className="px-5 pb-6 relative text-center">
-                    <img src={avatarUrl} alt="Avatar" className="w-20 h-20 rounded-full border-4 border-white dark:border-dark-950 object-cover mx-auto -mt-10 relative z-10 bg-white" />
-                    <h2 className="font-bold text-lg mt-2 text-gray-900 dark:text-white leading-tight">{showroomName || displayName}</h2>
-                    <p className="text-[.65rem] text-white bg-green px-2 py-0.5 rounded-full font-bold inline-block mt-1">✓ Vendeur Vérifié</p>
-                    <p className="text-[.75rem] text-gray-600 dark:text-gray-400 mt-3 mb-4 leading-relaxed">
-                      {showroomBio || "Boutique en ligne 🛍️ Vente de produits & services de qualité 📱 Commande rapide"}
-                    </p>
-
-                    <div className="flex justify-center gap-2">
-                      {Object.entries(showroomSocials as Record<string, string>).map(([social, link]) => (
-                        link && (
-                          <a key={social} href={String(link)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-white dark:bg-dark-800 shadow-sm border border-gray-100 dark:border-dark-border flex items-center justify-center text-[.8rem] text-gray-600 hover:text-green cursor-pointer">
-                            {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : social === 'facebook' ? 'f' : social === 'tiktok' ? '♪' : '▶'}
-                          </a>
-                        )
-                      ))}
+                      {/* Badges Grid */}
+                      <div className="flex flex-wrap gap-1.5">
+                        <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
+                          <span className="text-green-400 bg-green-400/20 rounded-sm w-3 h-3 flex items-center justify-center text-[.5rem]">✓</span> Vendeur vérifié
+                        </div>
+                        <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
+                          <span>📅</span> Membre depuis {new Date().getFullYear()}
+                        </div>
+                        <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
+                          <span className="text-[#FFB300]">⭐</span> 4.8/5 (12 avis)
+                        </div>
+                        <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
+                          <span>📦</span> {ads.length} annonces
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Listings */}
-                  <div className="px-4 pb-8 space-y-4">
-                    {ads.length > 0 ? ads.map((prod, idx) => (
-                      <div key={prod.id || idx} className="bg-white dark:bg-dark-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-dark-border">
-                        <img src={prod.image || "https://placehold.co/400x300?text=Sans+Image"} alt={prod.title} className="w-full h-40 object-cover" />
-                        <div className="p-4">
-                          <h4 className="font-bold text-[.85rem] text-gray-900 dark:text-white uppercase leading-snug">{prod.title}</h4>
-                          <div className="flex items-center justify-between mt-2">
-                            <div className="text-[.9rem] font-extrabold text-green">{prod.price} FCFA</div>
-                            <button className="bg-orange-500 text-white text-[.65rem] font-bold px-3 py-1.5 rounded-full">Acheter</button>
+                  {/* Listings Section */}
+                  <div className="p-4 bg-[#0A0E14] flex-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-white font-display font-bold text-[.9rem] leading-snug max-w-[200px]">
+                        Annonces de {showroomName || displayName || "Ma Boutique"}
+                      </h3>
+                      <span className="text-[#5C6BC0] text-xs font-bold whitespace-nowrap">Voir tout →</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 pb-[80px]">
+                      {ads.length > 0 ? ads.map((prod, idx) => (
+                        <div key={prod.id || idx} className="bg-[#161B22] rounded-xl overflow-hidden border border-white/5 relative">
+                          <div className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full z-10 backdrop-blur-sm">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                          </div>
+                          <img src={prod.image || "https://placehold.co/400x400?text=Sans+Image"} alt={prod.title} className="w-full aspect-square object-cover" />
+                          <div className="p-2.5">
+                            <h4 className="font-bold text-[.75rem] text-white leading-tight line-clamp-2">{prod.title}</h4>
+                            <div className="text-[.75rem] font-black text-[#5C6BC0] mt-1">{prod.price} FCFA</div>
+                            <div className="text-[.6rem] text-gray-500 mt-1 truncate">📍 {prod.location || "Dakar"}</div>
                           </div>
                         </div>
-                      </div>
-                    )) : (
-                      <div className="text-center p-6 text-gray-500 text-xs">
-                        Votre boutique est vide.
-                      </div>
-                    )}
+                      )) : (
+                        <div className="col-span-2 text-center p-6 text-gray-500 text-xs bg-[#161B22] rounded-xl border border-white/5">
+                          Votre boutique est vide.
+                        </div>
+                      )}
+                    </div>
                   </div>
 
+                  {/* Fake WhatsApp Button */}
+                  <div className="absolute bottom-[30px] right-4 z-50">
+                    <div className="w-[50px] h-[50px] bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-[0_0_20px_rgba(37,211,102,0.4)]">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1731,7 +1760,7 @@ export default function Dashboard() {
         {panel === "credits" && (
           <div className="animate-fadeUp max-w-[1000px] mx-auto">
             <div className="text-center mb-8">
-              <h2 className="font-display text-[1.6rem] font-extrabold dark:text-white mb-2">Acheter des Crédits</h2>
+              <h2 className="font-display text-[1.3rem] sm:text-[1.6rem] font-extrabold dark:text-white mb-2">Acheter des Crédits</h2>
               <p className="text-sm text-gray-500">Obtenez plus de visibilité en utilisant vos crédits pour booster vos annonces.</p>
             </div>
 
@@ -1790,7 +1819,7 @@ export default function Dashboard() {
 
         {panel === "messages" && (
           <div className="animate-fadeUp max-w-[1000px] mx-auto h-[700px] flex flex-col">
-            <h2 className="mb-4 font-display text-[1.4rem] font-extrabold dark:text-white shrink-0">Messagerie & Discussions</h2>
+            <h2 className="mb-4 font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold dark:text-white shrink-0">Messagerie & Discussions</h2>
             <div className="flex-1 bg-white dark:bg-dark-800 rounded-2xl border border-gray-200 dark:border-dark-border overflow-hidden">
               <ChatInterface />
             </div>
@@ -1800,7 +1829,7 @@ export default function Dashboard() {
 
         {panel === "security" && (
           <div className="animate-fadeUp max-w-[800px] mx-auto">
-            <h2 className="mb-6 font-display text-[1.4rem] font-extrabold dark:text-white">Sécurité & Vie privée</h2>
+            <h2 className="mb-6 font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold dark:text-white">Sécurité & Vie privée</h2>
             <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6">
               <h3 className="font-bold text-lg mb-4 dark:text-white">Modifier le mot de passe</h3>
               <div className="space-y-4 max-w-md">
@@ -1848,7 +1877,7 @@ export default function Dashboard() {
 
         {panel === "alerts" && (
           <div className="animate-fadeUp max-w-[800px] mx-auto">
-            <h2 className="mb-6 font-display text-[1.4rem] font-extrabold dark:text-white">Gérer mes alertes</h2>
+            <h2 className="mb-6 font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold dark:text-white">Gérer mes alertes</h2>
             <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm">
               <div className="space-y-6">
                 {[
@@ -1896,7 +1925,7 @@ export default function Dashboard() {
 
         {panel === "faq" && (
           <div className="animate-fadeUp max-w-[800px] mx-auto">
-            <h2 className="mb-2 font-display text-[1.4rem] font-extrabold dark:text-white">Foire Aux Questions</h2>
+            <h2 className="mb-2 font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold dark:text-white">Foire Aux Questions</h2>
             <p className="mb-6 text-sm text-gray-500">Trouvez rapidement des réponses à vos questions les plus fréquentes.</p>
 
             <div className="space-y-4">
@@ -1994,7 +2023,7 @@ function Kpi({ label, value, sub, up }: { label: string; value: string; sub: str
   return (
     <div className="relative overflow-hidden rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4">
       <div className="text-[.75rem] text-gray-500 dark:text-white/60">{label}</div>
-      <div className="my-1 font-display text-[1.6rem] font-extrabold leading-none dark:text-white">{value}</div>
+      <div className="my-1 font-display text-[1.3rem] sm:text-[1.6rem] font-extrabold leading-none dark:text-white">{value}</div>
       <div className={`text-[.72rem] ${up ? "text-green dark:text-neon-green font-bold" : "text-gray-500 dark:text-white/40"}`}>{sub}</div>
     </div>
   );
@@ -2014,11 +2043,21 @@ function KpiGrad({ gradient, icon, label, value }: { gradient: string; icon: str
     return () => cancelAnimationFrame(raf);
   }, [value]);
   return (
-    <div className={`relative overflow-hidden rounded-[18px] p-4 text-white ${gradient}`}>
+    <div className={`relative flex flex-col justify-between overflow-hidden rounded-[14px] p-4 shadow-sm text-white ${gradient}`}>
       <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10"></div>
-      <div className="relative z-10 mb-2 flex h-9 w-9 items-center justify-center rounded-[11px] bg-white/20 text-[1.05rem]">{icon}</div>
-      <div className="relative z-10 font-display text-[1.6rem] font-extrabold leading-none">{n.toLocaleString('fr-FR')}</div>
-      <div className="relative z-10 mt-1 text-[.76rem] opacity-90">{label}</div>
+      <div className="mb-2 flex items-center justify-between relative z-10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-white/20 text-[.9rem]">
+          {icon}
+        </div>
+      </div>
+      <div className="relative z-10">
+        <div className="font-display text-[1.4rem] font-extrabold leading-none">
+          {n.toLocaleString('fr-FR')}
+        </div>
+        <div className="mt-1.5 text-[.7rem] font-medium opacity-90">
+          {label}
+        </div>
+      </div>
     </div>
   );
 }

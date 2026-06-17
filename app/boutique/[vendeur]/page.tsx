@@ -20,7 +20,7 @@ export default async function BoutiquePage({ params }: Props) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   // Fetch profile
-  const { data: profile } = await supabase.from('profiles').select('id, full_name, avatar_url, phone, role, created_at').eq('id', sellerId).single();
+  const { data: profile } = await supabase.from('profiles').select('id, full_name, avatar_url, phone, role, created_at, bio, social_links').eq('id', sellerId).single() as { data: any };
   
   // Fetch their active listings
   const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, location, image, category, views').eq('user_id', sellerId).eq('status', 'active').order('created_at', { ascending: false });
@@ -29,9 +29,11 @@ export default async function BoutiquePage({ params }: Props) {
   if (name.includes('@')) {
     name = name.split('@')[0];
   }
+  const bio = profile?.bio || "La référence en bonnes affaires";
   const avatar = profile?.avatar_url || "https://placehold.co/120x120?text=B";
   const role = profile?.role === 'admin' ? 'Administrateur' : profile?.role === 'pro' ? 'Boutique Pro' : 'Vendeur vérifié';
   const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '2024';
+  const socialLinks = profile?.social_links || {};
 
   const ads = (dbListings || []).map((ad: any) => ({
     id: ad.id,
@@ -50,12 +52,12 @@ export default async function BoutiquePage({ params }: Props) {
       <div className="relative overflow-hidden bg-gradient-to-br from-dark-900 via-dark-800 to-green-900">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(at_20%_30%,rgba(0,136,85,.15)_0,transparent_45%)]" />
         <div className="relative z-10 mx-auto flex max-w-[1320px] flex-wrap items-center gap-6 px-4 py-12">
-          <Image src={avatar} alt={name} width={100} height={100} className="h-[100px] w-[100px] rounded-full border-[3px] border-gold object-cover shadow-lg" />
+          <Image src={avatar} alt={name} width={100} height={100} className="h-[100px] w-[100px] rounded-full border-[3px] border-gold object-cover shadow-lg bg-white" />
           <div>
             <h1 className="flex items-center gap-2 font-display text-[1.8rem] font-extrabold text-white leading-none mb-1">
               {name}
             </h1>
-            <p className="text-white/60 text-[.9rem] mb-3">La référence en bonnes affaires</p>
+            <p className="text-white/60 text-[.9rem] mb-3">{bio}</p>
             <div className="flex flex-wrap gap-3 text-[.8rem] text-white/90">
               <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm">
                 ✅ <span className="font-bold">{role}</span>
