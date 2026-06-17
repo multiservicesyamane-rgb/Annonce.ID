@@ -1,0 +1,656 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+/* ───────── Données mock (plan stratégique B2B) ───────── */
+const GRADS = ["bg-g1", "bg-g2", "bg-g3", "bg-g4", "bg-g5", "bg-g6", "bg-g7", "bg-g8"];
+
+const NAV: { id: string; icon: string; label: string; section?: string; badge?: number }[] = [
+  { id: "overview", icon: "📊", label: "Vue d'ensemble", section: "Tableau de bord" },
+  { id: "crm", icon: "🎯", label: "CRM Prospects", badge: 23 },
+  { id: "marketing", icon: "📢", label: "Centre Marketing" },
+  { id: "campagnes", icon: "📨", label: "Campagnes" },
+  { id: "employes", icon: "👨‍💼", label: "Employés", section: "Commercial" },
+  { id: "ambassadeurs", icon: "🤝", label: "Ambassadeurs" },
+  { id: "offres", icon: "💎", label: "Offres commerciales" },
+  { id: "moderation", icon: "🛡️", label: "Modération", section: "Plateforme", badge: 8 },
+  { id: "users", icon: "👥", label: "Utilisateurs" },
+  { id: "finance", icon: "💰", label: "Finances" },
+  { id: "ads", icon: "📺", label: "Publicités" },
+  { id: "ia", icon: "🤖", label: "Assistant IA", section: "Outils" },
+  { id: "points", icon: "⭐", label: "Points & Fidélité" },
+  { id: "diffusion", icon: "📡", label: "Diffusion multi-canaux" },
+  { id: "rapports", icon: "📄", label: "Rapports" },
+  { id: "settings", icon: "⚙️", label: "Paramètres" },
+];
+
+const PROSPECTS = [
+  { n: "Auto Dakar Plus", s: "Automobile", v: "Dakar", st: "int", pack: "Premium", ag: "Ibrahim", g: "bg-g1", ic: "🚗" },
+  { n: "Immobilier Excellence", s: "Immobilier", v: "Abidjan", st: "rdv", pack: "Enterprise", ag: "Aminata", g: "bg-g4", ic: "🏠" },
+  { n: "TechStore Bamako", s: "Électronique", v: "Bamako", st: "new", pack: "Basic", ag: "—", g: "bg-g3", ic: "📱" },
+  { n: "BTP Conseil Cotonou", s: "Services", v: "Cotonou", st: "ct", pack: "Pro", ag: "Ibrahim", g: "bg-g7", ic: "🔧" },
+  { n: "Fashion Palace", s: "Mode", v: "Lomé", st: "int", pack: "Basic", ag: "Aminata", g: "bg-g5", ic: "👗" },
+];
+const ST_LABELS: Record<string, string> = { new: "🆕 Nouveau", ct: "📤 Contacté", int: "🤝 Intéressé", rdv: "📅 Rendez-vous", cli: "✅ Client", ref: "❌ Refusé" };
+const ST_PILL: Record<string, string> = { new: "bg-white/10 text-gray-300", ct: "bg-blue-500/15 text-blue-300", int: "bg-amber-500/15 text-amber-300", rdv: "bg-violet-500/15 text-violet-300", cli: "bg-emerald-500/15 text-emerald-300", ref: "bg-red-500/15 text-red-300" };
+
+const EMPLOYES = [
+  { n: "Ibrahim Traoré", r: "Responsable Contact", em: 32, wa: 18, rdv: 2, cli: 1, com: 45000, target: 3, g: "bg-g1", rank: "🥈" },
+  { n: "Aminata Koné", r: "Responsable Prospection", em: 48, wa: 0, rdv: 0, cli: 0, com: 15000, target: 1.5, g: "bg-g5", rank: "🥉" },
+  { n: "Kwame Mensah", r: "Responsable Partenariats", em: 12, wa: 8, rdv: 4, cli: 2, com: 82000, target: 3, g: "bg-g4", rank: "🥇" },
+];
+
+const TEMPLATES = [
+  { cat: "Automobile", catC: "text-[#4FACFE]", t: "Email Automobile", p: "Augmentez la visibilité de votre parc automobile…" },
+  { cat: "Immobilier", catC: "text-[#43E97B]", t: "Email Immobilier", p: "Plus de visibilité pour vos biens immobiliers…" },
+  { cat: "WhatsApp", catC: "text-[#25D366]", t: "WhatsApp Premier contact", p: "Bonjour 👋 Je me permets de vous contacter…" },
+  { cat: "WhatsApp", catC: "text-[#25D366]", t: "WhatsApp Relance J+3", p: "Je reviens vers vous suite à mon précédent message…" },
+  { cat: "Électronique", catC: "text-[#A78BFA]", t: "Email Électronique", p: "Vendez plus de produits tech grâce à AnnoncesWest…" },
+  { cat: "Emploi", catC: "text-[#FB923C]", t: "Email Recrutement", p: "Trouvez les meilleurs candidats plus vite…" },
+];
+
+const OFFRES = [
+  { ic: "🆓", n: "Pack Gratuit", feats: ["10 annonces actives", "Profil simple", "Contact direct", "Stats de base"], color: "text-gray-300", prix: "0 FCFA/mois" },
+  { ic: "⭐", n: "Pack Basic", feats: ["50 annonces actives", "Page entreprise", "Badge vérifié", "Support email"], color: "text-[#4FACFE]", prix: "25 000 FCFA/mois" },
+  { ic: "🚀", n: "Pack Pro", feats: ["Annonces illimitées", "Page entreprise complète", "Mise en avant", "Import Excel/CSV", "Assistant IA"], color: "text-[#A18CD1]", prix: "75 000 FCFA/mois", pop: true },
+  { ic: "👑", n: "Pack Premium", feats: ["Tout le Pro", "Diffusion Facebook auto", "WhatsApp illimité", "Génération leads", "Account manager"], color: "text-[#FFC93C]", prix: "150 000 FCFA/mois" },
+  { ic: "🏢", n: "Enterprise", feats: ["Tout Premium", "API personnalisée", "Sync. stock", "Formation équipe", "SLA garantie"], color: "text-[#F093FB]", prix: "300 000+ FCFA/mois" },
+];
+
+const AMBASSADEURS = [
+  { n: "Fatoumata Bah", l: "🥇 Or", lc: "text-[#FFC93C]", v: 8, c: 82000, g: "bg-g5" },
+  { n: "Seydou Camara", l: "🥈 Argent", lc: "text-gray-300", v: 5, c: 45000, g: "bg-g1" },
+  { n: "Ama Asante", l: "🥈 Argent", lc: "text-gray-300", v: 4, c: 32000, g: "bg-g3" },
+  { n: "Moussa Touré", l: "🥉 Bronze", lc: "text-[#CD7F32]", v: 2, c: 15000, g: "bg-g8" },
+  { n: "Binta Koné", l: "🥉 Bronze", lc: "text-[#CD7F32]", v: 1, c: 7500, g: "bg-g7" },
+];
+
+const ADMIN_CREDS = { email: "admin@yamanetech.com", pass: "YamaneTech@2025" };
+
+/* ───────── Composants UI ───────── */
+function Kpi({ grad, icon, label, value, trend, suffix }: { grad: string; icon: string; label: string; value: number; trend?: string; suffix?: string }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let raf: number; const start = performance.now();
+    const tick = (t: number) => { const p = Math.min(1, (t - start) / 700); setN(Math.round(value * p)); if (p < 1) raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return (
+    <div className={`relative overflow-hidden rounded-[18px] p-4 ${grad}`}>
+      <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+      <div className="relative z-10 flex items-center justify-between">
+        <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/20 text-[1rem]">{icon}</div>
+        {trend && <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[.68rem] font-bold text-white">{trend}</span>}
+      </div>
+      <div className="relative z-10 mt-2 text-[1.6rem] font-extrabold leading-none text-white">{n.toLocaleString("fr-FR")}{suffix || ""}</div>
+      <div className="relative z-10 mt-1 text-[.75rem] text-white/80">{label}</div>
+    </div>
+  );
+}
+
+function Card({ title, sub, children, action }: { title?: string; sub?: string; children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className="rounded-[18px] border border-[#21262D] bg-[#161B22] p-4 overflow-hidden">
+      {(title || action) && (
+        <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
+          <div>{title && <h3 className="text-[.93rem] font-extrabold text-white">{title}</h3>}{sub && <div className="text-[.72rem] text-[#8B949E] mt-0.5">{sub}</div>}</div>
+          {action}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+export default function SuperAdminApp() {
+  const [authed, setAuthed] = useState(false);
+  const [page, setPage] = useState("overview");
+  const [sbOpen, setSbOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [email, setEmail] = useState(ADMIN_CREDS.email);
+  const [pass, setPass] = useState(ADMIN_CREDS.pass);
+  const [code, setCode] = useState("");
+
+  // Données réelles
+  const [counts, setCounts] = useState({ total: 0, pending: 0, active: 0, users: 0 });
+  const [pendingListings, setPendingListings] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
+
+  const T = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2100); };
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && sessionStorage.getItem("sa_authed") === "1") setAuthed(true);
+  }, []);
+
+  useEffect(() => {
+    if (!authed) return;
+    const sb = createClient();
+    (async () => {
+      const [t, p, a, u] = await Promise.all([
+        sb.from("listings").select("*", { count: "exact", head: true }),
+        sb.from("listings").select("*", { count: "exact", head: true }).eq("status", "pending"),
+        sb.from("listings").select("*", { count: "exact", head: true }).eq("status", "active"),
+        sb.from("profiles").select("*", { count: "exact", head: true }),
+      ]);
+      setCounts({ total: t.count || 0, pending: p.count || 0, active: a.count || 0, users: u.count || 0 });
+      const { data: pend } = await sb.from("listings").select("id, title, category, image, status, created_at").eq("status", "pending").order("created_at", { ascending: false }).limit(20);
+      setPendingListings(pend || []);
+      const { data: profs } = await sb.from("profiles").select("id, full_name, role, created_at").order("created_at", { ascending: false }).limit(20);
+      setProfiles(profs || []);
+    })();
+  }, [authed]);
+
+  function doLogin() {
+    if (email === ADMIN_CREDS.email && pass === ADMIN_CREDS.pass && (code === "1234" || code === "")) {
+      sessionStorage.setItem("sa_authed", "1"); setAuthed(true); T("✅ Bienvenue, Super Administrateur");
+    } else T("❌ Identifiants incorrects");
+  }
+  function doLogout() { sessionStorage.removeItem("sa_authed"); setAuthed(false); }
+
+  async function moderate(id: string, status: string) {
+    const sb = createClient();
+    const { error } = await sb.from("listings").update({ status }).eq("id", id);
+    if (error) { T("⚠ Action bloquée (droits admin requis côté base)"); return; }
+    setPendingListings((p) => p.filter((x) => x.id !== id));
+    setCounts((c) => ({ ...c, pending: Math.max(0, c.pending - 1), active: status === "active" ? c.active + 1 : c.active }));
+    T(status === "active" ? "✅ Annonce approuvée" : "❌ Annonce rejetée");
+  }
+
+  /* ───────── LOGIN ───────── */
+  if (!authed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0D1117] p-4">
+        <div className="w-full max-w-[400px] rounded-[24px] border border-[#30363D] bg-[#161B22] p-8 shadow-[0_0_60px_rgba(99,102,241,.15)]">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-g1 text-[1.3rem] font-extrabold text-white shadow-[0_0_30px_rgba(99,102,241,.4)]">SA</div>
+          <h1 className="text-center text-[1.2rem] font-extrabold text-white">Super Admin</h1>
+          <p className="mb-6 text-center text-[.82rem] text-[#8B949E]">AnnoncesWest · YamaneTech</p>
+          <div className="mb-4 rounded-[10px] border border-dashed border-[#30363D] bg-[#0D1117] p-3 text-[.75rem] leading-7 text-[#FFC93C]">🔐 <b>Accès démo :</b><br />Email : admin@yamanetech.com<br />Mot de passe : YamaneTech@2025<br />Code 2FA : 1234</div>
+          <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email administrateur" />
+          <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Mot de passe" />
+          <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="text" maxLength={4} value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && doLogin()} placeholder="Code 2FA (1234)" />
+          <button onClick={doLogin} className="w-full rounded-[10px] bg-g1 py-2.5 text-[.9rem] font-extrabold text-white shadow-[0_4px_20px_rgba(99,102,241,.35)] hover:-translate-y-px transition">Accéder au Super Admin →</button>
+        </div>
+        {toast && <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-[9px] bg-[#E6EDF3] px-4 py-2.5 text-[.82rem] font-bold text-[#1A1F36] shadow-lg">{toast}</div>}
+      </div>
+    );
+  }
+
+  /* ───────── APP ───────── */
+  return (
+    <div className="flex min-h-screen bg-[#0D1117] text-white">
+      {/* Sidebar */}
+      <aside className={`fixed top-0 bottom-0 z-[200] w-[240px] flex flex-col border-r border-[#21262D] bg-[#161B22] transition-transform ${sbOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
+        <div className="flex items-center gap-2.5 border-b border-[#21262D] px-4 py-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-g1 text-[.8rem] font-extrabold text-white shadow-[0_0_16px_rgba(99,102,241,.4)]">SA</div>
+          <div className="font-extrabold leading-tight text-[.88rem]">YamaneTech<span className="block text-[.64rem] font-semibold tracking-wide text-[#FFC93C]">SUPER ADMIN</span></div>
+        </div>
+        <div className="m-2.5 flex items-center gap-2.5 rounded-[11px] border border-[#6366F1]/20 bg-[#6366F1]/10 px-3 py-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-g1 text-[.85rem] font-extrabold text-white">JD</div>
+          <div><div className="text-[.84rem] font-bold">Konnecta Groupe</div><div className="text-[.68rem] font-semibold text-[#FFC93C]">Super Administrateur</div></div>
+        </div>
+        <nav className="flex-1 overflow-y-auto px-2.5 py-1">
+          {NAV.map((n) => (
+            <div key={n.id}>
+              {n.section && <div className="px-2 pb-1 pt-3 text-[.6rem] font-bold uppercase tracking-widest text-[#484F58]">{n.section}</div>}
+              <button onClick={() => { setPage(n.id); setSbOpen(false); }} className={`mb-0.5 flex w-full items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-left text-[.83rem] font-semibold transition ${page === n.id ? "border-l-2 border-[#6366F1] bg-[#6366F1]/15 text-[#A5B4FC]" : "text-[#8B949E] hover:bg-white/5 hover:text-white"}`}>
+                <span className="w-4 text-center text-[.85rem]">{n.icon}</span>
+                <span className="truncate">{n.label}</span>
+                {n.badge && <span className="ml-auto rounded-md bg-red-500 px-1.5 py-0.5 text-[.58rem] font-bold text-white">{n.badge}</span>}
+              </button>
+            </div>
+          ))}
+        </nav>
+        <div className="border-t border-[#21262D] p-2.5">
+          <button onClick={doLogout} className="flex w-full items-center gap-2 rounded-[9px] px-3 py-2.5 text-[.82rem] font-semibold text-[#F85149] hover:bg-[#F85149]/10">🚪 Déconnexion</button>
+        </div>
+      </aside>
+      {sbOpen && <div onClick={() => setSbOpen(false)} className="fixed inset-0 z-[190] bg-black/60 lg:hidden" />}
+
+      {/* Main */}
+      <div className="flex-1 lg:ml-[240px] flex flex-col min-w-0">
+        <header className="sticky top-0 z-[100] flex items-center gap-3 border-b border-[#21262D] bg-[#161B22]/90 px-5 py-3 backdrop-blur">
+          <button onClick={() => setSbOpen(true)} className="text-[1.2rem] text-[#8B949E] lg:hidden">☰</button>
+          <div className="relative max-w-[300px] flex-1">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[.8rem] text-[#484F58]">🔍</span>
+            <input className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] py-2 pl-8 pr-3 text-[.83rem] text-white outline-none focus:border-[#6366F1]" placeholder="Rechercher prospects, campagnes…" />
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={() => T("3 alertes système")} className="relative flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#30363D] bg-white/5">🔔<span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-red-500" /></button>
+            <button onClick={() => T("Export global…")} className="rounded-[9px] bg-g1 px-3 py-2 text-[.78rem] font-bold text-white shadow-[0_0_20px_rgba(99,102,241,.3)]">⬇ Exporter</button>
+          </div>
+        </header>
+
+        <div className="mx-auto w-full max-w-[1500px] p-5">
+          {page === "overview" && <Overview counts={counts} T={T} />}
+          {page === "crm" && <CRM T={T} />}
+          {page === "marketing" && <Marketing T={T} />}
+          {page === "campagnes" && <Campagnes />}
+          {page === "employes" && <Employes />}
+          {page === "ambassadeurs" && <Ambassadeurs T={T} />}
+          {page === "offres" && <Offres T={T} />}
+          {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
+          {page === "users" && <Users profiles={profiles} T={T} />}
+          {page === "finance" && <Finance />}
+          {page === "ads" && <Ads T={T} />}
+          {page === "ia" && <IA T={T} />}
+          {page === "points" && <Points />}
+          {page === "diffusion" && <Diffusion />}
+          {page === "rapports" && <Rapports T={T} />}
+          {page === "settings" && <Settings T={T} />}
+        </div>
+      </div>
+
+      {toast && <div className="fixed bottom-5 left-1/2 z-[9999] -translate-x-1/2 rounded-[9px] bg-[#E6EDF3] px-4 py-2.5 text-[.82rem] font-bold text-[#1A1F36] shadow-lg">{toast}</div>}
+    </div>
+  );
+}
+
+/* ───────── Sections ───────── */
+function PageHead({ title, sub, children }: { title: string; sub?: string; children?: React.ReactNode }) {
+  return (
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div><h1 className="text-[1.3rem] font-extrabold">{title}</h1>{sub && <p className="mt-0.5 text-[.8rem] text-[#8B949E]">{sub}</p>}</div>
+      {children && <div className="flex flex-wrap gap-2">{children}</div>}
+    </div>
+  );
+}
+const btnP = "rounded-[9px] bg-g1 px-3.5 py-2 text-[.78rem] font-bold text-white";
+const btnG = "rounded-[9px] border border-[#30363D] bg-[#21262D] px-3.5 py-2 text-[.78rem] font-bold text-[#8B949E] hover:text-white";
+
+function Overview({ counts, T }: { counts: any; T: (m: string) => void }) {
+  const mrr = [["Abonnements Pro/Premium", 52, "#667EEA"], ["Boosts annonces", 28, "#FFC93C"], ["Publicités annonceurs", 12, "#F093FB"], ["Commissions ambassadeurs", 8, "#43E97B"]] as const;
+  const pipe = [["Nouveaux", "#484F58", 50], ["Contactés", "#3B82F6", 30], ["Intéressés", "#F59E0B", 15], ["Rendez-vous", "#A78BFA", 8], ["Clients", "#10B981", 3]] as const;
+  return (
+    <>
+      <PageHead title="🚀 Super Admin" sub="Vue globale · AnnoncesWest · temps réel">
+        <button className={btnG} onClick={() => T("Période")}>📅 Ce mois</button>
+        <button className={btnP} onClick={() => T("Rapport…")}>+ Rapport</button>
+      </PageHead>
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="💰" label="MRR cible (FCFA)" value={1725000} trend="↑ 23%" />
+        <Kpi grad="bg-g8" icon="🏢" label="Annonces actives" value={counts.active} trend="réel" />
+        <Kpi grad="bg-g5" icon="🤝" label="Utilisateurs" value={counts.users} trend="réel" />
+        <Kpi grad="bg-g3" icon="🎯" label="Annonces totales" value={counts.total} trend="réel" />
+      </div>
+      <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
+        <Card title="Répartition MRR" sub="Par type d'offre">
+          {mrr.map(([n, p, c]) => (
+            <div key={n} className="mb-2.5">
+              <div className="mb-1 flex justify-between text-[.8rem] text-[#C9D1D9]"><span>{n}</span><span className="font-extrabold">{p}%</span></div>
+              <div className="h-[7px] overflow-hidden rounded bg-[#21262D]"><div className="h-full rounded" style={{ width: `${p}%`, background: c }} /></div>
+            </div>
+          ))}
+        </Card>
+        <Card title="Pipeline commercial">
+          {pipe.map(([n, c, v]) => (
+            <div key={n} className="mb-2 flex items-center gap-2.5">
+              <div className="w-[80px] text-[.76rem] font-semibold text-[#8B949E]">{n}</div>
+              <div className="relative h-6 flex-1 overflow-hidden rounded-md bg-[#0D1117]"><div className="h-full rounded-md" style={{ width: `${(v as number) / 50 * 100}%`, background: c }} /><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[.7rem] font-extrabold text-white">{v}</span></div>
+            </div>
+          ))}
+        </Card>
+      </div>
+      <div className="mt-3"><Card title="Meilleures performances (équipe)">
+        {EMPLOYES.map((e) => (
+          <div key={e.n} className="mb-2 flex items-center gap-2.5 rounded-[9px] bg-[#0D1117] p-2.5">
+            <div className="w-5 text-center">{e.rank}</div>
+            <div className={`flex h-8 w-8 items-center justify-center rounded-[9px] text-[.8rem] font-bold text-white ${e.g}`}>{e.n.split(" ").map((w) => w[0]).join("").slice(0, 2)}</div>
+            <div className="min-w-0 flex-1"><div className="truncate text-[.83rem] font-bold">{e.n}</div><div className="text-[.7rem] text-[#8B949E]">{e.r}</div></div>
+            <div className="text-right"><div className="text-[.85rem] font-extrabold text-[#FFC93C]">{e.com.toLocaleString("fr-FR")} F</div><div className="text-[.68rem] text-[#8B949E]">{e.cli} client(s)</div></div>
+          </div>
+        ))}
+      </Card></div>
+    </>
+  );
+}
+
+function CRM({ T }: { T: (m: string) => void }) {
+  const stages = [["🆕", "Nouveaux", 50], ["📤", "Contactés", 30], ["🤝", "Intéressés", 15], ["📅", "Rendez-vous", 8], ["✅", "Clients", 3], ["❌", "Refusés", 5]] as const;
+  return (
+    <>
+      <PageHead title="🎯 CRM — Prospects" sub="1 240 prospects · conversion 3.2%">
+        <button className={btnG} onClick={() => T("Importer CSV…")}>📥 Importer</button>
+        <button className={btnP} onClick={() => T("+ Prospect ajouté")}>+ Nouveau prospect</button>
+      </PageHead>
+      <Card title="Pipeline de vente">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {stages.map(([ic, n, c]) => (
+            <div key={n} className="rounded-[11px] border border-[#21262D] bg-[#0D1117] p-2.5">
+              <div className="mb-2 flex items-center justify-between border-b border-[#21262D] pb-1.5 text-[.73rem] font-bold text-[#8B949E]">{ic} {n}<span className="rounded bg-white/10 px-1.5 text-[.7rem]">{c}</span></div>
+              <div className="text-[.68rem] text-[#484F58]">Glisser-déposer</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <div className="mt-3"><Card title="Prospects récents">
+        {PROSPECTS.map((p) => (
+          <div key={p.n} className="mb-2 flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-2.5">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-[11px] text-[1.1rem] ${p.g}`}>{p.ic}</div>
+            <div className="min-w-[140px] flex-1"><div className="text-[.84rem] font-bold text-[#E6EDF3]">{p.n}</div><div className="text-[.72rem] text-[#8B949E]">{p.s} · {p.v} · Pack: <b className="text-[#FFC93C]">{p.pack}</b></div></div>
+            <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${ST_PILL[p.st]}`}>{ST_LABELS[p.st]}</span>
+            <div className="flex gap-1.5">
+              {["📧", "💬", "📅", "📋"].map((a, i) => <button key={i} onClick={() => T(`${a} ${p.n}`)} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem] hover:bg-[#6366F1]/20">{a}</button>)}
+            </div>
+          </div>
+        ))}
+      </Card></div>
+    </>
+  );
+}
+
+function Marketing({ T }: { T: (m: string) => void }) {
+  return (
+    <>
+      <PageHead title="📢 Centre Marketing" sub="Templates email & WhatsApp prêts à l'emploi">
+        <button className={btnP} onClick={() => T("+ Template créé")}>+ Nouveau template</button>
+      </PageHead>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {TEMPLATES.map((t) => (
+          <div key={t.t} className="flex flex-col gap-2 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-3.5 hover:border-[#6366F1]">
+            <div className="flex items-center justify-between"><span className={`text-[.64rem] font-bold uppercase tracking-wide ${t.catC}`}>{t.cat}</span><span className="text-[.68rem] text-[#484F58]">{t.cat === "WhatsApp" ? "WhatsApp" : "Email"}</span></div>
+            <div className="text-[.88rem] font-bold text-[#E6EDF3]">{t.t}</div>
+            <div className="line-clamp-2 text-[.75rem] leading-relaxed text-[#8B949E]">{t.p}</div>
+            <div className="mt-1 flex gap-1.5">
+              <button onClick={() => T(`Template : ${t.t}`)} className="rounded-[7px] border border-[#30363D] bg-[#161B22] px-2.5 py-1 text-[.7rem] font-bold text-[#8B949E] hover:text-[#A5B4FC]">👁 Voir</button>
+              <button onClick={() => T("📋 Copié !")} className="rounded-[7px] border border-[#30363D] bg-[#161B22] px-2.5 py-1 text-[.7rem] font-bold text-[#8B949E] hover:text-[#A5B4FC]">📋 Copier</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function Campagnes() {
+  const rows = [["Auto Dakar Juin", "Automobile", "Email", "250", "72 (29%)", "18 (7%)", "bg-emerald-500/15 text-emerald-300", "Active"], ["Immo Abidjan", "Immobilier", "Email + WhatsApp", "120", "38 (32%)", "9 (8%)", "bg-emerald-500/15 text-emerald-300", "Active"], ["Tech Bamako", "Électronique", "WhatsApp", "80", "—", "12 (15%)", "bg-amber-500/15 text-amber-300", "Planifiée"], ["Emploi Dakar", "Emploi", "Email", "200", "54 (27%)", "8 (4%)", "bg-blue-500/15 text-blue-300", "Terminée"]];
+  return (
+    <>
+      <PageHead title="📨 Campagnes" sub="Envoi groupé email & WhatsApp" />
+      <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="📤" label="Emails envoyés" value={1840} />
+        <Kpi grad="bg-g3" icon="💬" label="WhatsApp envoyés" value={920} />
+        <Kpi grad="bg-g5" icon="👁️" label="Emails ouverts" value={515} trend="28%" />
+        <Kpi grad="bg-g8" icon="✅" label="Réponses positives" value={59} trend="3.2%" />
+      </div>
+      <Card title="Campagnes actives">
+        <Tbl head={["Campagne", "Secteur", "Canal", "Envois", "Ouvertures", "Réponses", "Statut"]}>
+          {rows.map((r, i) => (
+            <tr key={i} className="hover:bg-white/[.02]"><Td bold>{r[0]}</Td><Td>{r[1]}</Td><Td>{r[2]}</Td><Td>{r[3]}</Td><Td>{r[4]}</Td><Td><span className="text-emerald-400 font-bold">{r[5]}</span></Td><Td><span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${r[6]}`}>{r[7]}</span></Td></tr>
+          ))}
+        </Tbl>
+      </Card>
+    </>
+  );
+}
+
+function Employes() {
+  return (
+    <>
+      <PageHead title="👨‍💼 Tableau de bord Employés" sub="Performance commerciale de l'équipe" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {EMPLOYES.map((e) => (
+          <div key={e.n} className="relative overflow-hidden rounded-[12px] border border-[#21262D] bg-[#0D1117] p-4">
+            <div className={`absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full text-[.78rem] ${e.g}`}>{e.rank}</div>
+            <div className={`mb-2.5 flex h-11 w-11 items-center justify-center rounded-[13px] text-[1rem] font-extrabold text-white ${e.g}`}>{e.n.split(" ").map((w) => w[0]).join("").slice(0, 2)}</div>
+            <div className="text-[.88rem] font-extrabold text-[#E6EDF3]">{e.n}</div>
+            <div className="mb-3 text-[.7rem] text-[#8B949E]">{e.r}</div>
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              {[["Emails", e.em], ["WhatsApp", e.wa], ["Rendez-vous", e.rdv], ["Clients", e.cli]].map(([l, v]) => (
+                <div key={l as string}><div className="text-[1rem] font-extrabold leading-none text-[#E6EDF3]">{v as number}</div><div className="text-[.66rem] text-[#8B949E]">{l}</div></div>
+              ))}
+            </div>
+            <div className="mb-1 flex justify-between text-[.72rem]"><span className="text-[#8B949E]">Objectif mensuel</span><span className="font-bold">{e.cli}/{e.target}</span></div>
+            <div className="h-1.5 overflow-hidden rounded bg-[#21262D]"><div className={`h-full rounded ${e.g}`} style={{ width: `${e.cli / e.target * 100}%` }} /></div>
+            <div className="mt-3 flex items-center justify-between rounded-[8px] bg-[#0D1117] border border-[#21262D] p-2.5"><span className="text-[.72rem] text-[#8B949E]">Commission</span><span className="text-[.9rem] font-extrabold text-[#FFC93C]">{e.com.toLocaleString("fr-FR")} FCFA</span></div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function Ambassadeurs({ T }: { T: (m: string) => void }) {
+  return (
+    <>
+      <PageHead title="🤝 Programme Ambassadeurs" sub="47 ambassadeurs actifs · 4 niveaux">
+        <button className={btnP} onClick={() => T("Programme partagé")}>🤝 Partager</button>
+      </PageHead>
+      <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi grad="bg-g4" icon="👥" label="Ambassadeurs actifs" value={47} />
+        <Kpi grad="bg-g1" icon="💰" label="Commissions (FCFA)" value={245000} />
+        <Kpi grad="bg-g5" icon="🔗" label="Clics sur liens" value={1240} />
+        <Kpi grad="bg-g8" icon="✅" label="Clients apportés" value={19} />
+      </div>
+      <Card title="Top ambassadeurs">
+        {AMBASSADEURS.map((a) => (
+          <div key={a.n} className="mb-2 flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-2.5">
+            <div className={`flex h-9 w-9 items-center justify-center rounded-[10px] text-[.85rem] font-bold text-white ${a.g}`}>{a.n.split(" ").map((w) => w[0]).join("")}</div>
+            <div className="min-w-[100px] flex-1"><div className="text-[.83rem] font-bold text-[#E6EDF3]">{a.n}</div><div className={`text-[.68rem] font-bold ${a.lc}`}>{a.l}</div></div>
+            <div className="flex gap-4 text-[.75rem]"><div><div className="text-[.9rem] font-extrabold text-[#FFC93C]">{a.v}</div><div className="text-[.66rem] text-[#8B949E]">Clients</div></div><div><div className="text-[.9rem] font-extrabold text-[#FFC93C]">{a.c.toLocaleString("fr-FR")} F</div><div className="text-[.66rem] text-[#8B949E]">Commission</div></div></div>
+            <div className="flex gap-1.5"><button onClick={() => T("Lien copié !")} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem]">🔗</button><button onClick={() => T("Paiement envoyé")} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem]">💳</button></div>
+          </div>
+        ))}
+      </Card>
+    </>
+  );
+}
+
+function Offres({ T }: { T: (m: string) => void }) {
+  return (
+    <>
+      <PageHead title="💎 Offres commerciales" sub="Gérer les packs et tarifs">
+        <button className={btnP} onClick={() => T("✅ Tarifs sauvegardés")}>💾 Sauvegarder</button>
+      </PageHead>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {OFFRES.map((o) => (
+          <div key={o.n} onClick={() => T(`Offre: ${o.n} · ${o.prix}`)} className={`relative cursor-pointer rounded-[12px] border bg-[#0D1117] p-4 transition hover:border-[#6366F1] ${o.pop ? "border-[#FFC93C]" : "border-[#21262D]"}`}>
+            {o.pop && <span className="absolute -top-2 right-4 rounded-md bg-g5 px-2 py-0.5 text-[.62rem] font-extrabold text-[#0D1117]">POPULAIRE</span>}
+            <div className="text-[1.5rem]">{o.ic}</div>
+            <div className="mt-1 text-[.95rem] font-extrabold text-[#E6EDF3]">{o.n}</div>
+            <div className={`mb-2 text-[1.1rem] font-extrabold ${o.color}`}>{o.prix}</div>
+            <div className="space-y-1 text-[.75rem] text-[#8B949E]">{o.feats.map((f) => <div key={f}>✓ {f}</div>)}</div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function Moderation({ items, moderate }: { items: any[]; moderate: (id: string, s: string) => void }) {
+  return (
+    <>
+      <PageHead title="🛡️ Modération" sub={`${items.length} annonce(s) en attente`} />
+      <Card>
+        <div className="mb-3 rounded-[9px] border border-[#FFC93C]/20 bg-[#FFC93C]/10 px-3.5 py-2.5 text-[.82rem] text-[#FFC93C]">⏳ <b>{items.length} annonces</b> attendent votre validation (délai max 24h)</div>
+        {items.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">✅ Aucune annonce en attente.</div> : items.map((m) => (
+          <div key={m.id} className="mb-2 flex flex-wrap items-center gap-3 rounded-[9px] border border-[#21262D] bg-[#0D1117] p-3">
+            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-[#21262D]">{m.image && <img src={m.image} alt="" className="h-full w-full object-cover" />}</div>
+            <div className="min-w-[120px] flex-1"><div className="text-[.84rem] font-bold text-[#E6EDF3]">{m.title}</div><div className="text-[.73rem] text-[#8B949E]">{m.category || "—"}</div></div>
+            <div className="flex shrink-0 gap-1.5">
+              <button onClick={() => moderate(m.id, "active")} className="rounded-[7px] bg-g1 px-2.5 py-1.5 text-[.74rem] font-bold text-white">✓ Approuver</button>
+              <button onClick={() => moderate(m.id, "rejected")} className="rounded-[7px] border border-[#F85149]/20 bg-[#F85149]/10 px-2.5 py-1.5 text-[.74rem] font-bold text-[#F85149]">✕ Rejeter</button>
+            </div>
+          </div>
+        ))}
+      </Card>
+    </>
+  );
+}
+
+function Users({ profiles, T }: { profiles: any[]; T: (m: string) => void }) {
+  return (
+    <>
+      <PageHead title="👥 Utilisateurs" sub={`${profiles.length} comptes affichés`} />
+      <Card>
+        <Tbl head={["Utilisateur", "Rôle", "Inscrit le", "Actions"]}>
+          {profiles.length === 0 ? <tr><Td>Aucun utilisateur</Td></tr> : profiles.map((u) => (
+            <tr key={u.id} className="hover:bg-white/[.02]">
+              <Td bold>{u.full_name || "(sans nom)"}</Td>
+              <Td><span className="rounded-md bg-violet-500/15 px-2 py-0.5 text-[.68rem] font-bold text-violet-300">{u.role || "user"}</span></Td>
+              <Td>{u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "—"}</Td>
+              <Td><span onClick={() => T("Voir profil")} className="mr-1 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-white/5">👁</span><span onClick={() => T("Passer Pro")} className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-white/5">🚀</span></Td>
+            </tr>
+          ))}
+        </Tbl>
+      </Card>
+    </>
+  );
+}
+
+function Finance() {
+  const rows = [["16/06", "Moussa D.", "À la Une", "9 000 FCFA", "Orange Money"], ["16/06", "Aminata K.", "Pack Premium", "150 000 FCFA", "Wave"], ["15/06", "Kwame M.", "Pack Pro", "75 000 FCFA", "MTN MoMo"], ["15/06", "Auto Dakar+", "Enterprise", "300 000 FCFA", "Carte"]];
+  return (
+    <>
+      <PageHead title="💰 Finances" sub="Revenus et transactions" />
+      <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="💰" label="Revenus totaux (FCFA)" value={124} suffix="M" trend="↑ 18%" />
+        <Kpi grad="bg-g8" icon="🚀" label="Revenus boosts" value={82} suffix="M" trend="↑ 22%" />
+        <Kpi grad="bg-g5" icon="📺" label="Revenus publicités" value={31} suffix="M" trend="↑ 15%" />
+        <Kpi grad="bg-g3" icon="📅" label="Abonnements Pro" value={11} suffix="M" trend="↑ 9%" />
+      </div>
+      <Card title="Dernières transactions">
+        <Tbl head={["Date", "Utilisateur", "Type", "Montant", "Méthode", "Statut"]}>
+          {rows.map((r, i) => <tr key={i} className="hover:bg-white/[.02]"><Td>{r[0]}</Td><Td bold>{r[1]}</Td><Td>{r[2]}</Td><Td><span className="font-extrabold text-emerald-400">{r[3]}</span></Td><Td>{r[4]}</Td><Td><span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[.68rem] font-bold text-emerald-300">✓ Payé</span></Td></tr>)}
+        </Tbl>
+      </Card>
+    </>
+  );
+}
+
+function Ads({ T }: { T: (m: string) => void }) {
+  const rows = [["A1 — Hero Banner", "Orange Money", "245 800", "2.0%"], ["A2 — In-feed Home", "Wave", "189 200", "3.0%"], ["A3 — Sidebar", "MTN MoMo", "156 700", "2.0%"], ["A4 — In-grid", "Coca-Cola", "98 400", "1.5%"], ["A5 — Page Annonce", "Airtel", "78 200", "1.4%"], ["A6 — Footer", "Banque SG", "45 600", "1.0%"]];
+  return (
+    <>
+      <PageHead title="📺 Zones publicitaires" sub="10 emplacements stratégiques">
+        <button className={btnP} onClick={() => T("+ Bannière créée")}>+ Nouvelle bannière</button>
+      </PageHead>
+      <Card>
+        <Tbl head={["Zone", "Annonceur", "Impressions", "CTR", "Statut"]}>
+          {rows.map((r, i) => <tr key={i} className="hover:bg-white/[.02]"><Td><span className="font-bold text-[#A5B4FC]">{r[0]}</span></Td><Td bold>{r[1]}</Td><Td>{r[2]}</Td><Td><span className="font-bold text-emerald-400">{r[3]}</span></Td><Td><span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[.68rem] font-bold text-emerald-300">🟢 Active</span></Td></tr>)}
+        </Tbl>
+      </Card>
+    </>
+  );
+}
+
+function IA({ T }: { T: (m: string) => void }) {
+  const [nom, setNom] = useState(""); const [ville, setVille] = useState(""); const [email, setEmail] = useState<string | null>(null); const [wa, setWa] = useState<string | null>(null);
+  return (
+    <>
+      <PageHead title="🤖 Assistant IA Commercial" sub="Génération automatique de textes marketing" />
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Card title="Générer un email commercial">
+          <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom de l'entreprise" className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+          <input value={ville} onChange={(e) => setVille(e.target.value)} placeholder="Ville" className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+          <button className={`${btnP} w-full`} onClick={() => setEmail(`Objet : Augmentez la visibilité de votre activité à ${ville || "[Ville]"}\n\nBonjour ${nom || "[Entreprise]"},\n\nNous avons remarqué votre activité à ${ville || "[Ville]"} et souhaitons vous présenter AnnoncesWest. Notre plateforme vous permet de toucher des acheteurs qualifiés dans 27 pays d'Afrique.\n\nSeriez-vous disponible pour une présentation de 15 minutes ?\n\nCordialement,\nL'équipe AnnoncesWest`)}>🤖 Générer l'email →</button>
+          {email && <div className="mt-3 whitespace-pre-line rounded-[9px] border-l-[3px] border-[#6366F1] bg-[#0D1117] p-3 text-[.8rem] leading-relaxed text-[#C9D1D9]">{email}<div className="mt-2"><button className={btnG} onClick={() => { navigator.clipboard?.writeText(email); T("📋 Email copié !"); }}>📋 Copier</button></div></div>}
+        </Card>
+        <Card title="Générer un message WhatsApp">
+          <button className={`${btnP} w-full`} onClick={() => setWa("Bonjour 👋\n\nJe me permets de vous contacter concernant la promotion de vos produits/services sur AnnoncesWest.\n\nNous aidons les entreprises à augmenter leur visibilité et générer des contacts qualifiés (Facebook & WhatsApp).\n\nPuis-je vous présenter notre offre ? 🙏")}>🤖 Générer WhatsApp →</button>
+          {wa && <div className="mt-3 whitespace-pre-line rounded-[9px] border-l-[3px] border-[#25D366] bg-[#0D1117] p-3 text-[.8rem] leading-relaxed text-[#C9D1D9]">{wa}<div className="mt-2"><button className={btnG} onClick={() => { navigator.clipboard?.writeText(wa); T("📋 Copié pour WhatsApp !"); }}>📋 Copier</button></div></div>}
+        </Card>
+      </div>
+    </>
+  );
+}
+
+function Points() {
+  const gains = [["Créer un compte", "50"], ["Publier une annonce", "10"], ["Annonce vendue", "100"], ["Partager sur réseaux", "5"], ["Parrainer un ami", "50"], ["Parrainage converti", "200"], ["Recevoir un avis 5★", "25"], ["Se connecter / jour", "2"]];
+  const rewards = [["100 pts", "1 annonce gratuite", "text-[#FFC93C]"], ["500 pts", "Mise en avant 7 jours", "text-[#4FACFE]"], ["1 000 pts", "1 mois Pack Pro offert", "text-[#A78BFA]"], ["5 000 pts", "Badge Ambassadeur Or", "text-[#FFC93C]"], ["10 000 pts", "1 an Premium offert", "text-[#F093FB]"]];
+  const lead = [["Moussa Diallo", 8420, "💎 Diamant"], ["Aminata Koné", 5810, "🥇 Or"], ["Ibrahim Traoré", 3240, "🥈 Argent"], ["Fatou Sow", 1890, "🥉 Bronze"]];
+  return (
+    <>
+      <PageHead title="⭐ Points & Fidélité" sub="Récompenser les utilisateurs actifs" />
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Card title="Comment gagner des points">{gains.map(([a, p]) => <div key={a} className="mb-1.5 flex items-center justify-between rounded-lg bg-[#0D1117] p-2.5 text-[.8rem]"><span className="text-[#C9D1D9]">{a}</span><span className="font-extrabold text-[#FFC93C]">+{p} pts</span></div>)}</Card>
+        <Card title="Récompenses disponibles">{rewards.map(([p, n, c]) => <div key={p} className="mb-1.5 flex items-center gap-2.5 rounded-lg bg-[#0D1117] p-2.5"><span className={`w-[70px] shrink-0 text-[.8rem] font-extrabold ${c}`}>{p}</span><span className="text-[.8rem] text-[#C9D1D9]">{n}</span></div>)}</Card>
+      </div>
+      <div className="mt-3"><Card title="Top utilisateurs par points">
+        <Tbl head={["#", "Utilisateur", "Points", "Niveau"]}>{lead.map((r, i) => <tr key={i}><Td><span className="font-extrabold text-[#FFC93C]">{i + 1}</span></Td><Td bold>{r[0]}</Td><Td><span className="font-extrabold text-emerald-400">{(r[1] as number).toLocaleString("fr-FR")}</span></Td><Td>{r[2]}</Td></tr>)}</Tbl>
+      </Card></div>
+    </>
+  );
+}
+
+function Diffusion() {
+  const pages = [["📘", "Auto Sénégal", "Automobile · 12 400 abonnés", true], ["📘", "Immo Abidjan", "Immobilier · 8 900 abonnés", true], ["📘", "Tech Dakar", "Électronique · 5 200 abonnés", true], ["📘", "Emploi Mali", "Emploi · 3 800 abonnés", false]];
+  const packs = [["🆓 Basic", "Site AnnoncesWest", "Inclus"], ["➕ Plus", "Site + Facebook", "+ 10 000 FCFA/mois"], ["🚀 Premium", "Site + FB + WhatsApp", "+ 30 000 FCFA/mois"], ["👑 Elite", "Site + FB + WA + Sponsorisé", "+ 75 000 FCFA/mois"]];
+  return (
+    <>
+      <PageHead title="📡 Diffusion multi-canaux" sub="Pages Facebook et groupes WhatsApp" />
+      <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="📘" label="Pages Facebook" value={12} />
+        <Kpi grad="bg-g4" icon="💬" label="Groupes WhatsApp" value={28} />
+        <Kpi grad="bg-g5" icon="🤖" label="Publications/mois" value={8450} />
+        <Kpi grad="bg-g3" icon="👁️" label="Portée totale" value={284000} />
+      </div>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Card title="Pages Facebook par secteur">{pages.map(([ic, n, s, on]) => <div key={n as string} className="mb-2 flex items-center gap-2.5 rounded-[9px] bg-[#0D1117] p-2.5"><span>{ic}</span><div className="flex-1"><div className="text-[.83rem] font-bold text-[#E6EDF3]">{n}</div><div className="text-[.7rem] text-[#8B949E]">{s}</div></div><span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${on ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-gray-400"}`}>{on ? "Active" : "Planifiée"}</span></div>)}</Card>
+        <Card title="Packs de diffusion">{packs.map(([n, c, p]) => <div key={n} className="mb-2 flex flex-wrap items-center justify-between gap-1 rounded-[9px] bg-[#0D1117] p-2.5"><div><div className="text-[.82rem] font-bold text-[#E6EDF3]">{n}</div><div className="text-[.71rem] text-[#8B949E]">{c}</div></div><span className="text-[.78rem] font-extrabold text-[#FFC93C]">{p}</span></div>)}</Card>
+      </div>
+    </>
+  );
+}
+
+function Rapports({ T }: { T: (m: string) => void }) {
+  const raps = [["📊", "Rapport MRR mensuel", "PDF · Revenus récurrents", "bg-g1"], ["🎯", "Rapport CRM & Conversions", "CSV · Pipeline", "bg-g8"], ["👨‍💼", "Performance employés", "PDF · Commissions", "bg-g5"], ["🤝", "Rapport ambassadeurs", "PDF · Performances", "bg-g3"], ["📢", "Performance campagnes", "Excel · Taux d'ouverture", "bg-g7"], ["💰", "Rapport financier", "PDF/CSV · Transactions", "bg-g4"]];
+  return (
+    <>
+      <PageHead title="📄 Rapports" sub="Génération et export" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {raps.map(([ic, t, s, g]) => (
+          <div key={t} onClick={() => T("Génération du rapport…")} className="cursor-pointer rounded-[18px] border border-[#21262D] bg-[#161B22] p-4 transition hover:border-[#6366F1]">
+            <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-[12px] text-[1.2rem] ${g}`}>{ic}</div>
+            <h3 className="text-[.88rem] font-bold text-[#E6EDF3]">{t}</h3>
+            <p className="mb-3 text-[.76rem] text-[#8B949E]">{s}</p>
+            <button className={btnP} onClick={(e) => { e.stopPropagation(); T("⬇ Téléchargement…"); }}>⬇ Générer</button>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function Settings({ T }: { T: (m: string) => void }) {
+  const tarifs = [["Pack Basic (mensuel)", "25000"], ["Pack Pro (mensuel)", "75000"], ["Pack Premium (mensuel)", "150000"], ["Pack Enterprise (mensuel)", "300000"], ["Boost Premium", "3500"], ["Boost À la Une", "9000"], ["Commission ambassadeurs (%)", "10"]];
+  const [toggles, setToggles] = useState<Record<string, boolean>>({ "Mode maintenance": false, "Inscriptions ouvertes": true, "Programme ambassadeurs": true, "Assistant IA": true, "Diffusion Facebook auto": true, "Paiements actifs": true });
+  return (
+    <>
+      <PageHead title="⚙️ Paramètres système" />
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Card title="Tarifs des offres (FCFA)">
+          <div className="space-y-2.5">
+            {tarifs.map(([l, v]) => <div key={l}><label className="mb-1 block text-[.75rem] font-bold text-[#8B949E]">{l}</label><input defaultValue={v} className="w-full rounded-[9px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.85rem] font-bold text-[#FFC93C] outline-none focus:border-[#6366F1]" /></div>)}
+            <button className={`${btnP} w-full`} onClick={() => T("✅ Tarifs sauvegardés")}>Sauvegarder les tarifs</button>
+          </div>
+        </Card>
+        <Card title="Toggles système">
+          <div className="space-y-2.5">
+            {Object.entries(toggles).map(([n, on]) => (
+              <div key={n} className="flex items-center justify-between rounded-[9px] bg-[#0D1117] p-2.5">
+                <span className="text-[.83rem] font-semibold text-[#C9D1D9]">{n}</span>
+                <button onClick={() => { setToggles((t) => ({ ...t, [n]: !t[n] })); T("Paramètre modifié"); }} className={`relative h-[22px] w-10 rounded-full transition ${on ? "bg-emerald-500" : "bg-[#30363D]"}`}><span className={`absolute top-[3px] h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[21px]" : "left-[3px]"}`} /></button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </>
+  );
+}
+
+/* ───────── Table helpers ───────── */
+function Tbl({ head, children }: { head: string[]; children: React.ReactNode }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse">
+        <thead><tr>{head.map((h) => <th key={h} className="border-b border-[#21262D] px-3 py-2.5 text-left text-[.68rem] font-bold uppercase tracking-wide text-[#484F58]">{h}</th>)}</tr></thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  );
+}
+function Td({ children, bold }: { children: React.ReactNode; bold?: boolean }) {
+  return <td className={`border-b border-[#21262D] px-3 py-2.5 text-[.82rem] ${bold ? "font-bold text-[#E6EDF3]" : "text-[#C9D1D9]"}`}>{children}</td>;
+}
