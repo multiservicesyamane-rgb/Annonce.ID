@@ -119,6 +119,10 @@ export default function SuperAdminApp() {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [prospects, setProspects] = useState<any[]>([]);
+  const [ambassadors, setAmbassadors] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   const T = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2100); };
@@ -163,9 +167,31 @@ export default function SuperAdminApp() {
       // Signalements
       const { data: repData } = await sb.from("reports").select("*").order("created_at", { ascending: false }).limit(30);
       setReports(repData || []);
+
+      // ── Données B2B (CRM, ambassadeurs, employés, campagnes) ──
+      const [pros, amb, emp, camp] = await Promise.all([
+        sb.from("prospects").select("*").order("created_at", { ascending: false }).limit(100),
+        sb.from("ambassadors").select("*").order("commission_total", { ascending: false }).limit(100),
+        sb.from("employees").select("*").order("created_at", { ascending: false }).limit(100),
+        sb.from("campaigns").select("*").order("created_at", { ascending: false }).limit(100),
+      ]);
+      setProspects(pros.data || []);
+      setAmbassadors(amb.data || []);
+      setEmployees(emp.data || []);
+      setCampaigns(camp.data || []);
     } catch (e) { console.error("SuperAdmin load error:", e); }
     setDataLoading(false);
   };
+
+  // Ajout réel d'un prospect dans la table
+  async function addProspect(p: Record<string, any>) {
+    const sb = createClient();
+    const { error } = await sb.from("prospects").insert(p);
+    if (error) { T(`⚠ ${error.message.includes("row-level") ? "Accès refusé (RLS) — voir SQL admin" : error.message}`); return false; }
+    T("✅ Prospect ajouté");
+    loadAllData();
+    return true;
+  }
 
   useEffect(() => { loadAllData(); }, [authed]);
 
@@ -255,11 +281,11 @@ export default function SuperAdminApp() {
             <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6366F1] border-t-transparent" /></div>
           ) : (<>
           {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} />}
-          {page === "crm" && <CRM T={T} />}
+          {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} />}
           {page === "marketing" && <Marketing T={T} />}
-          {page === "campagnes" && <Campagnes />}
-          {page === "employes" && <Employes />}
-          {page === "ambassadeurs" && <Ambassadeurs T={T} />}
+          {page === "campagnes" && <Campagnes campaigns={campaigns} />}
+          {page === "employes" && <Employes employees={employees} />}
+          {page === "ambassadeurs" && <Ambassadeurs T={T} ambassadors={ambassadors} />}
           {page === "offres" && <Offres T={T} />}
           {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
           {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
@@ -359,32 +385,62 @@ function Overview({ counts, allListings, profiles, purchases, T, loading }: { co
   );
 }
 
-function CRM({ T }: { T: (m: string) => void }) {
-  const stages = [["🆕", "Nouveaux", 50], ["📤", "Contactés", 30], ["🤝", "Intéressés", 15], ["📅", "Rendez-vous", 8], ["✅", "Clients", 3], ["❌", "Refusés", 5]] as const;
+function CRM({ T, prospects, addProspect }: { T: (m: string) => void; prospects: any[]; addProspect: (p: Record<string, any>) => Promise<boolean> }) {
+  const [form, setForm] = useState(false);
+  const [f, setF] = useState<Record<string, string>>({ status: "new", pack: "Basic" });
+  const stages: [string, string, string][] = [["🆕", "Nouveaux", "new"], ["📤", "Contactés", "ct"], ["🤝", "Intéressés", "int"], ["📅", "Rendez-vous", "rdv"], ["✅", "Clients", "cli"], ["❌", "Refusés", "ref"]];
+  const countBy = (st: string) => prospects.filter((p) => p.status === st).length;
+
+  async function submit() {
+    if (!f.name?.trim()) { T("⚠ Nom requis"); return; }
+    const ok = await addProspect({ name: f.name, sector: f.sector || null, city: f.city || null, email: f.email || null, phone: f.phone || null, status: f.status || "new", pack: f.pack || null });
+    if (ok) { setForm(false); setF({ status: "new", pack: "Basic" }); }
+  }
+
   return (
     <>
-      <PageHead title="🎯 CRM — Prospects" sub="1 240 prospects · conversion 3.2%">
-        <button className={btnG} onClick={() => T("Importer CSV…")}>📥 Importer</button>
-        <button className={btnP} onClick={() => T("+ Prospect ajouté")}>+ Nouveau prospect</button>
+      <PageHead title="🎯 CRM — Prospects" sub={`${prospects.length} prospect(s) · ${countBy("cli")} client(s)`}>
+        <button className={btnP} onClick={() => setForm((v) => !v)}>{form ? "✕ Fermer" : "+ Nouveau prospect"}</button>
       </PageHead>
+
+      {form && (
+        <div className="mb-3"><Card title="Ajouter un prospect">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {[["name", "Nom de l'entreprise *"], ["sector", "Secteur"], ["city", "Ville"], ["email", "Email"], ["phone", "Téléphone"]].map(([k, ph]) => (
+              <input key={k} value={f[k] || ""} onChange={(e) => setF((v) => ({ ...v, [k]: e.target.value }))} placeholder={ph} className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+            ))}
+            <select value={f.status} onChange={(e) => setF((v) => ({ ...v, status: e.target.value }))} className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none">
+              {stages.map((s) => <option key={s[2]} value={s[2]}>{s[1]}</option>)}
+            </select>
+            <select value={f.pack} onChange={(e) => setF((v) => ({ ...v, pack: e.target.value }))} className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none">
+              {["Basic", "Pro", "Premium", "Enterprise"].map((p) => <option key={p}>{p}</option>)}
+            </select>
+          </div>
+          <button className={`${btnP} mt-3`} onClick={submit}>Enregistrer le prospect</button>
+        </Card></div>
+      )}
+
       <Card title="Pipeline de vente">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          {stages.map(([ic, n, c]) => (
-            <div key={n} className="rounded-[11px] border border-[#21262D] bg-[#0D1117] p-2.5">
-              <div className="mb-2 flex items-center justify-between border-b border-[#21262D] pb-1.5 text-[.73rem] font-bold text-[#8B949E]">{ic} {n}<span className="rounded bg-white/10 px-1.5 text-[.7rem]">{c}</span></div>
-              <div className="text-[.68rem] text-[#484F58]">Glisser-déposer</div>
+          {stages.map(([ic, n, st]) => (
+            <div key={st} className="rounded-[11px] border border-[#21262D] bg-[#0D1117] p-2.5">
+              <div className="mb-2 flex items-center justify-between border-b border-[#21262D] pb-1.5 text-[.73rem] font-bold text-[#8B949E]">{ic} {n}<span className="rounded bg-white/10 px-1.5 text-[.7rem]">{countBy(st)}</span></div>
             </div>
           ))}
         </div>
       </Card>
-      <div className="mt-3"><Card title="Prospects récents">
-        {PROSPECTS.map((p) => (
-          <div key={p.n} className="mb-2 flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-2.5">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-[11px] text-[1.1rem] ${p.g}`}>{p.ic}</div>
-            <div className="min-w-[140px] flex-1"><div className="text-[.84rem] font-bold text-[#E6EDF3]">{p.n}</div><div className="text-[.72rem] text-[#8B949E]">{p.s} · {p.v} · Pack: <b className="text-[#FFC93C]">{p.pack}</b></div></div>
-            <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${ST_PILL[p.st]}`}>{ST_LABELS[p.st]}</span>
+
+      <div className="mt-3"><Card title="Prospects">
+        {prospects.length === 0 ? (
+          <div className="py-8 text-center text-[.85rem] text-[#8B949E]">Aucun prospect pour l'instant. Cliquez sur « + Nouveau prospect » pour commencer.</div>
+        ) : prospects.map((p) => (
+          <div key={p.id} className="mb-2 flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-g1 text-[1rem] font-bold text-white">{(p.name || "?").slice(0, 1).toUpperCase()}</div>
+            <div className="min-w-[140px] flex-1"><div className="text-[.84rem] font-bold text-[#E6EDF3]">{p.name}</div><div className="text-[.72rem] text-[#8B949E]">{p.sector || "—"} · {p.city || "—"}{p.pack ? <> · Pack: <b className="text-[#FFC93C]">{p.pack}</b></> : null}</div></div>
+            <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${ST_PILL[p.status] || "bg-white/10 text-gray-300"}`}>{ST_LABELS[p.status] || p.status}</span>
             <div className="flex gap-1.5">
-              {["📧", "💬", "📅", "📋"].map((a, i) => <button key={i} onClick={() => T(`${a} ${p.n}`)} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem] hover:bg-[#6366F1]/20">{a}</button>)}
+              {p.email && <a href={`mailto:${p.email}`} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem] hover:bg-[#6366F1]/20">📧</a>}
+              {p.phone && <a href={`https://wa.me/${(p.phone || "").replace(/\D/g, "")}`} target="_blank" className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem] hover:bg-[#25D366]/20">💬</a>}
             </div>
           </div>
         ))}
@@ -416,73 +472,76 @@ function Marketing({ T }: { T: (m: string) => void }) {
   );
 }
 
-function Campagnes() {
-  const rows = [["Auto Dakar Juin", "Automobile", "Email", "250", "72 (29%)", "18 (7%)", "bg-emerald-500/15 text-emerald-300", "Active"], ["Immo Abidjan", "Immobilier", "Email + WhatsApp", "120", "38 (32%)", "9 (8%)", "bg-emerald-500/15 text-emerald-300", "Active"], ["Tech Bamako", "Électronique", "WhatsApp", "80", "—", "12 (15%)", "bg-amber-500/15 text-amber-300", "Planifiée"], ["Emploi Dakar", "Emploi", "Email", "200", "54 (27%)", "8 (4%)", "bg-blue-500/15 text-blue-300", "Terminée"]];
+function Campagnes({ campaigns }: { campaigns: any[] }) {
+  const sum = (k: string) => campaigns.reduce((a, c) => a + (Number(c[k]) || 0), 0);
   return (
     <>
-      <PageHead title="📨 Campagnes" sub="Envoi groupé email & WhatsApp" />
+      <PageHead title="📨 Campagnes" sub={`${campaigns.length} campagne(s)`} />
       <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <Kpi grad="bg-g1" icon="📤" label="Emails envoyés" value={1840} />
-        <Kpi grad="bg-g3" icon="💬" label="WhatsApp envoyés" value={920} />
-        <Kpi grad="bg-g5" icon="👁️" label="Emails ouverts" value={515} trend="28%" />
-        <Kpi grad="bg-g8" icon="✅" label="Réponses positives" value={59} trend="3.2%" />
+        <Kpi grad="bg-g1" icon="📤" label="Envois totaux" value={sum("sent")} />
+        <Kpi grad="bg-g3" icon="👁️" label="Ouvertures" value={sum("opened")} />
+        <Kpi grad="bg-g8" icon="✅" label="Réponses" value={sum("replied")} />
+        <Kpi grad="bg-g5" icon="📨" label="Campagnes" value={campaigns.length} />
       </div>
-      <Card title="Campagnes actives">
-        <Tbl head={["Campagne", "Secteur", "Canal", "Envois", "Ouvertures", "Réponses", "Statut"]}>
-          {rows.map((r, i) => (
-            <tr key={i} className="hover:bg-white/[.02]"><Td bold>{r[0]}</Td><Td>{r[1]}</Td><Td>{r[2]}</Td><Td>{r[3]}</Td><Td>{r[4]}</Td><Td><span className="text-emerald-400 font-bold">{r[5]}</span></Td><Td><span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${r[6]}`}>{r[7]}</span></Td></tr>
-          ))}
-        </Tbl>
+      <Card title="Campagnes">
+        {campaigns.length === 0 ? (
+          <div className="py-8 text-center text-[.85rem] text-[#8B949E]">Aucune campagne. (Création de campagne à venir.)</div>
+        ) : (
+          <Tbl head={["Campagne", "Secteur", "Canal", "Envois", "Ouvertures", "Réponses", "Statut"]}>
+            {campaigns.map((c) => (
+              <tr key={c.id} className="hover:bg-white/[.02]"><Td bold>{c.name}</Td><Td>{c.sector || "—"}</Td><Td>{c.channel || "—"}</Td><Td>{c.sent || 0}</Td><Td>{c.opened || 0}</Td><Td><span className="text-emerald-400 font-bold">{c.replied || 0}</span></Td><Td><span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[.68rem] font-bold text-emerald-300">{c.status || "active"}</span></Td></tr>
+            ))}
+          </Tbl>
+        )}
       </Card>
     </>
   );
 }
 
-function Employes() {
+function Employes({ employees }: { employees: any[] }) {
   return (
     <>
-      <PageHead title="👨‍💼 Tableau de bord Employés" sub="Performance commerciale de l'équipe" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {EMPLOYES.map((e) => (
-          <div key={e.n} className="relative overflow-hidden rounded-[12px] border border-[#21262D] bg-[#0D1117] p-4">
-            <div className={`absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full text-[.78rem] ${e.g}`}>{e.rank}</div>
-            <div className={`mb-2.5 flex h-11 w-11 items-center justify-center rounded-[13px] text-[1rem] font-extrabold text-white ${e.g}`}>{e.n.split(" ").map((w) => w[0]).join("").slice(0, 2)}</div>
-            <div className="text-[.88rem] font-extrabold text-[#E6EDF3]">{e.n}</div>
-            <div className="mb-3 text-[.7rem] text-[#8B949E]">{e.r}</div>
-            <div className="mb-3 grid grid-cols-2 gap-2">
-              {[["Emails", e.em], ["WhatsApp", e.wa], ["Rendez-vous", e.rdv], ["Clients", e.cli]].map(([l, v]) => (
-                <div key={l as string}><div className="text-[1rem] font-extrabold leading-none text-[#E6EDF3]">{v as number}</div><div className="text-[.66rem] text-[#8B949E]">{l}</div></div>
-              ))}
-            </div>
-            <div className="mb-1 flex justify-between text-[.72rem]"><span className="text-[#8B949E]">Objectif mensuel</span><span className="font-bold">{e.cli}/{e.target}</span></div>
-            <div className="h-1.5 overflow-hidden rounded bg-[#21262D]"><div className={`h-full rounded ${e.g}`} style={{ width: `${e.cli / e.target * 100}%` }} /></div>
-            <div className="mt-3 flex items-center justify-between rounded-[8px] bg-[#0D1117] border border-[#21262D] p-2.5"><span className="text-[.72rem] text-[#8B949E]">Commission</span><span className="text-[.9rem] font-extrabold text-[#FFC93C]">{e.com.toLocaleString("fr-FR")} FCFA</span></div>
-          </div>
-        ))}
-      </div>
+      <PageHead title="👨‍💼 Tableau de bord Employés" sub={`${employees.length} employé(s)`} />
+      {employees.length === 0 ? (
+        <Card><div className="py-8 text-center text-[.85rem] text-[#8B949E]">Aucun employé enregistré. (Ajout d'employés à venir.)</div></Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {employees.map((e, i) => {
+            const g = GRADS[i % 8];
+            return (
+              <div key={e.id} className="relative overflow-hidden rounded-[12px] border border-[#21262D] bg-[#0D1117] p-4">
+                <div className={`mb-2.5 flex h-11 w-11 items-center justify-center rounded-[13px] text-[1rem] font-extrabold text-white ${g}`}>{(e.name || "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2)}</div>
+                <div className="text-[.88rem] font-extrabold text-[#E6EDF3]">{e.name}</div>
+                <div className="mb-3 text-[.7rem] text-[#8B949E]">{e.role || "Commercial"}</div>
+                <div className="flex items-center justify-between rounded-[8px] bg-[#0D1117] border border-[#21262D] p-2.5"><span className="text-[.72rem] text-[#8B949E]">Objectif mensuel</span><span className="text-[.9rem] font-extrabold text-[#FFC93C]">{e.monthly_target || 3} clients</span></div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }
 
-function Ambassadeurs({ T }: { T: (m: string) => void }) {
+function Ambassadeurs({ T, ambassadors }: { T: (m: string) => void; ambassadors: any[] }) {
+  const sum = (k: string) => ambassadors.reduce((a, x) => a + (Number(x[k]) || 0), 0);
   return (
     <>
-      <PageHead title="🤝 Programme Ambassadeurs" sub="47 ambassadeurs actifs · 4 niveaux">
-        <button className={btnP} onClick={() => T("Programme partagé")}>🤝 Partager</button>
-      </PageHead>
+      <PageHead title="🤝 Programme Ambassadeurs" sub={`${ambassadors.length} ambassadeur(s)`} />
       <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <Kpi grad="bg-g4" icon="👥" label="Ambassadeurs actifs" value={47} />
-        <Kpi grad="bg-g1" icon="💰" label="Commissions (FCFA)" value={245000} />
-        <Kpi grad="bg-g5" icon="🔗" label="Clics sur liens" value={1240} />
-        <Kpi grad="bg-g8" icon="✅" label="Clients apportés" value={19} />
+        <Kpi grad="bg-g4" icon="👥" label="Ambassadeurs" value={ambassadors.length} />
+        <Kpi grad="bg-g1" icon="💰" label="Commissions (FCFA)" value={sum("commission_total")} />
+        <Kpi grad="bg-g5" icon="🔗" label="Clics sur liens" value={sum("clicks")} />
+        <Kpi grad="bg-g8" icon="✅" label="Clients apportés" value={sum("clients_count")} />
       </div>
-      <Card title="Top ambassadeurs">
-        {AMBASSADEURS.map((a) => (
-          <div key={a.n} className="mb-2 flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-2.5">
-            <div className={`flex h-9 w-9 items-center justify-center rounded-[10px] text-[.85rem] font-bold text-white ${a.g}`}>{a.n.split(" ").map((w) => w[0]).join("")}</div>
-            <div className="min-w-[100px] flex-1"><div className="text-[.83rem] font-bold text-[#E6EDF3]">{a.n}</div><div className={`text-[.68rem] font-bold ${a.lc}`}>{a.l}</div></div>
-            <div className="flex gap-4 text-[.75rem]"><div><div className="text-[.9rem] font-extrabold text-[#FFC93C]">{a.v}</div><div className="text-[.66rem] text-[#8B949E]">Clients</div></div><div><div className="text-[.9rem] font-extrabold text-[#FFC93C]">{a.c.toLocaleString("fr-FR")} F</div><div className="text-[.66rem] text-[#8B949E]">Commission</div></div></div>
-            <div className="flex gap-1.5"><button onClick={() => T("Lien copié !")} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem]">🔗</button><button onClick={() => T("Paiement envoyé")} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem]">💳</button></div>
+      <Card title="Ambassadeurs">
+        {ambassadors.length === 0 ? (
+          <div className="py-8 text-center text-[.85rem] text-[#8B949E]">Aucun ambassadeur inscrit pour l'instant.</div>
+        ) : ambassadors.map((a, i) => (
+          <div key={a.id} className="mb-2 flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-2.5">
+            <div className={`flex h-9 w-9 items-center justify-center rounded-[10px] text-[.85rem] font-bold text-white ${GRADS[i % 8]}`}>{(a.name || "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2)}</div>
+            <div className="min-w-[100px] flex-1"><div className="text-[.83rem] font-bold text-[#E6EDF3]">{a.name}</div><div className="text-[.68rem] font-bold text-[#FFC93C]">{a.level || "bronze"}{a.ref_code ? ` · ${a.ref_code}` : ""}</div></div>
+            <div className="flex gap-4 text-[.75rem]"><div><div className="text-[.9rem] font-extrabold text-[#FFC93C]">{a.clients_count || 0}</div><div className="text-[.66rem] text-[#8B949E]">Clients</div></div><div><div className="text-[.9rem] font-extrabold text-[#FFC93C]">{(a.commission_total || 0).toLocaleString("fr-FR")} F</div><div className="text-[.66rem] text-[#8B949E]">Commission</div></div></div>
           </div>
         ))}
       </Card>
