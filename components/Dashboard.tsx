@@ -13,10 +13,11 @@ import { useFavorites } from "./FavButton";
 import ImageCropperModal from "./ImageCropperModal";
 import ChatInterface from "./ChatInterface";
 import MarketingPanel from "./MarketingPanel";
-type Panel = "overview" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "alerts" | "profile" | "faq" | "security";
+type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "alerts" | "profile" | "faq" | "security";
 
 const NAV: { id: string; icon: string; label: string; section?: string; badge?: number; isLink?: boolean; href?: string }[] = [
   { id: "overview", icon: "📊", label: "Accueil", section: "Principal" },
+  { id: "stats", icon: "📈", label: "Statistiques" },
   { id: "ads", icon: "📋", label: "Gérer mes annonces" },
   { id: "campaigns", icon: "🚀", label: "Marketing & Pub" },
   { id: "publish", icon: "➕", label: "Publier une annonce", isLink: true, href: "/publier" },
@@ -525,6 +526,58 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {panel === "stats" && (
+          <div className="animate-fadeUp max-w-[1000px] mx-auto">
+            <h1 className="font-display text-[1.3rem] font-extrabold dark:text-white">📈 Statistiques</h1>
+            <p className="mb-6 text-[.85rem] text-gray-500 dark:text-white/60">Performances de vos annonces (données réelles)</p>
+
+            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <KpiGrad gradient="bg-g1" icon="👁️" label="Vues totales" value={ads.reduce((a, d) => a + (d.views || 0), 0)} />
+              <KpiGrad gradient="bg-g3" icon="📦" label="Annonces actives" value={ads.filter(a => a.status === 'active' || !a.status).length} />
+              <KpiGrad gradient="bg-g5" icon="❤️" label="Favoris reçus" value={receivedFavsCount} />
+              <KpiGrad gradient="bg-g8" icon="📊" label="Vues / annonce" value={ads.length ? Math.round(ads.reduce((a, d) => a + (d.views || 0), 0) / ads.length) : 0} />
+            </div>
+
+            {ads.length === 0 ? (
+              <EmptyState title="Pas encore de données" description="Publiez des annonces pour voir vos statistiques apparaître ici." ctaLabel="Publier une annonce" ctaHref="/publier" emoji="📈" />
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+                {/* Vues par annonce (barres) */}
+                <div className="rounded-[18px] border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5">
+                  <h3 className="mb-4 font-display text-[1rem] font-bold dark:text-white">Vues par annonce</h3>
+                  <div className="flex items-end gap-2 h-[180px]">
+                    {[...ads].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 8).map((a, i) => {
+                      const max = Math.max(...ads.map(x => x.views || 0), 1);
+                      const grads = ['bg-g1', 'bg-g3', 'bg-g4', 'bg-g5'];
+                      return (
+                        <div key={a.id} className="flex-1 flex flex-col items-center gap-1 group">
+                          <div className="text-[.6rem] font-bold text-gray-400">{a.views || 0}</div>
+                          <div className={`w-full max-w-[34px] rounded-t-md ${grads[i % 4]} transition-all`} style={{ height: `${Math.max(4, (a.views || 0) / max * 140)}px` }} title={a.title}></div>
+                          <div className="text-[.55rem] text-gray-400 truncate w-full text-center">{(a.title || '').slice(0, 6)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Top annonces */}
+                <div className="rounded-[18px] border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5">
+                  <h3 className="mb-4 font-display text-[1rem] font-bold dark:text-white">Top annonces</h3>
+                  <div className="flex flex-col gap-2">
+                    {[...ads].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5).map((a, i) => (
+                      <Link key={a.id} href={`/annonce/${a.id}/${a.slug}`} className="flex items-center gap-2 py-1.5 border-b border-gray-100 dark:border-dark-border last:border-0 hover:opacity-80">
+                        <span className="w-5 font-extrabold text-green">{i + 1}</span>
+                        <span className="flex-1 truncate text-[.82rem] font-semibold dark:text-white">{a.title}</span>
+                        <span className="text-[.78rem] font-bold text-green">{(a.views || 0).toLocaleString('fr-FR')}</span>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
