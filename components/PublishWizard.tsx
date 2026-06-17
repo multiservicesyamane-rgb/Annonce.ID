@@ -163,7 +163,7 @@ export default function PublishWizard() {
     show("📤 Envoi des photos...");
     const uploadedPhotos = await uploadImages(photos, "listings");
 
-    const payload = {
+    const payload: Record<string, any> = {
       user_id: user.id,
       title: title || "Annonce sans titre",
       slug: (title || "annonce").toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now(),
@@ -182,15 +182,30 @@ export default function PublishWizard() {
       status: boost === 0 ? "active" : "pending"
     };
 
+    // Sauvegarde auto-adaptative : retire automatiquement toute colonne absente du
+    // schéma puis réessaie (fonctionne quel que soit l'état de la table listings).
+    async function saveAdaptive(isUpdate: boolean) {
+      const p: Record<string, any> = { ...payload };
+      for (let i = 0; i < 10; i++) {
+        const res = isUpdate
+          ? await supabase.from('listings').update(p).eq('id', editModeId!).select().single()
+          : await supabase.from('listings').insert(p).select().single();
+        if (!res.error) return res;
+        const m = res.error.message || "";
+        const match = m.match(/Could not find the '([^']+)' column/) || m.match(/column "?([a-z_]+)"? of relation/i);
+        if (match && match[1] in p) { delete p[match[1]]; continue; }
+        return res;
+      }
+      return { data: null as any, error: { message: "Schéma incompatible" } as any };
+    }
+
     let data, error;
     if (editModeId) {
-      // Update existant
-      const result = await supabase.from('listings').update(payload).eq('id', editModeId).select().single();
+      const result = await saveAdaptive(true);
       data = result.data;
       error = result.error;
     } else {
-      // Insertion nouvelle
-      const result = await supabase.from('listings').insert(payload).select().single();
+      const result = await saveAdaptive(false);
       data = result.data;
       error = result.error;
     }
