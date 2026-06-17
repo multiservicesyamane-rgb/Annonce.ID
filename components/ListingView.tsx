@@ -31,6 +31,7 @@ export default function ListingView({
   const [maxPrice, setMaxPrice] = useState(Number(searchParams.get("max")) || 5_000_000);
   const [condition, setCondition] = useState(searchParams.get("condition") || "Tous");
   const [sellerType, setSellerType] = useState(searchParams.get("sellerType") || "Tous");
+  const [location, setLocation] = useState(searchParams.get("location") || "Toutes");
   const [sort, setSort] = useState(searchParams.get("sort") || "recent");
   const [drawer, setDrawer] = useState(false);
   
@@ -53,13 +54,18 @@ export default function ListingView({
           if (sellerType === "Particuliers" && isPro) return false;
       }
       
+      // Filter by location
+      if (location !== "Toutes" && l.location) {
+          if (!l.location.toLowerCase().includes(location.toLowerCase())) return false;
+      }
+      
       return true;
     });
     if (sort === "price-asc") list = [...list].sort((a, b) => price(a) - price(b));
     if (sort === "price-desc") list = [...list].sort((a, b) => price(b) - price(a));
     if (sort === "views") list = [...list].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
     return list;
-  }, [initial, premiumOnly, minPrice, maxPrice, condition, sellerType, sort]);
+  }, [initial, premiumOnly, minPrice, maxPrice, condition, sellerType, location, sort]);
 
   const visibleListings = filtered.slice(0, visibleCount);
 
@@ -69,6 +75,7 @@ export default function ListingView({
     setMaxPrice(filters.priceRange[1]);
     setCondition(filters.condition || "Tous");
     setSellerType(filters.sellerType || "Tous");
+    setLocation(filters.location || "Toutes");
     setVisibleCount(12); // reset pagination
 
     const params = new URLSearchParams(searchParams.toString());
@@ -82,6 +89,9 @@ export default function ListingView({
     
     if (filters.sellerType && filters.sellerType !== "Tous") params.set("sellerType", filters.sellerType);
     else params.delete("sellerType");
+    
+    if (filters.location && filters.location !== "Toutes") params.set("location", filters.location);
+    else params.delete("location");
     
     router.replace(`?${params.toString()}`, { scroll: false });
   }

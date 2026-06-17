@@ -43,15 +43,65 @@ Termine par un appel à l'action (proposer une présentation de 15 min). Format 
   }
 }
 
-export async function POST(req: Request) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "Assistant IA non configuré : la variable ANTHROPIC_API_KEY est manquante côté serveur." },
-      { status: 500 }
-    );
-  }
+// ── FALLBACK GRATUIT (sans API) ──
+// Modèles de texte intégrés : utilisés quand la clé Claude est absente ou que
+// l'appel échoue (pas de crédits, erreur réseau...). Permet de tester l'outil
+// AVANT tout paiement. Bascule auto sur Claude dès que les crédits sont dispo.
+function templateText(body: any): string {
+  const kind = body?.kind || "email";
+  const company = (body?.company || "").trim() || "votre entreprise";
+  const city = (body?.city || "").trim() || "votre ville";
+  const sector = (body?.sector || "").trim() || "votre secteur";
+  const topic = (body?.topic || "").trim() || "votre produit";
 
+  switch (kind) {
+    case "email":
+      return `Objet : Boostez la visibilité de ${company} à ${city}
+
+Bonjour,
+
+Nous avons remarqué votre activité dans le secteur ${sector} à ${city}. Annonce.ID permet à votre entreprise de :
+✅ Toucher des acheteurs qualifiés dans 27 pays d'Afrique
+✅ Diffuser automatiquement vos annonces sur Facebook et WhatsApp
+✅ Générer des prospects et suivre vos statistiques en temps réel
+
+Seriez-vous disponible pour une présentation de 15 minutes cette semaine ?
+
+Cordialement,
+L'équipe Annonce.ID`;
+    case "whatsapp":
+      return `Bonjour 👋
+
+Je vous contacte concernant la promotion de ${sector} à ${city} sur *Annonce.ID*.
+
+Nous aidons les entreprises à :
+📈 Augmenter leur visibilité
+🎯 Générer des contacts qualifiés
+📱 Diffuser sur Facebook & WhatsApp
+
+Puis-je vous présenter notre offre en 5 min ? 🙏`;
+    case "listing_title":
+      return `🔥 ${topic} — Excellent état, prix imbattable à ${city}`;
+    case "listing_description":
+      return `${topic} en très bon état, disponible immédiatement à ${city}.
+
+✅ Qualité garantie
+✅ Prix négociable
+✅ Vendeur sérieux et réactif
+
+N'attendez plus : contactez-nous dès maintenant pour réserver ! Livraison possible. 📞`;
+    case "facebook":
+      return `🔥 BONNE AFFAIRE à ${city} ! 🔥
+
+${topic} disponible dès maintenant sur Annonce.ID. Qualité au top, prix imbattable. Ne ratez pas cette occasion ! 👇
+
+#AnnonceID #${(sector || "BonPlan").replace(/\s+/g, "")} #${city.replace(/\s+/g, "")} #Sénégal #BonPlan`;
+    default:
+      return `${topic} — disponible sur Annonce.ID.`;
+  }
+}
+
+export async function POST(req: Request) {
   // Rate limit par IP
   const ip = req.headers.get("x-forwarded-for") || "unknown";
   const now = Date.now();
@@ -65,9 +115,14 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const client = new Anthropic({ apiKey });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
 
-  // Choix du modèle selon le niveau (par défaut: utilisateur = Haiku, moins cher)
+  // Pas de clé → on sert directement le modèle gratuit (fonctionne avant paiement)
+  if (!apiKey) {
+    return NextResponse.json({ text: templateText(body), source: "template" });
+  }
+
+  const client = new Anthropic({ apiKey });
   const model = body?.tier === "admin" ? MODELS.admin : MODELS.user;
 
   try {
@@ -77,20 +132,15 @@ export async function POST(req: Request) {
       system: SYSTEM,
       messages: [{ role: "user", content: buildPrompt(body) }],
     });
-
     const text = msg.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text)
       .join("\n")
       .trim();
-
-    return NextResponse.json({ text });
+    return NextResponse.json({ text, source: "ai" });
   } catch (error: any) {
-    console.error("AI route error:", error);
-    const status = error?.status || 500;
-    return NextResponse.json(
-      { error: `Erreur IA: ${error?.message || "génération impossible"}` },
-      { status }
-    );
+    // Crédits épuisés / erreur API → on bascule sur le modèle gratuit (jamais bloquant)
+    console.warn("AI fallback (template):", error?.status, error?.message);
+    return NextResponse.json({ text: templateText(body), source: "template" });
   }
 }

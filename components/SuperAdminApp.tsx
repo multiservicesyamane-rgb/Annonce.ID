@@ -665,12 +665,12 @@ function AdsAdmin({ allListings, T, reload }: { allListings: any[]; T: (m: strin
   );
 }
 
-async function callAI(payload: Record<string, any>): Promise<string> {
+async function callAI(payload: Record<string, any>): Promise<{ text: string; source: string }> {
   // tier "admin" → modèle Opus 4.8 (qualité max) côté super admin
   const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, tier: "admin" }) });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error || "Erreur IA");
-  return data.text || "";
+  return { text: data.text || "", source: data.source || "template" };
 }
 
 function AIBlock({ title, accent, payloadBase, fields, T }: { title: string; accent: string; payloadBase: Record<string, any>; fields: { key: string; ph: string }[]; T: (m: string) => void }) {

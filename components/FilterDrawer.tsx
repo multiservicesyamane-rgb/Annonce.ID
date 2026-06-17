@@ -20,6 +20,7 @@ export default function FilterDrawer({
   const [premiumOnly, setPremiumOnly] = useState(false);
   const [condition, setCondition] = useState<string>("Tous");
   const [sellerType, setSellerType] = useState<string>("Tous");
+  const [location, setLocation] = useState<string>("Toutes");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000000]);
 
   // Prevent scroll when open on mobile
@@ -55,64 +56,57 @@ export default function FilterDrawer({
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-5">
-            {/* Catégories (en premier) */}
-            <div className="mb-6">
-              <h3 className="mb-3 text-[.85rem] font-bold text-gray-900 dark:text-white">Catégories</h3>
-              <div className="flex flex-col gap-1">
-                {CATEGORIES.map((c) => (
-                  <Link
-                    key={c.slug}
-                    href={`/categorie/${c.slug}`}
-                    onClick={onClose}
-                    className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[.85rem] font-medium text-gray-700 dark:text-white/80 hover:bg-green/10 hover:text-green dark:hover:text-green-400 transition-colors"
-                  >
-                    <span className="text-[1.05rem]">{c.icon}</span>
-                    <span className="truncate">{c.name}</span>
-                  </Link>
-                ))}
-              </div>
+            {/* Localisation */}
+            <div className="mb-5">
+              <h3 className="mb-2 text-[.8rem] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Localisation</h3>
+              <select 
+                value={location} 
+                onChange={(e) => setLocation(e.target.value)}
+                className="w-full rounded-[10px] border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 px-3 py-2.5 text-[.88rem] text-gray-900 dark:text-white outline-none focus:border-green transition"
+              >
+                <option value="Toutes">Tout le Sénégal</option>
+                <option value="Dakar">Dakar</option>
+                <option value="Thiès">Thiès</option>
+                <option value="Saint-Louis">Saint-Louis</option>
+                <option value="Ziguinchor">Ziguinchor</option>
+                <option value="Diourbel">Diourbel</option>
+                <option value="Kaolack">Kaolack</option>
+                <option value="Autre">Autre région</option>
+              </select>
             </div>
 
             {/* Prix */}
             <div className="mb-6">
-              <h3 className="mb-3 text-[.85rem] font-bold text-gray-900 dark:text-white">Prix</h3>
+              <h3 className="mb-3 text-[.8rem] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Fourchette de Prix</h3>
               <PriceSlider onChange={setPriceRange} />
             </div>
 
             {/* État */}
-            <div className="mb-6">
-              <h3 className="mb-3 text-[.85rem] font-bold text-gray-900 dark:text-white">État du produit</h3>
-              <div className="flex flex-col gap-2">
+            <div className="mb-5">
+              <h3 className="mb-2 text-[.8rem] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">État du produit</h3>
+              <select 
+                value={condition} 
+                onChange={(e) => setCondition(e.target.value)}
+                className="w-full rounded-[10px] border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 px-3 py-2.5 text-[.88rem] text-gray-900 dark:text-white outline-none focus:border-green transition"
+              >
                 {["Tous", "Neuf (Jamais utilisé)", "Occasion (Bon état)", "Pour pièces"].map(c => (
-                  <label key={c} className="flex cursor-pointer items-center gap-2 text-[.85rem] text-gray-700 dark:text-white/80">
-                    <input 
-                      type="radio" 
-                      name="condition" 
-                      checked={condition === c}
-                      onChange={() => setCondition(c)}
-                      className="accent-green" 
-                    /> {c}
-                  </label>
+                  <option key={c} value={c}>{c}</option>
                 ))}
-              </div>
+              </select>
             </div>
 
             {/* Type Vendeur */}
             <div className="mb-6">
-              <h3 className="mb-3 text-[.85rem] font-bold text-gray-900 dark:text-white">Type de vendeur</h3>
-              <div className="flex flex-col gap-2">
+              <h3 className="mb-2 text-[.8rem] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Type de vendeur</h3>
+              <select 
+                value={sellerType} 
+                onChange={(e) => setSellerType(e.target.value)}
+                className="w-full rounded-[10px] border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-900 px-3 py-2.5 text-[.88rem] text-gray-900 dark:text-white outline-none focus:border-green transition"
+              >
                 {["Tous", "Particuliers", "Professionnels vérifiés"].map(t => (
-                  <label key={t} className="flex cursor-pointer items-center gap-2 text-[.85rem] text-gray-700 dark:text-white/80">
-                    <input 
-                      type="radio" 
-                      name="seller" 
-                      checked={sellerType === t}
-                      onChange={() => setSellerType(t)}
-                      className="accent-green" 
-                    /> {t}
-                  </label>
+                  <option key={t} value={t}>{t}</option>
                 ))}
-              </div>
+              </select>
             </div>
 
             {/* Premium toggle */}
@@ -129,7 +123,7 @@ export default function FilterDrawer({
           <div className="border-t border-gray-100 dark:border-dark-border p-4">
             <button 
               onClick={() => {
-                onApply({ condition, sellerType, premiumOnly, priceRange });
+                onApply({ condition, sellerType, premiumOnly, priceRange, location });
                 onClose();
               }} 
               className="btn btn-green btn-block"

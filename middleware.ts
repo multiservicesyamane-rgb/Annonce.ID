@@ -37,6 +37,14 @@ export async function middleware(request: NextRequest) {
     pathname === '/' ||
     pathname === '/connexion' ||
     pathname === '/yamanetech' || // La page de login admin
+    pathname.startsWith('/yamanetech/super-admin') || // Super Admin (auth propre)
+    pathname.startsWith('/mentions-legales') ||
+    pathname.startsWith('/politique-confidentialite') ||
+    pathname.startsWith('/comment-ca-marche') ||
+    pathname.startsWith('/contact') ||
+    pathname.startsWith('/publicite') ||
+    pathname.startsWith('/assurance') ||
+    pathname.startsWith('/inscription') ||
     pathname.startsWith('/auth/callback') ||
     pathname.startsWith('/recherche') ||
     pathname.startsWith('/categorie') ||

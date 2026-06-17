@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AnnoncesWest — Administration</title>
+<style>
+/* ══ RESET & TOKENS ══ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F0F2F8;--surf:#fff;--surf2:#F7F9FC;--line:#E8ECF4;
+  --ink:#1A1F36;--ink2:#6B7280;--ink3:#A0AEC0;
+  --r:12px;--r-lg:18px;--r-xl:26px;
+  --sh:0 2px 8px rgba(20,30,80,.07);--sh-lg:0 12px 40px rgba(20,30,80,.13);
+  --p:#6366F1;--p-d:#4F46E5;--p-l:#EEF2FF;
+  --g1:linear-gradient(135deg,#667EEA 0%,#764BA2 100%);
+  --g2:linear-gradient(135deg,#F093FB 0%,#F5576C 100%);
+  --g3:linear-gradient(135deg,#4FACFE 0%,#00F2FE 100%);
+  --g4:linear-gradient(135deg,#43E97B 0%,#38F9D7 100%);
+  --g5:linear-gradient(135deg,#FA709A 0%,#FEE140 100%);
+  --g6:linear-gradient(135deg,#FF9A56 0%,#FF6A88 100%);
+  --g7:linear-gradient(135deg,#A18CD1 0%,#FBC2EB 100%);
+  --g8:linear-gradient(135deg,#0BA360 0%,#3CBA92 100%);
+  --red:#EF4444;--amber:#F59E0B;--green:#10B981;--blue:#3B82F6;--violet:#8B5CF6;
+}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#D1D9EE;border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ══ LAYOUT ══ */
+.app{display:flex;min-height:100vh}
+.sidebar{width:240px;background:var(--surf);border-right:1px solid var(--line);position:fixed;top:0;bottom:0;left:0;display:flex;flex-direction:column;z-index:200;transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.main{margin-left:240px;flex:1;display:flex;flex-direction:column;min-width:0}
+@media(max-width:1024px){.sidebar{transform:translateX(-100%);box-shadow:none}.sidebar.open{transform:none;box-shadow:var(--sh-lg)}.main{margin-left:0}}
+.overlay{display:none;position:fixed;inset:0;background:rgba(10,20,60,.35);z-index:190}
+.overlay.show{display:block}
+
+/* ══ SIDEBAR ══ */
+.sb-brand{display:flex;align-items:center;gap:.6rem;padding:1.2rem 1.1rem;border-bottom:1px solid var(--line)}
+.sb-logo{width:36px;height:36px;border-radius:10px;background:var(--g1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;font-weight:800;flex-shrink:0;box-shadow:0 4px 12px rgba(99,102,241,.35)}
+.sb-title{font-weight:800;font-size:.95rem;line-height:1.1}
+.sb-title span{color:var(--p);display:block;font-size:.7rem;font-weight:600;letter-spacing:.04em}
+.sb-admin{display:flex;align-items:center;gap:.6rem;padding:.9rem 1.1rem;margin:.3rem .6rem;background:var(--p-l);border-radius:var(--r);cursor:pointer}
+.sb-av{width:38px;height:38px;border-radius:10px;background:var(--g1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;font-weight:700;flex-shrink:0;position:relative}
+.sb-av::after{content:'';position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;background:#10B981;border:2px solid var(--surf);border-radius:50%}
+.sb-av-info .an{font-weight:700;font-size:.84rem}
+.sb-av-info .ar{font-size:.7rem;color:var(--p);font-weight:600}
+.sb-nav{flex:1;overflow-y:auto;padding:.4rem .6rem}
+.sb-section{font-size:.64rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;padding:.8rem .5rem .3rem}
+.sb-item{display:flex;align-items:center;gap:.6rem;padding:.62rem .75rem;border-radius:10px;font-size:.84rem;font-weight:600;color:var(--ink2);cursor:pointer;transition:all .15s;margin-bottom:.1rem;position:relative}
+.sb-item:hover{background:var(--surf2);color:var(--ink)}
+.sb-item.on{background:var(--g1);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.3)}
+.sb-item .ic{width:18px;text-align:center;flex-shrink:0;font-size:.9rem}
+.sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;padding:.05rem .38rem;border-radius:8px;min-width:18px;text-align:center}
+.sb-item.on .sb-badge{background:rgba(255,255,255,.25)}
+.sb-footer{padding:.8rem;border-top:1px solid var(--line)}
+.sb-logout{display:flex;align-items:center;gap:.55rem;padding:.6rem .75rem;border-radius:10px;color:var(--red);font-size:.84rem;font-weight:600;cursor:pointer;width:100%;transition:.15s}
+.sb-logout:hover{background:#FEF2F2}
+
+/* ══ TOPBAR ══ */
+.topbar{background:rgba(255,255,255,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:.8rem;padding:.75rem 1.4rem}
+.burger{font-size:1.25rem;display:none;color:var(--ink2)}
+@media(max-width:1024px){.burger{display:block}}
+.tb-search{flex:1;max-width:340px;position:relative}
+.tb-search input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:.55rem .8rem .55rem 2.2rem;font-size:.84rem;background:var(--surf2);outline:none;transition:.15s}
+.tb-search input:focus{border-color:var(--p);background:#fff}
+.tb-search .si{position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--ink3);font-size:.85rem}
+.tb-right{display:flex;align-items:center;gap:.5rem;margin-left:auto}
+.tb-ic{width:38px;height:38px;border-radius:10px;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:.9rem;cursor:pointer;position:relative;transition:.15s;color:var(--ink2)}
+.tb-ic:hover{background:#E8ECF4}
+.tb-dot{position:absolute;top:8px;right:9px;width:7px;height:7px;background:var(--red);border-radius:50%;border:1.5px solid #fff}
+.tb-date{font-size:.78rem;color:var(--ink2);font-weight:600;white-space:nowrap;display:none}
+@media(min-width:640px){.tb-date{display:block}}
+.tb-btn{display:flex;align-items:center;gap:.35rem;padding:.5rem 1rem;border-radius:10px;background:var(--g1);color:#fff;font-weight:700;font-size:.8rem;box-shadow:0 4px 12px rgba(99,102,241,.3);transition:.15s;white-space:nowrap}
+.tb-btn:hover{transform:translateY(-1px)}
+
+/* ══ CONTENT ══ */
+.content{padding:1.4rem;max-width:1600px;width:100%;margin:0 auto}
+.page{display:none}.page.on{display:block}
+.ph{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:.8rem;margin-bottom:1.3rem}
+.ph h1{font-weight:800;font-size:1.4rem}
+.ph p{font-size:.82rem;color:var(--ink2);margin-top:.1rem}
+.ph-actions{display:flex;gap:.4rem;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.52rem .9rem;border-radius:10px;font-weight:700;font-size:.8rem;transition:.15s}
+.btn-p{background:var(--g1);color:#fff;box-shadow:0 4px 12px rgba(99,102,241,.25)}.btn-p:hover{transform:translateY(-1px)}
+.btn-g{background:#fff;color:var(--ink2);border:1.5px solid var(--line)}.btn-g:hover{color:var(--ink)}
+.btn-r{background:#FEF2F2;color:var(--red);border:1.5px solid #FECACA}.btn-r:hover{background:#FEE2E2}
+.btn-a{background:#FFFBEB;color:#92400E;border:1.5px solid #FDE68A}
+
+/* ══ GRID ══ */
+.grid{display:grid;gap:1rem;margin-bottom:1rem}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g21{grid-template-columns:2fr 1fr}
+.g12{grid-template-columns:1fr 2fr}
+.g11{grid-template-columns:1fr 1fr}
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g21,.g12,.g11{grid-template-columns:1fr}.g3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.g4,.g3{grid-template-columns:1fr}}
+
+/* ══ KPI ══ */
+.kpi{border-radius:var(--r-lg);padding:1.2rem 1.3rem;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:.5rem}
+.kpi::after{content:'';position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.12);top:-30px;right:-30px}
+.kpi::before{content:'';position:absolute;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08);bottom:-20px;right:40px}
+.kpi-row{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.kpi-ic{width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;backdrop-filter:blur(4px)}
+.kpi-badge{font-size:.7rem;font-weight:700;background:rgba(255,255,255,.2);padding:.18rem .5rem;border-radius:7px}
+.kpi-val{font-size:1.75rem;font-weight:800;line-height:1;position:relative;z-index:1;font-variant-numeric:tabular-nums}
+.kpi-lbl{font-size:.78rem;opacity:.88;position:relative;z-index:1;font-weight:500}
+
+/* ══ CARD ══ */
+.card{background:var(--surf);border-radius:var(--r-lg);border:1px solid var(--line);box-shadow:var(--sh);padding:1.2rem;overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:.5rem;flex-wrap:wrap}
+.ch h3{font-weight:800;font-size:.97rem}
+.ch .csub{font-size:.74rem;color:var(--ink2);margin-top:.1rem}
+.tabs{display:flex;gap:.2rem;background:var(--surf2);border-radius:9px;padding:.2rem}
+.tab{padding:.3rem .65rem;border-radius:7px;font-size:.74rem;font-weight:700;color:var(--ink2);cursor:pointer;transition:.15s}
+.tab.on{background:#fff;color:var(--p-d);box-shadow:var(--sh)}
+.sel{border:1.5px solid var(--line);border-radius:9px;padding:.38rem .65rem;font-size:.76rem;font-weight:600;color:var(--ink2);outline:none;cursor:pointer;background:#fff}
+
+/* ══ GRAPHIQUE AIRE SVG ══ */
+.chart-box{height:220px;position:relative;margin-top:.5rem}
+.chart-box svg{width:100%;height:100%;overflow:visible}
+.ch-tip{position:absolute;background:var(--ink);color:#fff;font-size:.72rem;font-weight:700;padding:.3rem .6rem;border-radius:8px;pointer-events:none;transform:translate(-50%,-130%);white-space:nowrap;box-shadow:var(--sh-lg)}
+.ch-tip::after{content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--ink);border-bottom:0}
+.ax{display:flex;justify-content:space-between;margin-top:.4rem;font-size:.68rem;color:var(--ink3);font-weight:600}
+
+/* ══ BARRES ══ */
+.bar-wrap{display:flex;align-items:flex-end;gap:.5rem;height:160px;padding-top:.5rem}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:.35rem}
+.bb{width:100%;max-width:32px;border-radius:6px 6px 0 0;min-height:4px;transition:.8s}
+.bx{font-size:.68rem;color:var(--ink3);font-weight:600}
+
+/* ══ DONUT ══ */
+.donut-c{display:flex;align-items:center;gap:1.3rem;flex-wrap:wrap}
+.donut-sv{position:relative;width:140px;height:140px;flex-shrink:0}
+.donut-sv svg{transform:rotate(-90deg)}
+.donut-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.donut-mid .dv{font-weight:800;font-size:1.4rem;line-height:1}
+.donut-mid .dl{font-size:.66rem;color:var(--ink2)}
+.dleg{flex:1;min-width:120px;display:flex;flex-direction:column;gap:.55rem}
+.dleg-it{display:flex;align-items:center;gap:.5rem;font-size:.8rem}
+.dleg-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.dleg-it .pct{margin-left:auto;font-weight:700}
+
+/* ══ TABLEAU ══ */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:.7rem;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;padding:.65rem .75rem;border-bottom:1.5px solid var(--line)}
+.tbl td{padding:.75rem .75rem;border-bottom:1px solid var(--line);font-size:.83rem;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:var(--surf2)}
+.tc{display:flex;align-items:center;gap:.55rem}
+.tav{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem}
+.td-n{font-weight:700;font-size:.82rem}
+.td-s{font-size:.71rem;color:var(--ink2)}
+.pill{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .55rem;border-radius:7px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.pg{background:#DCFCE7;color:#15803D}
+.pa{background:#FEF3C7;color:#B45309}
+.pr{background:#FEE2E2;color:#B91C1C}
+.pb{background:#DBEAFE;color:#1D4ED8}
+.pv{background:#F3E8FF;color:#7E22CE}
+.pp{background:#F1F5F9;color:#475569}
+.ta-btn{width:28px;height:28px;border-radius:8px;background:var(--surf2);display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;transition:.15s;cursor:pointer}
+.ta-btn:hover{background:var(--p);color:#fff}
+
+/* ══ FEED ACTIVITÉ ══ */
+.feed-it{display:flex;gap:.7rem;padding:.7rem 0;border-bottom:1px solid var(--line)}
+.feed-it:last-child{border-bottom:none}
+.feed-ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;flex-shrink:0}
+.feed-t{font-size:.82rem;font-weight:600;line-height:1.4}
+.feed-t b{font-weight:800}
+.feed-d{font-size:.7rem;color:var(--ink3);margin-top:.15rem}
+
+/* ══ STAT MINI ══ */
+.sm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.8rem}
+@media(min-width:640px){.sm-grid{grid-template-columns:repeat(4,1fr)}}
+.sm{display:flex;align-items:center;gap:.75rem}
+.sm-ic{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#fff;flex-shrink:0}
+.sm-v{font-weight:800;font-size:1.2rem;line-height:1}
+.sm-l{font-size:.74rem;color:var(--ink2)}
+.sm-t{font-size:.69rem;font-weight:700}
+.sm-t.up{color:var(--green)}.sm-t.dn{color:var(--red)}
+
+/* ══ PROGRESS BAR ══ */
+.pb-wrap{margin-bottom:.7rem}
+.pb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;font-size:.8rem}
+.pb-head .pn{font-weight:600}.pb-head .pv{font-weight:800;color:var(--ink)}
+.pb-track{height:8px;background:var(--surf2);border-radius:6px;overflow:hidden}
+.pb-fill{height:100%;border-radius:6px;transition:width 1s ease}
+
+/* ══ MODÉRATION ══ */
+.mod-it{display:flex;align-items:center;gap:.75rem;padding:.75rem;border-radius:var(--r);border:1px solid var(--line);background:var(--surf2);margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem}
+.mod-img{width:50px;height:50px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem}
+.mod-info{flex:1;min-width:120px}
+.mod-t{font-weight:700;font-size:.84rem}
+.mod-m{font-size:.73rem;color:var(--ink2);margin-top:.1rem}
+.mod-acts{display:flex;gap:.4rem;flex-shrink:0}
+
+/* ══ CARTE PAYS ══ */
+.country-list{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+@media(min-width:640px){.country-list{grid-template-columns:1fr 1fr 1fr}}
+.country-it{display:flex;align-items:center;gap:.5rem;padding:.5rem .65rem;border-radius:9px;background:var(--surf2);font-size:.8rem}
+.country-it .cf{font-size:1.1rem;flex-shrink:0}
+.country-it .cn{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.country-it .cv{font-weight:800;font-size:.75rem;color:var(--p-d)}
+
+/* ══ PUBLI ══ */
+.pub-it{display:flex;align-items:center;gap:.7rem;padding:.65rem .75rem;border-radius:10px;border:1px solid var(--line);margin-bottom:.5rem;transition:.15s}
+.pub-it:hover{background:var(--surf2)}
+.pub-slot{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size.8rem;font-weight:800;color:#fff;flex-shrink:0;font-size:.8rem}
+.pub-info{flex:1;min-width:0}
+.pub-t{font-weight:700;font-size:.82rem}
+.pub-s{font-size:.72rem;color:var(--ink2);margin-top:.05rem}
+.pub-ctr{font-size:.75rem;font-weight:700;color:var(--green)}
+
+/* ══ ALERTE ══ */
+.alert{display:flex;gap:.6rem;padding:.75rem .9rem;border-radius:10px;font-size:.82rem;margin-bottom:.6rem;align-items:flex-start}
+.alert.warn{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E}
+.alert.info{background:#EFF6FF;border:1px solid #BFDBFE;color:#1E40AF}
+.alert.danger{background:#FEF2F2;border:1px solid #FECACA;color:#991B1B}
+.alert.ok{background:#F0FDF4;border:1px solid #BBF7D0;color:#166534}
+
+/* ══ TOAST ══ */
+#toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:.65rem 1.2rem;border-radius:10px;font-size:.82rem;font-weight:600;z-index:9999;opacity:0;transition:.3s;box-shadow:var(--sh-lg);pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ══ RESPONSIVE FIXES ══ */
+@media(max-width:560px){.content{padding:1rem}.ph{margin-bottom:1rem}.ph h1{font-size:1.2rem}.kpi-val{font-size:1.4rem}}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ════════ SIDEBAR ════════ -->
+<aside class="sidebar" id="sb">
+  <div class="sb-brand">
+    <div class="sb-logo">AW</div>
+    <div class="sb-title">AnnoncesWest<span>Administration</span></div>
+  </div>
+  <div class="sb-admin">
+    <div class="sb-av">JD</div>
+    <div class="sb-av-info"><div class="an">John Doe</div><div class="ar">Super Admin</div></div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section">Tableau de bord</div>
+    <div class="sb-item on" onclick="go('overview',this)"><span class="ic">📊</span> Vue d'ensemble</div>
+    <div class="sb-item" onclick="go('analytics',this)"><span class="ic">📈</span> Analytique</div>
+
+    <div class="sb-section">Contenu</div>
+    <div class="sb-item" onclick="go('moderation',this)"><span class="ic">🛡️</span> Modération<span class="sb-badge">8</span></div>
+    <div class="sb-item" onclick="go('listings',this)"><span class="ic">📋</span> Annonces</div>
+    <div class="sb-item" onclick="go('users',this)"><span class="ic">👥</span> Utilisateurs</div>
+    <div class="sb-item" onclick="go('messages',this)"><span class="ic">💬</span> Messages<span class="sb-badge">5</span></div>
+
+    <div class="sb-section">Monétisation</div>
+    <div class="sb-item" onclick="go('finance',this)"><span class="ic">💰</span> Finances</div>
+    <div class="sb-item" onclick="go('ads',this)"><span class="ic">📢</span> Publicités</div>
+    <div class="sb-item" onclick="go('boosts',this)"><span class="ic">✦</span> Boosts</div>
+
+    <div class="sb-section">Système</div>
+    <div class="sb-item" onclick="go('countries',this)"><span class="ic">🌍</span> Pays (27)</div>
+    <div class="sb-item" onclick="go('reports',this)"><span class="ic">📄</span> Rapports</div>
+    <div class="sb-item" onclick="go('settings',this)"><span class="ic">⚙️</span> Paramètres</div>
+  </nav>
+  <div class="sb-footer">
+    <button class="sb-logout" onclick="T('Déconnexion…')">🚪 Déconnexion</button>
+  </div>
+</aside>
+<div class="overlay" id="ov" onclick="closeSB()"></div>
+
+<!-- ════════ MAIN ════════ -->
+<div class="main">
+  <header class="topbar">
+    <button class="burger" onclick="openSB()">☰</button>
+    <div class="tb-search"><span class="si">🔍</span><input placeholder="Rechercher utilisateurs, annonces, transactions…"/></div>
+    <div class="tb-right">
+      <span class="tb-date" id="dateSpan"></span>
+      <div class="tb-ic" onclick="T('3 alertes système')">🔔<span class="tb-dot"></span></div>
+      <div class="tb-ic" onclick="T('Messages internes')">✉️<span class="tb-dot"></span></div>
+      <div class="tb-ic" onclick="T('Mode sombre bientôt')">🌙</div>
+      <button class="tb-btn" onclick="T('Export PDF généré…')">⬇ Exporter</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+  <!-- ════ PAGE: VUE D'ENSEMBLE ════ -->
+  <div class="page on" id="p-overview">
+    <div class="ph"><div><h1>Tableau de bord Admin</h1><p>Vue globale de la plateforme AnnoncesWest · Mise à jour en temps réel</p></div>
+      <div class="ph-actions">
+        <button class="btn btn-g" onclick="T('Période sélectionnée')">📅 Ce mois</button>
+        <button class="btn btn-p" onclick="T('Rapport généré')">+ Nouveau rapport</button>
+      </div>
+    </div>
+
+    <!-- ALERTES -->
+    <div class="alert warn">⚠️ <div><b>8 annonces en attente</b> de modération — <span style="cursor:pointer;text-decoration:underline" onclick="go('moderation',null)">Modérer maintenant</span></div></div>
+    <div class="alert danger" style="margin-bottom:1rem">🚨 <div><b>3 signalements critiques</b> nécessitent une action immédiate</div></div>
+
+    <!-- KPI -->
+    <div class="grid g4">
+      <div class="kpi" style="background:var(--g1)">
+        <div class="kpi-row"><div class="kpi-ic">👥</div><span class="kpi-badge">↑ 12%</span></div>
+        <div class="kpi-val" data-c="48320">0</div>
+        <div class="kpi-lbl">Utilisateurs actifs</div>
+      </div>
+      <div class="kpi" style="background:var(--g2)">
+        <div class="kpi-row"><div class="kpi-ic">📋</div><span class="kpi-badge">↑ 8%</span></div>
+        <div class="kpi-val" data-c="256891">0</div>
+        <div class="kpi-lbl">Annonces en ligne</div>
+      </div>
+      <div class="kpi" style="background:var(--g3)">
+        <div class="kpi-row"><div class="kpi-ic">💰</div><span class="kpi-badge">↑ 18%</span></div>
+        <div class="kpi-val" data-c="124" data-suf="M">0</div>
+        <div class="kpi-lbl">Revenus (FCFA ×100K)</div>
+      </div>
+      <div class="kpi" style="background:var(--g4)">
+        <div class="kpi-row"><div class="kpi-ic">🛡️</div><span class="kpi-badge">↑ 5%</span></div>
+        <div class="kpi-val" data-c="98" data-suf="%">0</div>
+        <div class="kpi-lbl">Taux de conformité</div>
+      </div>
+    </div>
+
+    <!-- GRAPHIQUE REVENUS + RÉPARTITION -->
+    <div class="grid g21">
+      <div class="card">
+        <div class="ch">
+          <div><h3>Revenus de la plateforme</h3><div class="csub">Boosts + Publicités + Abonnements Pro</div></div>
+          <div class="tabs">
+            <span class="tab" onclick="setR(this,'D')">7J</span>
+            <span class="tab on" onclick="setR(this,'M')">30J</span>
+            <span class="tab" onclick="setR(this,'Y')">12M</span>
+          </div>
+        </div>
+        <div class="chart-box" id="chartA"></div>
+        <div class="ax" id="axA"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div><h3>Sources de revenus</h3><div class="csub">Répartition par type</div></div></div>
+        <div class="donut-c">
+          <div class="donut-sv" id="donut1"></div>
+          <div class="dleg" id="dleg1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS MINI + BARRES ACTIVITÉ -->
+    <div class="card" style="margin-bottom:1rem">
+      <div class="sm-grid">
+        <div class="sm"><div class="sm-ic" style="background:var(--g1)">🆕</div><div><div class="sm-v" data-c="1240">0</div><div class="sm-l">Inscriptions ce mois</div><div class="sm-t up">↑ +12%</div></div></div>
+        <div class="sm"><div class="sm-ic" style="background:var(--g5)">📦</div><div><div class="sm-v" data-c="8450">0</div><div class="sm-l">Nouvelles annonces</div><div class="sm-t up">↑ +8%</div></div></div>
+        <div class="sm"><div class="sm-ic" style="background:var(--g6)">💳</div><div><div class="sm-v" data-c="2380">0</div><div class="sm-l">Transactions</div><div class="sm-t up">↑ +23%</div></div></div>
+        <div class="sm"><div class="sm-ic" style="background:var(--g8)">⭐</div><div><div class="sm-v" data-c="4" data-suf=".8/5">0</div><div class="sm-l">Note plateforme</div><div class="sm-t up">↑ Excellent</div></div></div>
+      </div>
+    </div>
+
+    <!-- TABLE TRANSACTIONS + ACTIVITÉ -->
+    <div class="grid g21">
+      <div class="card">
+        <div class="ch"><div><h3>Dernières transactions</h3><div class="csub">Paiements de boosts reçus</div></div>
+          <button class="btn btn-g" style="font-size:.74rem;padding:.38rem .7rem" onclick="go('finance',null)">Voir tout →</button>
+        </div>
+        <div style="overflow-x:auto"><table class="tbl" id="txTbl"></table></div>
+      </div>
+      <div class="card">
+        <div class="ch"><h3>Activité en temps réel</h3></div>
+        <div id="feedDiv"></div>
+      </div>
+    </div>
+
+    <!-- BARRES SEMAINE + PROGRESSION -->
+    <div class="grid g11">
+      <div class="card">
+        <div class="ch">
+          <div><h3>Activité hebdomadaire</h3><div class="csub">Annonces publiées vs signalées</div></div>
+          <div style="display:flex;gap:.8rem;font-size:.72rem;font-weight:700">
+            <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#667EEA;margin-right:.25rem"></span>Publiées</span>
+            <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#F5576C;margin-right:.25rem"></span>Signalées</span>
+          </div>
+        </div>
+        <div class="bar-wrap" id="barsW"></div>
+        <div class="ax" id="axB" style="margin-top:.5rem"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div><h3>Objectifs du mois</h3><div class="csub">Progression vers les cibles</div></div></div>
+        <div id="progDiv"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ PAGE: ANALYTIQUE ════ -->
+  <div class="page" id="p-analytics">
+    <div class="ph"><div><h1>📈 Analytique</h1><p>Trafic, conversions et comportements</p></div></div>
+    <div class="grid g4">
+      <div class="kpi" style="background:var(--g1)"><div class="kpi-row"><div class="kpi-ic">👁️</div><span class="kpi-badge">↑ 22%</span></div><div class="kpi-val" data-c="892400">0</div><div class="kpi-lbl">Pages vues ce mois</div></div>
+      <div class="kpi" style="background:var(--g5)"><div class="kpi-row"><div class="kpi-ic">🖱️</div><span class="kpi-badge">↑ 11%</span></div><div class="kpi-val" data-c="89" data-suf="K">0</div><div class="kpi-lbl">Visiteurs uniques</div></div>
+      <div class="kpi" style="background:var(--g3)"><div class="kpi-row"><div class="kpi-ic">⏱️</div><span class="kpi-badge">↑ 4%</span></div><div class="kpi-val" data-c="4" data-suf="m32s">0</div><div class="kpi-lbl">Durée session moy.</div></div>
+      <div class="kpi" style="background:var(--g8)"><div class="kpi-row"><div class="kpi-ic">🔄</div><span class="kpi-badge">↓ 2%</span></div><div class="kpi-val" data-c="38" data-suf="%">0</div><div class="kpi-lbl">Taux de rebond</div></div>
+    </div>
+    <div class="grid g21">
+      <div class="card"><div class="ch"><div><h3>Trafic par source</h3></div></div><div class="chart-box" id="chartB"></div><div class="ax" id="axC"></div></div>
+      <div class="card"><div class="ch"><div><h3>Top catégories</h3><div class="csub">Par nombre de vues</div></div></div>
+        <div id="topCatDiv"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ PAGE: MODÉRATION ════ -->
+  <div class="page" id="p-moderation">
+    <div class="ph"><div><h1>🛡️ Modération</h1><p>File d'attente des annonces à valider</p></div>
+      <div class="ph-actions"><button class="btn btn-p" onclick="T('Tout approuvé !')">✓ Tout approuver</button></div>
+    </div>
+    <div class="alert warn" style="margin-bottom:1rem">⏳ <b>8 annonces</b> attendent votre validation (délai max 24h)</div>
+    <div id="modDiv"></div>
+  </div>
+
+  <!-- ════ PAGE: ANNONCES ════ -->
+  <div class="page" id="p-listings">
+    <div class="ph"><div><h1>📋 Toutes les annonces</h1><p>256 891 annonces actives sur la plateforme</p></div></div>
+    <div class="card"><div style="overflow-x:auto"><table class="tbl" id="listTbl"></table></div></div>
+  </div>
+
+  <!-- ════ PAGE: UTILISATEURS ════ -->
+  <div class="page" id="p-users">
+    <div class="ph"><div><h1>👥 Utilisateurs</h1><p>48 320 comptes enregistrés</p></div></div>
+    <div class="grid g4" style="margin-bottom:1rem">
+      <div class="kpi" style="background:var(--g1)"><div class="kpi-row"><div class="kpi-ic">✅</div></div><div class="kpi-val">46 210</div><div class="kpi-lbl">Actifs</div></div>
+      <div class="kpi" style="background:var(--g3)"><div class="kpi-row"><div class="kpi-ic">⭐</div></div><div class="kpi-val">1 240</div><div class="kpi-lbl">Vendeurs Pro</div></div>
+      <div class="kpi" style="background:var(--g5)"><div class="kpi-row"><div class="kpi-ic">⏳</div></div><div class="kpi-val">820</div><div class="kpi-lbl">En attente vérif.</div></div>
+      <div class="kpi" style="background:var(--g2)"><div class="kpi-row"><div class="kpi-ic">🚫</div></div><div class="kpi-val">50</div><div class="kpi-lbl">Bannis</div></div>
+    </div>
+    <div class="card"><div style="overflow-x:auto"><table class="tbl" id="userTbl"></table></div></div>
+  </div>
+
+  <!-- ════ PAGE: FINANCES ════ -->
+  <div class="page" id="p-finance">
+    <div class="ph"><div><h1>💰 Finances</h1><p>Revenus, paiements et statistiques financières</p></div></div>
+    <div class="grid g4" style="margin-bottom:1rem">
+      <div class="kpi" style="background:var(--g1)"><div class="kpi-row"><div class="kpi-ic">💰</div><span class="kpi-badge">↑ 18%</span></div><div class="kpi-val" data-c="124" data-suf="M">0</div><div class="kpi-lbl">Revenus totaux (FCFA)</div></div>
+      <div class="kpi" style="background:var(--g8)"><div class="kpi-row"><div class="kpi-ic">🚀</div><span class="kpi-badge">↑ 22%</span></div><div class="kpi-val" data-c="82" data-suf="M">0</div><div class="kpi-lbl">Revenus boosts</div></div>
+      <div class="kpi" style="background:var(--g5)"><div class="kpi-row"><div class="kpi-ic">📢</div><span class="kpi-badge">↑ 15%</span></div><div class="kpi-val" data-c="31" data-suf="M">0</div><div class="kpi-lbl">Revenus publicités</div></div>
+      <div class="kpi" style="background:var(--g3)"><div class="kpi-row"><div class="kpi-ic">👑</div><span class="kpi-badge">↑ 9%</span></div><div class="kpi-val" data-c="11" data-suf="M">0</div><div class="kpi-lbl">Abonnements Pro</div></div>
+    </div>
+    <div class="grid g21">
+      <div class="card"><div class="ch"><div><h3>Évolution des revenus</h3></div></div><div class="chart-box" id="chartC"></div><div class="ax" id="axD"></div></div>
+      <div class="card"><div class="ch"><div><h3>Méthodes de paiement</h3></div></div><div class="donut-c"><div class="donut-sv" id="donut2"></div><div class="dleg" id="dleg2"></div></div></div>
+    </div>
+    <div class="card"><div class="ch"><h3>Historique des transactions</h3></div><div style="overflow-x:auto"><table class="tbl" id="finTbl"></table></div></div>
+  </div>
+
+  <!-- ════ PAGE: PUBLICITÉS ════ -->
+  <div class="page" id="p-ads">
+    <div class="ph"><div><h1>📢 Bannières annonceurs</h1><p>10 zones publicitaires gérées</p></div>
+      <button class="btn btn-p" onclick="T('+ Nouvelle bannière créée')">+ Nouvelle bannière</button>
+    </div>
+    <div id="adsDiv"></div>
+  </div>
+
+  <!-- ════ PAGE: BOOSTS ════ -->
+  <div class="page" id="p-boosts">
+    <div class="ph"><div><h1>✦ Gestion des boosts</h1><p>Annonces Premium, À la Une et Pack Pro actifs</p></div></div>
+    <div class="grid g3" style="margin-bottom:1rem">
+      <div class="kpi" style="background:var(--g1)"><div class="kpi-row"><div class="kpi-ic">⭐</div></div><div class="kpi-val">1 840</div><div class="kpi-lbl">Annonces Premium actives</div></div>
+      <div class="kpi" style="background:var(--g5)"><div class="kpi-row"><div class="kpi-ic">🏆</div></div><div class="kpi-val">420</div><div class="kpi-lbl">À la Une actives</div></div>
+      <div class="kpi" style="background:var(--g8)"><div class="kpi-row"><div class="kpi-ic">👑</div></div><div class="kpi-val">210</div><div class="kpi-lbl">Pack Pro actifs</div></div>
+    </div>
+    <div class="card"><div class="ch"><h3>Tarifs des boosts</h3><button class="btn btn-g" onclick="T('Tarifs sauvegardés !')">💾 Sauvegarder</button></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem">
+        ${['Premium ⭐','3 500','À la Une 🏆','9 000','Pack Pro 👑','15 000'].reduce((h,v,i)=>i%2===0?h+`<div><label style="font-size:.78rem;font-weight:700;color:var(--ink2);display:block;margin-bottom:.3rem">${v}</label>`:`<input style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:.55rem .8rem;font-size:.88rem;font-weight:700;outline:none" value="${v} FCFA"/></div>`,'')}
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ PAGE: PAYS ════ -->
+  <div class="page" id="p-countries">
+    <div class="ph"><div><h1>🌍 Gestion des 27 pays</h1><p>Activer, désactiver et configurer chaque pays</p></div></div>
+    <div class="card"><div class="country-list" id="countryDiv"></div></div>
+  </div>
+
+  <!-- ════ PAGE: RAPPORTS ════ -->
+  <div class="page" id="p-reports">
+    <div class="ph"><div><h1>📄 Rapports</h1><p>Générer et exporter les rapports de la plateforme</p></div></div>
+    <div class="grid g3">
+      ${[['Rapport mensuel complet','PDF · Toutes les statistiques','var(--g1)','📊'],['Utilisateurs & Inscriptions','CSV · Données démographiques','var(--g3)','👥'],['Transactions financières','PDF/CSV · Historique complet','var(--g8)','💰'],['Annonces par catégorie','Excel · Répartition détaillée','var(--g5)','📋'],['Signalements & Modération','PDF · Journal des actions','var(--g2)','🛡️'],['Performance publicitaire','PDF · CTR et impressions','var(--g6)','📢']].map(([t,s,g,ic])=>`<div class="card" style="cursor:pointer;transition:.18s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''" onclick="T('Génération du rapport…')"><div style="width:48px;height:48px;border-radius:13px;background:${g};display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:.75rem;box-shadow:var(--sh)">${ic}</div><h3 style="font-weight:800;font-size:.9rem;margin-bottom:.25rem">${t}</h3><p style="font-size:.78rem;color:var(--ink2);margin-bottom:.75rem">${s}</p><button class="btn btn-p" style="font-size:.76rem;padding:.42rem .8rem">⬇ Générer</button></div>`).join('')}
+    </div>
+  </div>
+
+  <!-- ════ PAGE: PARAMÈTRES ════ -->
+  <div class="page" id="p-settings">
+    <div class="ph"><div><h1>⚙️ Paramètres</h1><p>Configuration globale de la plateforme</p></div></div>
+    <div class="grid g11">
+      <div class="card"><h3 style="font-weight:800;margin-bottom:1rem">Plateforme</h3>
+        <div style="display:flex;flex-direction:column;gap:.75rem">
+          ${[['Nom de la plateforme','AnnoncesWest'],['Email support','support@annonceswest.com'],['Limite annonces gratuites','10'],['Durée annonce gratuite (jours)','30']].map(([l,v])=>`<div><label style="font-size:.76rem;font-weight:700;color:var(--ink2);display:block;margin-bottom:.25rem">${l}</label><input style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:.55rem .8rem;font-size:.85rem;outline:none" value="${v}"/></div>`).join('')}
+          <button class="btn btn-p" onclick="T('✓ Paramètres sauvegardés')">Sauvegarder</button>
+        </div>
+      </div>
+      <div class="card"><h3 style="font-weight:800;margin-bottom:1rem">Système</h3>
+        <div style="display:flex;flex-direction:column;gap:.65rem">
+          ${[['Mode maintenance','Désactivé','pp'],['Inscriptions ouvertes','Activé','pg'],['Paiements actifs','Activé','pg'],['Modération automatique','Activé','pg'],['Notifications push','Activé','pg']].map(([l,v,c])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .75rem;background:var(--surf2);border-radius:9px;font-size:.83rem;font-weight:600">${l}<span class="pill ${c}" onclick="T('Paramètre modifié')" style="cursor:pointer">${v}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ PAGE: MESSAGES ════ -->
+  <div class="page" id="p-messages">
+    <div class="ph"><div><h1>💬 Messages internes</h1><p>Communications de l'équipe admin</p></div></div>
+    <div class="card">
+      <div class="alert info" style="margin-bottom:1rem">ℹ️ Ces messages sont les signalements et alertes reçus des utilisateurs.</div>
+      <div id="msgDiv"></div>
+    </div>
+  </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+/* ══ NAV ══ */
+const pages={overview:'p-overview',analytics:'p-analytics',moderation:'p-moderation',listings:'p-listings',users:'p-users',messages:'p-messages',finance:'p-finance',ads:'p-ads',boosts:'p-boosts',countries:'p-countries',reports:'p-reports',settings:'p-settings'};
+function go(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.getElementById('p-'+id).classList.add('on');
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('on'));
+  if(el)el.classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+  closeSB();
+  initPage(id);
+}
+function openSB(){document.getElementById('sb').classList.add('open');document.getElementById('ov').classList.add('show')}
+function closeSB(){document.getElementById('sb').classList.remove('open');document.getElementById('ov').classList.remove('show')}
+
+/* ══ TOAST ══ */
+function T(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000)}
+
+/* ══ DATE ══ */
+const D=new Date();document.getElementById('dateSpan').textContent=D.toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'long'});
+
+/* ══ COMPTEURS ══ */
+function animCount(){document.querySelectorAll('[data-c]').forEach(el=>{if(el._done)return;el._done=1;const tgt=+el.dataset.c,suf=el.dataset.suf||'';let c=0;const iv=setInterval(()=>{c+=tgt/40;if(c>=tgt){c=tgt;clearInterval(iv)}let v=Math.round(c);el.textContent=(v>=1000&&!suf.includes('m')?v.toLocaleString('fr-FR'):v)+suf},20)})}
+
+/* ══ COULEURS AVATAR ══ */
+const AVC=['var(--g1)','var(--g2)','var(--g3)','var(--g4)','var(--g5)','var(--g6)','var(--g7)','var(--g8)'];
+function av(nm,i){return`<div class="tav" style="background:${AVC[i%8]}">${nm.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}</div>`}
+
+/* ══ AREA CHART ══ */
+const AREA={M:[[42,30],[58,22],[45,35],[68,28],[55,40],[82,18],[70,35],[95,22],[78,30],[110,15],[98,25],[125,10]],D:[[30,8],[48,12],[40,6],[62,15],[52,9],[78,5],[65,11]],Y:[[420,80],[580,65],[510,90],[690,55],[750,70],[920,40]]};
+const AXIS={M:['J','F','M','A','M','J','J','A','S','O','N','D'],D:['L','M','M','J','V','S','D'],Y:['2020','2021','2022','2023','2024','2025']};
+let rng='M';
+function drawArea(cId,axId,rngKey,col1,col2){
+  const data=AREA[rngKey||rng],axis=AXIS[rngKey||rng];
+  const el=document.getElementById(cId);if(!el)return;
+  const w=el.clientWidth||480,h=200,pad=10;
+  const vals1=data.map(d=>d[0]),vals2=data.map(d=>d[1]);
+  const max=Math.max(...vals1)*1.2;
+  const pts1=vals1.map((v,i)=>[i*(w/(data.length-1)),h-pad-(v/max)*(h-pad*2)]);
+  const pts2=vals2.map((v,i)=>[i*(w/(data.length-1)),h-pad-(v/max)*(h-pad*2)]);
+  const path=arr=>arr.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const fill=arr=>path(arr)+` L ${(w).toFixed(1)} ${h} L 0 ${h} Z`;
+  let grid='';for(let i=0;i<5;i++){const y=pad+(h-pad*2)*i/4;grid+=`<line x1="0" y1="${y.toFixed(1)}" x2="${w}" y2="${y.toFixed(1)}" stroke="#E8ECF4" stroke-width="1"/>`}
+  const c1=col1||'#667EEA',c2=col2||'#F5576C';
+  const gid1='ag'+cId+'1',gid2='ag'+cId+'2';
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="${gid1}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}" stop-opacity=".3"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${gid2}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c2}" stop-opacity=".2"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>
+    </defs>
+    ${grid}
+    <path d="${fill(pts1)}" fill="url(#${gid1})"/>
+    <path d="${fill(pts2)}" fill="url(#${gid2})"/>
+    <path d="${path(pts1)}" fill="none" stroke="${c1}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${path(pts2)}" fill="none" stroke="${c2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5,3"/>
+    ${pts1.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="#fff" stroke="${c1}" stroke-width="2.5"/>`).join('')}
+  </svg>`;
+  if(axId)document.getElementById(axId).innerHTML=axis.map(a=>`<span>${a}</span>`).join('');
+}
+function setR(el,r){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');rng=r;drawArea('chartA','axA')}
+
+/* ══ DONUT ══ */
+function drawDonut(id,legId,data){
+  const r=52,circ=2*Math.PI*r,cx=70,cy=70;let off=0,segs='';
+  data.forEach(([n,p,col])=>{const len=circ*p/100;segs+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="18" stroke-dasharray="${len.toFixed(1)} ${(circ-len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" stroke-linecap="round"/>`;off+=len});
+  document.getElementById(id).innerHTML=`<svg width="140" height="140">${segs}</svg><div class="donut-mid"><div class="dv">${data.reduce((a,d)=>a+d[1],0)}%</div><div class="dl">Total</div></div>`;
+  document.getElementById(legId).innerHTML=data.map(([n,p,col])=>`<div class="dleg-it"><span class="dleg-dot" style="background:${col}"></span>${n}<span class="pct">${p}%</span></div>`).join('');
+}
+
+/* ══ BARRES ══ */
+function drawBars(){
+  const d=[[65,8],[80,5],[55,12],[90,6],[72,9],[100,4],[60,7]],ax=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  const m=Math.max(...d.map(x=>x[0]))*1.1;
+  document.getElementById('barsW').innerHTML=d.map(([a,b])=>`<div class="bc"><div class="bb" style="height:${a/m*100}%;background:linear-gradient(180deg,#667EEA,#764BA2)"></div><div class="bb" style="height:${b/m*100}%;background:linear-gradient(180deg,#F093FB,#F5576C);margin-top:3px"></div></div>`).join('');
+  document.getElementById('axB').innerHTML=ax.map(a=>`<span>${a}</span>`).join('');
+}
+
+/* ══ PROGRESSION ══ */
+function drawProg(){
+  const ps=[['Inscriptions',78,'#667EEA'],['Revenus',92,'#43E97B'],['Modération',65,'#FA709A'],['Satisfaction',88,'#4FACFE'],['Annonces Pro',54,'#A18CD1']];
+  document.getElementById('progDiv').innerHTML=ps.map(([n,v,c])=>`<div class="pb-wrap"><div class="pb-head"><span class="pn">${n}</span><span class="pv">${v}%</span></div><div class="pb-track"><div class="pb-fill" style="width:${v}%;background:${c}"></div></div></div>`).join('');
+}
+
+/* ══ TABLE TRANSACTIONS ══ */
+const TX=[
+  ['Moussa Diallo','#TX-8841','À la Une','9 000 FCFA','✅ Complété','pg',0],
+  ['Aminata Koné','#TX-8840','Premium','3 500 FCFA','✅ Complété','pg',1],
+  ['Kwame Mensah','#TX-8839','Pack Pro','15 000 FCFA','⏳ En attente','pa',2],
+  ['Bineta Fall','#TX-8838','Premium','3 500 FCFA','✅ Complété','pg',3],
+  ['Ibrahim Traoré','#TX-8837','À la Une','9 000 FCFA','❌ Échoué','pr',4]];
+function drawTx(){document.getElementById('txTbl').innerHTML='<thead><tr><th>Client</th><th>ID</th><th>Offre</th><th>Montant</th><th>Statut</th><th></th></tr></thead><tbody>'+TX.map(([n,id,o,m,s,c,i])=>`<tr><td><div class="tc">${av(n,i)}<div><div class="td-n">${n}</div></div></div></td><td style="color:var(--ink2);font-weight:600">${id}</td><td>${o}</td><td style="font-weight:800">${m}</td><td><span class="pill ${c}">${s}</span></td><td><span class="ta-btn" onclick="T('Détails ${id}')">⋯</span></td></tr>`).join('')+'</tbody>'}
+
+/* ══ FEED ══ */
+const FEED=[['🆕','var(--g1)','<b>Nouvelle inscription</b> — Fatou Sow','Il y a 5 min'],['💰','var(--g8)','<b>Paiement reçu</b> — 9 000 FCFA Orange Money','Il y a 18 min'],['🛡️','var(--g5)','<b>Annonce signalée</b> — à modérer d\'urgence','Il y a 32 min'],['📋','var(--g3)','<b>Annonce approuvée</b> — Villa F5 Almadies','Il y a 1h'],['👑','var(--g2)','<b>Vendeur Pro validé</b> — Kwame Mensah','Il y a 2h'],['⚠️','var(--g6)','<b>Tentative login suspecte</b> — IP bloquée','Il y a 3h']];
+function drawFeed(){document.getElementById('feedDiv').innerHTML=FEED.map(([ic,bg,txt,tm])=>`<div class="feed-it"><div class="feed-ic" style="background:${bg}">${ic}</div><div><div class="feed-t">${txt}</div><div class="feed-d">${tm}</div></div></div>`).join('')}
+
+/* ══ MODÉRATION ══ */
+const MODS=[['Villa luxe Ngor — 5 pièces','Signalée : prix suspect · Immobilier','🏠','#DCFCE7'],['iPhone 13 64Go occasion','En attente de vérification · Électronique','📱','#DBEAFE'],['Toyota Yaris 2019 — Cotonou','Doublon potentiel · Voitures','🚗','#FEF3C7'],['Offre emploi — Secrétaire','Contenu insuffisant · Emploi','💼','#F3E8FF'],['Mouton Ladoum 3 ans','Première annonce · Animaux','🐑','#FEF3C7'],['MacBook Pro M2 comme neuf','Vérification photos · Électronique','💻','#DBEAFE'],['Terrain Saly 500m²','Documents manquants · Immobilier','🌿','#DCFCE7'],['Cours de code Python','Informations manquantes · Formation','🎓','#F3E8FF']];
+function drawMod(){document.getElementById('modDiv').innerHTML=MODS.map(([t,s,ic,bg])=>`<div class="mod-it"><div class="mod-img" style="background:${bg}">${ic}</div><div class="mod-info"><div class="mod-t">${t}</div><div class="mod-m">${s}</div></div><div class="mod-acts"><button class="btn btn-p" style="font-size:.74rem;padding:.38rem .7rem" onclick="T('✓ Approuvé !')">✓ Approuver</button><button class="btn btn-r" style="font-size:.74rem;padding:.38rem .7rem" onclick="T('✕ Rejeté')">✕ Rejeter</button><button class="btn btn-g" style="font-size:.74rem;padding:.38rem .7rem" onclick="T('Demande info envoyée')">ℹ Info</button></div></div>`).join('')}
+
+/* ══ TABLE ANNONCES ══ */
+function drawListings(){document.getElementById('listTbl').innerHTML='<thead><tr><th>Annonce</th><th>Catégorie</th><th>Prix</th><th>Vues</th><th>Boost</th><th>Statut</th><th>Actions</th></tr></thead><tbody>'+[['Villa F5 piscine Almadies','Immobilier','280 000 000 FCFA','1 247','✦ À la Une','pg','✅ Active',0],['BMW X5 2022 Full options','Voitures','45 000 000 FCFA','843','⭐ Premium','pb','✅ Active',1],['iPhone 15 Pro Max 256Go','Électronique','750 000 FCFA','2 134','⭐ Premium','pb','✅ Active',2],['Terrain Saly 500m²','Immobilier','18 000 000 FCFA','432','Gratuit','pp','⏳ En attente',3],['Chef projet IT — CDI','Emploi','Confidentiel','98','Gratuit','pp','❌ Expirée',4]].map(([t,c,p,v,b,bc,s,i])=>`<tr><td><div class="tc">${av(t,i)}<div><div class="td-n">${t}</div></div></div></td><td>${c}</td><td style="font-weight:700">${p}</td><td>${v}</td><td><span class="pill pv">${b}</span></td><td><span class="pill ${bc}">${s}</span></td><td><span class="ta-btn" onclick="T('Modifier')">✏</span> <span class="ta-btn" onclick="T('Suspendu')" style="color:var(--red)">⏸</span></td></tr>`).join('')+'</tbody>'}
+
+/* ══ TABLE UTILISATEURS ══ */
+function drawUsers(){document.getElementById('userTbl').innerHTML='<thead><tr><th>Utilisateur</th><th>Téléphone</th><th>Pays</th><th>Annonces</th><th>Inscrit le</th><th>Statut</th><th>Actions</th></tr></thead><tbody>'+[['Moussa Diallo','+221 77 123 45 67','🇸🇳 Sénégal',12,'01/01/2021','Pro',0],['Aminata Koné','+225 07 88 99 00','🇨🇮 Côte d\'Ivoire',5,'12/03/2022','Vérifié',1],['Kwame Mensah','+233 24 555 12 34','🇬🇭 Ghana',8,'05/07/2023','Actif',2],['Ibrahim Traoré','+223 76 44 55 66','🇲🇱 Mali',3,'22/11/2023','Actif',3],['Fatou Sow','+221 78 000 11 22','🇸🇳 Sénégal',1,'15/06/2025','Nouveau',4]].map(([n,p,c,a,d,s,i])=>`<tr><td><div class="tc">${av(n,i)}<div><div class="td-n">${n}</div></div></div></td><td>${p}</td><td>${c}</td><td style="font-weight:700">${a}</td><td style="color:var(--ink2)">${d}</td><td><span class="pill ${s==='Pro'?'pv':s==='Vérifié'?'pg':s==='Nouveau'?'pb':'pp'}">${s}</span></td><td><span class="ta-btn" onclick="T('Voir profil')">👁</span> <span class="ta-btn" onclick="confirmBan()" style="color:var(--red)">🚫</span></td></tr>`).join('')+'</tbody>'}
+function confirmBan(){if(confirm('Bannir cet utilisateur ?'))T('Utilisateur banni')}
+
+/* ══ PUBLICITÉS ══ */
+const ADS_DATA=[['A1 — Hero Banner','Orange Money','🇸🇳🇨🇮🇲🇱','245 800','4 920','2.0%','pg'],['A2 — In-feed Home','Wave','🇸🇳🇨🇮','189 200','5 676','3.0%','pg'],['A3 — Sidebar','MTN MoMo','🇨🇮🇧🇯🇬🇭','156 700','3 134','2.0%','pg'],['A4 — In-grid','Coca-Cola','Tous','98 400','1 476','1.5%','pa'],['A5 — Page annonce','Airtel','🇲🇱🇳🇪🇧🇫','78 200','1 096','1.4%','pg'],['A6 — Footer','Banque SG','🇸🇳','45 600','456','1.0%','pb']];
+function drawAds(){document.getElementById('adsDiv').innerHTML='<div class="card"><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Slot</th><th>Annonceur</th><th>Pays ciblés</th><th>Impressions</th><th>Clics</th><th>CTR</th><th>Statut</th><th>Actions</th></tr></thead><tbody>'+ADS_DATA.map(([s,an,c,im,cl,ctr,st])=>`<tr><td style="font-weight:700;color:var(--p-d)">${s}</td><td style="font-weight:700">${an}</td><td>${c}</td><td>${im}</td><td>${cl}</td><td style="font-weight:800;color:var(--green)">${ctr}</td><td><span class="pill ${st}">${st==='pg'?'🟢 Active':st==='pa'?'🟡 Planifiée':'🔵 Nouveau'}</span></td><td><span class="ta-btn" onclick="T('Modifier bannière')">✏</span> <span class="ta-btn" onclick="T('Bannière suspendue')">⏸</span></td></tr>`).join('')+'</tbody></table></div></div>'}
+
+/* ══ PAYS ══ */
+const PAYS=[['🇸🇳','Sénégal',45230],['🇨🇮','Côte d\'Ivoire',38900],['🇲🇱','Mali',22100],['🇧🇯','Bénin',18400],['🇧🇫','Burkina Faso',15600],['🇹🇬','Togo',12800],['🇳🇪','Niger',8900],['🇬🇳','Guinée',7400],['🇬🇭','Ghana',6800],['🇳🇬','Nigéria',5900],['🇨🇲','Cameroun',4200],['🇸🇱','Sierra Leone',2100],['🇱🇷','Liberia',1800],['🇬🇲','Gambie',1400],['🇨🇻','Cap-Vert',980],['🇲🇷','Mauritanie',870],['🇬🇦','Gabon',760],['🇨🇬','Congo',650],['🇨🇩','RD Congo',540],['🇹🇩','Tchad',430],['🇨🇫','Centrafrique',320],['🇬🇼','Guinée-Bissau',210],['🇬🇶','Guinée Éq.',180],['🇲🇦','Maroc',9800],['🇩🇿','Algérie',4500],['🇹🇳','Tunisie',2100],['🇲🇬','Madagascar',890]];
+function drawCountries(){document.getElementById('countryDiv').innerHTML=PAYS.map(([f,n,c])=>`<div class="country-it"><span class="cf">${f}</span><span class="cn">${n}</span><span class="cv">${c.toLocaleString('fr-FR')}</span></div>`).join('')}
+
+/* ══ FINANCE TABLE ══ */
+function drawFin(){document.getElementById('finTbl').innerHTML='<thead><tr><th>Date</th><th>Utilisateur</th><th>Type</th><th>Montant</th><th>Méthode</th><th>Statut</th></tr></thead><tbody>'+[['16/06','Moussa D.','À la Une','9 000 FCFA','Orange Money','pg'],['16/06','Aminata K.','Premium','3 500 FCFA','Wave','pg'],['15/06','Kwame M.','Pack Pro','15 000 FCFA','MTN MoMo','pg'],['15/06','Bineta F.','Premium','3 500 FCFA','Carte Visa','pg'],['14/06','Ibrahim T.','À la Une','9 000 FCFA','Orange Money','pr']].map(([d,u,t,m,me,s])=>`<tr><td style="color:var(--ink2)">${d}</td><td style="font-weight:700">${u}</td><td>${t}</td><td style="font-weight:800;color:var(--green)">${m}</td><td>${me}</td><td><span class="pill ${s}">${s==='pg'?'✅ Payé':'❌ Échoué'}</span></td></tr>`).join('')+'</tbody>'}
+
+/* ══ MESSAGES ══ */
+function drawMsgs(){document.getElementById('msgDiv').innerHTML=FEED.map(([ic,bg,txt,tm])=>`<div class="feed-it"><div class="feed-ic" style="background:${bg}">${ic}</div><div style="flex:1"><div class="feed-t">${txt}</div><div class="feed-d">${tm}</div></div><button class="btn btn-g" style="font-size:.72rem;padding:.32rem .65rem" onclick="T('Marque comme lu')">✓ Lu</button></div>`).join('')}
+
+/* ══ TOP CATÉGORIES ══ */
+function drawTopCat(){const cats=[['🏠 Immobilier',45,'#667EEA'],['📱 Électronique',58,'#4FACFE'],['🚗 Voitures',32,'#43E97B'],['👗 Mode',29,'#FA709A'],['💼 Emploi',12,'#A18CD1'],['🔧 Services',16,'#FF9A56']];document.getElementById('topCatDiv').innerHTML=cats.map(([n,v,c])=>`<div class="pb-wrap"><div class="pb-head"><span class="pn">${n}</span><span class="pv">${v}K vues</span></div><div class="pb-track"><div class="pb-fill" style="width:${Math.round(v/58*100)}%;background:${c}"></div></div></div>`).join('')}
+
+/* ══ INIT PAGE ══ */
+function initPage(id){
+  animCount();
+  if(id==='overview'){drawArea('chartA','axA');drawDonut('donut1','dleg1',[['Boosts',66,'#667EEA'],['Publicités',25,'#F093FB'],['Abonnements',9,'#43E97B']]);drawBars();drawProg();drawTx();drawFeed()}
+  if(id==='analytics'){drawArea('chartB','axC','D','#4FACFE','#43E97B');drawTopCat()}
+  if(id==='moderation')drawMod();
+  if(id==='listings')drawListings();
+  if(id==='users')drawUsers();
+  if(id==='finance'){drawArea('chartC','axD','Y','#43E97B','#667EEA');drawDonut('donut2','dleg2',[['Orange Money',45,'#FF6600'],['Wave',28,'#1DC8FF'],['MTN MoMo',15,'#FFCC00'],['Carte',8,'#6366F1'],['Moov',4,'#0066CC']]);drawFin()}
+  if(id==='ads')drawAds();
+  if(id==='countries')drawCountries();
+  if(id==='messages')drawMsgs();
+}
+window.addEventListener('load',()=>{initPage('overview');window.addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>initPage('overview'),200)})});
+</script>
+</body>
+</html>

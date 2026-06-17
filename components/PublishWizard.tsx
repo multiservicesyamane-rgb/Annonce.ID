@@ -247,7 +247,7 @@ export default function PublishWizard() {
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6">
       <div className="mb-6 mt-4 lg:mt-8">
-        <h1 className="font-display text-[1.8rem] font-extrabold dark:text-white">{editModeId ? "Modifier l'annonce" : "Créer une annonce"}</h1>
+        <h1 className="font-display text-[1.4rem] sm:text-[1.8rem] font-extrabold dark:text-white">{editModeId ? "Modifier l'annonce" : "Créer une annonce"}</h1>
         <p className="text-gray-500 dark:text-gray-400 text-[.95rem]">Suivez les étapes. Le rendu s'affiche en temps réel sur la droite.</p>
       </div>
 

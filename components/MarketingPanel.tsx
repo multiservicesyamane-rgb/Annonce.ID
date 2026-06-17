@@ -120,23 +120,23 @@ export default function MarketingPanel({ ads, user }: { ads: any[], user: any })
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-dark-800 p-5 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
           <div className="text-gray-500 text-xs font-bold mb-1">VUES ANNONCES</div>
-          <div className="text-2xl font-extrabold text-green">
+          <div className="text-xl sm:text-2xl font-extrabold text-green">
             {ads.reduce((acc, ad) => acc + (ad.views || 0), 0).toLocaleString('fr-FR')}
           </div>
         </div>
         <div className="bg-white dark:bg-dark-800 p-5 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
           <div className="text-gray-500 text-xs font-bold mb-1">CLICS WHATSAPP</div>
-          <div className="text-2xl font-extrabold text-gray-900 dark:text-white">
+          <div className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">
             {user?.whatsapp_clicks || 0}
           </div>
         </div>
         <div className="bg-white dark:bg-dark-800 p-5 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
           <div className="text-gray-500 text-xs font-bold mb-1">PRODUITS ACTIFS</div>
-          <div className="text-2xl font-extrabold text-gray-900 dark:text-white">{ads.length}</div>
+          <div className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">{ads.length}</div>
         </div>
         <div className="bg-white dark:bg-dark-800 p-5 rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
           <div className="text-gray-500 text-xs font-bold mb-1">VISITES BOUTIQUE</div>
-          <div className="text-2xl font-extrabold text-gray-900 dark:text-white">
+          <div className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">
             {user?.boutique_views || 0}
           </div>
         </div>

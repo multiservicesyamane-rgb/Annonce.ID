@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AnnoncesWest — Super Admin</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F0F2F8;--surf:#fff;--s2:#F7F9FC;--line:#E8ECF4;
+  --ink:#1A1F36;--ink2:#6B7280;--ink3:#A0AEC0;
+  --p:#6366F1;--pd:#4F46E5;--pl:#EEF2FF;
+  --green:#10B981;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;
+  --r:12px;--rl:18px;
+  --sh:0 2px 8px rgba(20,30,80,.07);--shl:0 14px 40px rgba(20,30,80,.13);
+  --g1:linear-gradient(135deg,#667EEA,#764BA2);
+  --g2:linear-gradient(135deg,#F093FB,#F5576C);
+  --g3:linear-gradient(135deg,#4FACFE,#00F2FE);
+  --g4:linear-gradient(135deg,#43E97B,#38F9D7);
+  --g5:linear-gradient(135deg,#FA709A,#FEE140);
+  --g6:linear-gradient(135deg,#FF9A56,#FF6A88);
+  --g7:linear-gradient(135deg,#A18CD1,#FBC2EB);
+  --g8:linear-gradient(135deg,#0BA360,#3CBA92);
+}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0D1117;color:#fff;font-size:14px;line-height:1.5;overflow-x:hidden;min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#30363d;border-radius:6px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.rv{animation:fadeUp .4s ease both}
+
+/* ══ LOGIN ══ */
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0D1117 0%,#161B22 50%,#0D1117 100%);padding:1rem}
+.login-card{background:#161B22;border:1px solid #30363D;border-radius:24px;padding:2rem;max-width:400px;width:100%;box-shadow:0 0 60px rgba(99,102,241,.15)}
+.login-logo{width:56px;height:56px;border-radius:16px;background:var(--g1);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;margin:0 auto 1rem;box-shadow:0 0 30px rgba(99,102,241,.4)}
+.login-card h1{text-align:center;font-size:1.2rem;font-weight:800;margin-bottom:.25rem}
+.login-card p{text-align:center;color:#8B949E;font-size:.82rem;margin-bottom:1.5rem}
+.login-creds{background:#0D1117;border:1px dashed #30363D;border-radius:10px;padding:.75rem;font-size:.75rem;color:#FFC93C;margin-bottom:1rem;line-height:1.8}
+.ainput{width:100%;background:#0D1117;border:1.5px solid #30363D;border-radius:10px;padding:.7rem .9rem;font-size:.88rem;color:#fff;outline:none;margin-bottom:.7rem;transition:.15s}
+.ainput:focus{border-color:#6366F1}
+.ainput::placeholder{color:#484F58}
+.lbtn{width:100%;background:var(--g1);color:#fff;border-radius:10px;padding:.75rem;font-weight:800;font-size:.9rem;box-shadow:0 4px 20px rgba(99,102,241,.35);transition:.15s}
+.lbtn:hover{transform:translateY(-1px)}
+
+/* ══ APP ══ */
+.app{display:flex;min-height:100vh;background:#0D1117}
+.sb{width:240px;background:#161B22;border-right:1px solid #21262D;position:fixed;top:0;bottom:0;display:flex;flex-direction:column;z-index:200;transition:transform .28s}
+@media(max-width:1024px){.sb{transform:translateX(-100%)}.sb.open{transform:none;box-shadow:0 0 60px rgba(0,0,0,.5)}}
+.main{margin-left:240px;flex:1;display:flex;flex-direction:column;min-width:0}
+@media(max-width:1024px){.main{margin-left:0}}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:190}.ov.show{display:block}
+
+/* ══ SIDEBAR ══ */
+.sb-brand{display:flex;align-items:center;gap:.6rem;padding:1rem 1.1rem;border-bottom:1px solid #21262D}
+.sb-logo{width:34px;height:34px;border-radius:9px;background:var(--g1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;font-weight:800;flex-shrink:0;box-shadow:0 0 16px rgba(99,102,241,.4)}
+.sb-title{font-weight:800;font-size:.88rem;line-height:1.1}
+.sb-title span{color:#FFC93C;display:block;font-size:.64rem;font-weight:600;letter-spacing:.05em}
+.sb-admin{display:flex;align-items:center;gap:.6rem;padding:.8rem 1.1rem;margin:.5rem .6rem;border-radius:11px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2)}
+.sb-av{width:36px;height:36px;border-radius:10px;background:var(--g1);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;color:#fff;flex-shrink:0;position:relative}
+.sb-av::after{content:'';position:absolute;bottom:-1px;right:-1px;width:9px;height:9px;background:var(--green);border:2px solid #161B22;border-radius:50%}
+.sb-nm{font-weight:700;font-size:.84rem}
+.sb-rl{font-size:.68rem;color:#FFC93C;font-weight:600}
+.sb-nav{flex:1;overflow-y:auto;padding:.3rem .6rem;scrollbar-width:none}
+.sb-sec{font-size:.6rem;font-weight:700;color:#484F58;text-transform:uppercase;letter-spacing:.1em;padding:.7rem .6rem .25rem}
+.sb-it{display:flex;align-items:center;gap:.6rem;padding:.58rem .75rem;border-radius:9px;font-size:.83rem;font-weight:600;color:#8B949E;cursor:pointer;transition:.15s;margin-bottom:.08rem}
+.sb-it:hover{background:rgba(255,255,255,.05);color:#fff}
+.sb-it.on{background:rgba(99,102,241,.15);color:#A5B4FC;border-left:2px solid #6366F1}
+.sb-it .ic{width:16px;text-align:center;flex-shrink:0;font-size:.85rem}
+.sbn{margin-left:auto;background:var(--red);color:#fff;font-size:.58rem;font-weight:700;padding:.05rem .35rem;border-radius:7px;min-width:16px;text-align:center}
+.sb-it.on .sbn{background:rgba(99,102,241,.4);color:#A5B4FC}
+.sb-foot{padding:.7rem;border-top:1px solid #21262D}
+.sb-out{display:flex;align-items:center;gap:.5rem;padding:.55rem .7rem;border-radius:9px;color:#F85149;font-size:.82rem;font-weight:600;cursor:pointer;transition:.15s;width:100%}
+.sb-out:hover{background:rgba(248,81,73,.1)}
+
+/* ══ TOPBAR ══ */
+.topbar{background:rgba(22,27,34,.9);backdrop-filter:blur(16px);border-bottom:1px solid #21262D;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:.7rem;padding:.7rem 1.3rem}
+.burger{font-size:1.2rem;display:none;cursor:pointer;color:#8B949E}
+@media(max-width:1024px){.burger{display:block}}
+.tb-s{flex:1;max-width:300px;position:relative}
+.tb-s input{width:100%;border:1px solid #30363D;border-radius:9px;padding:.5rem .8rem .5rem 2rem;font-size:.83rem;background:#0D1117;color:#fff;outline:none;transition:.15s}
+.tb-s input:focus{border-color:#6366F1}.tb-s input::placeholder{color:#484F58}
+.tb-s .si{position:absolute;left:.65rem;top:50%;transform:translateY(-50%);color:#484F58;font-size:.8rem}
+.tb-r{display:flex;align-items:center;gap:.4rem;margin-left:auto}
+.tbi{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid #30363D;display:flex;align-items:center;justify-content:center;font-size:.85rem;cursor:pointer;position:relative;transition:.15s}
+.tbi:hover{background:rgba(255,255,255,.1)}
+.tbi .dot{position:absolute;top:7px;right:8px;width:6px;height:6px;background:var(--red);border-radius:50%;border:1.5px solid #161B22}
+.tb-date{font-size:.75rem;color:#484F58;font-weight:600;white-space:nowrap;display:none}
+@media(min-width:640px){.tb-date{display:block}}
+.tb-btn{display:flex;align-items:center;gap:.3rem;padding:.45rem .9rem;border-radius:9px;background:var(--g1);color:#fff;font-weight:700;font-size:.78rem;box-shadow:0 0 20px rgba(99,102,241,.3);transition:.15s}
+.tb-btn:hover{transform:translateY(-1px)}
+
+/* ══ CONTENT ══ */
+.content{padding:1.3rem;max-width:1500px;width:100%;margin:0 auto}
+.page{display:none}.page.on{display:block;animation:fadeUp .35s ease}
+.ph{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:.7rem;margin-bottom:1.2rem}
+.ph h1{font-size:1.3rem;font-weight:800;display:flex;align-items:center;gap:.5rem}
+.ph p{font-size:.8rem;color:#8B949E;margin-top:.1rem}
+.ph-a{display:flex;gap:.4rem;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:.3rem;padding:.48rem .85rem;border-radius:9px;font-weight:700;font-size:.78rem;transition:.15s}
+.bp{background:var(--g1);color:#fff;box-shadow:0 0 20px rgba(99,102,241,.25)}.bp:hover{transform:translateY(-1px)}
+.bg{background:#21262D;color:#8B949E;border:1px solid #30363D}.bg:hover{color:#fff}
+.br{background:rgba(248,81,73,.1);color:#F85149;border:1px solid rgba(248,81,73,.2)}
+.ba{background:rgba(255,193,60,.1);color:#FFC93C;border:1px solid rgba(255,193,60,.2)}
+
+/* ══ GRILLES ══ */
+.grid{display:grid;gap:.9rem;margin-bottom:.9rem}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}
+.g21{grid-template-columns:2fr 1fr}.g11{grid-template-columns:1fr 1fr}
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g21,.g11{grid-template-columns:1fr}.g3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.g4,.g3{grid-template-columns:1fr}}
+
+/* ══ CARD ══ */
+.card{background:#161B22;border:1px solid #21262D;border-radius:var(--rl);padding:1.1rem;overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:.5rem;flex-wrap:wrap}
+.ch h3{font-size:.93rem;font-weight:800;color:#fff}
+.ch .sub{font-size:.72rem;color:#8B949E;margin-top:.1rem}
+.tabs{display:flex;gap:.2rem;background:#0D1117;border-radius:8px;padding:.2rem}
+.tab{padding:.28rem .6rem;border-radius:6px;font-size:.73rem;font-weight:700;color:#8B949E;cursor:pointer;transition:.15s}
+.tab.on{background:#21262D;color:#A5B4FC;box-shadow:var(--sh)}
+.sel{background:#0D1117;border:1px solid #30363D;border-radius:8px;padding:.35rem .6rem;font-size:.74rem;font-weight:600;color:#8B949E;outline:none;cursor:pointer}
+
+/* ══ KPI ══ */
+.kpi{border-radius:var(--rl);padding:1.1rem 1.2rem;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:.4rem}
+.kpi::after{content:'';position:absolute;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.08);top:-25px;right:-25px}
+.kpi::before{content:'';position:absolute;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.05);bottom:-20px;right:40px}
+.kpi-r{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.kpi-ic{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:1rem}
+.kpi-tr{font-size:.68rem;font-weight:700;background:rgba(255,255,255,.18);padding:.15rem .45rem;border-radius:6px;color:#fff}
+.kpi-v{font-size:1.6rem;font-weight:800;line-height:1;color:#fff;position:relative;z-index:1}
+.kpi-l{font-size:.75rem;color:rgba(255,255,255,.82);position:relative;z-index:1}
+
+/* ══ TABLE ══ */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:.68rem;font-weight:700;color:#484F58;text-transform:uppercase;letter-spacing:.05em;padding:.6rem .75rem;border-bottom:1px solid #21262D}
+.tbl td{padding:.7rem .75rem;border-bottom:1px solid #21262D;font-size:.82rem;color:#C9D1D9;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:rgba(255,255,255,.02)}
+.tc{display:flex;align-items:center;gap:.5rem}
+.tav{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.78rem;flex-shrink:0}
+.pill{display:inline-flex;align-items:center;gap:.2rem;padding:.18rem .5rem;border-radius:6px;font-size:.68rem;font-weight:700}
+.pg{background:rgba(16,185,129,.15);color:#34D399}
+.pa{background:rgba(245,158,11,.15);color:#FBBF24}
+.pr{background:rgba(248,81,73,.15);color:#F85149}
+.pb{background:rgba(99,102,241,.15);color:#A5B4FC}
+.pv{background:rgba(168,139,250,.15);color:#C084FC}
+.pp{background:rgba(255,255,255,.08);color:#8B949E}
+.ta{width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.06);display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;cursor:pointer;transition:.15s;color:#8B949E}
+.ta:hover{background:rgba(99,102,241,.2);color:#A5B4FC}
+
+/* ══ GRAPHIQUE ══ */
+.chart-box{height:180px;position:relative;margin-top:.5rem}
+.chart-box svg{width:100%;height:100%;overflow:visible}
+.ch-tip{position:absolute;background:#fff;color:#1A1F36;font-size:.7rem;font-weight:700;padding:.28rem .55rem;border-radius:7px;pointer-events:none;transform:translate(-50%,-130%);white-space:nowrap;box-shadow:var(--shl)}
+.ax{display:flex;justify-content:space-between;margin-top:.3rem;font-size:.66rem;color:#484F58;font-weight:600}
+
+/* ══ PIPELINE KANBAN ══ */
+.kanban{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;overflow-x:auto;padding-bottom:.5rem}
+@media(max-width:1200px){.kanban{grid-template-columns:repeat(3,minmax(160px,1fr))}}
+@media(max-width:700px){.kanban{grid-template-columns:repeat(2,minmax(150px,1fr))}}
+.kan-col{background:#0D1117;border-radius:11px;border:1px solid #21262D;padding:.6rem;min-width:150px}
+.kan-head{font-size:.73rem;font-weight:700;color:#8B949E;display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;padding-bottom:.4rem;border-bottom:1px solid #21262D}
+.kan-cnt{font-size:.7rem;background:rgba(255,255,255,.08);color:#8B949E;padding:.1rem .35rem;border-radius:6px;font-weight:700}
+.kan-card{background:#161B22;border:1px solid #21262D;border-radius:8px;padding:.6rem;margin-bottom:.4rem;cursor:pointer;transition:.15s}
+.kan-card:hover{border-color:#6366F1;background:#1C2128}
+.kan-card .kt{font-size:.78rem;font-weight:700;color:#E6EDF3;margin-bottom:.2rem;line-height:1.3}
+.kan-card .ks{font-size:.68rem;color:#8B949E}
+.kan-card .ka{font-size:.68rem;color:#FFC93C;margin-top:.2rem;font-weight:600}
+
+/* ══ PROSPECT FICHE ══ */
+.pros-card{background:#0D1117;border-radius:var(--r);border:1px solid #21262D;padding:.8rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;transition:.15s}
+.pros-card:hover{border-color:#30363D}
+.pros-ic{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.pros-info{flex:1;min-width:140px}
+.pros-nm{font-weight:700;font-size:.84rem;color:#E6EDF3}
+.pros-sub{font-size:.72rem;color:#8B949E;margin-top:.05rem}
+.pros-acts{display:flex;gap:.3rem;flex-shrink:0;flex-wrap:wrap}
+
+/* ══ TEMPLATE CARD ══ */
+.tpl-card{background:#0D1117;border:1px solid #21262D;border-radius:var(--r);padding:.9rem;cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:.5rem}
+.tpl-card:hover{border-color:#6366F1;background:#161B22}
+.tpl-cat{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.tpl-title{font-size:.88rem;font-weight:700;color:#E6EDF3}
+.tpl-prev{font-size:.75rem;color:#8B949E;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tpl-acts{display:flex;gap:.35rem;margin-top:.3rem}
+.tpl-btn{padding:.25rem .6rem;border-radius:7px;font-size:.7rem;font-weight:700;cursor:pointer;transition:.15s;border:1px solid #30363D;background:#161B22;color:#8B949E}
+.tpl-btn:hover{border-color:#6366F1;color:#A5B4FC}
+
+/* ══ EMPLOYÉ ══ */
+.emp-card{background:#0D1117;border:1px solid #21262D;border-radius:var(--r);padding:1rem;position:relative;overflow:hidden}
+.emp-card::after{content:'';position:absolute;top:0;right:0;width:80px;height:80px;border-radius:0 var(--r) 0 100%;opacity:.15}
+.emp-av{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1rem;margin-bottom:.65rem}
+.emp-nm{font-weight:800;font-size:.88rem;color:#E6EDF3}
+.emp-role{font-size:.7rem;color:#8B949E;margin-bottom:.7rem}
+.emp-stats{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.7rem}
+.emp-st .ev{font-weight:800;font-size:1rem;color:#E6EDF3;line-height:1}
+.emp-st .el{font-size:.66rem;color:#8B949E}
+.emp-prog{margin-bottom:.4rem}
+.prog-l{display:flex;justify-content:space-between;font-size:.72rem;margin-bottom:.2rem}
+.prog-l .pn{color:#8B949E}.prog-l .pv{font-weight:700;color:#E6EDF3}
+.prog-track{height:6px;background:#21262D;border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px}
+.emp-rank{position:absolute;top:.7rem;right:.7rem;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800;color:#fff}
+
+/* ══ AMBASS ══ */
+.amb-card{background:#0D1117;border:1px solid #21262D;border-radius:var(--r);padding:.9rem;display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin-bottom:.5rem}
+.amb-av{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem;flex-shrink:0}
+.amb-info{flex:1;min-width:100px}
+.amb-nm{font-weight:700;font-size:.83rem;color:#E6EDF3}
+.amb-level{font-size:.68rem;font-weight:700;margin-top:.1rem}
+.amb-stats{display:flex;gap:1rem;font-size:.75rem}
+.amb-stats .av{font-weight:800;color:#FFC93C;font-size:.9rem}
+.amb-stats .al{color:#8B949E;font-size:.68rem}
+
+/* ══ OFFRE ══ */
+.offre-card{background:#0D1117;border-radius:var(--r);padding:1rem;border:1px solid #21262D;position:relative;overflow:hidden;transition:.2s;cursor:pointer}
+.offre-card:hover{border-color:#6366F1}
+.offre-card.featured{border-color:#FFC93C}
+.offre-badge{position:absolute;top:-.5rem;right:1rem;background:var(--g5);color:#0D1117;font-size:.62rem;font-weight:800;padding:.12rem .5rem;border-radius:6px}
+.offre-ic{font-size:1.5rem;margin-bottom:.5rem}
+.offre-nm{font-weight:800;font-size:.95rem;color:#E6EDF3;margin-bottom:.25rem}
+.offre-prix{font-size:1.5rem;font-weight:800;color:#FFC93C;line-height:1;margin-bottom:.5rem}
+.offre-feats{font-size:.75rem;color:#8B949E;line-height:1.9}
+.offre-feats div::before{content:'✓ ';color:var(--green);font-weight:700}
+
+/* ══ IA ASSISTANT ══ */
+.ia-box{background:#0D1117;border:1px solid #21262D;border-radius:var(--r);padding:1rem;margin-bottom:.6rem}
+.ia-prompt{display:flex;gap:.5rem;align-items:flex-end}
+.ia-prompt textarea{flex:1;background:#161B22;border:1px solid #30363D;border-radius:9px;padding:.6rem .8rem;font-size:.83rem;color:#E6EDF3;outline:none;resize:none;min-height:80px;font-family:inherit}
+.ia-prompt textarea:focus{border-color:#6366F1}
+.ia-result{background:#161B22;border-radius:9px;padding:.8rem;font-size:.82rem;color:#C9D1D9;line-height:1.7;margin-top:.6rem;border-left:3px solid #6366F1}
+
+/* ══ POINTS ══ */
+.pts-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem;background:#0D1117;border-radius:8px;margin-bottom:.4rem;font-size:.8rem}
+.pts-act{color:#C9D1D9;font-weight:500}
+.pts-val{font-weight:800;color:#FFC93C}
+
+/* ══ TOAST ══ */
+#toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%) translateY(20px);background:#E6EDF3;color:#1A1F36;padding:.6rem 1.2rem;border-radius:9px;font-size:.82rem;font-weight:700;z-index:9999;opacity:0;transition:.3s;box-shadow:var(--shl);pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- ════ LOGIN ════ -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">SA</div>
+    <h1>Super Admin</h1>
+    <p>AnnoncesWest · YamaneTech</p>
+    <div class="login-creds">🔑 <b>Accès démo :</b><br/>Email : admin@yamanetech.com<br/>Mot de passe : YamaneTech@2025<br/>Code 2FA : 1234</div>
+    <input class="ainput" type="email" id="lEmail" placeholder="Email administrateur" value="admin@yamanetech.com"/>
+    <input class="ainput" type="password" id="lPass" placeholder="Mot de passe" value="YamaneTech@2025"/>
+    <input class="ainput" type="text" id="l2fa" placeholder="Code 2FA (1234)" maxlength="4"/>
+    <button class="lbtn" onclick="doLogin()">Accéder au Super Admin →</button>
+  </div>
+</div>
+
+<!-- ════ APPLICATION ════ -->
+<div class="app" id="appScreen" style="display:none">
+
+<!-- SIDEBAR -->
+<aside class="sb" id="sb">
+  <div class="sb-brand"><div class="sb-logo">SA</div><div class="sb-title">YamaneTech<span>SUPER ADMIN</span></div></div>
+  <div class="sb-admin"><div class="sb-av">JD</div><div><div class="sb-nm">John Doe</div><div class="sb-rl">Super Administrateur</div></div></div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Tableau de bord</div>
+    <div class="sb-it on" onclick="go('overview',this)"><span class="ic">📊</span> Vue d'ensemble</div>
+    <div class="sb-it" onclick="go('crm',this)"><span class="ic">🎯</span> CRM Prospects<span class="sbn">23</span></div>
+    <div class="sb-it" onclick="go('marketing',this)"><span class="ic">📢</span> Centre Marketing</div>
+    <div class="sb-it" onclick="go('campagnes',this)"><span class="ic">🚀</span> Campagnes</div>
+    <div class="sb-sec">Commercial</div>
+    <div class="sb-it" onclick="go('employes',this)"><span class="ic">👨‍💼</span> Employés</div>
+    <div class="sb-it" onclick="go('ambassadeurs',this)"><span class="ic">🤝</span> Ambassadeurs</div>
+    <div class="sb-it" onclick="go('offres',this)"><span class="ic">💎</span> Offres commerciales</div>
+    <div class="sb-sec">Plateforme</div>
+    <div class="sb-it" onclick="go('moderation',this)"><span class="ic">🛡️</span> Modération<span class="sbn">8</span></div>
+    <div class="sb-it" onclick="go('users',this)"><span class="ic">👥</span> Utilisateurs</div>
+    <div class="sb-it" onclick="go('finance',this)"><span class="ic">💰</span> Finances</div>
+    <div class="sb-it" onclick="go('ads',this)"><span class="ic">📺</span> Publicités</div>
+    <div class="sb-sec">Outils</div>
+    <div class="sb-it" onclick="go('ia',this)"><span class="ic">🤖</span> Assistant IA</div>
+    <div class="sb-it" onclick="go('points',this)"><span class="ic">⭐</span> Points & Fidélité</div>
+    <div class="sb-it" onclick="go('diffusion',this)"><span class="ic">📡</span> Diffusion multi-canaux</div>
+    <div class="sb-it" onclick="go('rapports',this)"><span class="ic">📄</span> Rapports</div>
+    <div class="sb-it" onclick="go('settings',this)"><span class="ic">⚙️</span> Paramètres</div>
+  </nav>
+  <div class="sb-foot"><div class="sb-out" onclick="doLogout()">🚪 Déconnexion</div></div>
+</aside>
+<div class="ov" id="ov" onclick="closeSB()"></div>
+
+<!-- MAIN -->
+<div class="main">
+<header class="topbar">
+  <button class="burger" onclick="openSB()">☰</button>
+  <div class="tb-s"><span class="si">🔍</span><input placeholder="Rechercher prospects, campagnes, utilisateurs…"/></div>
+  <div class="tb-r">
+    <span class="tb-date" id="dateSpan"></span>
+    <div class="tbi" onclick="T('3 alertes système')">🔔<span class="dot"></span></div>
+    <div class="tbi" onclick="T('Messages internes')">✉️<span class="dot"></span></div>
+    <button class="tb-btn" onclick="T('Export global…')">⬇ Exporter</button>
+  </div>
+</header>
+
+<div class="content">
+
+<!-- PAGE: VUE D'ENSEMBLE -->
+<div class="page on" id="p-overview">
+  <div class="ph rv"><div><h1>📊 Super Admin</h1><p>Vue globale · AnnoncesWest · <span style="color:#FFC93C">Mise à jour en temps réel</span></p></div>
+    <div class="ph-a"><button class="bg" onclick="T('Période')">📅 Ce mois</button><button class="bp" onclick="T('Rapport…')">+ Rapport</button></div>
+  </div>
+  <div class="grid g4">
+    <div class="kpi rv" style="background:var(--g1)"><div class="kpi-r"><div class="kpi-ic">💰</div><span class="kpi-tr">↑ 23%</span></div><div class="kpi-v" data-c="1725000" data-m="1">0</div><div class="kpi-l">MRR (FCFA) — objectif 6 mois</div></div>
+    <div class="kpi rv" style="background:var(--g8);animation-delay:.06s"><div class="kpi-r"><div class="kpi-ic">🏢</div><span class="kpi-tr">↑ 12%</span></div><div class="kpi-v" data-c="19">0</div><div class="kpi-l">Clients payants actifs</div></div>
+    <div class="kpi rv" style="background:var(--g5);animation-delay:.1s"><div class="kpi-r"><div class="kpi-ic">🤝</div><span class="kpi-tr">+8 ce mois</span></div><div class="kpi-v" data-c="47">0</div><div class="kpi-l">Ambassadeurs actifs</div></div>
+    <div class="kpi rv" style="background:var(--g3);animation-delay:.14s"><div class="kpi-r"><div class="kpi-ic">🎯</div><span class="kpi-tr">3.2%</span></div><div class="kpi-v" data-c="1240">0</div><div class="kpi-l">Prospects dans le CRM</div></div>
+  </div>
+  <div class="grid g21">
+    <div class="card rv"><div class="ch"><div><h3>Revenus récurrents — MRR</h3><div class="sub">Boosts + Abonnements + Publicités</div></div>
+      <div class="tabs"><span class="tab" onclick="setR(this,'D')">7J</span><span class="tab on" onclick="setR(this,'M')">30J</span><span class="tab" onclick="setR(this,'Y')">12M</span></div>
+    </div><div class="chart-box" id="chartMRR"></div><div class="ax" id="axMRR"></div></div>
+    <div class="card rv"><div class="ch"><div><h3>Répartition MRR</h3><div class="sub">Par type d'offre</div></div></div>
+      <div id="mrrBreak"></div>
+    </div>
+  </div>
+  <div class="card rv" style="margin-bottom:.9rem">
+    <div class="grid g4" style="margin:0">
+      <div><div style="font-size:.72rem;color:#8B949E;margin-bottom:.15rem">Pack Basic</div><div style="font-weight:800;font-size:1.15rem;color:#43E97B">250 000 FCFA</div><div style="font-size:.7rem;color:#8B949E">10 clients × 25K</div></div>
+      <div><div style="font-size:.72rem;color:#8B949E;margin-bottom:.15rem">Pack Pro</div><div style="font-weight:800;font-size:1.15rem;color:#4FACFE">375 000 FCFA</div><div style="font-size:.7rem;color:#8B949E">5 clients × 75K</div></div>
+      <div><div style="font-size:.72rem;color:#8B949E;margin-bottom:.15rem">Pack Premium</div><div style="font-weight:800;font-size:1.15rem;color:#A18CD1">450 000 FCFA</div><div style="font-size:.7rem;color:#8B949E">3 clients × 150K</div></div>
+      <div><div style="font-size:.72rem;color:#8B949E;margin-bottom:.15rem">Enterprise</div><div style="font-weight:800;font-size:1.15rem;color:#FFC93C">300 000 FCFA</div><div style="font-size:.7rem;color:#8B949E">1 client × 300K</div></div>
+    </div>
+  </div>
+  <div class="grid g21">
+    <div class="card rv"><div class="ch"><h3>Pipeline commercial</h3><button class="bg" style="font-size:.72rem;padding:.32rem .65rem" onclick="go('crm',null)">Voir CRM →</button></div><div id="pipelineDiv"></div></div>
+    <div class="card rv"><div class="ch"><h3>Meilleures performances</h3></div><div id="topEmpDiv"></div></div>
+  </div>
+</div>
+
+<!-- PAGE: CRM -->
+<div class="page" id="p-crm">
+  <div class="ph"><div><h1>🎯 CRM — Gestion des prospects</h1><p>1 240 prospects · Taux de conversion 3.2%</p></div>
+    <div class="ph-a"><button class="bg" onclick="T('Importer CSV…')">📥 Importer</button><button class="bp" onclick="T('+ Prospect ajouté')">+ Nouveau prospect</button></div>
+  </div>
+  <!-- Pipeline Kanban -->
+  <div class="card" style="margin-bottom:.9rem">
+    <div class="ch"><h3>Pipeline de vente</h3><div style="font-size:.75rem;color:#8B949E">Glisser-déposer pour changer le statut</div></div>
+    <div class="kanban" id="kanbanDiv"></div>
+  </div>
+  <!-- Liste prospects -->
+  <div class="card"><div class="ch"><h3>Prospects récents</h3><div style="display:flex;gap:.4rem"><select class="sel"><option>Tous les secteurs</option><option>Automobile</option><option>Immobilier</option><option>Électronique</option><option>Emploi</option></select><select class="sel"><option>Tous les statuts</option><option>Nouveau</option><option>Contacté</option><option>Intéressé</option><option>Rendez-vous</option></select></div></div>
+    <div id="prospectsDiv"></div>
+  </div>
+</div>
+
+<!-- PAGE: MARKETING -->
+<div class="page" id="p-marketing">
+  <div class="ph"><div><h1>📢 Centre Marketing</h1><p>Templates email & WhatsApp prêts à l'emploi</p></div>
+    <div class="ph-a"><button class="bg" onclick="T('+ Template créé')">+ Nouveau template</button></div>
+  </div>
+  <div class="grid g3" id="templatesDiv"></div>
+</div>
+
+<!-- PAGE: CAMPAGNES -->
+<div class="page" id="p-campagnes">
+  <div class="ph"><div><h1>🚀 Campagnes</h1><p>Envoi groupé email & WhatsApp</p></div>
+    <button class="bp" onclick="T('+ Campagne créée')">+ Nouvelle campagne</button>
+  </div>
+  <div class="grid g4" style="margin-bottom:.9rem">
+    <div class="kpi" style="background:var(--g1)"><div class="kpi-r"><div class="kpi-ic">📤</div></div><div class="kpi-v" data-c="1840">0</div><div class="kpi-l">Emails envoyés ce mois</div></div>
+    <div class="kpi" style="background:var(--g3)"><div class="kpi-r"><div class="kpi-ic">💬</div></div><div class="kpi-v" data-c="920">0</div><div class="kpi-l">WhatsApp envoyés</div></div>
+    <div class="kpi" style="background:var(--g5)"><div class="kpi-r"><div class="kpi-ic">👁️</div><span class="kpi-tr">28%</span></div><div class="kpi-v" data-c="515">0</div><div class="kpi-l">Emails ouverts</div></div>
+    <div class="kpi" style="background:var(--g8)"><div class="kpi-r"><div class="kpi-ic">✅</div><span class="kpi-tr">3.2%</span></div><div class="kpi-v" data-c="59">0</div><div class="kpi-l">Réponses positives</div></div>
+  </div>
+  <div class="card"><div class="ch"><h3>Campagnes actives</h3></div>
+    <div style="overflow-x:auto"><table class="tbl" id="campTbl"></table></div>
+  </div>
+</div>
+
+<!-- PAGE: EMPLOYÉS -->
+<div class="page" id="p-employes">
+  <div class="ph"><div><h1>👨‍💼 Tableau de bord Employés</h1><p>Performance commerciale de l'équipe</p></div>
+    <button class="bp" onclick="T('+ Employé ajouté')">+ Ajouter</button>
+  </div>
+  <div class="grid g3" id="empDiv"></div>
+</div>
+
+<!-- PAGE: AMBASSADEURS -->
+<div class="page" id="p-ambassadeurs">
+  <div class="ph"><div><h1>🤝 Programme Ambassadeurs</h1><p>47 ambassadeurs actifs · 4 niveaux</p></div>
+    <button class="bp" onclick="T('Programme partagé')">📤 Partager le programme</button>
+  </div>
+  <div class="grid g4" style="margin-bottom:.9rem">
+    <div class="kpi" style="background:var(--g4)"><div class="kpi-r"><div class="kpi-ic">👥</div></div><div class="kpi-v" data-c="47">0</div><div class="kpi-l">Ambassadeurs actifs</div></div>
+    <div class="kpi" style="background:var(--g1)"><div class="kpi-r"><div class="kpi-ic">💰</div></div><div class="kpi-v" data-c="245000">0</div><div class="kpi-l">Commissions payées (FCFA)</div></div>
+    <div class="kpi" style="background:var(--g5)"><div class="kpi-r"><div class="kpi-ic">🔗</div></div><div class="kpi-v" data-c="1240">0</div><div class="kpi-l">Clics sur les liens</div></div>
+    <div class="kpi" style="background:var(--g8)"><div class="kpi-r"><div class="kpi-ic">✅</div></div><div class="kpi-v" data-c="19">0</div><div class="kpi-l">Clients apportés</div></div>
+  </div>
+  <div class="card"><div class="ch"><h3>Top ambassadeurs</h3>
+    <div class="tabs"><span class="tab on" onclick="T('Bronze')">🥉 Bronze</span><span class="tab" onclick="T('Argent')">🥈 Argent</span><span class="tab" onclick="T('Or')">🥇 Or</span><span class="tab" onclick="T('Diamant')">💎 Diamant</span></div>
+  </div><div id="ambDiv"></div></div>
+</div>
+
+<!-- PAGE: OFFRES -->
+<div class="page" id="p-offres">
+  <div class="ph"><div><h1>💎 Offres commerciales</h1><p>Gérer les packs et tarifs</p></div>
+    <button class="bp" onclick="T('Tarifs sauvegardés !')">💾 Sauvegarder</button>
+  </div>
+  <div class="grid g4" id="offresDiv"></div>
+</div>
+
+<!-- PAGE: MODÉRATION -->
+<div class="page" id="p-moderation">
+  <div class="ph"><div><h1>🛡️ Modération</h1><p>8 annonces en attente de validation</p></div>
+    <button class="bp" onclick="T('✅ Tout approuvé !')">✓ Tout approuver</button>
+  </div>
+  <div id="modDiv"></div>
+</div>
+
+<!-- PAGE: UTILISATEURS -->
+<div class="page" id="p-users">
+  <div class="ph"><div><h1>👥 Utilisateurs</h1><p>48 320 comptes</p></div></div>
+  <div class="card"><div style="overflow-x:auto"><table class="tbl" id="userTbl"></table></div></div>
+</div>
+
+<!-- PAGE: FINANCES -->
+<div class="page" id="p-finance">
+  <div class="ph"><div><h1>💰 Finances</h1><p>Revenus et transactions</p></div></div>
+  <div class="grid g4" style="margin-bottom:.9rem">
+    <div class="kpi" style="background:var(--g1)"><div class="kpi-r"><div class="kpi-ic">💰</div><span class="kpi-tr">↑ 18%</span></div><div class="kpi-v" data-c="124" data-s="M">0</div><div class="kpi-l">Revenus totaux (FCFA)</div></div>
+    <div class="kpi" style="background:var(--g8)"><div class="kpi-r"><div class="kpi-ic">🚀</div><span class="kpi-tr">↑ 22%</span></div><div class="kpi-v" data-c="82" data-s="M">0</div><div class="kpi-l">Revenus boosts</div></div>
+    <div class="kpi" style="background:var(--g5)"><div class="kpi-r"><div class="kpi-ic">📺</div><span class="kpi-tr">↑ 15%</span></div><div class="kpi-v" data-c="31" data-s="M">0</div><div class="kpi-l">Revenus publicités</div></div>
+    <div class="kpi" style="background:var(--g3)"><div class="kpi-r"><div class="kpi-ic">👑</div><span class="kpi-tr">↑ 9%</span></div><div class="kpi-v" data-c="11" data-s="M">0</div><div class="kpi-l">Abonnements Pro</div></div>
+  </div>
+  <div class="card"><div class="ch"><h3>Dernières transactions</h3></div><div style="overflow-x:auto"><table class="tbl" id="finTbl"></table></div></div>
+</div>
+
+<!-- PAGE: PUBLICITÉS -->
+<div class="page" id="p-ads">
+  <div class="ph"><div><h1>📺 Zones publicitaires</h1><p>10 emplacements stratégiques</p></div>
+    <button class="bp" onclick="T('+ Bannière créée')">+ Nouvelle bannière</button>
+  </div>
+  <div class="card"><div style="overflow-x:auto"><table class="tbl" id="adsTbl"></table></div></div>
+</div>
+
+<!-- PAGE: ASSISTANT IA -->
+<div class="page" id="p-ia">
+  <div class="ph"><div><h1>🤖 Assistant IA Commercial</h1><p>Génération automatique de textes marketing</p></div></div>
+  <div class="grid g11">
+    <div class="card">
+      <div class="ch"><h3>Générer un email commercial</h3></div>
+      <div style="margin-bottom:.7rem"><select class="sel" style="width:100%;margin-bottom:.5rem;display:block"><option>Secteur automobile</option><option>Secteur immobilier</option><option>Secteur électronique</option><option>Secteur emploi</option><option>Secteur services</option></select>
+      <input style="width:100%;background:#0D1117;border:1px solid #30363D;border-radius:9px;padding:.55rem .8rem;font-size:.83rem;color:#fff;outline:none;margin-bottom:.5rem" placeholder="Nom de l'entreprise" id="iaNom"/>
+      <input style="width:100%;background:#0D1117;border:1px solid #30363D;border-radius:9px;padding:.55rem .8rem;font-size:.83rem;color:#fff;outline:none" placeholder="Ville" id="iaVille"/></div>
+      <button class="bp" style="width:100%;margin-top:.5rem" onclick="genEmail()">🤖 Générer l'email →</button>
+      <div id="iaEmailResult" style="display:none;margin-top:.8rem"></div>
+    </div>
+    <div class="card">
+      <div class="ch"><h3>Générer un message WhatsApp</h3></div>
+      <select class="sel" style="width:100%;margin-bottom:.5rem;display:block"><option>Premier contact</option><option>Relance J+3</option><option>Relance J+7</option><option>Offre spéciale</option></select>
+      <button class="bp" style="width:100%;margin-top:.5rem" onclick="genWA()">🤖 Générer WhatsApp →</button>
+      <div id="iaWAResult" style="display:none;margin-top:.8rem"></div>
+    </div>
+  </div>
+  <div class="grid g3">
+    <div class="card"><div class="ch"><h3>📝 Génération titre annonce</h3></div><textarea class="ainput" style="background:#0D1117;color:#fff;border-color:#30363D;resize:none;height:80px" placeholder="Décrivez le produit…"></textarea><button class="bp" style="width:100%;margin-top:.5rem" onclick="T('Titre généré : iPhone 15 Pro Max 256Go Titane — Neuf scellé 🔥')">Générer le titre</button></div>
+    <div class="card"><div class="ch"><h3>📱 Texte Facebook</h3></div><textarea class="ainput" style="background:#0D1117;color:#fff;border-color:#30363D;resize:none;height:80px" placeholder="Titre de l'annonce…"></textarea><button class="bp" style="width:100%;margin-top:.5rem" onclick="T('Texte Facebook généré !')">Générer pour Facebook</button></div>
+    <div class="card"><div class="ch"><h3>💬 Message WhatsApp annonce</h3></div><textarea class="ainput" style="background:#0D1117;color:#fff;border-color:#30363D;resize:none;height:80px" placeholder="Titre de l'annonce…"></textarea><button class="bp" style="width:100%;margin-top:.5rem" onclick="T('Message WhatsApp copié !')">Générer pour WhatsApp</button></div>
+  </div>
+</div>
+
+<!-- PAGE: POINTS -->
+<div class="page" id="p-points">
+  <div class="ph"><div><h1>⭐ Système de points & Fidélité</h1><p>Récompenser les utilisateurs actifs</p></div></div>
+  <div class="grid g11">
+    <div class="card"><div class="ch"><h3>Comment gagner des points</h3></div>
+      <div id="gainDiv"></div>
+    </div>
+    <div class="card"><div class="ch"><h3>Récompenses disponibles</h3></div>
+      <div id="rewardDiv"></div>
+    </div>
+  </div>
+  <div class="card"><div class="ch"><h3>Top utilisateurs par points</h3></div>
+    <div style="overflow-x:auto"><table class="tbl" id="pointsTbl"></table></div>
+  </div>
+</div>
+
+<!-- PAGE: DIFFUSION -->
+<div class="page" id="p-diffusion">
+  <div class="ph"><div><h1>📡 Diffusion multi-canaux</h1><p>Réseau de pages Facebook et groupes WhatsApp</p></div></div>
+  <div class="grid g4" style="margin-bottom:.9rem">
+    <div class="kpi" style="background:var(--g1)"><div class="kpi-r"><div class="kpi-ic">📘</div></div><div class="kpi-v" data-c="12">0</div><div class="kpi-l">Pages Facebook actives</div></div>
+    <div class="kpi" style="background:var(--g4)"><div class="kpi-r"><div class="kpi-ic">💬</div></div><div class="kpi-v" data-c="28">0</div><div class="kpi-l">Groupes WhatsApp</div></div>
+    <div class="kpi" style="background:var(--g5)"><div class="kpi-r"><div class="kpi-ic">📤</div></div><div class="kpi-v" data-c="8450">0</div><div class="kpi-l">Publications ce mois</div></div>
+    <div class="kpi" style="background:var(--g3)"><div class="kpi-r"><div class="kpi-ic">👁️</div></div><div class="kpi-v" data-c="284000">0</div><div class="kpi-l">Portée totale</div></div>
+  </div>
+  <div class="grid g11">
+    <div class="card"><div class="ch"><h3>Pages Facebook par secteur</h3><button class="bp" style="font-size:.72rem;padding:.32rem .65rem" onclick="T('+ Page créée')">+ Page</button></div><div id="fbPagesDiv"></div></div>
+    <div class="card"><div class="ch"><h3>Packs de diffusion</h3></div>
+      <div id="packsDiv"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: RAPPORTS -->
+<div class="page" id="p-rapports">
+  <div class="ph"><div><h1>📄 Rapports</h1><p>Génération et export</p></div></div>
+  <div class="grid g3" id="rapportDiv"></div>
+</div>
+
+<!-- PAGE: PARAMÈTRES -->
+<div class="page" id="p-settings">
+  <div class="ph"><div><h1>⚙️ Paramètres système</h1></div></div>
+  <div class="grid g11">
+    <div class="card"><h3 style="font-weight:800;margin-bottom:1rem;color:#E6EDF3">Tarifs des offres (FCFA)</h3>
+      <div style="display:flex;flex-direction:column;gap:.65rem">
+        ${[['Pack Basic (mensuel)','25000'],['Pack Pro (mensuel)','75000'],['Pack Premium (mensuel)','150000'],['Pack Enterprise (mensuel)','300000'],['Boost Premium (par annonce)','3500'],['Boost À la Une','9000'],['Commission ambassadeurs (%)','10']].map(([l,v])=>`<div><label style="font-size:.75rem;font-weight:700;color:#8B949E;display:block;margin-bottom:.2rem">${l}</label><input style="width:100%;background:#0D1117;border:1.5px solid #30363D;border-radius:9px;padding:.55rem .8rem;font-size:.85rem;font-weight:700;color:#FFC93C;outline:none" value="${v}"/></div>`).join('')}
+        <button class="bp" onclick="T('✓ Tarifs sauvegardés !')">Sauvegarder les tarifs</button>
+      </div>
+    </div>
+    <div class="card"><h3 style="font-weight:800;margin-bottom:1rem;color:#E6EDF3">Toggles système</h3>
+      <div style="display:flex;flex-direction:column;gap:.6rem" id="togglesDiv"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+<div id="toast"></div>
+
+<script>
+/* ══ AUTH ══ */
+function doLogin(){const e=document.getElementById('lEmail').value,p=document.getElementById('lPass').value,f=document.getElementById('l2fa').value;if(e==='admin@yamanetech.com'&&p==='YamaneTech@2025'&&(f==='1234'||f==='')){document.getElementById('loginScreen').style.display='none';document.getElementById('appScreen').style.display='flex';initAll();T('✅ Bienvenue, Super Administrateur')}else T('❌ Identifiants incorrects')}
+function doLogout(){document.getElementById('appScreen').style.display='none';document.getElementById('loginScreen').style.display='flex';T('Déconnecté')}
+document.getElementById('l2fa').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
+/* ══ NAV ══ */
+function go(id,el){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById('p-'+id).classList.add('on');document.querySelectorAll('.sb-it').forEach(i=>i.classList.remove('on'));if(el)el.classList.add('on');else{const m={crm:1,marketing:2,campagnes:3,employes:5,ambassadeurs:6,offres:7,moderation:9,users:10,finance:11,ads:12,ia:14,points:15,diffusion:16,rapports:17,settings:18};const items=document.querySelectorAll('.sb-it');if(m[id])items[m[id]]?.classList.add('on')}window.scrollTo({top:0,behavior:'smooth'});closeSB();initPage(id)}
+function openSB(){document.getElementById('sb').classList.add('open');document.getElementById('ov').classList.add('show')}
+function closeSB(){document.getElementById('sb').classList.remove('open');document.getElementById('ov').classList.remove('show')}
+function T(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2100)}
+document.getElementById('dateSpan').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'long',year:'numeric'});
+
+/* ══ COMPTEURS ══ */
+const GS=['var(--g1)','var(--g2)','var(--g3)','var(--g4)','var(--g5)','var(--g6)','var(--g7)','var(--g8)'];
+function animCount(){document.querySelectorAll('[data-c]').forEach(el=>{if(el._d)return;el._d=1;const t=+el.dataset.c,m=el.dataset.m,s=el.dataset.s||'';let c=0;const iv=setInterval(()=>{c+=t/40;if(c>=t){c=t;clearInterval(iv)}let v=Math.round(c);if(m)v=v>=1e6?(v/1e6).toFixed(1)+'M FCFA':v>=1e3?(v/1e3).toFixed(0)+'K':v;else v=v.toLocaleString('fr-FR');el.textContent=v+s},22)})}
+
+/* ══ GRAPHIQUE ══ */
+const AREA={M:[[42,20],[55,25],[48,18],[70,30],[62,28],[85,35],[74,32],[98,40],[88,38],[115,45],[105,42],[132,52]],D:[[30,12],[48,18],[42,15],[62,24],[55,22],[78,30],[68,26]],Y:[[320,120],[480,180],[420,160],[610,230],[580,210],[840,310]]};
+const AX={M:['J','F','M','A','M','J','J','A','S','O','N','D'],D:['L','M','M','J','V','S','D'],Y:['2020','2021','2022','2023','2024','2025']};
+let rng='M';
+function drawChart(cId,axId,r,c1,c2){
+  const d=AREA[r||rng],a=AX[r||rng];const el=document.getElementById(cId);if(!el)return;
+  const w=el.clientWidth||480,h=170,pad=6;
+  const v1=d.map(x=>x[0]),v2=d.map(x=>x[1]);const mx=Math.max(...v1)*1.2;
+  const pts1=v1.map((v,i)=>[i*(w/(d.length-1)),h-pad-(v/mx)*(h-pad*2)]);
+  const pts2=v2.map((v,i)=>[i*(w/(d.length-1)),h-pad-(v/mx)*(h-pad*2)]);
+  const path=arr=>arr.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const fill=arr=>path(arr)+` L ${w} ${h} L 0 ${h} Z`;
+  const gid='g'+cId,col1=c1||'#6366F1',col2=c2||'#FFC93C';
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs>
+    <linearGradient id="${gid}1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col1}" stop-opacity=".3"/><stop offset="1" stop-color="${col1}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="${gid}2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col2}" stop-opacity=".2"/><stop offset="1" stop-color="${col2}" stop-opacity="0"/></linearGradient>
+  </defs>
+  ${[0,1,2,3].map(i=>`<line x1="0" y1="${(pad+(h-pad*2)*i/3).toFixed(1)}" x2="${w}" y2="${(pad+(h-pad*2)*i/3).toFixed(1)}" stroke="#21262D" stroke-width="1"/>`).join('')}
+  <path d="${fill(pts1)}" fill="url(#${gid}1)"/><path d="${fill(pts2)}" fill="url(#${gid}2)"/>
+  <path d="${path(pts1)}" fill="none" stroke="${col1}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${path(pts2)}" fill="none" stroke="${col2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5,3"/>
+  ${pts1.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="#161B22" stroke="${col1}" stroke-width="2"/>`).join('')}</svg>`;
+  if(axId)document.getElementById(axId).innerHTML=a.map(x=>`<span>${x}</span>`).join('');
+}
+function setR(el,r){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');rng=r;drawChart('chartMRR','axMRR',r)}
+
+/* ══ DONNÉES ══ */
+const PROSPECTS=[{n:'Auto Dakar Plus',s:'Automobile',v:'Dakar',e:'autodakarplus@email.com',st:'int',pack:'Premium',ag:'Ibrahim',g:'var(--g1)',ic:'🚗'},
+{n:'Immobilier Excellence',s:'Immobilier',v:'Abidjan',e:'immo@excellence.ci',st:'rdv',pack:'Enterprise',ag:'Aminata',g:'var(--g4)',ic:'🏠'},
+{n:'TechStore Bamako',s:'Électronique',v:'Bamako',e:'tech@store.ml',st:'new',pack:'Basic',ag:'—',g:'var(--g3)',ic:'📱'},
+{n:'BTP Conseil Cotonou',s:'Services',v:'Cotonou',e:'btp@conseil.bj',st:'ct',pack:'Pro',ag:'Ibrahim',g:'var(--g7)',ic:'🔧'},
+{n:'Fashion Palace',s:'Mode',v:'Lomé',e:'fashion@palace.tg',st:'int',pack:'Basic',ag:'Aminata',g:'var(--g5)',ic:'👗'}];
+const ST_LABELS={new:'🆕 Nouveau',ct:'📤 Contacté',int:'🤝 Intéressé',rdv:'📅 Rendez-vous',cli:'✅ Client',ref:'❌ Refusé'};
+const ST_PILL={new:'pp',ct:'pb',int:'pa',rdv:'pv',cli:'pg',ref:'pr'};
+
+const EMPLOYES=[{n:'Ibrahim Traoré',r:'Responsable Contact',em:32,wa:18,rep:7,rdv:2,cli:1,com:45000,target:3,g:'var(--g1)',rank:'🥇'},
+{n:'Aminata Koné',r:'Responsable Prospection',em:48,wa:0,rep:0,rdv:0,cli:0,com:15000,target:1.5,pros:92,g:'var(--g5)',rank:'🥈'},
+{n:'Kwame Mensah',r:'Responsable Partenariats',em:12,wa:8,rep:5,rdv:4,cli:2,com:82000,target:3,g:'var(--g4)',rank:'🥉'}];
+
+const TEMPLATES=[{cat:'Automobile',catC:'#4FACFE',t:'Email Automobile',p:'Augmentez la visibilité de votre parc automobile…',full:'Bonjour [Nom entreprise],\n\nNous avons remarqué votre activité dans la vente de véhicules à [Ville].\n\nNotre plateforme AnnoncesWest permet à votre concession de :\n✅ Publier toutes vos annonces en quelques minutes\n✅ Toucher des acheteurs dans 27 pays d\'Afrique\n✅ Diffuser automatiquement sur Facebook et WhatsApp\n\nSeriez-vous disponible pour une présentation rapide de 15 minutes ?\n\nCordialement,\nÉquipe AnnoncesWest'},
+{cat:'Immobilier',catC:'#43E97B',t:'Email Immobilier',p:'Plus de visibilité pour vos biens immobiliers…',full:'Bonjour [Nom agence],\n\nEn tant qu\'agence immobilière à [Ville], vous cherchez sûrement à maximiser la visibilité de vos biens.\n\nAnnoncesWest vous offre :\n✅ Publication illimitée de vos biens\n✅ Diffusion Facebook + WhatsApp automatique\n✅ Génération de prospects qualifiés\n✅ Import de tout votre catalogue en une fois\n\nIntéressé ? Répondez à ce message.\n\nCordialement,\nÉquipe AnnoncesWest'},
+{cat:'WhatsApp',catC:'#25D366',t:'WhatsApp Premier contact',p:'Bonjour 👋 Je me permets de vous contacter…',full:'Bonjour 👋\n\nJe me permets de vous contacter concernant la promotion de vos [produits/biens] sur AnnoncesWest.\n\nNous proposons des solutions pour augmenter votre visibilité et générer des contacts qualifiés.\n\nPuis-je vous présenter notre offre en 5 minutes ? 🙏'},
+{cat:'WhatsApp',catC:'#25D366',t:'WhatsApp Relance J+3',p:'Je reviens vers vous suite à mon précédent message…',full:'Bonjour,\n\nJe reviens vers vous suite à mon message concernant AnnoncesWest.\n\nAvez-vous eu l\'occasion de regarder notre proposition ?\n\nN\'hésitez pas, je suis disponible pour répondre à vos questions. 😊'},
+{cat:'Électronique',catC:'#A78BFA',t:'Email Électronique',p:'Vendez plus de produits tech grâce à AnnoncesWest…',full:'Bonjour [Nom],\n\nVotre boutique de produits électroniques à [Ville] mérite une visibilité maximale.\n\nAnnoncesWest vous permet de :\n✅ Mettre en avant vos offres tech\n✅ Toucher des acheteurs qualifiés\n✅ Diffuser sur les réseaux sociaux auto\n\nEssayez gratuitement pendant 30 jours.\n\nL\'équipe AnnoncesWest'},
+{cat:'Emploi',catC:'#FB923C',t:'Email Recrutement',p:'Trouvez les meilleurs candidats plus vite…',full:'Bonjour [RH / Responsable],\n\nVous recherchez des candidats qualifiés à [Ville] ?\n\nAnnoncesWest vous permet de :\n✅ Publier vos offres d\'emploi rapidement\n✅ Toucher des milliers de candidats actifs\n✅ Recevoir les candidatures directement\n\nPublier votre première offre est gratuit.\n\nL\'équipe AnnoncesWest'}];
+
+const OFFRES=[{ic:'📋',n:'Pack Gratuit',p:'0',feats:['10 annonces actives','Profil simple','Contact direct','Stats de base'],color:'#30363D',prix:'0 FCFA/mois'},
+{ic:'⭐',n:'Pack Basic',p:'25 000',feats:['50 annonces actives','Page entreprise','Badge vérifié','Stats de base','Support email'],color:'#4FACFE',prix:'25 000 FCFA/mois'},
+{ic:'🚀',n:'Pack Pro',p:'75 000',feats:['Annonces illimitées','Page entreprise complète','Mise en avant','Stats avancées','Import Excel/CSV','Assistant IA','1 campagne WhatsApp/mois'],color:'#A18CD1',prix:'75 000 FCFA/mois',pop:true},
+{ic:'💎',n:'Pack Premium',p:'150 000',feats:['Tout le Pro','Diffusion Facebook auto','WhatsApp illimité','Génération leads','Account manager dédié','Rapports mensuels'],color:'#FFC93C',prix:'150 000 FCFA/mois'},
+{ic:'🏆',n:'Enterprise',p:'Sur devis',feats:['Tout Premium','API personnalisée','Sync. automatique stock','Dashboard dédié','Formation équipe','SLA garantie'],color:'#F093FB',prix:'300 000+ FCFA/mois'}];
+
+/* ══ INIT PAGES ══ */
+function initPage(id){animCount();
+  if(id==='overview'){drawChart('chartMRR','axMRR');drawMRRBreak();drawPipeline();drawTopEmp()}
+  if(id==='crm'){drawKanban();drawProspects()}
+  if(id==='marketing')drawTemplates();
+  if(id==='campagnes')drawCampagnes();
+  if(id==='employes')drawEmployes();
+  if(id==='ambassadeurs')drawAmbassadeurs();
+  if(id==='offres')drawOffres();
+  if(id==='moderation')drawMod();
+  if(id==='users')drawUsers();
+  if(id==='finance')drawFinance();
+  if(id==='ads')drawAds();
+  if(id==='points'){drawGains();drawRewards();drawPointsTbl()}
+  if(id==='diffusion'){drawFBPages();drawPacks()}
+  if(id==='rapports')drawRapports();
+  if(id==='settings')drawToggles();
+}
+
+/* ══ OVERVIEW ══ */
+function drawMRRBreak(){const d=[['Abonnements Pro/Premium',52,'#667EEA'],['Boosts annonces',28,'#FFC93C'],['Publicités annonceurs',12,'#F093FB'],['Commissions ambassadeurs',8,'#43E97B']];document.getElementById('mrrBreak').innerHTML=d.map(([n,p,c])=>`<div style="margin-bottom:.6rem"><div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:.2rem;color:#C9D1D9"><span>${n}</span><span style="font-weight:800">${p}%</span></div><div style="height:7px;background:#21262D;border-radius:4px;overflow:hidden"><div style="height:100%;width:${p}%;background:${c};border-radius:4px"></div></div></div>`).join('')}
+function drawPipeline(){const pipe=[['Nouveaux','#484F58',50],['Contactés','#3B82F6',30],['Intéressés','#F59E0B',15],['Rendez-vous','#A78BFA',8],['Clients','#10B981',3]];document.getElementById('pipelineDiv').innerHTML=pipe.map(([n,c,v])=>`<div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.55rem"><div style="width:90px;font-size:.78rem;color:#8B949E;font-weight:600">${n}</div><div style="flex:1;height:26px;background:#0D1117;border-radius:7px;overflow:hidden;position:relative"><div style="height:100%;width:${v/50*100}%;background:${c};border-radius:7px"></div><span style="position:absolute;left:.5rem;top:50%;transform:translateY(-50%);font-size:.72rem;font-weight:800;color:#fff">${v}</span></div><div style="font-size:.75rem;font-weight:800;color:${c};width:24px;text-align:right">${v}</div></div>`).join('')}
+function drawTopEmp(){document.getElementById('topEmpDiv').innerHTML=EMPLOYES.map((e,i)=>`<div style="display:flex;align-items:center;gap:.7rem;padding:.6rem;background:#0D1117;border-radius:9px;margin-bottom:.4rem"><div style="font-size:1rem;width:20px;text-align:center">${e.rank}</div><div style="width:34px;height:34px;border-radius:9px;background:${e.g};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.8rem;flex-shrink:0">${e.n.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:.83rem;color:#E6EDF3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.n}</div><div style="font-size:.7rem;color:#8B949E">${e.r.split(' ').slice(1).join(' ')}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;color:#FFC93C;font-size:.85rem">${e.com.toLocaleString('fr-FR')} F</div><div style="font-size:.68rem;color:#8B949E">${e.cli} client${e.cli>1?'s':''}</div></div></div>`).join('')}
+
+/* ══ CRM ══ */
+function drawKanban(){const stages=[['🆕','Nouveaux',50,['Auto Dakar Plus','TechStore BK']],['📤','Contactés',30,['Fashion Palace']],['🤝','Intéressés',15,['Auto Dakar Plus']],['📅','Rendez-vous',8,['Immobilier Exc.']],['✅','Clients',3,['BTP Conseil']],['❌','Refusés',5,[]]];document.getElementById('kanbanDiv').innerHTML=stages.map(([ic,n,cnt,cards])=>`<div class="kan-col"><div class="kan-head">${ic} ${n}<span class="kan-cnt">${cnt}</span></div>${cards.map(c=>`<div class="kan-card"><div class="kt">${c}</div><div class="ks">Secteur · Dakar</div><div class="ka">Contacter →</div></div>`).join('')}</div>`).join('')}
+function drawProspects(){document.getElementById('prospectsDiv').innerHTML=PROSPECTS.map(p=>`<div class="pros-card"><div class="pros-ic" style="background:${p.g}">${p.ic}</div><div class="pros-info"><div class="pros-nm">${p.n}</div><div class="pros-sub">${p.s} · ${p.v} · Pack: <b style="color:#FFC93C">${p.pack}</b></div></div><span class="pill ${ST_PILL[p.st]}" style="margin-right:.3rem">${ST_LABELS[p.st]}</span><div class="pros-acts"><button class="ta" onclick="T('📧 Email envoyé à ${p.n}')">📧</button><button class="ta" onclick="T('💬 WhatsApp à ${p.n}')">💬</button><button class="ta" onclick="T('📅 RDV planifié')">📅</button><button class="ta" onclick="T('Fiche ouverte')">👁</button></div></div>`).join('')}
+
+/* ══ TEMPLATES ══ */
+function drawTemplates(){document.getElementById('templatesDiv').innerHTML=TEMPLATES.map(t=>`<div class="tpl-card"><div style="display:flex;align-items:center;justify-content:space-between"><span class="tpl-cat" style="color:${t.catC}">${t.cat}</span><span style="font-size:.68rem;color:#484F58">${t.cat==='WhatsApp'?'WhatsApp':'Email'}</span></div><div class="tpl-title">${t.t}</div><div class="tpl-prev">${t.p}</div><div class="tpl-acts"><button class="tpl-btn" onclick="showTemplate('${t.t.replace(/'/g,'')}','${encodeURIComponent(t.full)}')">👁 Voir</button><button class="tpl-btn" onclick="T('📋 Copié !')">📋 Copier</button><button class="tpl-btn" onclick="T('✏ Éditeur ouvert')">✏ Modifier</button></div></div>`).join('')}
+function showTemplate(title,content){T('Template : '+title+' — Copier pour utiliser')}
+
+/* ══ CAMPAGNES ══ */
+function drawCampagnes(){document.getElementById('campTbl').innerHTML='<thead><tr><th>Campagne</th><th>Secteur</th><th>Canal</th><th>Envois</th><th>Ouvertures</th><th>Réponses</th><th>Statut</th><th></th></tr></thead><tbody>'+[['Auto Dakar Juin','Automobile','Email','250','72 (29%)','18 (7%)','pg','Active'],['Immo Abidjan','Immobilier','Email + WhatsApp','120','38 (32%)','9 (8%)','pg','Active'],['Tech Bamako','Électronique','WhatsApp','80','—','12 (15%)','pa','Planifiée'],['Emploi Dakar','Emploi','Email','200','54 (27%)','8 (4%)','pb','Terminée']].map(([n,s,c,e,o,r,st,stl])=>`<tr><td style="font-weight:700;color:#E6EDF3">${n}</td><td>${s}</td><td>${c}</td><td>${e}</td><td>${o}</td><td style="color:#34D399;font-weight:700">${r}</td><td><span class="pill ${st}">${stl}</span></td><td><span class="ta" onclick="T('Voir campagne')">👁</span></td></tr>`).join('')+'</tbody>'}
+
+/* ══ EMPLOYÉS ══ */
+function drawEmployes(){document.getElementById('empDiv').innerHTML=EMPLOYES.map((e,i)=>`<div class="emp-card"><div class="emp-rank" style="background:${e.g}">${e.rank}</div><div class="emp-av" style="background:${e.g}">${e.n.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><div class="emp-nm">${e.n}</div><div class="emp-role">${e.r}</div><div class="emp-stats"><div class="emp-st"><div class="ev">${e.em}</div><div class="el">Emails envoyés</div></div><div class="emp-st"><div class="ev">${e.wa}</div><div class="el">WhatsApp</div></div><div class="emp-st"><div class="ev">${e.rdv}</div><div class="el">Rendez-vous</div></div><div class="emp-st"><div class="ev" style="color:#FFC93C">${e.cli}</div><div class="el">Clients signés</div></div></div><div class="emp-prog"><div class="prog-l"><span class="pn">Objectif mensuel</span><span class="pv">${e.cli}/${e.target} clients</span></div><div class="prog-track"><div class="prog-fill" style="width:${e.cli/e.target*100}%;background:${e.g}"></div></div></div><div style="background:#0D1117;border-radius:8px;padding:.55rem;display:flex;align-items:center;justify-content:space-between;margin-top:.5rem"><span style="font-size:.72rem;color:#8B949E">Commission ce mois</span><span style="font-weight:800;color:#FFC93C;font-size:.9rem">${e.com.toLocaleString('fr-FR')} FCFA</span></div></div>`).join('')}
+
+/* ══ AMBASSADEURS ══ */
+function drawAmbassadeurs(){const ambs=[{n:'Fatoumata Bah',l:'🥇 Or',lc:'#FFC93C',v:8,c:82000,g:'var(--g5)'},{n:'Seydou Camara',l:'🥈 Argent',lc:'#C9D1D9',v:5,c:45000,g:'var(--g1)'},{n:'Ama Asante',l:'🥈 Argent',lc:'#C9D1D9',v:4,c:32000,g:'var(--g3)'},{n:'Moussa Touré',l:'🥉 Bronze',lc:'#CD7F32',v:2,c:15000,g:'var(--g8)'},{n:'Binta Koné',l:'🥉 Bronze',lc:'#CD7F32',v:1,c:7500,g:'var(--g7)'}];document.getElementById('ambDiv').innerHTML=ambs.map((a,i)=>`<div class="amb-card"><div class="amb-av" style="background:${a.g}">${a.n.split(' ').map(w=>w[0]).join('')}</div><div class="amb-info"><div class="amb-nm">${a.n}</div><div class="amb-level" style="color:${a.lc}">${a.l}</div></div><div class="amb-stats"><div><div class="av">${a.v}</div><div class="al">Clients</div></div><div><div class="av">${a.c.toLocaleString('fr-FR')} F</div><div class="al">Commission</div></div></div><div style="display:flex;gap:.3rem"><button class="ta" onclick="T('Lien copié !')">🔗</button><button class="ta" onclick="T('Paiement envoyé')">💳</button></div></div>`).join('')}
+
+/* ══ OFFRES ══ */
+function drawOffres(){document.getElementById('offresDiv').innerHTML=OFFRES.map(o=>`<div class="offre-card ${o.pop?'featured':''}" onclick="T('Offre: ${o.n} — ${o.prix}')"><div style="position:relative">${o.pop?'<span class="offre-badge">POPULAIRE</span>':''}<div class="offre-ic">${o.ic}</div></div><div class="offre-nm">${o.n}</div><div class="offre-prix" style="color:${o.color}">${o.prix}</div><div class="offre-feats">${o.feats.map(f=>`<div>${f}</div>`).join('')}</div><button class="bp" style="width:100%;margin-top:.8rem;font-size:.75rem">Configurer →</button></div>`).join('')}
+
+/* ══ MODÉRATION ══ */
+function drawMod(){const mods=[['Villa luxe Ngor 5p','Prix suspect','Immobilier','🏠','#DCFCE7'],['iPhone 13 64Go occ.','Vérif. en cours','Électronique','📱','#DBEAFE'],['Toyota Yaris 2019','Doublon','Voitures','🚗','#FEF3C7'],['Offre emploi sec.','Contenu insuff.','Emploi','💼','#F3E8FF'],['Mouton Ladoum 3 ans','1ère annonce','Animaux','🐑','#FEF3C7'],['MacBook Pro M2','Vérif. photos','Électronique','💻','#DBEAFE'],['Terrain Saly 500m²','Docs manquants','Immobilier','🌿','#DCFCE7'],['Cours Python','Infos manquantes','Formation','🎓','#F3E8FF']];document.getElementById('modDiv').innerHTML=`<div class="card"><div style="background:rgba(255,193,60,.08);border:1px solid rgba(255,193,60,.2);border-radius:9px;padding:.7rem .9rem;margin-bottom:.9rem;font-size:.82rem;color:#FFC93C">⏳ <b>${mods.length} annonces</b> attendent votre validation (délai max 24h)</div>${mods.map(([t,r,c,ic,bg])=>`<div style="display:flex;align-items:center;gap:.75rem;padding:.75rem;border-radius:9px;background:#0D1117;border:1px solid #21262D;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem"><div style="width:46px;height:46px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${ic}</div><div style="flex:1;min-width:100px"><div style="font-weight:700;font-size:.84rem;color:#E6EDF3">${t}</div><div style="font-size:.73rem;color:#8B949E;margin-top:.05rem">${r} · ${c}</div></div><div style="display:flex;gap:.4rem;flex-shrink:0"><button class="btn bp" style="font-size:.74rem;padding:.35rem .7rem" onclick="T('✅ Approuvé : ${t}')">✓ Approuver</button><button class="btn br" style="font-size:.74rem;padding:.35rem .7rem" onclick="T('❌ Rejeté')">✕ Rejeter</button><button class="btn bg" style="font-size:.74rem;padding:.35rem .7rem" onclick="T('ℹ Info demandée')">ℹ Info</button></div></div>`).join('')}</div>`}
+
+/* ══ USERS ══ */
+function drawUsers(){document.getElementById('userTbl').innerHTML='<thead><tr><th>Utilisateur</th><th>Pays</th><th>Annonces</th><th>Pack</th><th>Statut</th><th>Actions</th></tr></thead><tbody>'+[['Moussa Diallo','🇸🇳 Sénégal',12,'👑 Pro','Actif','pg'],['Aminata Koné','🇨🇮 Côte d\'Ivoire',5,'⭐ Premium','Actif','pg'],['Kwame Mensah','🇬🇭 Ghana',8,'🚀 Pro','Actif','pg'],['Ibrahim Traoré','🇲🇱 Mali',3,'📋 Gratuit','Actif','pp'],['Fatou Sow','🇸🇳 Sénégal',1,'📋 Gratuit','Nouveau','pb']].map(([n,c,a,p,s,sc])=>`<tr><td style="font-weight:700;color:#E6EDF3">${n}</td><td>${c}</td><td>${a}</td><td><span class="pill pv">${p}</span></td><td><span class="pill ${sc}">${s}</span></td><td><span class="ta" onclick="T('Voir ${n}')">👁</span> <span class="ta" onclick="T('Passer Pro')">👑</span> <span class="ta" onclick="T('Banni !')" style="color:#F85149">🚫</span></td></tr>`).join('')+'</tbody>'}
+
+/* ══ FINANCES ══ */
+function drawFinance(){document.getElementById('finTbl').innerHTML='<thead><tr><th>Date</th><th>Utilisateur</th><th>Type</th><th>Montant</th><th>Méthode</th><th>Statut</th></tr></thead><tbody>'+[['16/06','Moussa D.','À la Une','9 000 FCFA','Orange Money','pg'],['16/06','Aminata K.','Pack Premium','150 000 FCFA','Wave','pg'],['15/06','Kwame M.','Pack Pro','75 000 FCFA','MTN MoMo','pg'],['15/06','Auto Dakar+','Pack Enterprise','300 000 FCFA','Carte','pg'],['14/06','Bineta F.','Premium','3 500 FCFA','Orange Money','pg']].map(([d,u,t,m,me,s])=>`<tr><td style="color:#8B949E">${d}</td><td style="font-weight:700;color:#E6EDF3">${u}</td><td>${t}</td><td style="font-weight:800;color:#34D399">${m}</td><td>${me}</td><td><span class="pill ${s}">✅ Payé</span></td></tr>`).join('')+'</tbody>'}
+
+/* ══ ADS ══ */
+function drawAds(){document.getElementById('adsTbl').innerHTML='<thead><tr><th>Zone</th><th>Annonceur</th><th>Pays ciblés</th><th>Impressions</th><th>CTR</th><th>Statut</th><th></th></tr></thead><tbody>'+[['A1 — Hero Banner','Orange Money','🇸🇳🇨🇮🇲🇱','245 800','2.0%','pg'],['A2 — In-feed Home','Wave','🇸🇳🇨🇮','189 200','3.0%','pg'],['A3 — Sidebar','MTN MoMo','🇨🇮🇧🇯🇬🇭','156 700','2.0%','pg'],['A4 — In-grid','Coca-Cola','Tous','98 400','1.5%','pa'],['A5 — Page Annonce','Airtel','🇲🇱🇳🇪','78 200','1.4%','pg'],['A6 — Footer','Banque SG','🇸🇳','45 600','1.0%','pb']].map(([s,a,c,i,r,st])=>`<tr><td style="font-weight:700;color:#A5B4FC">${s}</td><td style="font-weight:700;color:#E6EDF3">${a}</td><td>${c}</td><td>${i}</td><td style="color:#34D399;font-weight:700">${r}</td><td><span class="pill ${st}">${st==='pg'?'🟢 Active':st==='pa'?'🟡 Planifiée':'🔵 Nouveau'}</span></td><td><span class="ta" onclick="T('Modifier')">✏</span></td></tr>`).join('')+'</tbody>'}
+
+/* ══ IA ══ */
+function genEmail(){const n=document.getElementById('iaNom').value||'[Entreprise]',v=document.getElementById('iaVille').value||'Dakar';const res=document.getElementById('iaEmailResult');res.style.display='block';res.innerHTML=`<div class="ia-result"><b>Objet :</b> Augmentez la visibilité de votre activité à ${v}<br/><br/>Bonjour ${n},<br/><br/>Nous avons remarqué votre activité à ${v} et souhaitons vous présenter AnnoncesWest.<br/>Notre plateforme vous permet de toucher des acheteurs qualifiés dans 27 pays d'Afrique.<br/><br/>Seriez-vous disponible pour une présentation rapide de 15 minutes ?<br/><br/>Cordialement,<br/>L'équipe AnnoncesWest</div><button class="btn bg" style="margin-top:.5rem;font-size:.75rem" onclick="T('📋 Email copié !')">📋 Copier cet email</button>`}
+function genWA(){const res=document.getElementById('iaWAResult');res.style.display='block';res.innerHTML=`<div class="ia-result">Bonjour 👋<br/><br/>Je me permets de vous contacter concernant la promotion de vos produits/services sur <b>AnnoncesWest</b>.<br/><br/>Nous aidons les entreprises à :<br/>✅ Augmenter leur visibilité<br/>✅ Générer des contacts qualifiés<br/>✅ Diffuser sur Facebook & WhatsApp<br/><br/>Puis-je vous présenter notre offre ? 🙏</div><button class="btn bg" style="margin-top:.5rem;font-size:.75rem" onclick="T('📋 Message WhatsApp copié !')">📋 Copier pour WhatsApp</button>`}
+
+/* ══ POINTS ══ */
+function drawGains(){const g=[['Créer un compte','50 pts'],['Publier une annonce','10 pts'],['Annonce vendue','100 pts'],['Partager sur réseaux','5 pts'],['Parrainer un ami','50 pts'],['Parrainage converti','200 pts'],['Recevoir un avis 5★','25 pts'],['Se connecter / jour','2 pts']];document.getElementById('gainDiv').innerHTML=g.map(([a,p])=>`<div class="pts-row"><span class="pts-act">${a}</span><span class="pts-val">+${p}</span></div>`).join('')}
+function drawRewards(){const r=[['100 pts','1 annonce gratuite supplémentaire','#FFC93C'],['500 pts','Mise en avant 7 jours','#4FACFE'],['1 000 pts','1 mois Pack Pro offert','#A78BFA'],['5 000 pts','Badge Ambassadeur Or','#FFC93C'],['10 000 pts','1 an Premium offert','#F093FB']];document.getElementById('rewardDiv').innerHTML=r.map(([p,n,c])=>`<div style="display:flex;align-items:center;gap:.6rem;padding:.55rem;background:#0D1117;border-radius:8px;margin-bottom:.4rem"><span style="font-weight:800;color:${c};font-size:.8rem;width:70px;flex-shrink:0">${p}</span><span style="font-size:.8rem;color:#C9D1D9">${n}</span></div>`).join('')}
+function drawPointsTbl(){document.getElementById('pointsTbl').innerHTML='<thead><tr><th>#</th><th>Utilisateur</th><th>Points</th><th>Niveau</th><th>Récompenses utilisées</th></tr></thead><tbody>'+[['Moussa Diallo',8420,'💎 Diamant',5],['Aminata Koné',5810,'🥇 Or',3],['Ibrahim Traoré',3240,'🥈 Argent',2],['Fatou Sow',1890,'🥉 Bronze',1],['Kwame Mensah',920,'🥉 Bronze',0]].map(([n,p,l,r],i)=>`<tr><td style="font-weight:800;color:#FFC93C">${i+1}</td><td style="font-weight:700;color:#E6EDF3">${n}</td><td style="font-weight:800;color:#34D399">${p.toLocaleString('fr-FR')}</td><td>${l}</td><td>${r}</td></tr>`).join('')+'</tbody>'}
+
+/* ══ DIFFUSION ══ */
+function drawFBPages(){const pages=[['📘 Auto Sénégal','Automobile','🇸🇳','12 400 abonnés','Active','#4267B2'],['📘 Immo Abidjan','Immobilier','🇨🇮','8 900 abonnés','Active','#4267B2'],['📘 Tech Dakar','Électronique','🇸🇳','5 200 abonnés','Active','#4267B2'],['📘 Emploi Mali','Emploi','🇲🇱','3 800 abonnés','Planifiée','#8B949E']];document.getElementById('fbPagesDiv').innerHTML=pages.map(([n,s,c,a,st,col])=>`<div style="display:flex;align-items:center;gap:.7rem;padding:.65rem;background:#0D1117;border-radius:9px;margin-bottom:.4rem"><span style="font-size:1.1rem;flex-shrink:0">${n.split(' ')[0]}</span><div style="flex:1"><div style="font-weight:700;font-size:.83rem;color:#E6EDF3">${n.substring(3)}</div><div style="font-size:.7rem;color:#8B949E">${s} · ${c} · ${a}</div></div><span class="pill ${st==='Active'?'pg':'pp'}">${st}</span></div>`).join('')}
+function drawPacks(){const packs=[['📋 Basic','Site AnnoncesWest','Inclus'],['➕ Plus','Site + Facebook','+ 10 000 FCFA/mois'],['💎 Premium','Site + FB + WhatsApp','+ 30 000 FCFA/mois'],['👑 Elite','Site + FB + WA + Sponsorisé','+ 75 000 FCFA/mois']];document.getElementById('packsDiv').innerHTML=packs.map(([n,c,p])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:.65rem;background:#0D1117;border-radius:9px;margin-bottom:.4rem;flex-wrap:wrap;gap:.3rem"><div><div style="font-weight:700;font-size:.82rem;color:#E6EDF3">${n}</div><div style="font-size:.71rem;color:#8B949E">${c}</div></div><span style="font-weight:800;font-size:.78rem;color:#FFC93C">${p}</span></div>`).join('')}
+
+/* ══ RAPPORTS ══ */
+function drawRapports(){const raps=[['📊','Rapport MRR mensuel','PDF · Revenus récurrents et croissance','var(--g1)'],['🎯','Rapport CRM & Conversions','CSV · Pipeline et taux de conversion','var(--g8)'],['👨‍💼','Performance employés','PDF · Stats individuelles et commissions','var(--g5)'],['🤝','Rapport ambassadeurs','PDF · Commissions et performances','var(--g3)'],['📢','Performance campagnes','Excel · Taux d\'ouverture et conversions','var(--g7)'],['💰','Rapport financier','PDF/CSV · Toutes transactions','var(--g4)']];document.getElementById('rapportDiv').innerHTML=raps.map(([ic,t,s,g])=>`<div class="card" style="cursor:pointer;transition:.18s" onclick="T('Génération du rapport…')" onmouseover="this.style.borderColor='#6366F1'" onmouseout="this.style.borderColor='#21262D'"><div style="width:46px;height:46px;border-radius:12px;background:${g};display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:.7rem;box-shadow:0 4px 16px rgba(99,102,241,.2)">${ic}</div><h3 style="color:#E6EDF3;font-size:.88rem;margin-bottom:.25rem">${t}</h3><p style="font-size:.76rem;color:#8B949E;margin-bottom:.7rem">${s}</p><button class="btn bp" style="font-size:.74rem;padding:.4rem .75rem" onclick="event.stopPropagation();T('⬇ Téléchargement…')">⬇ Générer</button></div>`).join('')}
+
+/* ══ TOGGLES ══ */
+function drawToggles(){const ts=[['Mode maintenance','Désactivé',false],['Inscriptions ouvertes','Activé',true],['Programme ambassadeurs','Activé',true],['Assistant IA','Activé',true],['Diffusion Facebook auto','Activé',true],['Paiements actifs','Activé',true]];document.getElementById('togglesDiv').innerHTML=ts.map(([n,v,on])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;background:#0D1117;border-radius:9px"><span style="font-size:.83rem;color:#C9D1D9;font-weight:600">${n}</span><div style="display:flex;align-items:center;gap:.6rem"><span style="font-size:.75rem;color:#8B949E">${v}</span><div style="width:40px;height:22px;border-radius:11px;background:${on?'var(--green)':'#30363D'};position:relative;cursor:pointer;transition:.2s" onclick="this.style.background=this.style.background==='rgb(16, 185, 129)'?'#30363D':'rgb(16, 185, 129)';T('Paramètre modifié')"><div style="width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${on?'21':'3'}px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div></div></div></div>`).join('')}
+
+/* ══ INIT GLOBAL ══ */
+function initAll(){animCount();initPage('overview')}
+</script>
+</body>
+</html>

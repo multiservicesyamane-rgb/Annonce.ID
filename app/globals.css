@@ -60,31 +60,51 @@ body {
 
 /* ───────── DARK MODE ───────── */
 html.dark body {
-  background: #030712;
-  color: #F9FAFB;
+  background: #0D1117;
+  color: #E6EDF3;
 }
 
 /* Dark mode overrides for common light elements */
-html.dark .bg-white { background-color: #0B1120 !important; }
-html.dark .bg-gray-50 { background-color: #111827 !important; }
-html.dark .bg-light { background-color: #030712 !important; }
-html.dark .text-gray-900 { color: #F9FAFB !important; }
-html.dark .text-gray-800 { color: #F3F4F6 !important; }
-html.dark .text-gray-700 { color: #E5E7EB !important; }
-html.dark .text-gray-600 { color: #D1D5DB !important; }
-html.dark .text-gray-500 { color: #9CA3AF !important; }
-html.dark .border-gray-100 { border-color: #1F2937 !important; }
-html.dark .border-gray-200 { border-color: #1F2937 !important; }
-html.dark .border-gray-300 { border-color: #374151 !important; }
+html.dark .bg-white { background-color: #161B22 !important; }
+html.dark .bg-gray-50 { background-color: #21262D !important; }
+html.dark .bg-gray-100 { background-color: #21262D !important; }
+html.dark .bg-gray-200 { background-color: #30363D !important; }
+html.dark .bg-light { background-color: #0D1117 !important; }
+html.dark .text-gray-900 { color: #E6EDF3 !important; }
+html.dark .text-gray-800 { color: #C9D1D9 !important; }
+html.dark .text-gray-700 { color: #8B949E !important; }
+html.dark .text-gray-600 { color: #8B949E !important; }
+html.dark .text-gray-500 { color: #484F58 !important; }
+html.dark .border-gray-100 { border-color: #30363D !important; }
+html.dark .border-gray-200 { border-color: #30363D !important; }
+html.dark .border-gray-300 { border-color: #30363D !important; }
 
 /* Dark mode inputs */
 html.dark .input {
-  background-color: #111827 !important;
-  border-color: #1F2937 !important;
-  color: #F9FAFB !important;
+  background-color: #0D1117 !important;
+  border-color: #30363D !important;
+  color: #E6EDF3 !important;
 }
 html.dark .input:focus {
-  background-color: #0B1120 !important;
+  background-color: #161B22 !important;
+  border-color: #6366F1 !important;
+}
+
+/* Dark mode buttons */
+html.dark .btn-outline {
+  border-color: #30363D !important;
+  color: #E6EDF3 !important;
+}
+html.dark .btn-outline:hover {
+  background-color: #161B22 !important;
+  border-color: #6366F1 !important;
+}
+html.dark .btn-ghost {
+  color: #C9D1D9 !important;
+}
+html.dark .btn-ghost:hover {
+  background-color: #161B22 !important;
+  color: #E6EDF3 !important;
 }
 
 /* Dark mode cards & sections */

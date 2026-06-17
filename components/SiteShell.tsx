@@ -5,6 +5,7 @@ import Header from "./Header";
 import CategoryStrip from "./CategoryStrip";
 import Footer from "./Footer";
 import BottomNav from "./BottomNav";
+import WhatsAppFloat from "./WhatsAppFloat";
 import { ToastProvider } from "./Toast";
 
 /**
@@ -17,31 +18,38 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/";
 
   const isAdmin = pathname.startsWith("/yamanetech");
-  const noFooter =
-    isAdmin ||
+  
+  const isAuthOrDashboard = 
     pathname.startsWith("/connexion") ||
     pathname.startsWith("/inscription") ||
     pathname.startsWith("/paiement") ||
+    pathname.startsWith("/publier") ||
     pathname.startsWith("/dashboard");
+
+  const noFooter = isAdmin || isAuthOrDashboard;
+  const isAnnoncePage = pathname.startsWith("/annonce/");
+  
+  // On cache le BottomNav et WhatsApp sur les pages où ça gène
+  const hideChrome = isAdmin || isAuthOrDashboard;
+  const hideBottomNav = hideChrome || isAnnoncePage;
+
   const showCatStrip =
     pathname === "/" ||
     pathname.startsWith("/categorie") ||
-    pathname.startsWith("/annonce") ||
     pathname.startsWith("/recherche");
 
   if (isAdmin) {
     return <>{children}</>;
   }
 
-  const isAnnoncePage = pathname.startsWith("/annonce/");
-
   return (
     <ToastProvider>
       <Header />
       {showCatStrip && <CategoryStrip />}
-      <main className={`min-h-[40vh] ${isAnnoncePage ? 'pb-20' : 'pb-20 lg:pb-0'}`}>{children}</main>
+      <main className={`min-h-[40vh] ${hideBottomNav ? 'pb-8' : 'pb-20 lg:pb-0'}`}>{children}</main>
       {!noFooter && <Footer />}
-      {!isAnnoncePage && <BottomNav />}
+      {!hideBottomNav && <BottomNav />}
+      {!(hideChrome || isAnnoncePage) && <WhatsAppFloat />}
     </ToastProvider>
   );
 }

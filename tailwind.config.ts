@@ -35,12 +35,22 @@ const config: Config = {
           dark: "#D4891A",
           pale: "#FEF3DC",
         },
-        // AnnoncesWest : accent principal indigo (l'ancien "green" est remappé en indigo
-        // pour recolorer tout le site sans toucher chaque classe utilitaire).
+        // Redirection totale de "green" vers l'accent "indigo" du Dashboard
         green: {
-          DEFAULT: "#6366F1", // indigo principal (--p)
-          mid: "#4F46E5",     // indigo foncé (--pd)
-          pale: "#EEF2FF",    // indigo pâle (--pl)
+          50: '#eef2ff',
+          100: '#e0e7ff',
+          200: '#c7d2fe',
+          300: '#a5b4fc',
+          400: '#818cf8',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca',
+          800: '#3730a3',
+          900: '#312e81',
+          950: '#1e1b4b',
+          DEFAULT: "#6366F1",
+          mid: "#4F46E5",
+          pale: "#EEF2FF",
         },
         indigo: {
           DEFAULT: "#6366F1",

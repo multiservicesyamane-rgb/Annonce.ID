@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import SiteShell from "@/components/SiteShell";
-import WhatsAppFloat from "@/components/WhatsAppFloat";
 import CookieBanner from "@/components/CookieBanner";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://annonces.sn";
@@ -45,7 +44,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
+    <html lang="fr" className="dark">
       <head>
         {/* Polices chargées via <link> (pas de fetch au build, fallback système si hors-ligne) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -57,7 +56,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-body antialiased">
         <SiteShell>{children}</SiteShell>
-        <WhatsAppFloat />
         <CookieBanner />
       </body>
     </html>
