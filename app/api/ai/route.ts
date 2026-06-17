@@ -4,6 +4,16 @@ import Anthropic from "@anthropic-ai/sdk";
 // Route serveur — la clé ANTHROPIC_API_KEY reste secrète côté serveur.
 export const dynamic = "force-dynamic";
 
+// ── Maîtrise des coûts ──
+// Utilisateurs (public)  → Haiku 4.5 (≈ gratuit, ~0,002 $/génération)
+// Super admin            → Opus 4.8 (qualité max)
+const MODELS = { user: "claude-haiku-4-5", admin: "claude-opus-4-8" } as const;
+
+// Rate limiting basique en mémoire (anti-abus)
+const rl = new Map<string, { count: number; ts: number }>();
+const RL_WINDOW = 60 * 1000;
+const RL_MAX = 12; // 12 générations / minute / IP
+
 const SYSTEM = `Tu es l'assistant commercial IA d'Annonce.ID (plateforme de petites annonces et de marketing B2B en Afrique de l'Ouest, par YamaneTech).
 Tu écris en français, ton professionnel, chaleureux et persuasif, adapté au marché ouest-africain (Sénégal, Côte d'Ivoire, Mali, etc.).
 Réponds UNIQUEMENT avec le texte demandé, sans préambule ni commentaire, prêt à copier-coller.`;
@@ -42,12 +52,27 @@ export async function POST(req: Request) {
     );
   }
 
+  // Rate limit par IP
+  const ip = req.headers.get("x-forwarded-for") || "unknown";
+  const now = Date.now();
+  const rec = rl.get(ip);
+  if (!rec || now - rec.ts > RL_WINDOW) {
+    rl.set(ip, { count: 1, ts: now });
+  } else if (rec.count >= RL_MAX) {
+    return NextResponse.json({ error: "Trop de générations. Réessayez dans une minute." }, { status: 429 });
+  } else {
+    rec.count++;
+  }
+
   const body = await req.json().catch(() => ({}));
   const client = new Anthropic({ apiKey });
 
+  // Choix du modèle selon le niveau (par défaut: utilisateur = Haiku, moins cher)
+  const model = body?.tier === "admin" ? MODELS.admin : MODELS.user;
+
   try {
     const msg = await client.messages.create({
-      model: "claude-opus-4-8",
+      model,
       max_tokens: 1500,
       system: SYSTEM,
       messages: [{ role: "user", content: buildPrompt(body) }],

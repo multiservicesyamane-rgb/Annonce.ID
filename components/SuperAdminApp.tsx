@@ -666,7 +666,8 @@ function AdsAdmin({ allListings, T, reload }: { allListings: any[]; T: (m: strin
 }
 
 async function callAI(payload: Record<string, any>): Promise<string> {
-  const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  // tier "admin" → modèle Opus 4.8 (qualité max) côté super admin
+  const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, tier: "admin" }) });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error || "Erreur IA");
   return data.text || "";
