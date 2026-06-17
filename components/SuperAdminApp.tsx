@@ -665,22 +665,49 @@ function AdsAdmin({ allListings, T, reload }: { allListings: any[]; T: (m: strin
   );
 }
 
+async function callAI(payload: Record<string, any>): Promise<string> {
+  const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error || "Erreur IA");
+  return data.text || "";
+}
+
+function AIBlock({ title, accent, payloadBase, fields, T }: { title: string; accent: string; payloadBase: Record<string, any>; fields: { key: string; ph: string }[]; T: (m: string) => void }) {
+  const [vals, setVals] = useState<Record<string, string>>({});
+  const [out, setOut] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  async function run() {
+    setLoading(true); setOut(null);
+    try { setOut(await callAI({ ...payloadBase, ...vals })); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+    finally { setLoading(false); }
+  }
+  return (
+    <Card title={title}>
+      {fields.map((f) => (
+        <input key={f.key} value={vals[f.key] || ""} onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))} placeholder={f.ph} className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+      ))}
+      <button disabled={loading} className={`${btnP} w-full disabled:opacity-60`} onClick={run}>{loading ? "⏳ Génération…" : "🤖 Générer avec l'IA →"}</button>
+      {out && (
+        <div className="mt-3 whitespace-pre-line rounded-[9px] border-l-[3px] bg-[#0D1117] p-3 text-[.8rem] leading-relaxed text-[#C9D1D9]" style={{ borderLeftColor: accent }}>
+          {out}
+          <div className="mt-2"><button className={btnG} onClick={() => { navigator.clipboard?.writeText(out); T("📋 Copié !"); }}>📋 Copier</button></div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function IA({ T }: { T: (m: string) => void }) {
-  const [nom, setNom] = useState(""); const [ville, setVille] = useState(""); const [email, setEmail] = useState<string | null>(null); const [wa, setWa] = useState<string | null>(null);
   return (
     <>
-      <PageHead title="🤖 Assistant IA Commercial" sub="Génération automatique de textes marketing" />
+      <PageHead title="🤖 Assistant IA Commercial" sub="Propulsé par Claude (Anthropic) — génération réelle de textes marketing" />
       <div className="grid gap-3 lg:grid-cols-2">
-        <Card title="Générer un email commercial">
-          <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom de l'entreprise" className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
-          <input value={ville} onChange={(e) => setVille(e.target.value)} placeholder="Ville" className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
-          <button className={`${btnP} w-full`} onClick={() => setEmail(`Objet : Augmentez la visibilité de votre activité à ${ville || "[Ville]"}\n\nBonjour ${nom || "[Entreprise]"},\n\nNous avons remarqué votre activité à ${ville || "[Ville]"} et souhaitons vous présenter Annonce.ID. Notre plateforme vous permet de toucher des acheteurs qualifiés dans 27 pays d'Afrique.\n\nSeriez-vous disponible pour une présentation de 15 minutes ?\n\nCordialement,\nL'équipe Annonce.ID`)}>🤖 Générer l'email →</button>
-          {email && <div className="mt-3 whitespace-pre-line rounded-[9px] border-l-[3px] border-[#6366F1] bg-[#0D1117] p-3 text-[.8rem] leading-relaxed text-[#C9D1D9]">{email}<div className="mt-2"><button className={btnG} onClick={() => { navigator.clipboard?.writeText(email); T("📋 Email copié !"); }}>📋 Copier</button></div></div>}
-        </Card>
-        <Card title="Générer un message WhatsApp">
-          <button className={`${btnP} w-full`} onClick={() => setWa("Bonjour 👋\n\nJe me permets de vous contacter concernant la promotion de vos produits/services sur Annonce.ID.\n\nNous aidons les entreprises à augmenter leur visibilité et générer des contacts qualifiés (Facebook & WhatsApp).\n\nPuis-je vous présenter notre offre ? 🙏")}>🤖 Générer WhatsApp →</button>
-          {wa && <div className="mt-3 whitespace-pre-line rounded-[9px] border-l-[3px] border-[#25D366] bg-[#0D1117] p-3 text-[.8rem] leading-relaxed text-[#C9D1D9]">{wa}<div className="mt-2"><button className={btnG} onClick={() => { navigator.clipboard?.writeText(wa); T("📋 Copié pour WhatsApp !"); }}>📋 Copier</button></div></div>}
-        </Card>
+        <AIBlock title="Email commercial de prospection" accent="#6366F1" payloadBase={{ kind: "email" }} fields={[{ key: "company", ph: "Nom de l'entreprise" }, { key: "sector", ph: "Secteur (ex: automobile)" }, { key: "city", ph: "Ville" }]} T={T} />
+        <AIBlock title="Message WhatsApp" accent="#25D366" payloadBase={{ kind: "whatsapp" }} fields={[{ key: "sector", ph: "Secteur" }, { key: "city", ph: "Ville" }, { key: "topic", ph: "Type (premier contact, relance…)" }]} T={T} />
+        <AIBlock title="Titre d'annonce optimisé (SEO)" accent="#FFC93C" payloadBase={{ kind: "listing_title" }} fields={[{ key: "topic", ph: "Décrivez le produit/service" }]} T={T} />
+        <AIBlock title="Description d'annonce" accent="#43E97B" payloadBase={{ kind: "listing_description" }} fields={[{ key: "topic", ph: "Produit/service à décrire" }]} T={T} />
+        <AIBlock title="Post Facebook" accent="#4FACFE" payloadBase={{ kind: "facebook" }} fields={[{ key: "topic", ph: "Annonce à promouvoir" }]} T={T} />
       </div>
     </>
   );
