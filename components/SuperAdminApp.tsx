@@ -679,7 +679,7 @@ function AIBlock({ title, accent, payloadBase, fields, T }: { title: string; acc
   const [loading, setLoading] = useState(false);
   async function run() {
     setLoading(true); setOut(null);
-    try { setOut(await callAI({ ...payloadBase, ...vals })); }
+    try { const res = await callAI({ ...payloadBase, ...vals }); setOut(res.text); }
     catch (e: any) { T(`❌ ${e.message}`); }
     finally { setLoading(false); }
   }
