@@ -48,17 +48,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ users });
     }
 
-    // Créer un compte (employé / ambassadeur / pro / user)
+    // Créer un compte (par email OU par nom d'utilisateur avec mot de passe auto-généré)
     if (action === "create") {
-      const { email, password, full_name, role } = body;
-      if (!email || !password) return NextResponse.json({ error: "Email et mot de passe requis." }, { status: 400 });
+      let { email, password, full_name, role, username } = body;
+      // Mode rapide terrain : juste un nom d'utilisateur → email technique généré
+      if (!email && username) {
+        const u = String(username).toLowerCase().trim().replace(/[^a-z0-9._-]/g, "");
+        if (!u) return NextResponse.json({ error: "Nom d'utilisateur invalide." }, { status: 400 });
+        email = `${u}@wanteermako.app`;
+        if (!full_name) full_name = username;
+      }
+      if (!email) return NextResponse.json({ error: "Email ou nom d'utilisateur requis." }, { status: 400 });
+      // Mot de passe par défaut si non fourni
+      const generated = !password;
+      if (!password) password = "wmk-" + Math.random().toString(36).slice(2, 8);
+
       const { data: created, error } = await sb.auth.admin.createUser({
         email, password, email_confirm: true, user_metadata: { full_name: full_name || "" },
       });
       if (error) throw error;
       const uid = created.user.id;
       await sb.from("profiles").upsert({ id: uid, full_name: full_name || "", role: role || "user" }, { onConflict: "id" });
-      return NextResponse.json({ ok: true, id: uid });
+      // On renvoie les identifiants pour que l'admin les communique au vendeur
+      return NextResponse.json({ ok: true, id: uid, email, password, generated, username: username || null });
     }
 
     // Modifier le rôle

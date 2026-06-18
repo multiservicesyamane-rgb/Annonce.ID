@@ -41,7 +41,9 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
           show("✅ Compte créé ! Vérifiez votre email pour confirmer (si demandé), puis connectez-vous.");
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        // Connexion par email OU par nom d'utilisateur (sans @ → complété automatiquement)
+        const loginId = email.includes("@") ? email.trim() : `${email.trim().toLowerCase()}@wanteermako.app`;
+        const { error } = await supabase.auth.signInWithPassword({ email: loginId, password });
         if (error) throw error;
         window.location.href = "/dashboard";
       }
@@ -58,9 +60,8 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
       type="button"
       onClick={async () => {
         show("Redirection vers Google...");
-        const redirectUrl = process.env.NODE_ENV === "development"
-          ? "http://localhost:3000/auth/callback"
-          : "https://wanteermako.com/auth/callback";
+        // Utilise TOUJOURS le domaine courant (wanteermako.com, vercel.app ou localhost)
+        const redirectUrl = `${window.location.origin}/auth/callback`;
         await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirectUrl } });
       }}
       className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-gray-100 bg-white py-3 text-[.92rem] font-semibold text-gray-700 hover:border-gray-300 transition-colors shadow-sm hover:shadow-md"
@@ -112,7 +113,7 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
           {mode === "signup" && (
             <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nom complet ou boutique" className="rounded-[10px] border-2 border-gray-100 bg-gray-50 px-4 py-3 text-[.92rem] outline-none focus:border-green focus:bg-white transition" />
           )}
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Adresse email" className="rounded-[10px] border-2 border-gray-100 bg-gray-50 px-4 py-3 text-[.92rem] outline-none focus:border-green focus:bg-white transition" />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} type="text" placeholder={mode === "signup" ? "Adresse email" : "Email ou nom d'utilisateur"} className="rounded-[10px] border-2 border-gray-100 bg-gray-50 px-4 py-3 text-[.92rem] outline-none focus:border-green focus:bg-white transition" />
           <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Mot de passe" className="rounded-[10px] border-2 border-gray-100 bg-gray-50 px-4 py-3 text-[.92rem] outline-none focus:border-green focus:bg-white transition" />
           <button type="submit" disabled={loading} className="btn btn-green rounded-[10px] py-3 text-[.95rem] font-bold disabled:opacity-60">
             {loading ? "⏳ Patientez…" : mode === "signup" ? "Créer mon compte" : "Se connecter"}

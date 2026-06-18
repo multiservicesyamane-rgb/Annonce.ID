@@ -5,9 +5,9 @@
 // ⚠️ Remplace/complète par tes 4 vrais emails ci-dessous.
 export const OWNER_EMAILS = [
   "multiservicesyamane@gmail.com",
-  // "compte2@gmail.com",
-  // "compte3@gmail.com",
-  // "compte4@gmail.com",
+  "ibrahimadiop363@gmail.com",
+  "wanteermako@gmail.com",
+  "analysteprogrammeur1374@gmail.com",
 ];
 
 export function isOwner(email?: string | null): boolean {

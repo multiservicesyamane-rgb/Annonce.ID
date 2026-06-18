@@ -609,6 +609,7 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({ role: "employee" });
   const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState<{ login: string; password: string } | null>(null);
 
   async function refreshList() {
     try { const d = await adminApi("list"); setServerUsers(d.users || []); }
@@ -620,11 +621,19 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
   const filtered = source.filter((u: any) => !search || (u.full_name || "").toLowerCase().includes(search.toLowerCase()) || (u.email || "").toLowerCase().includes(search.toLowerCase()) || (u.phone || "").includes(search));
 
   async function createAccount() {
-    if (!form.email || !form.password) { T("⚠ Email + mot de passe requis"); return; }
+    // Mode rapide terrain : nom d'utilisateur suffit (email + mot de passe optionnels)
+    if (!form.username && !form.email) { T("⚠ Nom d'utilisateur OU email requis"); return; }
     setBusy(true);
     try {
-      await adminApi("create", { email: form.email, password: form.password, full_name: form.full_name || "", role: form.role || "user" });
-      T("✅ Compte créé"); setShowCreate(false); setForm({ role: "employee" }); refreshList();
+      const r = await adminApi("create", {
+        username: form.username || "",
+        email: form.email || "",
+        password: form.password || "",
+        full_name: form.full_name || "",
+        role: form.role || "user",
+      });
+      setCreated({ login: form.username || r.email || "", password: r.password || form.password || "" });
+      T("✅ Compte créé"); setForm({ role: "employee" }); refreshList();
     } catch (e: any) { T(`❌ ${e.message}`); }
     finally { setBusy(false); }
   }
@@ -651,19 +660,33 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
       </PageHead>
 
       {showCreate && (
-        <div className="mb-3"><Card title="Créer un compte (employé, ambassadeur…)">
+        <div className="mb-3"><Card title="Créer un compte (terrain : nom d'utilisateur suffit)">
+          <p className="mb-2 text-[.78rem] text-gray-400">💡 Sur le terrain : saisis juste un <b className="text-white">nom d'utilisateur</b> → un mot de passe est généré. Le vendeur se connecte, puis met son vrai email et ses infos.</p>
           <div className="grid gap-2 sm:grid-cols-2">
-            <input value={form.full_name || ""} onChange={(e) => setForm((v) => ({ ...v, full_name: e.target.value }))} placeholder="Nom complet" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
-            <input value={form.email || ""} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} placeholder="Email *" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
-            <input value={form.password || ""} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Mot de passe *" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+            <input value={form.username || ""} onChange={(e) => setForm((v) => ({ ...v, username: e.target.value }))} placeholder="Nom d'utilisateur (ex: boutiquefatou)" className="rounded-[9px] border border-[#6366F1]/50 bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+            <input value={form.full_name || ""} onChange={(e) => setForm((v) => ({ ...v, full_name: e.target.value }))} placeholder="Nom complet / boutique (optionnel)" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+            <input value={form.email || ""} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} placeholder="Email (optionnel)" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+            <input value={form.password || ""} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Mot de passe (auto si vide)" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
             <select value={form.role} onChange={(e) => setForm((v) => ({ ...v, role: e.target.value }))} className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none">
+              <option value="user">👤 Utilisateur / Vendeur</option>
+              <option value="pro">🚀 Vendeur Pro (boutique)</option>
               <option value="employee">👨‍💼 Employé (commercial)</option>
               <option value="ambassador">🤝 Ambassadeur</option>
-              <option value="pro">🚀 Vendeur Pro</option>
-              <option value="user">👤 Utilisateur</option>
             </select>
           </div>
           <button disabled={busy} className={`${btnP} mt-3 disabled:opacity-60`} onClick={createAccount}>{busy ? "⏳ Création…" : "Créer le compte"}</button>
+
+          {created && (
+            <div className="mt-3 rounded-[10px] border border-emerald-500/40 bg-emerald-500/10 p-3">
+              <p className="mb-1 text-[.82rem] font-bold text-emerald-300">✅ Compte créé — note ces identifiants (à donner au vendeur) :</p>
+              <div className="font-mono text-[.85rem] text-white">
+                <div>👤 Identifiant : <b className="select-all">{created.login}</b></div>
+                <div>🔑 Mot de passe : <b className="select-all">{created.password}</b></div>
+              </div>
+              <p className="mt-1 text-[.72rem] text-gray-400">Le vendeur se connecte avec ce nom d'utilisateur + mot de passe, puis modifie son compte (vrai email, infos).</p>
+              <button className="mt-2 rounded-[8px] bg-emerald-500/20 px-3 py-1 text-[.78rem] text-emerald-200" onClick={() => { navigator.clipboard?.writeText(`Identifiant: ${created.login}\nMot de passe: ${created.password}`); T("📋 Copié"); }}>📋 Copier</button>
+            </div>
+          )}
         </Card></div>
       )}
 

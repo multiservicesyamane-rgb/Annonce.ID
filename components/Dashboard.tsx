@@ -50,6 +50,7 @@ export default function Dashboard() {
   // Security Panel States
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showroomName, setShowroomName] = useState("");
@@ -1854,6 +1855,23 @@ export default function Dashboard() {
         {panel === "security" && (
           <div className="animate-fadeUp max-w-[800px] mx-auto">
             <h2 className="mb-6 font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold dark:text-white">Sécurité & Vie privée</h2>
+            <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6">
+              <h3 className="font-bold text-lg mb-1 dark:text-white">Mon adresse email</h3>
+              <p className="text-[.8rem] text-gray-500 mb-4">Si votre compte a été créé sur le terrain (nom d'utilisateur), mettez ici votre <b>vrai email</b> pour sécuriser votre compte.</p>
+              <div className="flex flex-col sm:flex-row gap-2 max-w-lg">
+                <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="votre@email.com" className="flex-1 bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-border rounded-lg px-4 py-2.5 text-sm outline-none focus:border-green" />
+                <button
+                  className="btn btn-green whitespace-nowrap"
+                  onClick={async () => {
+                    if (!newEmail || !newEmail.includes("@")) { show("❌ Email invalide"); return; }
+                    const { error } = await supabase.auth.updateUser({ email: newEmail });
+                    if (error) { show("❌ Erreur: " + error.message); }
+                    else { show("✓ Email mis à jour. Vérifiez votre boîte mail pour confirmer."); setNewEmail(""); }
+                  }}
+                >Enregistrer l'email</button>
+              </div>
+            </div>
+
             <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6">
               <h3 className="font-bold text-lg mb-4 dark:text-white">Modifier le mot de passe</h3>
               <div className="space-y-4 max-w-md">
