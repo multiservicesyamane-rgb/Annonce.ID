@@ -9,6 +9,8 @@
 -- ============================================================
 
 alter table profiles add column if not exists free_premium boolean default false;
+-- Image de couverture de la boutique (dashboard → Ma Boutique)
+alter table profiles add column if not exists cover_url text;
 
 -- (Optionnel) Permettre au Super Admin (accès par mot de passe côté app)
 -- de modifier les profils des autres utilisateurs — sinon le bouton

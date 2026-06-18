@@ -24,14 +24,14 @@ export default async function BoutiquePage({ params }: Props) {
   const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(sellerId);
   
   if (isUuid) {
-    const { data } = await supabase.from('profiles').select('id, full_name, avatar_url, phone, role, created_at, bio, social_links').eq('id', sellerId).single();
+    const { data } = await supabase.from('profiles').select('*').eq('id', sellerId).single();
     profile = data;
   }
   
   // Fallback: search by name slug (ex: "boutique-pro" → matches "Boutique Pro")
   if (!profile) {
     const nameSearch = decodeURIComponent(sellerId).replace(/-/g, ' ');
-    const { data } = await supabase.from('profiles').select('id, full_name, avatar_url, phone, role, created_at, bio, social_links').ilike('full_name', `%${nameSearch}%`).limit(1).single();
+    const { data } = await supabase.from('profiles').select('*').ilike('full_name', `%${nameSearch}%`).limit(1).single();
     profile = data;
   }
 
@@ -63,8 +63,14 @@ export default async function BoutiquePage({ params }: Props) {
 
   return (
     <div>
-      {/* Bannière boutique */}
+      {/* Bannière boutique (image de couverture si définie) */}
       <div className="relative overflow-hidden bg-gradient-to-br from-dark-900 via-dark-800 to-green-900">
+        {profile?.cover_url && (
+          <>
+            <Image src={profile.cover_url} alt="Couverture" fill sizes="100vw" className="object-cover opacity-60" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/70 to-dark-900/30" />
+          </>
+        )}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(at_20%_30%,rgba(0,136,85,.15)_0,transparent_45%)]" />
         <div className="relative z-10 mx-auto flex max-w-[1320px] flex-wrap items-center gap-6 px-4 py-12">
           <Image src={avatar} alt={name} width={100} height={100} className="h-[100px] w-[100px] rounded-full border-[3px] border-gold object-cover shadow-lg bg-white" />

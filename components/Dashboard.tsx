@@ -55,6 +55,7 @@ export default function Dashboard() {
   const [showroomName, setShowroomName] = useState("");
   const [showroomBio, setShowroomBio] = useState("");
   const [showroomSocials, setShowroomSocials] = useState<any>({});
+  const [showroomCover, setShowroomCover] = useState("");
   const [livePreviewOpen, setLivePreviewOpen] = useState(false);
   const [editingSocial, setEditingSocial] = useState<string | null>(null);
   const [alertPrefs, setAlertPrefs] = useState<any>({ messages: true, expired: true, stats: false, search: true, promos: false });
@@ -86,7 +87,7 @@ export default function Dashboard() {
   const [typeProduct, setTypeProduct] = useState<string | null>(null);
 
   const [cropModalImage, setCropModalImage] = useState<string | null>(null);
-  const [cropModalZone, setCropModalZone] = useState<"hero" | "footer" | "catalogue" | "product" | "avatar" | null>(null);
+  const [cropModalZone, setCropModalZone] = useState<"hero" | "footer" | "catalogue" | "product" | "avatar" | "cover" | null>(null);
 
   const [campaignUrlType, setCampaignUrlType] = useState("custom");
   const [campaignUrl, setCampaignUrl] = useState("");
@@ -160,6 +161,7 @@ export default function Dashboard() {
             setShowroomName(profData.full_name || defaultName);
             setShowroomBio(profData.bio || "La référence en bonnes affaires");
             setShowroomSocials(profData.social_links || {});
+            setShowroomCover(profData.cover_url || "");
             setAlertPrefs(profData.alert_prefs || { messages: true, expired: true, stats: false, search: true, promos: false });
           } else {
             setProfileName(defaultName);
@@ -1550,7 +1552,22 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Tabs enlevées: 'Ma Boutique' & 'Design' n'existent plus. */}
+              {/* Image de couverture */}
+              <div className="mb-6">
+                <label className="relative block h-[140px] sm:h-[180px] w-full overflow-hidden rounded-2xl border border-gray-200 dark:border-dark-border bg-gradient-to-br from-dark-900 to-green-900 cursor-pointer group">
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setCropModalZone("cover");
+                      setCropModalImage(URL.createObjectURL(e.target.files[0]));
+                    }
+                  }} />
+                  {showroomCover && <img src={showroomCover} alt="couverture" className="absolute inset-0 h-full w-full object-cover" />}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition">
+                    <span className="rounded-full bg-white/90 px-4 py-2 text-[.8rem] font-bold text-gray-900">📷 {showroomCover ? "Changer la couverture" : "Ajouter une image de couverture"}</span>
+                  </div>
+                  {!showroomCover && <div className="absolute inset-0 flex items-center justify-center text-white/70 text-[.85rem] font-semibold">📷 Image de couverture de votre boutique</div>}
+                </label>
+              </div>
 
               {/* Profile Card Editor */}
               <div className="rounded-2xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6 relative">
@@ -1986,8 +2003,8 @@ export default function Dashboard() {
       {cropModalImage && cropModalZone && (
         <ImageCropperModal
           imageSrc={cropModalImage}
-          maxWidth={cropModalZone === 'avatar' ? 256 : 1200}
-          aspectRatio={cropModalZone === 'catalogue' || cropModalZone === 'product' ? 4 : cropModalZone === 'avatar' ? 1 : 4} // Tous sont en 4:1 (1200x300 ou 800x200) sauf avatar (1:1)
+          maxWidth={cropModalZone === 'avatar' ? 256 : cropModalZone === 'cover' ? 1600 : 1200}
+          aspectRatio={cropModalZone === 'avatar' ? 1 : cropModalZone === 'cover' ? 3 : 4} // avatar 1:1, couverture ~3:1, bannières 4:1
           onCancel={() => {
             setCropModalImage(null);
             setCropModalZone(null);
@@ -1997,6 +2014,21 @@ export default function Dashboard() {
             if (cropModalZone === 'footer') setFileFooter(base64);
             if (cropModalZone === 'catalogue') setFileCatalogue(base64);
             if (cropModalZone === 'product') setFileProduct(base64);
+            if (cropModalZone === 'cover') {
+              if (user) {
+                try {
+                  const coverUrl = await uploadImage(base64, "covers");
+                  const { error } = await supabase.from('profiles').update({ cover_url: coverUrl }).eq('id', user.id);
+                  if (error) throw error;
+                  setShowroomCover(coverUrl);
+                  setProfile((prev: any) => prev ? { ...prev, cover_url: coverUrl } : { cover_url: coverUrl });
+                  show("✓ Image de couverture mise à jour !");
+                } catch (e: any) {
+                  show("❌ Erreur (colonne cover_url manquante ? Lancez le SQL).");
+                  console.error(e);
+                }
+              }
+            }
             if (cropModalZone === 'avatar') {
               if (user) {
                 try {
