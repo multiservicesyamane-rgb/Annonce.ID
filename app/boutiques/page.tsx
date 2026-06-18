@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
+import BoutiquesView from "@/components/BoutiquesView";
 
 export const metadata = {
   title: "Boutiques — Annonce.ID",
@@ -17,7 +17,7 @@ export default async function BoutiquesPage() {
   // Fetch all profiles that have at least an avatar or a bio (= configured shop)
   const { data: allProfiles } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, bio, role, created_at')
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(100);
 
@@ -71,72 +71,19 @@ export default async function BoutiquesPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {boutiques.map((shop: any) => {
-            let name = shop.full_name || "Boutique";
-            if (name.includes('@')) name = name.split('@')[0];
-            const avatar = shop.avatar_url || "https://placehold.co/100x100?text=B";
-            const bio = shop.bio || "Vendeur sur Annonce.ID";
-            const adCount = countMap[shop.id] || 0;
-            const isPro = shop.role === 'pro' || shop.role === 'business';
-            const memberSince = shop.created_at 
-              ? new Date(shop.created_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) 
-              : '';
-
-            return (
-              <Link
-                key={shop.id}
-                href={`/boutique/${shop.id}`}
-                className="group relative flex flex-col rounded-[16px] border border-gray-100 dark:border-white/10 bg-white dark:bg-[#111722]/80 overflow-hidden shadow-sm hover:shadow-lg hover:border-gold/40 transition-all duration-300"
-              >
-                {/* Top gradient banner */}
-                <div className="h-16 bg-gradient-to-br from-green-600/20 via-neon-gold/10 to-transparent relative">
-                  {isPro && (
-                    <span className="absolute top-2 right-2 bg-gradient-to-r from-neon-gold to-[#D4891A] text-dark-900 text-[.6rem] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                      PRO
-                    </span>
-                  )}
-                </div>
-
-                {/* Avatar overlapping banner */}
-                <div className="flex flex-col items-center -mt-8 px-4 pb-5">
-                  <Image
-                    src={avatar}
-                    alt={name}
-                    width={64}
-                    height={64}
-                    className="h-16 w-16 rounded-full border-[3px] border-white dark:border-dark-800 object-cover shadow-md bg-white group-hover:scale-105 transition-transform"
-                  />
-                  <h3 className="mt-2 font-display text-[.95rem] font-bold text-gray-900 dark:text-white text-center leading-tight group-hover:text-green transition-colors">
-                    {name}
-                  </h3>
-                  <p className="text-[.75rem] text-gray-500 dark:text-gray-400 mt-1 text-center line-clamp-2 leading-snug">
-                    {bio.length > 60 ? bio.slice(0, 60) + '…' : bio}
-                  </p>
-
-                  {/* Stats */}
-                  <div className="flex items-center gap-3 mt-3 text-[.72rem] text-gray-500">
-                    <span className="flex items-center gap-1">
-                      📦 <b className="text-gray-700 dark:text-white">{adCount}</b> annonce{adCount > 1 ? 's' : ''}
-                    </span>
-                    {memberSince && (
-                      <span className="flex items-center gap-1">
-                        🗓️ {memberSince}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* CTA */}
-                  <div className="mt-3 w-full">
-                    <span className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-[.8rem] font-bold text-green group-hover:bg-green group-hover:text-white transition-all">
-                      Voir la boutique →
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        <BoutiquesView
+          boutiques={boutiques.map((shop: any) => ({
+            id: shop.id,
+            name: (shop.full_name || "Boutique").includes("@") ? (shop.full_name || "Boutique").split("@")[0] : (shop.full_name || "Boutique"),
+            avatar: shop.avatar_url || "https://placehold.co/100x100?text=B",
+            cover: shop.cover_url || null,
+            bio: shop.bio || "Vendeur sur Annonce.ID",
+            adCount: countMap[shop.id] || 0,
+            isPro: shop.role === "pro" || shop.role === "business" || !!shop.free_premium,
+            phone: shop.phone || "",
+            memberSince: shop.created_at ? new Date(shop.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" }) : "",
+          }))}
+        />
       )}
     </div>
   );
