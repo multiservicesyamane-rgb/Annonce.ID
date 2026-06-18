@@ -382,7 +382,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)] dark:bg-dark-900">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden dark:bg-dark-900">
       {/* Mobile top bar */}
       <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-900 px-4 py-3 lg:hidden">
         <div className="font-bold dark:text-white flex items-center gap-2">

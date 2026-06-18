@@ -42,7 +42,7 @@ export default function Footer() {
         <FooterCol title="Compte">
           <FooterLink href="/connexion">Connexion</FooterLink>
           <FooterLink href="/dashboard">Mes annonces</FooterLink>
-          <FooterLink href="/yamanetech">Espace Admin</FooterLink>
+          <FooterLink href="/boutiques">Boutiques</FooterLink>
           <FooterLink href="/publier">✦ Premium</FooterLink>
         </FooterCol>
       </div>

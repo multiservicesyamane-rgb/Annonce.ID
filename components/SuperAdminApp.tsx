@@ -108,8 +108,8 @@ export default function SuperAdminApp() {
   const [page, setPage] = useState("overview");
   const [sbOpen, setSbOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [email, setEmail] = useState(ADMIN_CREDS.email);
-  const [pass, setPass] = useState(ADMIN_CREDS.pass);
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
   const [code, setCode] = useState("");
 
   // Données réelles
@@ -224,7 +224,6 @@ export default function SuperAdminApp() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-g1 text-[1.3rem] font-extrabold text-white shadow-[0_0_30px_rgba(99,102,241,.4)]">SA</div>
           <h1 className="text-center text-[1.2rem] font-extrabold text-white">Super Admin</h1>
           <p className="mb-6 text-center text-[.82rem] text-[#8B949E]">Annonce.ID · YamaneTech</p>
-          <div className="mb-4 rounded-[10px] border border-dashed border-[#30363D] bg-[#0D1117] p-3 text-[.75rem] leading-7 text-[#FFC93C]">🔐 <b>Accès démo :</b><br />Email : admin@yamanetech.com<br />Mot de passe : YamaneTech@2025<br />Code 2FA : 1234</div>
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email administrateur" />
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Mot de passe" />
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="text" maxLength={4} value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && doLogin()} placeholder="Code 2FA (1234)" />
