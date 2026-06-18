@@ -57,6 +57,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             else document.documentElement.classList.remove('dark');
           })();
         `}} />
+        {/* Google AdSense (validation du site + diffusion des annonces) */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8749142175860365"
+          crossOrigin="anonymous"
+        />
         {/* Polices chargées via <link> (pas de fetch au build, fallback système si hors-ligne) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
