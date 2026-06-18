@@ -80,26 +80,16 @@ export default function PaymentFlow({
           </div>
         </div>
 
-        <p className="mb-3 text-[.8rem] font-semibold text-gray-500 dark:text-gray-400">Choisissez votre moyen de paiement</p>
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={() => pay("paytech")}
-            disabled={!!processing}
-            className="btn btn-green btn-block h-[52px] text-[1rem] font-bold shadow-lg shadow-green/30 disabled:opacity-70 transition-all hover:scale-[1.02]"
-          >
-            {processing === "paytech" ? "⏳ Redirection…" : `💳 PayTech — ${formatNumber(total)} FCFA`}
-          </button>
-          <button
-            onClick={() => pay("cinetpay")}
-            disabled={!!processing}
-            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[10px] border-2 border-[#0a6cff] bg-[#0a6cff]/10 text-[1rem] font-bold text-[#0a6cff] disabled:opacity-70 transition-all hover:bg-[#0a6cff] hover:text-white"
-          >
-            {processing === "cinetpay" ? "⏳ Redirection…" : `🟦 CinetPay — Orange Money, Wave, MTN, Moov`}
-          </button>
-        </div>
+        <button
+          onClick={() => pay("cinetpay")}
+          disabled={!!processing}
+          className="btn btn-green btn-block h-[56px] text-[1.1rem] font-bold shadow-lg shadow-green/30 disabled:opacity-70 transition-all hover:scale-[1.02]"
+        >
+          {processing === "cinetpay" ? "⏳ Ouverture du paiement…" : `💳 PAYER ${formatNumber(total)} FCFA`}
+        </button>
 
-        <div className="mt-6 flex items-center justify-center gap-2 text-[.75rem] text-gray-400">
-          <span>🔒 Paiement 100% sécurisé via PayTech &amp; CinetPay</span>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[.75rem] text-gray-400">
+          <span>🔒 Paiement 100% sécurisé · Orange Money · Wave · MTN · Moov · Carte</span>
         </div>
       </div>
     </div>

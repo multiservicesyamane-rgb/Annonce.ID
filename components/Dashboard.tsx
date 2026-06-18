@@ -1371,7 +1371,7 @@ export default function Dashboard() {
 
                               show("Redirection vers PayTech...");
                               try {
-                                const res = await fetch("/api/paytech", {
+                                const res = await fetch("/api/cinetpay", {
                                   method: "POST",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({
@@ -1811,7 +1811,7 @@ export default function Dashboard() {
                       const numericPrice = pack.credits === 50 ? 5000 : pack.credits === 150 ? 12000 : 35000;
                       show("Redirection vers PayTech...");
                       try {
-                        const res = await fetch("/api/paytech", {
+                        const res = await fetch("/api/cinetpay", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
