@@ -6,6 +6,7 @@ import { CATEGORIES, COUNTRIES, BOOSTS, SENEGAL_REGIONS } from "@/lib/constants"
 import { formatNumber } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImages } from "@/lib/storage";
+import { isOwner } from "@/lib/owners";
 import Link from "next/link";
 import ImageCropperModal from "./ImageCropperModal";
 
@@ -121,7 +122,7 @@ export default function PublishWizard() {
     finally { setAiLoading(""); }
   }
 
-  const isKonnecta = userEmail.toLowerCase().includes('multiservicesyamane');
+  const isKonnecta = isOwner(userEmail);
   const freeAdsRemaining = isKonnecta ? 999 : (userProfile?.free_ads_remaining ?? 3);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -160,8 +161,8 @@ export default function PublishWizard() {
 
   async function handlePublish() {
     if (loadingProfile) return show("⏳ Chargement...");
-    // Comptes "VIP gratuit" : annonces Premium offertes, sans limite ni paiement
-    const isVipFree = !!userProfile?.free_premium;
+    // Comptes propriétaires + VIP gratuit : Premium + À la Une offerts, sans limite ni paiement
+    const isVipFree = isOwner(userEmail) || !!userProfile?.free_premium;
     if (!isVipFree && boost === 0 && freeAdsRemaining <= 0) return show("⚠ Plus d'annonces gratuites.");
     setIsPublishing(true);
     show("Création en cours...");
@@ -184,8 +185,9 @@ export default function PublishWizard() {
       region, commune, custom_commune: customCommune,
       image: uploadedPhotos.length > 0 ? uploadedPhotos[0] : "https://placehold.co/600x400?text=Sans+Image",
       photos: uploadedPhotos, specs,
-      // VIP gratuit → annonce Premium + active immédiatement, sans paiement
+      // VIP gratuit → Premium + À la Une + active immédiatement, sans paiement
       premium: isVipFree || undefined,
+      featured: isVipFree || undefined,
       status: (boost === 0 || isVipFree) ? "active" : "pending"
     };
 

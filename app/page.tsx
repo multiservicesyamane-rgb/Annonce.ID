@@ -85,6 +85,10 @@ export default async function HomePage() {
     views: ad.views ?? 0,
   } as any));
 
+  // Repli : si aucune annonce À la Une / Premium, on affiche les plus récentes
+  const uneList = une.length > 0 ? une : formattedListings.slice(0, 10);
+  const premList = prem.length > 0 ? prem : formattedListings.slice(0, 8);
+
   // Fetch boutiques (profils avec avatar)
   const { data: allBoutiques } = await supabase
     .from('profiles')
@@ -137,7 +141,7 @@ export default async function HomePage() {
 
 
       {/* À LA UNE */}
-      {une && une.length > 0 && (
+      {uneList.length > 0 && (
         <ScrollReveal className="wrap pt-3 pb-1 md:pt-5 md:pb-2" delay={100}>
           <div className="mb-2 md:mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 font-display text-[1.1rem] md:text-[1.25rem] font-bold text-gray-900">
@@ -148,7 +152,7 @@ export default async function HomePage() {
             </Link>
           </div>
           
-          <UneCarousel listings={une} />
+          <UneCarousel listings={uneList} />
         </ScrollReveal>
       )}
 
@@ -163,7 +167,7 @@ export default async function HomePage() {
       </ScrollReveal>
 
       {/* PREMIUM carousel */}
-      {prem && prem.length > 0 && (
+      {premList.length > 0 && (
         <ScrollReveal delay={200}>
         <section className="bg-gradient-to-b from-gray-50 to-white dark:from-[#0f172a] dark:to-black py-4 md:py-8 relative overflow-hidden transition-colors">
           {/* Subtle glowing orb in background (Dark mode only) */}
@@ -179,7 +183,7 @@ export default async function HomePage() {
             </div>
             
             <div className="no-scrollbar flex gap-1.5 md:gap-3 overflow-x-auto pb-4 snap-x pt-2 px-1">
-              {prem.map((ad) => (
+              {premList.map((ad) => (
                 <Link
                   key={ad.id}
                   href={`/annonce/${ad.id}/${ad.slug}`}
