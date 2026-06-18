@@ -22,6 +22,7 @@ export const metadata: Metadata = {
     description: "Tout le Sénégal à portée de main · Achetez et vendez facilement.",
   },
   robots: { index: true, follow: true },
+  other: { "google-adsense-account": "ca-pub-8749142175860365" },
   manifest: "/manifest.json",
   appleWebApp: {
     title: "Wanteermako",
