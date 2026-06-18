@@ -8,6 +8,7 @@ import Link from "next/link";
 import AdCard from "./AdCard";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage";
+import { formatNumber } from "@/lib/utils";
 import ConfirmModal from "./ConfirmModal";
 import EmptyState from "./EmptyState";
 import { useFavorites } from "./FavButton";
