@@ -20,42 +20,42 @@ export default function PaymentFlow({
   subKey?: string;
   category?: string;
 }) {
-  const [processing, setProcessing] = useState(false);
+  const [processing, setProcessing] = useState<"" | "paytech" | "cinetpay">("");
   const total = price;
 
-  async function pay() {
-    setProcessing(true);
+  async function pay(provider: "paytech" | "cinetpay") {
+    setProcessing(provider);
     try {
-      const res = await fetch("/api/paytech", {
+      const res = await fetch(`/api/${provider}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: total,
           itemName: itemName,
-          refCommand: `AID-${Math.floor(Math.random() * 100000)}`,
+          refCommand: `WMK-${Math.floor(Math.random() * 100000)}`,
           listingId: listingId || "",
           boostKey: boostKey || "",
           subKey: subKey || "",
           category: category || "",
         }),
       });
-      
+
       if (res.status === 401) {
-        alert("Votre session de connexion a expiré ou est inexistante. Veuillez vous reconnecter.");
+        alert("Votre session de connexion a expiré. Veuillez vous reconnecter.");
         window.location.href = "/connexion";
         return;
       }
 
       const data = await res.json();
       if (data.redirect_url) {
-        window.location.href = data.redirect_url; // Redirection PayTech
+        window.location.href = data.redirect_url;
       } else {
         alert(data.error || "Erreur d'initialisation du paiement");
-        setProcessing(false);
+        setProcessing("");
       }
     } catch (err) {
       console.error(err);
-      setProcessing(false);
+      setProcessing("");
     }
   }
 
@@ -80,17 +80,26 @@ export default function PaymentFlow({
           </div>
         </div>
 
-        <button
-          onClick={pay}
-          disabled={processing}
-          className="btn btn-green btn-block h-[56px] text-[1.1rem] font-bold shadow-lg shadow-green/30 disabled:opacity-70 transition-all hover:scale-[1.02]"
-        >
-          {processing ? "⏳ Redirection vers PayTech..." : `💳 PAYER ${formatNumber(total)} FCFA`}
-        </button>
+        <p className="mb-3 text-[.8rem] font-semibold text-gray-500 dark:text-gray-400">Choisissez votre moyen de paiement</p>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => pay("paytech")}
+            disabled={!!processing}
+            className="btn btn-green btn-block h-[52px] text-[1rem] font-bold shadow-lg shadow-green/30 disabled:opacity-70 transition-all hover:scale-[1.02]"
+          >
+            {processing === "paytech" ? "⏳ Redirection…" : `💳 PayTech — ${formatNumber(total)} FCFA`}
+          </button>
+          <button
+            onClick={() => pay("cinetpay")}
+            disabled={!!processing}
+            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[10px] border-2 border-[#0a6cff] bg-[#0a6cff]/10 text-[1rem] font-bold text-[#0a6cff] disabled:opacity-70 transition-all hover:bg-[#0a6cff] hover:text-white"
+          >
+            {processing === "cinetpay" ? "⏳ Redirection…" : `🟦 CinetPay — Orange Money, Wave, MTN, Moov`}
+          </button>
+        </div>
 
         <div className="mt-6 flex items-center justify-center gap-2 text-[.75rem] text-gray-400">
-          <span>🔒 Paiement 100% sécurisé via</span>
-          <strong className="text-gray-600 dark:text-gray-300">PayTech</strong>
+          <span>🔒 Paiement 100% sécurisé via PayTech &amp; CinetPay</span>
         </div>
       </div>
     </div>
