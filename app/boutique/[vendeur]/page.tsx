@@ -49,6 +49,7 @@ export default async function BoutiquePage({ params }: Props) {
   const role = profile?.role === 'admin' ? 'Administrateur' : profile?.role === 'pro' ? 'Boutique Pro' : 'Vendeur vérifié';
   const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '2024';
   const socialLinks = profile?.social_links || {};
+  const phoneDigits = (profile?.phone || "").replace(/\D/g, "");
 
   const ads = (dbListings || []).map((ad: any) => ({
     id: ad.id,
@@ -63,35 +64,43 @@ export default async function BoutiquePage({ params }: Props) {
 
   return (
     <div>
-      {/* Bannière boutique (image de couverture si définie) */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-dark-900 via-dark-800 to-green-900">
-        {profile?.cover_url && (
-          <>
-            <Image src={profile.cover_url} alt="Couverture" fill sizes="100vw" className="object-cover opacity-60" />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/70 to-dark-900/30" />
-          </>
-        )}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(at_20%_30%,rgba(0,136,85,.15)_0,transparent_45%)]" />
-        <div className="relative z-10 mx-auto flex max-w-[1320px] flex-wrap items-center gap-6 px-4 py-12">
-          <Image src={avatar} alt={name} width={100} height={100} className="h-[100px] w-[100px] rounded-full border-[3px] border-gold object-cover shadow-lg bg-white" />
-          <div>
-            <h1 className="flex items-center gap-2 font-display text-[1.8rem] font-extrabold text-white leading-none mb-1">
-              {name}
-            </h1>
-            <p className="text-white/60 text-[.9rem] mb-3">{bio}</p>
-            <div className="flex flex-wrap gap-3 text-[.8rem] text-white/90">
-              <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm">
-                ✅ <span className="font-bold">{role}</span>
-              </span>
-              <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm">
-                🗓️ Membre depuis {memberSince}
-              </span>
-              <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm">
-                ⭐ <span className="font-bold text-gold">4.8/5</span> (12 avis)
-              </span>
-              <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm">
-                📦 {ads.length} annonces actives
-              </span>
+      {/* ── En-tête boutique : couverture + logo + contact ── */}
+      {/* Bande de couverture */}
+      <div className="relative h-[130px] sm:h-[200px] overflow-hidden bg-gradient-to-br from-dark-900 via-dark-800 to-green-900">
+        {profile?.cover_url && <Image src={profile.cover_url} alt="Couverture" fill sizes="100vw" className="object-cover" />}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+      </div>
+
+      {/* Carte profil (chevauche la couverture) */}
+      <div className="wrap">
+        <div className="relative -mt-10 sm:-mt-14 mb-2 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-6 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+            {/* Logo entreprise */}
+            <Image src={avatar} alt={name} width={104} height={104} className="-mt-14 sm:-mt-20 h-[88px] w-[88px] sm:h-[104px] sm:w-[104px] rounded-2xl border-4 border-white dark:border-dark-800 object-cover shadow-xl bg-white" />
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="font-display text-[1.3rem] sm:text-[1.7rem] font-extrabold text-gray-900 dark:text-white leading-tight">{name}</h1>
+                {(profile?.role === 'pro' || profile?.role === 'business' || profile?.free_premium) && (
+                  <span className="rounded-full bg-gradient-to-r from-gold to-gold-light px-2 py-0.5 text-[.62rem] font-extrabold uppercase tracking-wide text-dark-900">✦ VIP</span>
+                )}
+              </div>
+              <p className="text-gray-500 dark:text-white/60 text-[.82rem] sm:text-[.9rem] mt-0.5 line-clamp-2">{bio}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[.7rem] sm:text-[.78rem]">
+                <span className="rounded-full bg-green/10 px-2.5 py-1 font-bold text-green">✅ {role}</span>
+                <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2.5 py-1 font-medium text-gray-600 dark:text-white/70">🗓️ Depuis {memberSince}</span>
+                <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2.5 py-1 font-medium text-gray-600 dark:text-white/70">📦 {ads.length} annonces</span>
+              </div>
+            </div>
+
+            {/* Boutons contact */}
+            <div className="flex gap-2 shrink-0">
+              {phoneDigits && (
+                <a href={`https://wa.me/${phoneDigits}`} target="_blank" className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-xl bg-[#25D366] px-4 py-2.5 text-[.82rem] font-bold text-white shadow-sm hover:scale-[1.03] transition">💬 WhatsApp</a>
+              )}
+              {phoneDigits && (
+                <a href={`tel:${profile?.phone}`} className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-gray-200 dark:border-dark-border bg-white dark:bg-dark-900 px-4 py-2.5 text-[.82rem] font-bold text-gray-800 dark:text-white hover:border-green transition">📞 Appeler</a>
+              )}
             </div>
           </div>
         </div>
