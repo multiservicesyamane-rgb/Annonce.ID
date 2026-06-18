@@ -14,7 +14,7 @@ const rl = new Map<string, { count: number; ts: number }>();
 const RL_WINDOW = 60 * 1000;
 const RL_MAX = 12; // 12 générations / minute / IP
 
-const SYSTEM = `Tu es l'assistant commercial IA d'Annonce.ID (plateforme de petites annonces et de marketing B2B en Afrique de l'Ouest, par YamaneTech).
+const SYSTEM = `Tu es l'assistant commercial IA d'Wanteermako (plateforme de petites annonces et de marketing B2B en Afrique de l'Ouest, par YamaneTech).
 Tu écris en français, ton professionnel, chaleureux et persuasif, adapté au marché ouest-africain (Sénégal, Côte d'Ivoire, Mali, etc.).
 Réponds UNIQUEMENT avec le texte demandé, sans préambule ni commentaire, prêt à copier-coller.`;
 
@@ -27,11 +27,11 @@ function buildPrompt(body: any): string {
 
   switch (kind) {
     case "email":
-      return `Rédige un email commercial de prospection pour convaincre l'entreprise "${company}" (secteur : ${sector}, ville : ${city}) de s'abonner à Annonce.ID.
+      return `Rédige un email commercial de prospection pour convaincre l'entreprise "${company}" (secteur : ${sector}, ville : ${city}) de s'abonner à Wanteermako.
 Mets en avant : visibilité dans 27 pays, diffusion automatique Facebook/WhatsApp, génération de prospects qualifiés, statistiques.
 Termine par un appel à l'action (proposer une présentation de 15 min). Format : Objet + corps. Maximum 150 mots.`;
     case "whatsapp":
-      return `Rédige un message WhatsApp court (4-6 lignes, avec quelques emojis pertinents) pour un ${topic || "premier contact"} commercial avec une entreprise du secteur ${sector} à ${city}, afin de présenter Annonce.ID et proposer une offre de visibilité. Ton direct et amical.`;
+      return `Rédige un message WhatsApp court (4-6 lignes, avec quelques emojis pertinents) pour un ${topic || "premier contact"} commercial avec une entreprise du secteur ${sector} à ${city}, afin de présenter Wanteermako et proposer une offre de visibilité. Ton direct et amical.`;
     case "listing_title":
       return `Génère 1 titre d'annonce optimisé (accrocheur, avec mots-clés SEO et 1 emoji) pour ce produit/service : "${topic}". Maximum 70 caractères. Donne uniquement le titre.`;
     case "listing_description":
@@ -60,7 +60,7 @@ function templateText(body: any): string {
 
 Bonjour,
 
-Nous avons remarqué votre activité dans le secteur ${sector} à ${city}. Annonce.ID permet à votre entreprise de :
+Nous avons remarqué votre activité dans le secteur ${sector} à ${city}. Wanteermako permet à votre entreprise de :
 ✅ Toucher des acheteurs qualifiés dans 27 pays d'Afrique
 ✅ Diffuser automatiquement vos annonces sur Facebook et WhatsApp
 ✅ Générer des prospects et suivre vos statistiques en temps réel
@@ -68,11 +68,11 @@ Nous avons remarqué votre activité dans le secteur ${sector} à ${city}. Annon
 Seriez-vous disponible pour une présentation de 15 minutes cette semaine ?
 
 Cordialement,
-L'équipe Annonce.ID`;
+L'équipe Wanteermako`;
     case "whatsapp":
       return `Bonjour 👋
 
-Je vous contacte concernant la promotion de ${sector} à ${city} sur *Annonce.ID*.
+Je vous contacte concernant la promotion de ${sector} à ${city} sur *Wanteermako*.
 
 Nous aidons les entreprises à :
 📈 Augmenter leur visibilité
@@ -93,11 +93,11 @@ N'attendez plus : contactez-nous dès maintenant pour réserver ! Livraison poss
     case "facebook":
       return `🔥 BONNE AFFAIRE à ${city} ! 🔥
 
-${topic} disponible dès maintenant sur Annonce.ID. Qualité au top, prix imbattable. Ne ratez pas cette occasion ! 👇
+${topic} disponible dès maintenant sur Wanteermako. Qualité au top, prix imbattable. Ne ratez pas cette occasion ! 👇
 
-#AnnonceID #${(sector || "BonPlan").replace(/\s+/g, "")} #${city.replace(/\s+/g, "")} #Sénégal #BonPlan`;
+#Wanteermako #${(sector || "BonPlan").replace(/\s+/g, "")} #${city.replace(/\s+/g, "")} #Sénégal #BonPlan`;
     default:
-      return `${topic} — disponible sur Annonce.ID.`;
+      return `${topic} — disponible sur Wanteermako.`;
   }
 }
 

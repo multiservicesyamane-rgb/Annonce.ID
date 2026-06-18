@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Blog & Actualités | Annonce.ID",
+  title: "Blog & Actualités | Wanteermako",
   description: "Dernières actualités sur les prix, les produits et le marché en Afrique de l'Ouest.",
 };
 

@@ -44,7 +44,7 @@ export default function MarketingPanel({ ads, user }: { ads: any[], user: any })
       const baseUrl = window.location.origin;
       const boutiqueUrl = `${baseUrl}/boutique/${user.id}`;
       
-      let msg = `👋 Bonjour ! Je viens de mettre à jour mon catalogue sur Annonce.ID.\n\n`;
+      let msg = `👋 Bonjour ! Je viens de mettre à jour mon catalogue sur Wanteermako.\n\n`;
       msg += `🔥 Voici mes dernières nouveautés :\n`;
       
       const recentAds = ads.slice(0, 3);
@@ -179,7 +179,7 @@ export default function MarketingPanel({ ads, user }: { ads: any[], user: any })
               *{ads[0]?.title || "Nom du produit"}* à *{ads[0]?.price || "10 000"} FCFA*.
               <br/><br/>
               Retrouvez tous les détails ici 👇<br/>
-              <span className="text-blue-500 underline">https://annonce.id/a/...</span>
+              <span className="text-blue-500 underline">https://wanteermako.com/a/...</span>
               <div className="text-[.6rem] text-right mt-1 text-gray-500 dark:text-gray-300">14:00 ✓✓</div>
             </div>
           </div>

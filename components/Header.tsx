@@ -26,7 +26,7 @@ export default function Header() {
           
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
-            <img src="/annoncesn.jpeg" alt="Annonce.ID" className="h-[30px] md:h-[40px] w-auto object-contain rounded-md" />
+            <img src="/annoncesn.jpeg" alt="Wanteermako" className="h-[30px] md:h-[40px] w-auto object-contain rounded-md" />
           </Link>
 
           {/* Search Bar - Center on PC, Hidden on Mobile */}

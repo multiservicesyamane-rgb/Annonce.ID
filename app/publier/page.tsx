@@ -4,7 +4,7 @@ import PublishWizard from "@/components/PublishWizard";
 
 export const metadata: Metadata = {
   title: "Publier une annonce",
-  description: "Publiez votre annonce gratuitement en 5 étapes sur Annonce.ID.",
+  description: "Publiez votre annonce gratuitement en 5 étapes sur Wanteermako.",
 };
 
 export default function PublierPage() {

@@ -405,7 +405,7 @@ export default function Dashboard() {
           <span className="text-[.8rem] font-extrabold dark:text-white">📊 Mon Espace</span>
           <button onClick={() => setIsMobileMenuOpen(false)} className="text-xl text-gray-400 lg:hidden">✕</button>
         </div>
-        {/* Carte profil gradient (style AnnoncesWest) */}
+        {/* Carte profil gradient (style Wanteermako) */}
         <div className="m-3 relative overflow-hidden rounded-[18px] bg-g1 p-4 text-white">
           <div className="absolute -right-5 -top-7 h-24 w-24 rounded-full bg-white/10" />
           <div className="absolute -bottom-5 left-5 h-16 w-16 rounded-full bg-white/[.07]" />
@@ -2068,7 +2068,7 @@ function Kpi({ label, value, sub, up }: { label: string; value: string; sub: str
   );
 }
 
-// KPI carte gradient (style AnnoncesWest) — compteur animé
+// KPI carte gradient (style Wanteermako) — compteur animé
 function KpiGrad({ gradient, icon, label, value }: { gradient: string; icon: string; label: string; value: number }) {
   const [n, setN] = useState(0);
   useEffect(() => {

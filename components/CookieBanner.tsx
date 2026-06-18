@@ -37,7 +37,7 @@ export default function CookieBanner() {
             🍪 Nous utilisons des cookies
           </h3>
           <p className="text-[0.98rem] md:text-[1rem] text-gray-600 dark:text-gray-400 leading-relaxed">
-            <strong>Annonce.ID</strong> et nos partenaires (dont Google AdSense) utilisent des cookies pour personnaliser le contenu, adapter les publicités à vos préférences et analyser notre trafic. En cliquant sur "Tout Accepter", vous consentez à l'utilisation de ces technologies.
+            <strong>Wanteermako</strong> et nos partenaires (dont Google AdSense) utilisent des cookies pour personnaliser le contenu, adapter les publicités à vos préférences et analyser notre trafic. En cliquant sur "Tout Accepter", vous consentez à l'utilisation de ces technologies.
             <Link href="/politique-confidentialite" className="text-green hover:underline ml-1 font-semibold">
               En savoir plus.
             </Link>

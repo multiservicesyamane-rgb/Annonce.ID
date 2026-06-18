@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { LISTINGS } from "@/lib/data";
 import { CATEGORIES } from "@/lib/constants";
 
-const base = process.env.NEXT_PUBLIC_APP_URL || "https://annonce.id";
+const base = process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages = ["", "/recherche", "/publier", "/connexion", "/aide", "/securite", "/cgu"].map((p) => ({

@@ -17,15 +17,15 @@ export async function GET() {
     }
 
     const testPayload = {
-      item_name: "Test Connection Annonce.ID",
+      item_name: "Test Connection Wanteermako",
       item_price: 1000,
       currency: "XOF",
       ref_command: `TEST-${Date.now()}`,
       command_name: "Test Connection",
       env: "test", // Force test mode for credentials check
-      ipn_url: "https://annonce-id.vercel.app/api/paytech/ipn",
-      success_url: "https://annonce-id.vercel.app/paiement/succes",
-      cancel_url: "https://annonce-id.vercel.app/paiement/erreur",
+      ipn_url: "https://wanteermako.com/api/paytech/ipn",
+      success_url: "https://wanteermako.com/paiement/succes",
+      cancel_url: "https://wanteermako.com/paiement/erreur",
       custom_field: JSON.stringify({ test: true }),
     };
 

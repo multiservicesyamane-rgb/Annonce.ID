@@ -46,7 +46,7 @@ const TEMPLATES = [
   { cat: "Immobilier", catC: "text-[#43E97B]", t: "Email Immobilier", p: "Plus de visibilité pour vos biens immobiliers…" },
   { cat: "WhatsApp", catC: "text-[#25D366]", t: "WhatsApp Premier contact", p: "Bonjour 👋 Je me permets de vous contacter…" },
   { cat: "WhatsApp", catC: "text-[#25D366]", t: "WhatsApp Relance J+3", p: "Je reviens vers vous suite à mon précédent message…" },
-  { cat: "Électronique", catC: "text-[#A78BFA]", t: "Email Électronique", p: "Vendez plus de produits tech grâce à AnnoncesWest…" },
+  { cat: "Électronique", catC: "text-[#A78BFA]", t: "Email Électronique", p: "Vendez plus de produits tech grâce à Wanteermako…" },
   { cat: "Emploi", catC: "text-[#FB923C]", t: "Email Recrutement", p: "Trouvez les meilleurs candidats plus vite…" },
 ];
 
@@ -223,7 +223,7 @@ export default function SuperAdminApp() {
         <div className="w-full max-w-[400px] rounded-[24px] border border-[#30363D] bg-[#161B22] p-5 sm:p-8 shadow-[0_0_60px_rgba(99,102,241,.15)]">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-g1 text-[1.3rem] font-extrabold text-white shadow-[0_0_30px_rgba(99,102,241,.4)]">SA</div>
           <h1 className="text-center text-[1.2rem] font-extrabold text-white">Super Admin</h1>
-          <p className="mb-6 text-center text-[.82rem] text-[#8B949E]">Annonce.ID · YamaneTech</p>
+          <p className="mb-6 text-center text-[.82rem] text-[#8B949E]">Wanteermako · YamaneTech</p>
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email administrateur" />
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Mot de passe" />
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="text" maxLength={4} value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && doLogin()} placeholder="Code 2FA (1234)" />
@@ -245,7 +245,7 @@ export default function SuperAdminApp() {
         </div>
         <div className="m-2.5 flex items-center gap-2.5 rounded-[11px] border border-[#6366F1]/20 bg-[#6366F1]/10 px-3 py-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-g1 text-[.85rem] font-extrabold text-white">SA</div>
-          <div><div className="text-[.84rem] font-bold">Super Administrateur</div><div className="text-[.68rem] font-semibold text-[#FFC93C]">Annonce.ID</div></div>
+          <div><div className="text-[.84rem] font-bold">Super Administrateur</div><div className="text-[.68rem] font-semibold text-[#FFC93C]">Wanteermako</div></div>
         </div>
         <nav className="flex-1 overflow-y-auto px-2.5 py-1">
           {NAV.map((n) => (
@@ -342,7 +342,7 @@ function Overview({ counts, allListings, profiles, purchases, T, loading }: { co
 
   return (
     <>
-      <PageHead title="🚀 Super Admin — Annonce.ID" sub="Tableau de bord temps réel · données Supabase">
+      <PageHead title="🚀 Super Admin — Wanteermako" sub="Tableau de bord temps réel · données Supabase">
         <button className={btnG} onClick={() => T("Actualisation…")}>{loading ? "⏳" : "🔄"} Rafraîchir</button>
       </PageHead>
       <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
@@ -861,7 +861,7 @@ function Points() {
 
 function Diffusion() {
   const pages = [["📘", "Auto Sénégal", "Automobile · 12 400 abonnés", true], ["📘", "Immo Abidjan", "Immobilier · 8 900 abonnés", true], ["📘", "Tech Dakar", "Électronique · 5 200 abonnés", true], ["📘", "Emploi Mali", "Emploi · 3 800 abonnés", false]];
-  const packs = [["🆓 Basic", "Site Annonce.ID", "Inclus"], ["➕ Plus", "Site + Facebook", "+ 10 000 FCFA/mois"], ["🚀 Premium", "Site + FB + WhatsApp", "+ 30 000 FCFA/mois"], ["👑 Elite", "Site + FB + WA + Sponsorisé", "+ 75 000 FCFA/mois"]];
+  const packs = [["🆓 Basic", "Site Wanteermako", "Inclus"], ["➕ Plus", "Site + Facebook", "+ 10 000 FCFA/mois"], ["🚀 Premium", "Site + FB + WhatsApp", "+ 30 000 FCFA/mois"], ["👑 Elite", "Site + FB + WA + Sponsorisé", "+ 75 000 FCFA/mois"]];
   return (
     <>
       <PageHead title="📡 Diffusion multi-canaux" sub="Pages Facebook et groupes WhatsApp" />

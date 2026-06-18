@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const seo = SEO_MAPPING[params.slug];
   if (!seo) return { title: "Annonces au Sénégal" };
   return {
-    title: `${seo.title} | Annonce.ID`,
+    title: `${seo.title} | Wanteermako`,
     description: seo.desc,
     openGraph: {
       title: seo.title,
@@ -93,9 +93,9 @@ export default async function SeoLandingPage({ params }: Props) {
 
       {/* SEO Content Footer (Good for indexing) */}
       <div className="mt-12 bg-gray-50 dark:bg-dark-800 rounded-xl p-8 text-[.9rem] text-gray-600 dark:text-gray-400">
-        <h2 className="font-bold text-gray-900 dark:text-white mb-3 text-[1.2rem]">Pourquoi choisir Annonce.ID pour {pageTitle.toLowerCase()} ?</h2>
+        <h2 className="font-bold text-gray-900 dark:text-white mb-3 text-[1.2rem]">Pourquoi choisir Wanteermako pour {pageTitle.toLowerCase()} ?</h2>
         <p className="mb-4">
-          Annonce.ID est la première plateforme de petites annonces premium au Sénégal. Que vous cherchiez {pageDesc.toLowerCase()} notre système vous met en relation directe avec les vendeurs sans intermédiaire.
+          Wanteermako est la première plateforme de petites annonces premium au Sénégal. Que vous cherchiez {pageDesc.toLowerCase()} notre système vous met en relation directe avec les vendeurs sans intermédiaire.
         </p>
         <p>
           Mettez en ligne votre propre annonce gratuitement dès aujourd'hui et profitez d'une visibilité inégalée !

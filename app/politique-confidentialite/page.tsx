@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Politique de Confidentialité | Annonce.ID",
+  title: "Politique de Confidentialité | Wanteermako",
   description: "Notre politique de confidentialité et de gestion des données personnelles.",
 };
 
@@ -14,7 +14,7 @@ export default function PrivacyPolicyPage() {
         <p><strong>Dernière mise à jour : 15 Juin 2026</strong></p>
  
         <p>
-          Chez Annonce.ID, la confidentialité et la sécurité de vos données personnelles sont une priorité absolue. 
+          Chez Wanteermako, la confidentialité et la sécurité de vos données personnelles sont une priorité absolue. 
           Cette politique explique comment nous recueillons, utilisons et protégeons vos informations.
         </p>
 
@@ -36,7 +36,7 @@ export default function PrivacyPolicyPage() {
 
         <h3 className="font-display font-bold text-[1.4rem] mt-8 mb-4 text-gray-900 dark:text-white">3. Publicité et Google AdSense</h3>
         <p>
-          Annonce.ID utilise Google AdSense pour diffuser des annonces publicitaires. Google, en tant que prestataire tiers, utilise des cookies (y compris le cookie DoubleClick) pour diffuser des annonces en fonction de vos visites antérieures sur notre site et sur d'autres sites web.
+          Wanteermako utilise Google AdSense pour diffuser des annonces publicitaires. Google, en tant que prestataire tiers, utilise des cookies (y compris le cookie DoubleClick) pour diffuser des annonces en fonction de vos visites antérieures sur notre site et sur d'autres sites web.
         </p>
         <p>
           Vous pouvez désactiver la publicité ciblée par centres d'intérêt en visitant les 

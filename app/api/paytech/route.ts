@@ -97,7 +97,7 @@ export async function POST(req: Request) {
 
     // PayTech exige que ipn_url soit une URL HTTPS PUBLIQUE (callback serveur-à-serveur).
     // localhost n'est jamais joignable : en dev on bascule sur le domaine de production.
-    const PROD_FALLBACK = "https://annonce-id.vercel.app";
+    const PROD_FALLBACK = "https://wanteermako.com";
     const ipnBaseUrl = baseUrl.startsWith("https://")
       ? baseUrl
       : (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || PROD_FALLBACK).replace(/\/+$/, "");
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
       item_price: amount,
       currency: "XOF",
       ref_command: refCommand || `CMD-${Date.now()}`,
-      command_name: "Paiement Annonce.ID",
+      command_name: "Paiement Wanteermako",
       custom_field: JSON.stringify({
         userId: secureUserId,
         listingId: listingId || "",

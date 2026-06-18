@@ -6,7 +6,7 @@ export default function AidePage() {
   return (
     <StaticPage
       title="Centre d'aide"
-      intro="Tout ce qu'il faut savoir pour acheter et vendre sur Annonce.ID."
+      intro="Tout ce qu'il faut savoir pour acheter et vendre sur Wanteermako."
       sections={[
         { h: "Comment publier une annonce ?", p: "Cliquez sur « + Publier », choisissez une catégorie, remplissez les détails, ajoutez 1 à 10 photos, vos coordonnées, puis choisissez une option de visibilité. La publication gratuite est immédiate." },
         { h: "Comment contacter un vendeur ?", p: "Chaque annonce dispose de boutons WhatsApp, Appel et Message. Le contact est direct, sans intermédiaire et sans panier." },

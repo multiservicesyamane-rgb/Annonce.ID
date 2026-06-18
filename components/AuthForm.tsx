@@ -60,7 +60,7 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
         show("Redirection vers Google...");
         const redirectUrl = process.env.NODE_ENV === "development"
           ? "http://localhost:3000/auth/callback"
-          : "https://annonce-id.vercel.app/auth/callback";
+          : "https://wanteermako.com/auth/callback";
         await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirectUrl } });
       }}
       className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-gray-100 bg-white py-3 text-[.92rem] font-semibold text-gray-700 hover:border-gray-300 transition-colors shadow-sm hover:shadow-md"
@@ -98,7 +98,7 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
       {/* Panneau droit (formulaire) */}
       <div className="flex w-full flex-col justify-center bg-white px-6 py-8 md:w-[460px] md:shrink-0">
         <Link href="/" className="mb-6 font-display text-[1.4rem] font-extrabold text-green text-center">
-          Annonce<span className="text-gold-dark">.ID</span>
+          Wanteer<span className="text-gold-dark">mako</span>
         </Link>
 
         <h2 className="mb-2 font-display text-[1.4rem] font-extrabold text-center text-gray-900">

@@ -19,7 +19,7 @@ export function generateMetadata({ params }: Props): Metadata {
   if (!cat) return { title: "Catégorie introuvable" };
   return {
     title: `${cat.name} — Petites annonces`,
-    description: `Toutes les annonces ${cat.name} en Afrique de l'Ouest sur Annonce.ID.`,
+    description: `Toutes les annonces ${cat.name} en Afrique de l'Ouest sur Wanteermako.`,
   };
 }
 

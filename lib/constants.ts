@@ -1,10 +1,10 @@
-// ───────── Constantes globales Annonce.ID ─────────
+// ───────── Constantes globales Wanteermako ─────────
 // Brand, 27 pays, catégories + champs dynamiques, options de boost.
 
 export const BRAND = {
-  name: "Annonce.ID",
+  name: "Wanteermako",
   tagline: "Le marché de l'Afrique de l'Ouest dans votre poche",
-  legal: "Annonce.ID by YamaneTech",
+  legal: "Wanteermako by YamaneTech",
 } as const;
 
 export type Country = {

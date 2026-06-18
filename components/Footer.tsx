@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="mx-auto grid max-w-[1320px] gap-8 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
         <div>
           <div className="font-display text-[1.2rem] font-extrabold text-white">
-            Annonce<span className="text-neon-gold">.ID</span>
+            Wanteer<span className="text-neon-gold">mako</span>
           </div>
           <p className="mt-2.5 max-w-[230px] text-[.8rem] leading-relaxed">
             La première plateforme de petites annonces premium d'Afrique de l'Ouest. Simple, rapide, de confiance.
@@ -50,7 +50,7 @@ export default function Footer() {
 
 
       <div className="mx-auto mt-8 flex max-w-[1320px] flex-wrap items-center justify-between gap-3 border-t border-dark-border pt-4 text-[.75rem]">
-        <p>© {new Date().getFullYear()} Annonce.ID by YamaneTech · Tous droits réservés</p>
+        <p>© {new Date().getFullYear()} Wanteermako by YamaneTech · Tous droits réservés</p>
         <p className="text-white/30">FCFA · Français</p>
       </div>
     </footer>
