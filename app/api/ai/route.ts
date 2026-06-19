@@ -47,55 +47,102 @@ Termine par un appel à l'action (proposer une présentation de 15 min). Format 
 // Modèles de texte intégrés : utilisés quand la clé Claude est absente ou que
 // l'appel échoue (pas de crédits, erreur réseau...). Permet de tester l'outil
 // AVANT tout paiement. Bascule auto sur Claude dès que les crédits sont dispo.
+const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
 function templateText(body: any): string {
   const kind = body?.kind || "email";
   const company = (body?.company || "").trim() || "votre entreprise";
   const city = (body?.city || "").trim() || "votre ville";
   const sector = (body?.sector || "").trim() || "votre secteur";
   const topic = (body?.topic || "").trim() || "votre produit";
+  const tag = (s: string) => s.replace(/\s+/g, "");
 
   switch (kind) {
-    case "email":
-      return `Objet : Boostez la visibilité de ${company} à ${city}
+    case "email": {
+      const objets = [
+        `Objet : Boostez la visibilité de ${company} à ${city}`,
+        `Objet : ${company}, multipliez vos ventes à ${city}`,
+        `Objet : Plus de clients pour ${company} grâce à Wanteermako`,
+        `Objet : Une opportunité de visibilité pour ${company}`,
+      ];
+      const accroches = [
+        `Nous avons remarqué votre activité dans le secteur ${sector} à ${city}.`,
+        `Votre entreprise dans le secteur ${sector} mérite plus de visibilité à ${city}.`,
+        `En tant qu'acteur du secteur ${sector} à ${city}, vous gagneriez à être davantage visible.`,
+      ];
+      const ctas = [
+        `Seriez-vous disponible pour une présentation de 15 minutes cette semaine ?`,
+        `Quand pouvons-nous échanger 15 minutes pour vous montrer concrètement les résultats ?`,
+        `Puis-je vous appeler cette semaine pour vous présenter notre offre ?`,
+      ];
+      return `${pick(objets)}
 
 Bonjour,
 
-Nous avons remarqué votre activité dans le secteur ${sector} à ${city}. Wanteermako permet à votre entreprise de :
-✅ Toucher des acheteurs qualifiés dans 27 pays d'Afrique
-✅ Diffuser automatiquement vos annonces sur Facebook et WhatsApp
+${pick(accroches)} Wanteermako permet à votre entreprise de :
+✅ Toucher des acheteurs qualifiés dans toute l'Afrique de l'Ouest
+✅ Diffuser vos annonces sur Facebook et WhatsApp
 ✅ Générer des prospects et suivre vos statistiques en temps réel
 
-Seriez-vous disponible pour une présentation de 15 minutes cette semaine ?
+${pick(ctas)}
 
 Cordialement,
 L'équipe Wanteermako`;
-    case "whatsapp":
-      return `Bonjour 👋
+    }
+    case "whatsapp": {
+      const intros = ["Bonjour 👋", "Bonjour, j'espère que vous allez bien 🙂", "Salam 👋"];
+      const fins = [
+        `Puis-je vous présenter notre offre en 5 min ? 🙏`,
+        `Ça vous intéresse d'en savoir plus ? 😊`,
+        `Quand seriez-vous disponible pour un échange rapide ? 📞`,
+      ];
+      return `${pick(intros)}
 
 Je vous contacte concernant la promotion de ${sector} à ${city} sur *Wanteermako*.
 
 Nous aidons les entreprises à :
 📈 Augmenter leur visibilité
 🎯 Générer des contacts qualifiés
-📱 Diffuser sur Facebook & WhatsApp
+📱 Être présentes sur Facebook & WhatsApp
 
-Puis-je vous présenter notre offre en 5 min ? 🙏`;
-    case "listing_title":
-      return `🔥 ${topic} — Excellent état, prix imbattable à ${city}`;
-    case "listing_description":
-      return `${topic} en très bon état, disponible immédiatement à ${city}.
+${pick(fins)}`;
+    }
+    case "listing_title": {
+      const tpl = [
+        `🔥 ${topic} — Excellent état, prix imbattable à ${city}`,
+        `✨ ${topic} de qualité à saisir à ${city}`,
+        `💥 Bonne affaire : ${topic} disponible à ${city}`,
+        `⭐ ${topic} — Occasion à ne pas rater (${city})`,
+        `🚀 ${topic} au meilleur prix à ${city}`,
+      ];
+      return pick(tpl);
+    }
+    case "listing_description": {
+      const ouv = [
+        `${topic} en très bon état, disponible immédiatement à ${city}.`,
+        `À vendre : ${topic}, parfait état, à ${city}.`,
+        `Superbe ${topic} à saisir rapidement à ${city}.`,
+      ];
+      const args = pick([
+        `✅ Qualité garantie\n✅ Prix négociable\n✅ Vendeur sérieux et réactif`,
+        `✅ Très bon état\n✅ Prix intéressant\n✅ Disponible tout de suite`,
+        `✅ Produit fiable\n✅ Bon rapport qualité/prix\n✅ Réponse rapide`,
+      ]);
+      const fin = pick([
+        `N'attendez plus : contactez-nous dès maintenant pour réserver ! Livraison possible. 📞`,
+        `Contactez-nous vite, ça part rapidement ! 📲`,
+        `Intéressé(e) ? Écrivez-nous maintenant pour plus d'infos. 🤝`,
+      ]);
+      return `${pick(ouv)}\n\n${args}\n\n${fin}`;
+    }
+    case "facebook": {
+      const heads = [`🔥 BONNE AFFAIRE à ${city} ! 🔥`, `💥 À SAISIR à ${city} 💥`, `✨ OFFRE DU MOMENT — ${city} ✨`];
+      return `${pick(heads)}
 
-✅ Qualité garantie
-✅ Prix négociable
-✅ Vendeur sérieux et réactif
+${topic} disponible dès maintenant sur Wanteermako. ${pick(["Qualité au top, prix imbattable.", "Ne ratez pas cette occasion unique.", "Stock limité, foncez !"])} 👇
 
-N'attendez plus : contactez-nous dès maintenant pour réserver ! Livraison possible. 📞`;
-    case "facebook":
-      return `🔥 BONNE AFFAIRE à ${city} ! 🔥
-
-${topic} disponible dès maintenant sur Wanteermako. Qualité au top, prix imbattable. Ne ratez pas cette occasion ! 👇
-
-#Wanteermako #${(sector || "BonPlan").replace(/\s+/g, "")} #${city.replace(/\s+/g, "")} #Sénégal #BonPlan`;
+#Wanteermako #${tag(sector || "BonPlan")} #${tag(city)} #Afrique #BonPlan`;
+    }
     default:
       return `${topic} — disponible sur Wanteermako.`;
   }

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import PaymentFlow from "@/components/PaymentFlow";
 import ManualPayment from "@/components/ManualPayment";
 import { ONLINE_PAYMENT_ENABLED } from "@/lib/payment";
+import { fetchPrices, effectivePrice, type PriceMap } from "@/lib/prices";
 import { BOOSTS, SUBSCRIPTION_PLANS } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
 
@@ -18,6 +19,11 @@ function PaiementContent() {
   // Selection states
   const [activeTab, setActiveTab] = useState<"boost" | "subscription">("boost");
   const [selectedCategory, setSelectedCategory] = useState<"vehicules" | "immobilier" | "electronique" | "general">("vehicules");
+  // Prix réels configurés dans l'admin (override des prix par défaut)
+  const [prices, setPrices] = useState<PriceMap>({});
+  useEffect(() => { fetchPrices().then(setPrices); }, []);
+  const boostPrice = (b: any) => effectivePrice(prices, `boost:${b.key}`, b.price);
+  const subPrice = (cat: string, s: any) => effectivePrice(prices, `sub:${cat}:${s.key}`, s.price);
   const [checkoutInfo, setCheckoutInfo] = useState<{
     itemName: string;
     price: number;
@@ -44,7 +50,7 @@ function PaiementContent() {
   const handleSelectBoost = (b: any) => {
     setCheckoutInfo({
       itemName: `Boost ${b.name}`,
-      price: b.price,
+      price: boostPrice(b),
       duration: b.duration,
       boostKey: b.key,
     });
@@ -53,7 +59,7 @@ function PaiementContent() {
   const handleSelectSubscription = (s: any, categoryKey: string) => {
     setCheckoutInfo({
       itemName: `Abonnement Boutique : ${s.name}`,
-      price: s.price,
+      price: subPrice(categoryKey, s),
       duration: s.duration,
       subKey: s.key,
       category: categoryKey,
@@ -151,7 +157,7 @@ function PaiementContent() {
                 <div>
                   <h3 className="text-[1.05rem] font-bold text-gray-800 dark:text-white group-hover:text-gold transition-colors">{b.name}</h3>
                   <div className="mt-2 font-display text-[1.35rem] font-extrabold text-green">
-                    {formatNumber(b.price)} FCFA
+                    {formatNumber(boostPrice(b))} FCFA
                   </div>
                   <p className="mb-4 mt-1 text-[.75rem] text-gray-400">Durée : {b.duration}</p>
                   <div className="space-y-1.5 text-[.8rem] text-gray-600 dark:text-gray-300 pt-3 border-t border-gray-100 dark:border-white/5">
@@ -212,7 +218,7 @@ function PaiementContent() {
                         {s.name}
                       </h3>
                       <div className="mt-2 font-display text-[1.5rem] font-extrabold text-green">
-                        {formatNumber(s.price)} FCFA <span className="text-xs font-normal text-gray-400">/ mois</span>
+                        {formatNumber(subPrice(selectedCategory, s))} FCFA <span className="text-xs font-normal text-gray-400">/ mois</span>
                       </div>
                       <p className="mb-4 mt-1 text-[.75rem] text-gray-400">Facturation mensuelle</p>
                       

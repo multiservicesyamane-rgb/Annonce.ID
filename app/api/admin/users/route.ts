@@ -202,6 +202,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ref, expires });
     }
 
+    // Achats / transactions (bypass RLS pour les Finances admin)
+    if (action === "purchases") {
+      const { data } = await sb.from("purchases").select("*").order("created_at", { ascending: false }).limit(500);
+      return NextResponse.json({ purchases: data || [] });
+    }
+
     // Paramètres globaux (tarifs, toggles) — stockés dans app_settings
     if (action === "getSettings") {
       const { data } = await sb.from("app_settings").select("data").eq("id", "global").maybeSingle();

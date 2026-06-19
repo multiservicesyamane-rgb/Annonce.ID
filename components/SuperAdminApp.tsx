@@ -168,9 +168,11 @@ export default function SuperAdminApp() {
       const { data: profs } = await sb.from("profiles").select("*").order("created_at", { ascending: false }).limit(200);
       setProfiles(profs || []);
 
-      // Achats
-      const { data: purchData } = await sb.from("purchases").select("*").order("created_at", { ascending: false }).limit(50);
-      setPurchases(purchData || []);
+      // Achats — via service role (bypass RLS) sinon les Finances restent vides
+      let purchData: any[] = [];
+      try { const d = await adminApi("purchases"); purchData = d.purchases || []; }
+      catch { const r = await sb.from("purchases").select("*").order("created_at", { ascending: false }).limit(50); purchData = r.data || []; }
+      setPurchases(purchData);
 
       // Signalements
       const { data: repData } = await sb.from("reports").select("*").order("created_at", { ascending: false }).limit(30);
@@ -986,7 +988,7 @@ function Encaissement({ profiles, allListings, T, reload }: { profiles: any[]; a
 
 function Finance({ purchases, counts }: { purchases: any[]; counts: any }) {
   const total = purchases.reduce((s: number, p: any) => s + (p.amount || 0), 0);
-  const paid = purchases.filter(p => p.status === "paid" || p.status === "completed");
+  const paid = purchases.filter(p => ["paid", "completed", "success"].includes(p.status));
   const paidTotal = paid.reduce((s: number, p: any) => s + (p.amount || 0), 0);
   const pending = purchases.filter(p => p.status === "pending");
   const pendingTotal = pending.reduce((s: number, p: any) => s + (p.amount || 0), 0);
@@ -1224,52 +1226,72 @@ function Rapports({ T, allListings, profiles, purchases }: { T: (m: string) => v
   );
 }
 
-const TARIF_KEYS = [
-  ["pack_basic", "Pack Basic (mensuel)", "25000"], ["pack_pro", "Pack Pro (mensuel)", "75000"],
-  ["pack_premium", "Pack Premium (mensuel)", "150000"], ["pack_enterprise", "Pack Enterprise (mensuel)", "300000"],
-  ["boost_premium", "Boost Premium", "3500"], ["boost_alaune", "Boost À la Une", "9000"],
-  ["commission_amb", "Commission ambassadeurs (%)", "10"],
-];
 const TOGGLE_KEYS = ["Mode maintenance", "Inscriptions ouvertes", "Programme ambassadeurs", "Assistant IA", "Diffusion Facebook auto", "Paiements actifs"];
 
 function Settings({ T }: { T: (m: string) => void }) {
-  const [tarifs, setTarifs] = useState<Record<string, string>>(() => Object.fromEntries(TARIF_KEYS.map(([k, , v]) => [k, v])));
+  const [prices, setPrices] = useState<Record<string, number>>({});
   const [toggles, setToggles] = useState<Record<string, boolean>>({ "Mode maintenance": false, "Inscriptions ouvertes": true, "Programme ambassadeurs": true, "Assistant IA": true, "Diffusion Facebook auto": true, "Paiements actifs": true });
+  const [cat, setCat] = useState<string>(Object.keys(SUBSCRIPTION_PLANS)[0] || "");
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     adminApi("getSettings").then((d) => {
       const s = d.settings || {};
-      if (s.tarifs) setTarifs((t) => ({ ...t, ...s.tarifs }));
+      if (s.prices) setPrices(s.prices);
       if (s.toggles) setToggles((t) => ({ ...t, ...s.toggles }));
     }).catch(() => { /* table pas encore créée */ }).finally(() => setLoaded(true));
   }, []);
 
+  const priceVal = (key: string, fallback: number) => (typeof prices[key] === "number" ? prices[key] : fallback);
+  const setPrice = (key: string, v: string) => setPrices((p) => ({ ...p, [key]: Number(v) || 0 }));
+
   async function save() {
     setBusy(true);
-    try { await adminApi("saveSettings", { settings: { tarifs, toggles } }); T("✅ Paramètres enregistrés"); }
+    try { await adminApi("saveSettings", { settings: { prices, toggles } }); T("✅ Tarifs enregistrés — appliqués sur le site"); }
     catch (e: any) { T(`❌ ${e.message}`); }
     finally { setBusy(false); }
   }
-
   async function toggleOne(n: string) {
     const next = { ...toggles, [n]: !toggles[n] };
     setToggles(next);
-    try { await adminApi("saveSettings", { settings: { tarifs, toggles: next } }); T("✅ Enregistré"); }
+    try { await adminApi("saveSettings", { settings: { prices, toggles: next } }); T("✅ Enregistré"); }
     catch (e: any) { T(`❌ ${e.message}`); }
   }
 
+  const inp = "w-28 rounded-[9px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3 py-1.5 text-[.85rem] font-bold text-[#FFC93C] outline-none focus:border-[#6366F1]";
+
   return (
     <>
-      <PageHead title="⚙️ Paramètres système" sub={loaded ? "Modifications enregistrées en base" : "Chargement…"} />
+      <PageHead title="⚙️ Paramètres système" sub={loaded ? "Les tarifs modifiés ici s'appliquent réellement sur le site" : "Chargement…"} />
       <div className="grid gap-3 lg:grid-cols-2">
-        <Card title="Tarifs des offres (FCFA)">
-          <div className="space-y-2.5">
-            {TARIF_KEYS.map(([k, l]) => <div key={k}><label className="mb-1 block text-[.75rem] font-bold text-[#8B949E]">{l}</label><input value={tarifs[k] ?? ""} onChange={(e) => setTarifs((t) => ({ ...t, [k]: e.target.value }))} className="w-full rounded-[9px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.85rem] font-bold text-[#FFC93C] outline-none focus:border-[#6366F1]" /></div>)}
-            <button disabled={busy} className={`${btnP} w-full disabled:opacity-60`} onClick={save}>{busy ? "⏳…" : "💾 Sauvegarder les tarifs"}</button>
+        <Card title="Tarifs RÉELS — Boosts d'annonce (FCFA)">
+          <div className="space-y-2">
+            {BOOSTS.filter((b) => b.price > 0).map((b) => (
+              <div key={b.key} className="flex items-center justify-between gap-2 rounded-[9px] bg-[#0D1117] p-2">
+                <span className="text-[.82rem] text-[#C9D1D9]">{b.name} <span className="text-[#8B949E]">({b.duration})</span></span>
+                <input type="number" value={priceVal(`boost:${b.key}`, b.price)} onChange={(e) => setPrice(`boost:${b.key}`, e.target.value)} className={inp} />
+              </div>
+            ))}
           </div>
+          <button disabled={busy} className={`${btnP} mt-3 w-full disabled:opacity-60`} onClick={save}>{busy ? "⏳…" : "💾 Sauvegarder les tarifs"}</button>
         </Card>
+
+        <Card title="Tarifs RÉELS — Abonnements (FCFA/mois)">
+          <select value={cat} onChange={(e) => setCat(e.target.value)} className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none">
+            {Object.keys(SUBSCRIPTION_PLANS).map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <div className="space-y-2">
+            {(SUBSCRIPTION_PLANS[cat] || []).filter((p) => p.price > 0).map((p) => (
+              <div key={p.key} className="flex items-center justify-between gap-2 rounded-[9px] bg-[#0D1117] p-2">
+                <span className="text-[.82rem] text-[#C9D1D9]">{p.name}</span>
+                <input type="number" value={priceVal(`sub:${cat}:${p.key}`, p.price)} onChange={(e) => setPrice(`sub:${cat}:${p.key}`, e.target.value)} className={inp} />
+              </div>
+            ))}
+          </div>
+          <button disabled={busy} className={`${btnP} mt-3 w-full disabled:opacity-60`} onClick={save}>{busy ? "⏳…" : "💾 Sauvegarder"}</button>
+        </Card>
+
         <Card title="Toggles système">
           <div className="space-y-2.5">
             {TOGGLE_KEYS.map((n) => {
