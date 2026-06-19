@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatNumber } from "@/lib/utils";
-import { WAVE_NUMBER, ORANGE_NUMBER, whatsappLink } from "@/lib/payment";
+import { WAVE_NUMBER, ORANGE_NUMBER, whatsappLink, ONLINE_PAYMENT_ENABLED } from "@/lib/payment";
 
 export default function ManualPayment({
   itemName,
@@ -108,22 +108,26 @@ export default function ManualPayment({
           💬 Envoyer mon reçu sur WhatsApp
         </a>
 
-        {/* Alternative : paiement automatique en ligne (PayTech) */}
-        <div className="my-4 flex items-center gap-3 text-[.75rem] text-gray-400">
-          <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
-          ou payer en ligne (automatique)
-          <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
-        </div>
+        {/* Alternative : paiement automatique en ligne (PayTech) — masqué tant que
+            le compte PayTech n'est pas activé en production. */}
+        {ONLINE_PAYMENT_ENABLED && (
+          <>
+            <div className="my-4 flex items-center gap-3 text-[.75rem] text-gray-400">
+              <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+              ou payer en ligne (automatique)
+              <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+            </div>
+            <button
+              onClick={payTech}
+              disabled={processing}
+              className="btn btn-block h-[52px] text-[1rem] font-bold text-white bg-gradient-to-r from-green-500 to-neon-gold shadow-lg disabled:opacity-70 transition-all hover:scale-[1.02]"
+            >
+              {processing ? "⏳ Ouverture du paiement…" : `💳 Payer ${formatNumber(price)} FCFA en ligne (PayTech)`}
+            </button>
+          </>
+        )}
 
-        <button
-          onClick={payTech}
-          disabled={processing}
-          className="btn btn-block h-[52px] text-[1rem] font-bold text-white bg-gradient-to-r from-green-500 to-neon-gold shadow-lg disabled:opacity-70 transition-all hover:scale-[1.02]"
-        >
-          {processing ? "⏳ Ouverture du paiement…" : `💳 Payer ${formatNumber(price)} FCFA en ligne (PayTech)`}
-        </button>
-
-        <p className="mt-5 text-center text-[.75rem] text-gray-400">🔒 Wave · Orange Money · Carte · activation automatique ou par reçu</p>
+        <p className="mt-5 text-center text-[.75rem] text-gray-400">🔒 Wave · Orange Money · activation rapide après réception du reçu</p>
       </div>
     </div>
   );
