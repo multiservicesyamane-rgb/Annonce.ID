@@ -62,6 +62,8 @@ export type Category = {
   count: string;
   subs: string[];
   fields: DynField[];
+  // Champs additionnels selon la sous-catégorie choisie (optionnel)
+  subFields?: Record<string, DynField[]>;
 };
 
 export const CATEGORIES: Category[] = [
@@ -193,13 +195,66 @@ export const CATEGORIES: Category[] = [
     name: "Services",
     icon: "🔧",
     count: "15 600",
-    subs: ["Plomberie", "Électricité", "Ménage", "Coiffure", "Transport"],
-    fields: [
-      { label: "Type", type: "text", placeholder: "Ex : Plomberie" },
-      { label: "Disponibilité", type: "select", options: ["Temps plein", "Sur RDV", "Week-end", "24h/24"] },
-      { label: "Zone", type: "text", placeholder: "Ex : Dakar" },
-      { label: "Tarif", type: "text", placeholder: "Ex : 5000/h ou Devis" },
+    subs: [
+      "Plomberie", "Électricité", "Ménage & Nettoyage", "Coiffure & Beauté",
+      "Transport & Déménagement", "Couture & Mode", "Mécanique auto", "Informatique & Web",
+      "Événementiel", "Cuisine & Traiteur", "Bâtiment & Maçonnerie", "Peinture",
+      "Climatisation & Froid", "Jardinage", "Sécurité & Gardiennage", "Cours & Soutien", "Autre",
     ],
+    fields: [
+      { label: "Prestataire", type: "select", options: ["Particulier", "Professionnel", "Entreprise"] },
+      { label: "Expérience", type: "select", options: ["Débutant", "1-3 ans", "3-5 ans", "5-10 ans", "+10 ans"] },
+      { label: "Déplacement à domicile", type: "select", options: ["Oui", "Non", "Selon zone"] },
+      { label: "Mode de tarification", type: "select", options: ["À l'heure", "Au forfait", "Sur devis", "À la journée"] },
+      { label: "Tarif", type: "text", placeholder: "Ex : 5 000/h ou Devis gratuit" },
+      { label: "Devis gratuit", type: "select", options: ["Oui", "Non"] },
+      { label: "Disponibilité", type: "select", options: ["Temps plein", "Sur RDV", "Week-end", "Soirs", "24h/24"] },
+      { label: "Zone d'intervention", type: "text", placeholder: "Ex : Dakar et banlieue" },
+    ],
+    subFields: {
+      "Transport & Déménagement": [
+        { label: "Type de véhicule", type: "select", options: ["Voiture", "Camionnette", "Camion", "Bus", "Moto"] },
+        { label: "Capacité", type: "text", placeholder: "Ex : 3 tonnes / 12 places" },
+        { label: "Manutention incluse", type: "select", options: ["Oui", "Non"] },
+      ],
+      "Coiffure & Beauté": [
+        { label: "Prestation", type: "select", options: ["À domicile", "En salon", "Les deux"] },
+        { label: "Spécialité", type: "text", placeholder: "Ex : Tresses, Maquillage, Ongles" },
+        { label: "Genre", type: "select", options: ["Femme", "Homme", "Mixte", "Enfant"] },
+      ],
+      "Informatique & Web": [
+        { label: "Spécialité", type: "select", options: ["Création de site", "Réparation PC", "Réseaux", "Développement", "Maintenance", "Formation"] },
+        { label: "Intervention", type: "select", options: ["À distance", "Sur place", "Les deux"] },
+        { label: "Délai", type: "text", placeholder: "Ex : 48h" },
+      ],
+      "Couture & Mode": [
+        { label: "Spécialité", type: "text", placeholder: "Ex : Sur mesure, Retouches, Wax" },
+        { label: "Délai de livraison", type: "text", placeholder: "Ex : 5 jours" },
+      ],
+      "Événementiel": [
+        { label: "Type d'événement", type: "select", options: ["Mariage", "Baptême", "Anniversaire", "Entreprise", "Concert", "Autre"] },
+        { label: "Prestation", type: "text", placeholder: "Ex : Décoration, Sonorisation, Photo" },
+        { label: "Capacité (invités)", type: "text", placeholder: "Ex : 200" },
+      ],
+      "Cuisine & Traiteur": [
+        { label: "Type de cuisine", type: "text", placeholder: "Ex : Sénégalaise, Pâtisserie" },
+        { label: "Capacité (couverts)", type: "text", placeholder: "Ex : 100" },
+        { label: "Livraison", type: "select", options: ["Oui", "Non"] },
+      ],
+      "Bâtiment & Maçonnerie": [
+        { label: "Spécialité", type: "text", placeholder: "Ex : Carrelage, Dalle, Fondation" },
+        { label: "Équipe", type: "select", options: ["Seul", "Petite équipe", "Grande équipe"] },
+      ],
+      "Cours & Soutien": [
+        { label: "Matière / Domaine", type: "text", placeholder: "Ex : Maths, Anglais" },
+        { label: "Niveau", type: "select", options: ["Primaire", "Collège", "Lycée", "Université", "Adulte"] },
+        { label: "Format", type: "select", options: ["À domicile", "En ligne", "Chez le prof"] },
+      ],
+      "Sécurité & Gardiennage": [
+        { label: "Type", type: "select", options: ["Gardien", "Agent de sécurité", "Vidéosurveillance", "Société"] },
+        { label: "Horaires", type: "select", options: ["Jour", "Nuit", "24h/24"] },
+      ],
+    },
   },
   {
     slug: "animaux",

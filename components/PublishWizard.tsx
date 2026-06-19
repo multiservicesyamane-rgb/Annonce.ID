@@ -100,6 +100,8 @@ export default function PublishWizard() {
   }, [catSlug, subCategory, title, desc, price, priceType, photos, region, commune, customCommune, specs]);
 
   const cat = CATEGORIES.find((c) => c.slug === catSlug);
+  // Champs = champs de la catégorie + champs spécifiques à la sous-catégorie choisie
+  const activeFields = cat ? [...cat.fields, ...((cat.subFields && subCategory && cat.subFields[subCategory]) || [])] : [];
   const show = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
 
   // Aide IA (gratuit via modèles intégrés, ou Claude si crédits dispo)
@@ -146,8 +148,8 @@ export default function PublishWizard() {
       if (!title || title.trim().length < 10) return show("⚠ Titre: min 10 caractères.");
       if (priceType !== "Sur devis" && !price) return show("⚠ Indiquez un prix.");
       if (!desc || desc.trim().length < 30) return show("⚠ Description: min 30 caractères.");
-      if (cat?.fields) {
-        for (const field of cat.fields) {
+      if (activeFields.length > 0) {
+        for (const field of activeFields) {
           if (field.label.includes("*")) {
             if (!specs[field.label] || specs[field.label] === "Choisir...") {
               return show(`⚠ "${field.label}" est obligatoire.`);
@@ -370,11 +372,11 @@ export default function PublishWizard() {
               <textarea className="input resize-none min-h-[80px] md:min-h-[100px]" maxLength={2000} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Décrivez votre article..." />
               <div className="text-right text-[.65rem] text-gray-400 mt-0.5">{desc.length}/2000</div>
             </div>
-            {cat?.fields && (
+            {activeFields.length > 0 && (
               <div className="pt-3 border-t border-gray-100 dark:border-dark-border">
-                <h3 className="font-bold text-[.8rem] mb-2 text-gold-dark dark:text-gold uppercase tracking-wider">{cat.name}</h3>
+                <h3 className="font-bold text-[.8rem] mb-2 text-gold-dark dark:text-gold uppercase tracking-wider">Caractéristiques — {subCategory || cat?.name}</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {cat.fields.map(f => (
+                  {activeFields.map(f => (
                     <div key={f.label}>
                       <label className="label">{f.label}</label>
                       {f.type === 'select' ? (
