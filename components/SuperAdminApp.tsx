@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { BOOSTS, SUBSCRIPTION_PLANS } from "@/lib/constants";
+import { formatNumber } from "@/lib/utils";
 
 /* ───────── Données mock (plan stratégique B2B) ───────── */
 const GRADS = ["bg-g1", "bg-g2", "bg-g3", "bg-g4", "bg-g5", "bg-g6", "bg-g7", "bg-g8"];
@@ -16,6 +18,7 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
   { id: "offres", icon: "💎", label: "Offres commerciales" },
   { id: "moderation", icon: "🛡️", label: "Modération", section: "Plateforme", badge: 8 },
   { id: "users", icon: "👥", label: "Utilisateurs" },
+  { id: "encaissement", icon: "💵", label: "Encaissement (espèces)" },
   { id: "finance", icon: "💰", label: "Finances" },
   { id: "ads", icon: "📺", label: "Publicités" },
   { id: "ia", icon: "🤖", label: "Assistant IA", section: "Outils" },
@@ -293,6 +296,7 @@ export default function SuperAdminApp() {
             {page === "offres" && <Offres T={T} />}
             {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
             {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
+            {page === "encaissement" && <Encaissement profiles={profiles} allListings={allListings} T={T} reload={loadAllData} />}
             {page === "finance" && <Finance purchases={purchases} counts={counts} />}
             {page === "ads" && <AdsAdmin allListings={allListings} T={T} reload={loadAllData} />}
             {page === "ia" && <IA T={T} />}
@@ -729,6 +733,136 @@ return (
     </Card>
   </>
 );
+}
+
+function parseDays(duration: string): number {
+  if (/illimit/i.test(duration)) return 3650;
+  const mois = duration.match(/(\d+)\s*mois/i);
+  if (mois) return parseInt(mois[1], 10) * 30;
+  const jours = duration.match(/(\d+)\s*jour/i);
+  if (jours) return parseInt(jours[1], 10);
+  return 30;
+}
+
+// Encaissement manuel (espèces) : activer un plan pour un client qui paie en main propre
+function Encaissement({ profiles, allListings, T, reload }: { profiles: any[]; allListings: any[]; T: (m: string) => void; reload: () => void }) {
+  const [search, setSearch] = useState("");
+  const [userId, setUserId] = useState("");
+  const [kind, setKind] = useState<"boost" | "sub">("boost");
+  const [category, setCategory] = useState<string>(Object.keys(SUBSCRIPTION_PLANS)[0] || "");
+  const [planKey, setPlanKey] = useState<string>("");
+  const [listingId, setListingId] = useState("");
+  const [amount, setAmount] = useState<string>("");
+  const [days, setDays] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<{ name: string; user: string; ref: string; expires: string } | null>(null);
+
+  const selectedUser = profiles.find((p: any) => p.id === userId);
+  const userLabel = (p: any) => p.full_name || p.email || p.phone || p.id?.slice(0, 8);
+  const filteredUsers = !search ? profiles.slice(0, 30)
+    : profiles.filter((p: any) => `${p.full_name || ""} ${p.email || ""} ${p.phone || ""}`.toLowerCase().includes(search.toLowerCase())).slice(0, 30);
+
+  const userListings = allListings.filter((l: any) => (l.user_id || l.owner_id || l.profile_id) === userId);
+
+  const plans = kind === "boost" ? BOOSTS.filter((b) => b.price > 0) : (SUBSCRIPTION_PLANS[category] || []).filter((p) => p.price > 0);
+  const selectedPlan: any = plans.find((p: any) => p.key === planKey);
+
+  // Pré-remplit montant + durée quand on choisit un plan
+  function pickPlan(key: string) {
+    setPlanKey(key);
+    const p: any = plans.find((x: any) => x.key === key);
+    if (p) { setAmount(String(p.price)); setDays(String(parseDays(p.duration))); }
+  }
+
+  async function activate() {
+    if (!userId) { T("⚠ Choisis un client"); return; }
+    if (!selectedPlan) { T("⚠ Choisis un plan"); return; }
+    if (kind === "boost" && !listingId) { T("⚠ Choisis l'annonce à booster"); return; }
+    setBusy(true);
+    try {
+      const r = await adminApi("activatePlan", {
+        userId, kind, planKey,
+        planName: selectedPlan.name,
+        amount: Number(amount) || selectedPlan.price,
+        durationDays: Number(days) || parseDays(selectedPlan.duration),
+        listingId: kind === "boost" ? listingId : undefined,
+      });
+      setDone({ name: selectedPlan.name, user: userLabel(selectedUser), ref: r.ref, expires: r.expires });
+      T("✅ Plan activé (espèces encaissées)");
+      reload();
+      setPlanKey(""); setListingId(""); setAmount(""); setDays("");
+    } catch (e: any) { T(`❌ ${e.message}`); }
+    finally { setBusy(false); }
+  }
+
+  const inp = "rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]";
+
+  return (
+    <>
+      <PageHead title="💵 Encaissement espèces — Activation manuelle" sub="Un client te paie en main propre → tu actives son plan ici. La transaction est enregistrée." />
+
+      {done && (
+        <div className="mb-3 rounded-[12px] border border-emerald-500/40 bg-emerald-500/10 p-3">
+          <p className="text-[.85rem] font-bold text-emerald-300">✅ {done.name} activé pour {done.user}</p>
+          <p className="text-[.74rem] text-gray-300">Réf : {done.ref} · expire le {new Date(done.expires).toLocaleDateString("fr-FR")}</p>
+        </div>
+      )}
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        {/* 1. Client */}
+        <Card title="1. Choisir le client">
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Rechercher (nom, email, téléphone)…" className={`${inp} mb-2 w-full`} />
+          <div className="max-h-[240px] space-y-1 overflow-y-auto">
+            {filteredUsers.length === 0 ? <p className="py-4 text-center text-[.8rem] text-[#8B949E]">Aucun client.</p> :
+              filteredUsers.map((p: any) => (
+                <button key={p.id} onClick={() => { setUserId(p.id); setListingId(""); }}
+                  className={`flex w-full items-center gap-2 rounded-[9px] border p-2 text-left text-[.8rem] ${userId === p.id ? "border-[#6366F1] bg-[#6366F1]/10" : "border-[#21262D] bg-[#0D1117] hover:border-[#30363D]"}`}>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#21262D] text-[.7rem] font-bold text-white">{(userLabel(p) || "?")[0]?.toUpperCase()}</span>
+                  <span className="min-w-0 flex-1"><span className="block truncate font-bold text-[#E6EDF3]">{userLabel(p)}</span><span className="block truncate text-[.7rem] text-[#8B949E]">{p.email || p.phone || "—"}</span></span>
+                  {userId === p.id && <span className="text-[#6366F1]">✓</span>}
+                </button>
+              ))}
+          </div>
+        </Card>
+
+        {/* 2. Plan */}
+        <Card title="2. Choisir le plan">
+          <div className="mb-2 flex gap-2">
+            <button onClick={() => { setKind("boost"); setPlanKey(""); }} className={`flex-1 rounded-[9px] px-3 py-2 text-[.8rem] font-bold ${kind === "boost" ? "bg-g1 text-white" : "bg-white/5 text-[#A5B4FC]"}`}>🚀 Boost annonce</button>
+            <button onClick={() => { setKind("sub"); setPlanKey(""); }} className={`flex-1 rounded-[9px] px-3 py-2 text-[.8rem] font-bold ${kind === "sub" ? "bg-g1 text-white" : "bg-white/5 text-[#A5B4FC]"}`}>💎 Abonnement compte</button>
+          </div>
+
+          {kind === "sub" && (
+            <select value={category} onChange={(e) => { setCategory(e.target.value); setPlanKey(""); }} className={`${inp} mb-2 w-full`}>
+              {Object.keys(SUBSCRIPTION_PLANS).map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+
+          <select value={planKey} onChange={(e) => pickPlan(e.target.value)} className={`${inp} mb-2 w-full`}>
+            <option value="">— Sélectionner —</option>
+            {plans.map((p: any) => <option key={p.key} value={p.key}>{p.name} · {formatNumber(p.price)} FCFA · {p.duration}</option>)}
+          </select>
+
+          {kind === "boost" && userId && (
+            <select value={listingId} onChange={(e) => setListingId(e.target.value)} className={`${inp} mb-2 w-full`}>
+              <option value="">— Annonce à booster —</option>
+              {userListings.map((l: any) => <option key={l.id} value={l.id}>{l.title || l.name || l.id?.slice(0, 8)}</option>)}
+            </select>
+          )}
+          {kind === "boost" && userId && userListings.length === 0 && <p className="mb-2 text-[.74rem] text-amber-300">⚠ Ce client n'a aucune annonce. Il doit d'abord en publier une.</p>}
+
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="mb-1 block text-[.7rem] text-[#8B949E]">Montant reçu (FCFA)</label><input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className={`${inp} w-full`} /></div>
+            <div><label className="mb-1 block text-[.7rem] text-[#8B949E]">Durée (jours)</label><input value={days} onChange={(e) => setDays(e.target.value)} placeholder="30" className={`${inp} w-full`} /></div>
+          </div>
+
+          <button disabled={busy} onClick={activate} className={`${btnP} mt-3 w-full disabled:opacity-60`}>
+            {busy ? "⏳ Activation…" : `💵 Encaisser & activer${selectedUser ? ` pour ${userLabel(selectedUser)}` : ""}`}
+          </button>
+        </Card>
+      </div>
+    </>
+  );
 }
 
 function Finance({ purchases, counts }: { purchases: any[]; counts: any }) {

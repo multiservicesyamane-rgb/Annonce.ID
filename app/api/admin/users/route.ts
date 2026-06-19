@@ -14,6 +14,20 @@ function admin() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
+// Écriture "adaptative" : si une colonne n'existe pas encore en base, on la retire
+// du payload et on réessaie. Évite de planter quand le schéma est partiel.
+async function adaptiveWrite(run: (p: any) => PromiseLike<{ error: any }>, payload: any) {
+  let p: any = { ...payload };
+  for (let i = 0; i < 12; i++) {
+    const { error } = await run(p);
+    if (!error) return;
+    const m: string = error.message || "";
+    const match = m.match(/'([^']+)' column/) || m.match(/column "([^"]+)"/) || m.match(/Could not find the '([^']+)'/);
+    if (match && match[1] in p) { delete p[match[1]]; continue; }
+    throw error;
+  }
+}
+
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   if (body?.pass !== ADMIN_PASS) {
@@ -88,6 +102,67 @@ export async function POST(req: Request) {
       if (error) throw error;
       await sb.from("listings").update({ premium: !!value }).eq("user_id", userId);
       return NextResponse.json({ ok: true });
+    }
+
+    // Encaissement manuel (espèces) : activer un boost d'annonce OU un abonnement
+    // de compte, enregistrer la transaction et appliquer les avantages.
+    if (action === "activatePlan") {
+      const { userId, kind, planKey, planName, amount, durationDays, listingId } = body;
+      if (!userId) return NextResponse.json({ error: "Utilisateur requis." }, { status: 400 });
+
+      const days = Number(durationDays) || 30;
+      const now = new Date();
+      const expires = new Date(now.getTime() + days * 86400000).toISOString();
+      const amt = Number(amount) || 0;
+      const ref = `CASH-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+      // 1) Enregistrer le paiement espèces (adaptatif)
+      await adaptiveWrite(
+        (p) => sb.from("purchases").insert(p),
+        {
+          user_id: userId,
+          amount: amt,
+          ref_command: ref,
+          status: "success",
+          type: kind === "sub" ? "subscription" : "boost",
+          method: "cash",
+          plan_key: planKey || null,
+          plan_name: planName || null,
+          expires_at: expires,
+        }
+      );
+
+      if (kind === "boost") {
+        if (!listingId) return NextResponse.json({ error: "Annonce requise pour un boost." }, { status: 400 });
+        const featured = planKey === "alaune" || planKey === "vip";
+        await adaptiveWrite(
+          (p) => sb.from("listings").update(p).eq("id", listingId),
+          {
+            status: "active",
+            premium: true,
+            featured,
+            is_premium: true,
+            is_featured: featured,
+            boost_key: planKey || null,
+            premium_until: expires,
+            boost_expires_at: expires,
+          }
+        );
+      } else {
+        // Abonnement de compte : avantages premium jusqu'à expiration
+        await adaptiveWrite(
+          (p) => sb.from("profiles").update(p).eq("id", userId),
+          {
+            free_premium: true,
+            subscription_plan: planName || planKey || "premium",
+            plan_key: planKey || null,
+            subscription_expires_at: expires,
+            plan_expires_at: expires,
+          }
+        );
+      }
+
+      return NextResponse.json({ ok: true, ref, expires });
     }
 
     // Supprimer un compte
