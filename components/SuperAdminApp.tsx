@@ -649,18 +649,15 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
       await refreshList(); // recharge pour annuler le changement visuel
     }
   }
-}
-async function setVip(userId: string, value: boolean) {
-  try { await adminApi("setVip", { userId, value }); T(value ? "🎁 VIP gratuit activé" : "VIP retiré"); refreshList(); reload(); }
-  catch (e: any) { T(`❌ ${e.message}`); }
-}
-async function del(userId: string) {
-}
-async function del(userId: string) {
-  if (!confirm("Supprimer définitivement ce compte ?")) return;
-  try { await adminApi("delete", { userId }); T("🗑️ Compte supprimé"); refreshList(); reload(); }
-  catch (e: any) { T(`❌ ${e.message}`); }
-}
+  async function setVip(userId: string, value: boolean) {
+    try { await adminApi("setVip", { userId, value }); T(value ? "🎁 VIP gratuit activé" : "VIP retiré"); refreshList(); reload(); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+  }
+  async function del(userId: string) {
+    if (!confirm("Supprimer définitivement ce compte ?")) return;
+    try { await adminApi("delete", { userId }); T("🗑️ Compte supprimé"); refreshList(); reload(); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+  }
 
 const roleColor = (r: string) => r === "employee" ? "bg-blue-500/15 text-blue-300" : r === "ambassador" ? "bg-amber-500/15 text-amber-300" : r === "pro" || r === "business" ? "bg-violet-500/15 text-violet-300" : r === "admin" || r === "super_admin" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400";
 
