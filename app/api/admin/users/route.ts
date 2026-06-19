@@ -202,6 +202,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ref, expires });
     }
 
+    // Paramètres globaux (tarifs, toggles) — stockés dans app_settings
+    if (action === "getSettings") {
+      const { data } = await sb.from("app_settings").select("data").eq("id", "global").maybeSingle();
+      return NextResponse.json({ settings: data?.data || {} });
+    }
+    if (action === "saveSettings") {
+      const { settings } = body;
+      const { error } = await sb.from("app_settings").upsert({ id: "global", data: settings || {}, updated_at: new Date().toISOString() });
+      if (error) {
+        if (/app_settings/.test(error.message || "")) {
+          return NextResponse.json({ error: "Table app_settings manquante. Relance SETUP_SUPABASE.sql." }, { status: 500 });
+        }
+        throw error;
+      }
+      return NextResponse.json({ ok: true });
+    }
+
     // Supprimer un compte
     if (action === "delete") {
       const { userId } = body;

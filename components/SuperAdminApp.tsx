@@ -300,8 +300,8 @@ export default function SuperAdminApp() {
             {page === "finance" && <Finance purchases={purchases} counts={counts} />}
             {page === "ads" && <AdsAdmin allListings={allListings} T={T} reload={loadAllData} />}
             {page === "ia" && <IA T={T} />}
-            {page === "points" && <Points />}
-            {page === "diffusion" && <Diffusion />}
+            {page === "points" && <Points profiles={profiles} />}
+            {page === "diffusion" && <Diffusion allListings={allListings} />}
             {page === "rapports" && <Rapports T={T} allListings={allListings} profiles={profiles} purchases={purchases} />}
             {page === "settings" && <Settings T={T} />}
           </>)}
@@ -458,11 +458,10 @@ function CRM({ T, prospects, addProspect }: { T: (m: string) => void; prospects:
 }
 
 function Marketing({ T }: { T: (m: string) => void }) {
+  const [view, setView] = useState<any>(null);
   return (
     <>
-      <PageHead title="📢 Centre Marketing" sub="Templates email & WhatsApp prêts à l'emploi">
-        <button className={btnP} onClick={() => T("+ Template créé")}>+ Nouveau template</button>
-      </PageHead>
+      <PageHead title="📢 Centre Marketing" sub="Templates email & WhatsApp prêts à l'emploi" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {TEMPLATES.map((t) => (
           <div key={t.t} className="flex flex-col gap-2 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-3.5 hover:border-[#6366F1]">
@@ -470,12 +469,22 @@ function Marketing({ T }: { T: (m: string) => void }) {
             <div className="text-[.88rem] font-bold text-[#E6EDF3]">{t.t}</div>
             <div className="line-clamp-2 text-[.75rem] leading-relaxed text-[#8B949E]">{t.p}</div>
             <div className="mt-1 flex gap-1.5">
-              <button onClick={() => T(`Template : ${t.t}`)} className="rounded-[7px] border border-[#30363D] bg-[#161B22] px-2.5 py-1 text-[.7rem] font-bold text-[#8B949E] hover:text-[#A5B4FC]">👁 Voir</button>
-              <button onClick={() => T("📋 Copié !")} className="rounded-[7px] border border-[#30363D] bg-[#161B22] px-2.5 py-1 text-[.7rem] font-bold text-[#8B949E] hover:text-[#A5B4FC]">📋 Copier</button>
+              <button onClick={() => setView(t)} className="rounded-[7px] border border-[#30363D] bg-[#161B22] px-2.5 py-1 text-[.7rem] font-bold text-[#8B949E] hover:text-[#A5B4FC]">👁 Voir</button>
+              <button onClick={() => { navigator.clipboard?.writeText(t.p); T("📋 Copié dans le presse-papier !"); }} className="rounded-[7px] border border-[#30363D] bg-[#161B22] px-2.5 py-1 text-[.7rem] font-bold text-[#8B949E] hover:text-[#A5B4FC]">📋 Copier</button>
             </div>
           </div>
         ))}
       </div>
+      {view && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={() => setView(null)}>
+          <div className="w-full max-w-[480px] rounded-[14px] border border-[#30363D] bg-[#161B22] p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex items-center justify-between"><h3 className="text-[1rem] font-bold text-white">{view.t}</h3><button onClick={() => setView(null)} className="text-gray-400 text-xl">✕</button></div>
+            <span className={`text-[.64rem] font-bold uppercase ${view.catC}`}>{view.cat}</span>
+            <p className="mt-2 whitespace-pre-wrap rounded-[10px] bg-[#0D1117] p-3 text-[.83rem] leading-relaxed text-[#C9D1D9]">{view.p}</p>
+            <button onClick={() => { navigator.clipboard?.writeText(view.p); T("📋 Copié !"); }} className={`${btnP} mt-3 w-full`}>📋 Copier le texte</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -558,19 +567,37 @@ function Ambassadeurs({ T, ambassadors }: { T: (m: string) => void; ambassadors:
 }
 
 function Offres({ T }: { T: (m: string) => void }) {
+  const [cat, setCat] = useState<string>(Object.keys(SUBSCRIPTION_PLANS)[0] || "");
   return (
     <>
-      <PageHead title="💎 Offres commerciales" sub="Gérer les packs et tarifs">
-        <button className={btnP} onClick={() => T("✅ Tarifs sauvegardés")}>💾 Sauvegarder</button>
-      </PageHead>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {OFFRES.map((o) => (
-          <div key={o.n} onClick={() => T(`Offre: ${o.n} · ${o.prix}`)} className={`relative cursor-pointer rounded-[12px] border bg-[#0D1117] p-4 transition hover:border-[#6366F1] ${o.pop ? "border-[#FFC93C]" : "border-[#21262D]"}`}>
-            {o.pop && <span className="absolute -top-2 right-4 rounded-md bg-g5 px-2 py-0.5 text-[.62rem] font-extrabold text-[#0D1117]">POPULAIRE</span>}
-            <div className="text-[1.5rem]">{o.ic}</div>
-            <div className="mt-1 text-[.95rem] font-extrabold text-[#E6EDF3]">{o.n}</div>
-            <div className={`mb-2 text-[1.1rem] font-extrabold ${o.color}`}>{o.prix}</div>
-            <div className="space-y-1 text-[.75rem] text-[#8B949E]">{o.feats.map((f) => <div key={f}>✓ {f}</div>)}</div>
+      <PageHead title="💎 Offres commerciales" sub="Tarifs réels appliqués sur le site (modifiables dans lib/constants.ts)" />
+
+      <h3 className="mb-2 text-[.9rem] font-bold text-[#E6EDF3]">🚀 Boosts d'annonce</h3>
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {BOOSTS.filter((b) => b.price > 0).map((b) => (
+          <div key={b.key} className={`relative rounded-[12px] border bg-[#0D1117] p-4 ${b.popular ? "border-[#FFC93C]" : "border-[#21262D]"}`}>
+            {b.popular && <span className="absolute -top-2 right-4 rounded-md bg-g5 px-2 py-0.5 text-[.62rem] font-extrabold text-[#0D1117]">POPULAIRE</span>}
+            <div className="text-[.95rem] font-extrabold text-[#E6EDF3]">{b.name}</div>
+            <div className="mb-1 text-[1.1rem] font-extrabold text-[#FFC93C]">{formatNumber(b.price)} FCFA</div>
+            <div className="mb-2 text-[.7rem] text-[#8B949E]">Durée : {b.duration}</div>
+            <div className="space-y-1 text-[.74rem] text-[#8B949E]">{b.features.map((f) => <div key={f}>✓ {f}</div>)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <h3 className="text-[.9rem] font-bold text-[#E6EDF3]">💼 Abonnements boutique</h3>
+        <select value={cat} onChange={(e) => setCat(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.78rem] text-white outline-none">
+          {Object.keys(SUBSCRIPTION_PLANS).map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {(SUBSCRIPTION_PLANS[cat] || []).filter((p) => p.price > 0).map((p) => (
+          <div key={p.key} className="rounded-[12px] border border-[#21262D] bg-[#0D1117] p-4">
+            <div className="text-[.95rem] font-extrabold text-[#E6EDF3]">{p.name}</div>
+            <div className="mb-1 text-[1.1rem] font-extrabold text-[#A5B4FC]">{formatNumber(p.price)} FCFA<span className="text-[.7rem] font-normal text-[#8B949E]"> /{p.duration}</span></div>
+            <div className="mb-2 text-[.7rem] text-[#8B949E]">{p.limits.activeAds} annonces · {p.limits.photos} photos</div>
+            <div className="space-y-1 text-[.74rem] text-[#8B949E]">{p.features.map((f) => <div key={f}>✓ {f}</div>)}</div>
           </div>
         ))}
       </div>
@@ -1044,39 +1071,62 @@ function IA({ T }: { T: (m: string) => void }) {
   );
 }
 
-function Points() {
+function Points({ profiles }: { profiles: any[] }) {
   const gains = [["Créer un compte", "50"], ["Publier une annonce", "10"], ["Annonce vendue", "100"], ["Partager sur réseaux", "5"], ["Parrainer un ami", "50"], ["Parrainage converti", "200"], ["Recevoir un avis 5★", "25"], ["Se connecter / jour", "2"]];
   const rewards = [["100 pts", "1 annonce gratuite", "text-[#FFC93C]"], ["500 pts", "Mise en avant 7 jours", "text-[#4FACFE]"], ["1 000 pts", "1 mois Pack Pro offert", "text-[#A78BFA]"], ["5 000 pts", "Badge Ambassadeur Or", "text-[#FFC93C]"], ["10 000 pts", "1 an Premium offert", "text-[#F093FB]"]];
-  const lead = [["Moussa Diallo", 8420, "💎 Diamant"], ["Aminata Koné", 5810, "🥇 Or"], ["Ibrahim Traoré", 3240, "🥈 Argent"], ["Fatou Sow", 1890, "🥉 Bronze"]];
+  const niveau = (pts: number) => pts >= 5000 ? "💎 Diamant" : pts >= 2000 ? "🥇 Or" : pts >= 500 ? "🥈 Argent" : "🥉 Bronze";
+  // Classement RÉEL : par crédits du compte (proxy de points en attendant le système complet)
+  const lead = [...profiles]
+    .map((p) => ({ name: p.full_name || p.email || "(sans nom)", pts: Number(p.points ?? p.credits ?? 0) }))
+    .sort((a, b) => b.pts - a.pts).slice(0, 10);
   return (
     <>
-      <PageHead title="⭐ Points & Fidélité" sub="Récompenser les utilisateurs actifs" />
+      <PageHead title="⭐ Points & Fidélité" sub="Barème du programme · classement réel des comptes" />
       <div className="grid gap-3 lg:grid-cols-2">
         <Card title="Comment gagner des points">{gains.map(([a, p]) => <div key={a} className="mb-1.5 flex items-center justify-between rounded-lg bg-[#0D1117] p-2.5 text-[.8rem]"><span className="text-[#C9D1D9]">{a}</span><span className="font-extrabold text-[#FFC93C]">+{p} pts</span></div>)}</Card>
         <Card title="Récompenses disponibles">{rewards.map(([p, n, c]) => <div key={p} className="mb-1.5 flex items-center gap-2.5 rounded-lg bg-[#0D1117] p-2.5"><span className={`w-[70px] shrink-0 text-[.8rem] font-extrabold ${c}`}>{p}</span><span className="text-[.8rem] text-[#C9D1D9]">{n}</span></div>)}</Card>
       </div>
-      <div className="mt-3"><Card title="Top utilisateurs par points">
-        <Tbl head={["#", "Utilisateur", "Points", "Niveau"]}>{lead.map((r, i) => <tr key={i}><Td><span className="font-extrabold text-[#FFC93C]">{i + 1}</span></Td><Td bold>{r[0]}</Td><Td><span className="font-extrabold text-emerald-400">{(r[1] as number).toLocaleString("fr-FR")}</span></Td><Td>{r[2]}</Td></tr>)}</Tbl>
+      <div className="mt-3"><Card title="Top comptes (par crédits)">
+        {lead.length === 0 || lead.every((l) => l.pts === 0) ? (
+          <div className="py-6 text-center text-[.82rem] text-[#8B949E]">Aucun point/crédit attribué pour l'instant.</div>
+        ) : (
+          <Tbl head={["#", "Utilisateur", "Crédits", "Niveau"]}>{lead.map((r, i) => <tr key={i}><Td><span className="font-extrabold text-[#FFC93C]">{i + 1}</span></Td><Td bold>{r.name}</Td><Td><span className="font-extrabold text-emerald-400">{r.pts.toLocaleString("fr-FR")}</span></Td><Td>{niveau(r.pts)}</Td></tr>)}</Tbl>
+        )}
       </Card></div>
     </>
   );
 }
 
-function Diffusion() {
-  const pages = [["📘", "Auto Sénégal", "Automobile · 12 400 abonnés", true], ["📘", "Immo Abidjan", "Immobilier · 8 900 abonnés", true], ["📘", "Tech Dakar", "Électronique · 5 200 abonnés", true], ["📘", "Emploi Mali", "Emploi · 3 800 abonnés", false]];
-  const packs = [["🆓 Basic", "Site Wanteermako", "Inclus"], ["➕ Plus", "Site + Facebook", "+ 10 000 FCFA/mois"], ["🚀 Premium", "Site + FB + WhatsApp", "+ 30 000 FCFA/mois"], ["👑 Elite", "Site + FB + WA + Sponsorisé", "+ 75 000 FCFA/mois"]];
+function Diffusion({ allListings }: { allListings: any[] }) {
+  const [picked, setPicked] = useState("");
+  const ad = allListings.find((a) => a.id === picked);
+  const siteUrl = (typeof window !== "undefined" ? window.location.origin : "https://wanteermako.com");
+  const shareText = ad ? `🔥 ${ad.title} — ${ad.price ? `${ad.price} FCFA` : ""}\n${siteUrl}/annonce/${ad.id}/${ad.slug || ""}\nSur Wanteermako 👉 ${siteUrl}` : "";
+  const packs = [["➕ Plus", "Site + Facebook", "+ 10 000 FCFA/mois"], ["🚀 Premium", "Site + FB + WhatsApp", "+ 30 000 FCFA/mois"], ["👑 Elite", "Site + FB + WA + Sponsorisé", "+ 75 000 FCFA/mois"]];
   return (
     <>
-      <PageHead title="📡 Diffusion multi-canaux" sub="Pages Facebook et groupes WhatsApp" />
-      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <Kpi grad="bg-g1" icon="📘" label="Pages Facebook" value={12} />
-        <Kpi grad="bg-g4" icon="💬" label="Groupes WhatsApp" value={28} />
-        <Kpi grad="bg-g5" icon="🤖" label="Publications/mois" value={8450} />
-        <Kpi grad="bg-g3" icon="👁️" label="Portée totale" value={284000} />
-      </div>
+      <PageHead title="📡 Diffusion multi-canaux" sub="Partage rapide des annonces · automatisation Facebook à venir" />
       <div className="grid gap-3 lg:grid-cols-2">
-        <Card title="Pages Facebook par secteur">{pages.map(([ic, n, s, on]) => <div key={n as string} className="mb-2 flex items-center gap-2.5 rounded-[9px] bg-[#0D1117] p-2.5"><span>{ic}</span><div className="flex-1"><div className="text-[.83rem] font-bold text-[#E6EDF3]">{n}</div><div className="text-[.7rem] text-[#8B949E]">{s}</div></div><span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${on ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-gray-400"}`}>{on ? "Active" : "Planifiée"}</span></div>)}</Card>
-        <Card title="Packs de diffusion">{packs.map(([n, c, p]) => <div key={n} className="mb-2 flex flex-wrap items-center justify-between gap-1 rounded-[9px] bg-[#0D1117] p-2.5"><div><div className="text-[.82rem] font-bold text-[#E6EDF3]">{n}</div><div className="text-[.71rem] text-[#8B949E]">{c}</div></div><span className="text-[.78rem] font-extrabold text-[#FFC93C]">{p}</span></div>)}</Card>
+        <Card title="Partager une annonce">
+          <select value={picked} onChange={(e) => setPicked(e.target.value)} className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none">
+            <option value="">— Choisir une annonce —</option>
+            {allListings.slice(0, 100).map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
+          </select>
+          {ad && (
+            <>
+              <textarea readOnly value={shareText} rows={4} className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] p-2.5 text-[.78rem] text-[#C9D1D9] outline-none" />
+              <div className="flex flex-wrap gap-2">
+                <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener noreferrer" className="rounded-[8px] bg-[#25D366] px-3 py-1.5 text-[.78rem] font-bold text-white">💬 WhatsApp</a>
+                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${siteUrl}/annonce/${ad.id}/${ad.slug || ""}`)}`} target="_blank" rel="noopener noreferrer" className="rounded-[8px] bg-[#1877F2] px-3 py-1.5 text-[.78rem] font-bold text-white">📘 Facebook</a>
+                <button onClick={() => navigator.clipboard?.writeText(shareText)} className="rounded-[8px] border border-[#30363D] px-3 py-1.5 text-[.78rem] font-bold text-[#A5B4FC]">📋 Copier</button>
+              </div>
+            </>
+          )}
+        </Card>
+        <Card title="Packs de diffusion (option payante)">
+          <div className="mb-2 rounded-[9px] border border-[#6366F1]/30 bg-[#6366F1]/10 p-2.5 text-[.76rem] text-[#A5B4FC]">ℹ️ La publication <b>automatique</b> sur pages Facebook/groupes WhatsApp est en cours de mise en place. Le partage manuel ci-contre fonctionne dès maintenant.</div>
+          {packs.map(([n, c, p]) => <div key={n} className="mb-2 flex flex-wrap items-center justify-between gap-1 rounded-[9px] bg-[#0D1117] p-2.5"><div><div className="text-[.82rem] font-bold text-[#E6EDF3]">{n}</div><div className="text-[.71rem] text-[#8B949E]">{c}</div></div><span className="text-[.78rem] font-extrabold text-[#FFC93C]">{p}</span></div>)}
+        </Card>
       </div>
     </>
   );
@@ -1120,27 +1170,63 @@ function Rapports({ T, allListings, profiles, purchases }: { T: (m: string) => v
   );
 }
 
+const TARIF_KEYS = [
+  ["pack_basic", "Pack Basic (mensuel)", "25000"], ["pack_pro", "Pack Pro (mensuel)", "75000"],
+  ["pack_premium", "Pack Premium (mensuel)", "150000"], ["pack_enterprise", "Pack Enterprise (mensuel)", "300000"],
+  ["boost_premium", "Boost Premium", "3500"], ["boost_alaune", "Boost À la Une", "9000"],
+  ["commission_amb", "Commission ambassadeurs (%)", "10"],
+];
+const TOGGLE_KEYS = ["Mode maintenance", "Inscriptions ouvertes", "Programme ambassadeurs", "Assistant IA", "Diffusion Facebook auto", "Paiements actifs"];
+
 function Settings({ T }: { T: (m: string) => void }) {
-  const tarifs = [["Pack Basic (mensuel)", "25000"], ["Pack Pro (mensuel)", "75000"], ["Pack Premium (mensuel)", "150000"], ["Pack Enterprise (mensuel)", "300000"], ["Boost Premium", "3500"], ["Boost À la Une", "9000"], ["Commission ambassadeurs (%)", "10"]];
+  const [tarifs, setTarifs] = useState<Record<string, string>>(() => Object.fromEntries(TARIF_KEYS.map(([k, , v]) => [k, v])));
   const [toggles, setToggles] = useState<Record<string, boolean>>({ "Mode maintenance": false, "Inscriptions ouvertes": true, "Programme ambassadeurs": true, "Assistant IA": true, "Diffusion Facebook auto": true, "Paiements actifs": true });
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    adminApi("getSettings").then((d) => {
+      const s = d.settings || {};
+      if (s.tarifs) setTarifs((t) => ({ ...t, ...s.tarifs }));
+      if (s.toggles) setToggles((t) => ({ ...t, ...s.toggles }));
+    }).catch(() => { /* table pas encore créée */ }).finally(() => setLoaded(true));
+  }, []);
+
+  async function save() {
+    setBusy(true);
+    try { await adminApi("saveSettings", { settings: { tarifs, toggles } }); T("✅ Paramètres enregistrés"); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+    finally { setBusy(false); }
+  }
+
+  async function toggleOne(n: string) {
+    const next = { ...toggles, [n]: !toggles[n] };
+    setToggles(next);
+    try { await adminApi("saveSettings", { settings: { tarifs, toggles: next } }); T("✅ Enregistré"); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+  }
+
   return (
     <>
-      <PageHead title="⚙️ Paramètres système" />
+      <PageHead title="⚙️ Paramètres système" sub={loaded ? "Modifications enregistrées en base" : "Chargement…"} />
       <div className="grid gap-3 lg:grid-cols-2">
         <Card title="Tarifs des offres (FCFA)">
           <div className="space-y-2.5">
-            {tarifs.map(([l, v]) => <div key={l}><label className="mb-1 block text-[.75rem] font-bold text-[#8B949E]">{l}</label><input defaultValue={v} className="w-full rounded-[9px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.85rem] font-bold text-[#FFC93C] outline-none focus:border-[#6366F1]" /></div>)}
-            <button className={`${btnP} w-full`} onClick={() => T("✅ Tarifs sauvegardés")}>Sauvegarder les tarifs</button>
+            {TARIF_KEYS.map(([k, l]) => <div key={k}><label className="mb-1 block text-[.75rem] font-bold text-[#8B949E]">{l}</label><input value={tarifs[k] ?? ""} onChange={(e) => setTarifs((t) => ({ ...t, [k]: e.target.value }))} className="w-full rounded-[9px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.85rem] font-bold text-[#FFC93C] outline-none focus:border-[#6366F1]" /></div>)}
+            <button disabled={busy} className={`${btnP} w-full disabled:opacity-60`} onClick={save}>{busy ? "⏳…" : "💾 Sauvegarder les tarifs"}</button>
           </div>
         </Card>
         <Card title="Toggles système">
           <div className="space-y-2.5">
-            {Object.entries(toggles).map(([n, on]) => (
-              <div key={n} className="flex items-center justify-between rounded-[9px] bg-[#0D1117] p-2.5">
-                <span className="text-[.83rem] font-semibold text-[#C9D1D9]">{n}</span>
-                <button onClick={() => { setToggles((t) => ({ ...t, [n]: !t[n] })); T("Paramètre modifié"); }} className={`relative h-[22px] w-10 rounded-full transition ${on ? "bg-emerald-500" : "bg-[#30363D]"}`}><span className={`absolute top-[3px] h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[21px]" : "left-[3px]"}`} /></button>
-              </div>
-            ))}
+            {TOGGLE_KEYS.map((n) => {
+              const on = !!toggles[n];
+              return (
+                <div key={n} className="flex items-center justify-between rounded-[9px] bg-[#0D1117] p-2.5">
+                  <span className="text-[.83rem] font-semibold text-[#C9D1D9]">{n}</span>
+                  <button onClick={() => toggleOne(n)} className={`relative h-[22px] w-10 rounded-full transition ${on ? "bg-emerald-500" : "bg-[#30363D]"}`}><span className={`absolute top-[3px] h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[21px]" : "left-[3px]"}`} /></button>
+                </div>
+              );
+            })}
           </div>
         </Card>
       </div>
