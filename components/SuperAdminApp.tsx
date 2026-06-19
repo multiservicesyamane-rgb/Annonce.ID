@@ -200,6 +200,16 @@ export default function SuperAdminApp() {
     loadAllData();
     return true;
   }
+  async function addRow(table: string, p: Record<string, any>, okMsg: string) {
+    const sb = createClient();
+    const { error } = await sb.from(table).insert(p);
+    if (error) { T(`⚠ ${error.message.includes("row-level") ? "Accès refusé (RLS) — relance SETUP_SUPABASE.sql / MIGRATION_B2B_RLS.sql" : error.message}`); return false; }
+    T(okMsg);
+    loadAllData();
+    return true;
+  }
+  const addCampaign = (p: Record<string, any>) => addRow("campaigns", p, "✅ Campagne créée");
+  const addEmployee = (p: Record<string, any>) => addRow("employees", p, "✅ Employé ajouté");
 
   useEffect(() => { loadAllData(); }, [authed]);
 
@@ -290,8 +300,8 @@ export default function SuperAdminApp() {
             {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} />}
             {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} />}
             {page === "marketing" && <Marketing T={T} />}
-            {page === "campagnes" && <Campagnes campaigns={campaigns} />}
-            {page === "employes" && <Employes employees={employees} />}
+            {page === "campagnes" && <Campagnes campaigns={campaigns} addCampaign={addCampaign} T={T} />}
+            {page === "employes" && <Employes employees={employees} addEmployee={addEmployee} T={T} />}
             {page === "ambassadeurs" && <Ambassadeurs T={T} ambassadors={ambassadors} />}
             {page === "offres" && <Offres T={T} />}
             {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
@@ -489,11 +499,33 @@ function Marketing({ T }: { T: (m: string) => void }) {
   );
 }
 
-function Campagnes({ campaigns }: { campaigns: any[] }) {
+function Campagnes({ campaigns, addCampaign, T }: { campaigns: any[]; addCampaign: (p: Record<string, any>) => Promise<boolean>; T: (m: string) => void }) {
   const sum = (k: string) => campaigns.reduce((a, c) => a + (Number(c[k]) || 0), 0);
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState<Record<string, string>>({ channel: "email" });
+  const inp = "rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]";
+  async function create() {
+    if (!f.name) { T("⚠ Nom requis"); return; }
+    const ok = await addCampaign({ name: f.name, sector: f.sector || null, channel: f.channel || "email", status: "active", sent: 0, opened: 0, replied: 0 });
+    if (ok) { setShow(false); setF({ channel: "email" }); }
+  }
   return (
     <>
-      <PageHead title="📨 Campagnes" sub={`${campaigns.length} campagne(s)`} />
+      <PageHead title="📨 Campagnes" sub={`${campaigns.length} campagne(s)`}>
+        <button className={btnP} onClick={() => setShow((v) => !v)}>{show ? "✕ Fermer" : "+ Nouvelle campagne"}</button>
+      </PageHead>
+      {show && (
+        <div className="mb-3"><Card title="Créer une campagne">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input value={f.name || ""} onChange={(e) => setF((v) => ({ ...v, name: e.target.value }))} placeholder="Nom de la campagne *" className={inp} />
+            <input value={f.sector || ""} onChange={(e) => setF((v) => ({ ...v, sector: e.target.value }))} placeholder="Secteur (ex: automobile)" className={inp} />
+            <select value={f.channel} onChange={(e) => setF((v) => ({ ...v, channel: e.target.value }))} className={inp}>
+              <option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="sms">SMS</option>
+            </select>
+          </div>
+          <button className={`${btnP} mt-3`} onClick={create}>Créer la campagne</button>
+        </Card></div>
+      )}
       <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
         <Kpi grad="bg-g1" icon="📤" label="Envois totaux" value={sum("sent")} />
         <Kpi grad="bg-g3" icon="👁️" label="Ouvertures" value={sum("opened")} />
@@ -515,12 +547,34 @@ function Campagnes({ campaigns }: { campaigns: any[] }) {
   );
 }
 
-function Employes({ employees }: { employees: any[] }) {
+function Employes({ employees, addEmployee, T }: { employees: any[]; addEmployee: (p: Record<string, any>) => Promise<boolean>; T: (m: string) => void }) {
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState<Record<string, string>>({});
+  const inp = "rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]";
+  async function create() {
+    if (!f.name) { T("⚠ Nom requis"); return; }
+    const ok = await addEmployee({ name: f.name, role: f.role || "Commercial", phone: f.phone || null, monthly_target: Number(f.target) || 3 });
+    if (ok) { setShow(false); setF({}); }
+  }
   return (
     <>
-      <PageHead title="👨‍💼 Tableau de bord Employés" sub={`${employees.length} employé(s)`} />
+      <PageHead title="👨‍💼 Tableau de bord Employés" sub={`${employees.length} employé(s) · pour un compte connecté, utilise Utilisateurs`}>
+        <button className={btnP} onClick={() => setShow((v) => !v)}>{show ? "✕ Fermer" : "+ Ajouter un employé"}</button>
+      </PageHead>
+      {show && (
+        <div className="mb-3"><Card title="Ajouter un employé (fiche)">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input value={f.name || ""} onChange={(e) => setF((v) => ({ ...v, name: e.target.value }))} placeholder="Nom complet *" className={inp} />
+            <input value={f.role || ""} onChange={(e) => setF((v) => ({ ...v, role: e.target.value }))} placeholder="Poste (ex: Commercial)" className={inp} />
+            <input value={f.phone || ""} onChange={(e) => setF((v) => ({ ...v, phone: e.target.value }))} placeholder="Téléphone" className={inp} />
+            <input value={f.target || ""} onChange={(e) => setF((v) => ({ ...v, target: e.target.value }))} placeholder="Objectif mensuel (clients)" className={inp} />
+          </div>
+          <p className="mt-2 text-[.74rem] text-[#8B949E]">💡 Pour donner un <b>accès connecté</b> (login), crée plutôt un compte rôle « employé » dans <b>Utilisateurs</b>.</p>
+          <button className={`${btnP} mt-3`} onClick={create}>Ajouter</button>
+        </Card></div>
+      )}
       {employees.length === 0 ? (
-        <Card><div className="py-8 text-center text-[.85rem] text-[#8B949E]">Aucun employé enregistré. (Ajout d'employés à venir.)</div></Card>
+        <Card><div className="py-8 text-center text-[.85rem] text-[#8B949E]">Aucun employé enregistré. Clique « + Ajouter un employé ».</div></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {employees.map((e, i) => {
