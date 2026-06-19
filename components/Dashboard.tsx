@@ -9,6 +9,8 @@ import AdCard from "./AdCard";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage";
 import { whatsappLink } from "@/lib/payment";
+import { BOOSTS } from "@/lib/constants";
+import { fetchPrices, effectivePrice } from "@/lib/prices";
 import { formatNumber } from "@/lib/utils";
 import ConfirmModal from "./ConfirmModal";
 import EmptyState from "./EmptyState";
@@ -69,6 +71,7 @@ export default function Dashboard() {
   const [boostCredits, setBoostCredits] = useState<any[]>([]);
   const [usingCredit, setUsingCredit] = useState<string | null>(null);
   const [creditTarget, setCreditTarget] = useState<Record<string, string>>({});
+  const [planPrices, setPlanPrices] = useState<Record<string, number>>({});
   const [loadingProfile, setLoadingProfile] = useState(true);
   const supabase = createClient();
   const { favs } = useFavorites();
@@ -292,7 +295,7 @@ export default function Dashboard() {
       setBoostCredits(d.credits || []);
     } catch { /* ignore */ }
   }
-  useEffect(() => { if (panel === "credits") loadBoostCredits(); }, [panel]);
+  useEffect(() => { if (panel === "credits") { loadBoostCredits(); fetchPrices().then(setPlanPrices); } }, [panel]);
 
   async function useBoostCredit(creditId: string) {
     const listingId = creditTarget[creditId];
@@ -1853,39 +1856,35 @@ export default function Dashboard() {
             })()}
 
             <div className="text-center mb-8">
-              <h2 className="font-display text-[1.3rem] sm:text-[1.6rem] font-extrabold dark:text-white mb-2">Acheter des Crédits</h2>
-              <p className="text-sm text-gray-500">Obtenez plus de visibilité en utilisant vos crédits pour booster vos annonces.</p>
+              <h2 className="font-display text-[1.3rem] sm:text-[1.6rem] font-extrabold dark:text-white mb-2">Booster une annonce</h2>
+              <p className="text-sm text-gray-500">Choisissez une formule de boost pour gagner en visibilité. Prix officiels du site.</p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                { name: "Pack Découverte", credits: 50, price: "5 000 FCFA", popular: false, color: "border-gray-200 dark:border-dark-border" },
-                { name: "Pack Pro", credits: 150, price: "12 000 FCFA", popular: true, color: "border-orange-500 shadow-lg scale-105" },
-                { name: "Pack VIP", credits: 500, price: "35 000 FCFA", popular: false, color: "border-gold" },
-              ].map((pack, idx) => (
-                <div key={idx} className={`relative rounded-2xl border-2 bg-white dark:bg-dark-800 p-6 flex flex-col ${pack.color}`}>
-                  {pack.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-3 py-1 text-[.65rem] font-bold uppercase tracking-widest rounded-full">Populaire</span>}
-                  <div className="text-center mb-6">
-                    <h3 className="font-bold text-gray-500 dark:text-gray-400 mb-2">{pack.name}</h3>
-                    <div className="text-4xl font-extrabold text-gray-900 dark:text-white mb-1">{pack.credits} <span className="text-lg">Crédits</span></div>
-                    <div className="text-xl font-bold text-green">{pack.price}</div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {BOOSTS.filter((b) => b.price > 0).map((b) => {
+                const price = effectivePrice(planPrices, `boost:${b.key}`, b.price);
+                return (
+                  <div key={b.key} className={`relative rounded-2xl border-2 bg-white dark:bg-dark-800 p-5 flex flex-col ${b.popular ? "border-orange-500 shadow-lg" : "border-gray-200 dark:border-dark-border"}`}>
+                    {b.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-3 py-1 text-[.6rem] font-bold uppercase tracking-widest rounded-full">Populaire</span>}
+                    <div className="text-center mb-4">
+                      <h3 className="font-bold text-gray-800 dark:text-white mb-1">{b.name}</h3>
+                      <div className="text-2xl font-extrabold text-green mb-0.5">{formatNumber(price)} <span className="text-sm">FCFA</span></div>
+                      <div className="text-xs text-gray-400">Durée : {b.duration}</div>
+                    </div>
+                    <ul className="space-y-1.5 mb-5 flex-1 text-[.78rem] text-gray-600 dark:text-gray-300">
+                      {b.features.map((f) => <li key={f} className="flex gap-1.5"><span className="text-gold">✓</span> {f}</li>)}
+                    </ul>
+                    <Link
+                      href={`/paiement?boost=${b.key}`}
+                      className={`w-full py-2.5 rounded-lg font-bold transition text-center block text-sm ${b.popular ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700"}`}
+                    >
+                      Choisir ce boost →
+                    </Link>
                   </div>
-                  <ul className="space-y-3 mb-8 flex-1 text-sm text-gray-600 dark:text-gray-300">
-                    <li className="flex gap-2">✓ Validité illimitée</li>
-                    <li className="flex gap-2">✓ Boosts applicables instantanément</li>
-                    <li className="flex gap-2">✓ Priorité support client</li>
-                  </ul>
-                  <a
-                    href={whatsappLink(`Bonjour 👋, je souhaite acheter le *${pack.name}* (${pack.credits} crédits - ${pack.price}). Je fais le dépôt et j'envoie le reçu.`)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`w-full py-3 rounded-lg font-bold transition text-center block ${pack.popular ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700"}`}
-                  >
-                    💬 Commander (dépôt + WhatsApp)
-                  </a>
-                </div>
-              ))}
+                );
+              })}
             </div>
+            <p className="mt-6 text-center text-xs text-gray-400">💡 Pour booster une annonce précise : « Gérer mes annonces » → ⭐ Booster.</p>
           </div>
         )}
 

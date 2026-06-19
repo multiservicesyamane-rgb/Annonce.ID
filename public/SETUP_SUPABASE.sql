@@ -66,6 +66,22 @@ create table if not exists public.app_settings (
 );
 alter table public.app_settings enable row level security;
 
+-- tables B2B (employés, campagnes) + colonnes utilisées par l'admin
+create table if not exists public.employees ( id uuid primary key default gen_random_uuid(), created_at timestamptz default now() );
+alter table public.employees add column if not exists name text;
+alter table public.employees add column if not exists role text;
+alter table public.employees add column if not exists phone text;
+alter table public.employees add column if not exists monthly_target integer default 3;
+
+create table if not exists public.campaigns ( id uuid primary key default gen_random_uuid(), created_at timestamptz default now() );
+alter table public.campaigns add column if not exists name text;
+alter table public.campaigns add column if not exists sector text;
+alter table public.campaigns add column if not exists channel text;
+alter table public.campaigns add column if not exists status text default 'active';
+alter table public.campaigns add column if not exists sent integer default 0;
+alter table public.campaigns add column if not exists opened integer default 0;
+alter table public.campaigns add column if not exists replied integer default 0;
+
 -- ───────────────────────── 2) CRÉDITS BOOST ─────────────────────────
 create table if not exists public.boost_credits (
   id uuid primary key default gen_random_uuid(),

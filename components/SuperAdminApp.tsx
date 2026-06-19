@@ -202,13 +202,21 @@ export default function SuperAdminApp() {
     loadAllData();
     return true;
   }
-  async function addRow(table: string, p: Record<string, any>, okMsg: string) {
+  async function addRow(table: string, payload: Record<string, any>, okMsg: string) {
     const sb = createClient();
-    const { error } = await sb.from(table).insert(p);
-    if (error) { T(`⚠ ${error.message.includes("row-level") ? "Accès refusé (RLS) — relance SETUP_SUPABASE.sql / MIGRATION_B2B_RLS.sql" : error.message}`); return false; }
-    T(okMsg);
-    loadAllData();
-    return true;
+    let p: Record<string, any> = { ...payload };
+    for (let i = 0; i < 10; i++) {
+      const { error } = await sb.from(table).insert(p);
+      if (!error) { T(okMsg); loadAllData(); return true; }
+      const m = error.message || "";
+      // Colonne absente → on la retire et on réessaie (schéma partiel)
+      const match = m.match(/'([^']+)' column/) || m.match(/column "([^"]+)"/) || m.match(/Could not find the '([^']+)'/);
+      if (match && match[1] in p) { delete p[match[1]]; continue; }
+      T(`⚠ ${m.includes("row-level") ? "Accès refusé (RLS) — relance SETUP_SUPABASE.sql" : m}`);
+      return false;
+    }
+    T("⚠ Impossible d'enregistrer (schéma incompatible)");
+    return false;
   }
   const addCampaign = (p: Record<string, any>) => addRow("campaigns", p, "✅ Campagne créée");
   const addEmployee = (p: Record<string, any>) => addRow("employees", p, "✅ Employé ajouté");
