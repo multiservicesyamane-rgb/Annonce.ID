@@ -284,22 +284,22 @@ export default function SuperAdminApp() {
           {dataLoading && page !== "overview" ? (
             <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6366F1] border-t-transparent" /></div>
           ) : (<>
-          {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} />}
-          {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} />}
-          {page === "marketing" && <Marketing T={T} />}
-          {page === "campagnes" && <Campagnes campaigns={campaigns} />}
-          {page === "employes" && <Employes employees={employees} />}
-          {page === "ambassadeurs" && <Ambassadeurs T={T} ambassadors={ambassadors} />}
-          {page === "offres" && <Offres T={T} />}
-          {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
-          {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
-          {page === "finance" && <Finance purchases={purchases} counts={counts} />}
-          {page === "ads" && <AdsAdmin allListings={allListings} T={T} reload={loadAllData} />}
-          {page === "ia" && <IA T={T} />}
-          {page === "points" && <Points />}
-          {page === "diffusion" && <Diffusion />}
-          {page === "rapports" && <Rapports T={T} allListings={allListings} profiles={profiles} purchases={purchases} />}
-          {page === "settings" && <Settings T={T} />}
+            {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} />}
+            {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} />}
+            {page === "marketing" && <Marketing T={T} />}
+            {page === "campagnes" && <Campagnes campaigns={campaigns} />}
+            {page === "employes" && <Employes employees={employees} />}
+            {page === "ambassadeurs" && <Ambassadeurs T={T} ambassadors={ambassadors} />}
+            {page === "offres" && <Offres T={T} />}
+            {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
+            {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
+            {page === "finance" && <Finance purchases={purchases} counts={counts} />}
+            {page === "ads" && <AdsAdmin allListings={allListings} T={T} reload={loadAllData} />}
+            {page === "ia" && <IA T={T} />}
+            {page === "points" && <Points />}
+            {page === "diffusion" && <Diffusion />}
+            {page === "rapports" && <Rapports T={T} allListings={allListings} profiles={profiles} purchases={purchases} />}
+            {page === "settings" && <Settings T={T} />}
           </>)}
         </div>
       </div>
@@ -638,89 +638,98 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
     finally { setBusy(false); }
   }
   async function setRole(userId: string, role: string) {
-    try { await adminApi("setRole", { userId, role }); T("✅ Rôle mis à jour"); refreshList(); reload(); }
-    catch (e: any) { T(`❌ ${e.message}`); }
+    try {
+      await adminApi("setRole", { userId, role });
+      T("✅ Rôle mis à jour");
+      await refreshList();
+      reload();
+    }
+    catch (e: any) {
+      T(`❌ Erreur rôle : ${e.message}`);
+      await refreshList(); // recharge pour annuler le changement visuel
+    }
   }
-  async function setVip(userId: string, value: boolean) {
-    try { await adminApi("setVip", { userId, value }); T(value ? "🎁 VIP gratuit activé" : "VIP retiré"); refreshList(); reload(); }
-    catch (e: any) { T(`❌ ${e.message}`); }
-  }
-  async function del(userId: string) {
-    if (!confirm("Supprimer définitivement ce compte ?")) return;
-    try { await adminApi("delete", { userId }); T("🗑️ Compte supprimé"); refreshList(); reload(); }
-    catch (e: any) { T(`❌ ${e.message}`); }
-  }
+}
+async function setVip(userId: string, value: boolean) {
+  try { await adminApi("setVip", { userId, value }); T(value ? "🎁 VIP gratuit activé" : "VIP retiré"); refreshList(); reload(); }
+  catch (e: any) { T(`❌ ${e.message}`); }
+}
+async function del(userId: string) {
+  if (!confirm("Supprimer définitivement ce compte ?")) return;
+  try { await adminApi("delete", { userId }); T("🗑️ Compte supprimé"); refreshList(); reload(); }
+  catch (e: any) { T(`❌ ${e.message}`); }
+}
 
-  const roleColor = (r: string) => r === "employee" ? "bg-blue-500/15 text-blue-300" : r === "ambassador" ? "bg-amber-500/15 text-amber-300" : r === "pro" || r === "business" ? "bg-violet-500/15 text-violet-300" : r === "admin" || r === "super_admin" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400";
+const roleColor = (r: string) => r === "employee" ? "bg-blue-500/15 text-blue-300" : r === "ambassador" ? "bg-amber-500/15 text-amber-300" : r === "pro" || r === "business" ? "bg-violet-500/15 text-violet-300" : r === "admin" || r === "super_admin" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400";
 
-  return (
-    <>
-      <PageHead title="👥 Utilisateurs & Équipe" sub={`${source.length} comptes${serverUsers ? "" : " · (liste limitée — ajoutez la clé service role)"}`}>
-        <button className={btnP} onClick={() => setShowCreate((v) => !v)}>{showCreate ? "✕ Fermer" : "+ Créer un compte"}</button>
-      </PageHead>
+return (
+  <>
+    <PageHead title="👥 Utilisateurs & Équipe" sub={`${source.length} comptes${serverUsers ? "" : " · (liste limitée — ajoutez la clé service role)"}`}>
+      <button className={btnP} onClick={() => setShowCreate((v) => !v)}>{showCreate ? "✕ Fermer" : "+ Créer un compte"}</button>
+    </PageHead>
 
-      {showCreate && (
-        <div className="mb-3"><Card title="Créer un compte (terrain : nom d'utilisateur suffit)">
-          <p className="mb-2 text-[.78rem] text-gray-400">💡 Sur le terrain : saisis juste un <b className="text-white">nom d'utilisateur</b> → un mot de passe est généré. Le vendeur se connecte, puis met son vrai email et ses infos.</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <input value={form.username || ""} onChange={(e) => setForm((v) => ({ ...v, username: e.target.value }))} placeholder="Nom d'utilisateur (ex: boutiquefatou)" className="rounded-[9px] border border-[#6366F1]/50 bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
-            <input value={form.full_name || ""} onChange={(e) => setForm((v) => ({ ...v, full_name: e.target.value }))} placeholder="Nom complet / boutique (optionnel)" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
-            <input value={form.email || ""} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} placeholder="Email (optionnel)" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
-            <input value={form.password || ""} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Mot de passe (auto si vide)" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
-            <select value={form.role} onChange={(e) => setForm((v) => ({ ...v, role: e.target.value }))} className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none">
-              <option value="user">👤 Utilisateur / Vendeur</option>
-              <option value="pro">🚀 Vendeur Pro (boutique)</option>
-              <option value="employee">👨‍💼 Employé (commercial)</option>
-              <option value="ambassador">🤝 Ambassadeur</option>
-            </select>
-          </div>
-          <button disabled={busy} className={`${btnP} mt-3 disabled:opacity-60`} onClick={createAccount}>{busy ? "⏳ Création…" : "Créer le compte"}</button>
+    {showCreate && (
+      <div className="mb-3"><Card title="Créer un compte (terrain : nom d'utilisateur suffit)">
+        <p className="mb-2 text-[.78rem] text-gray-400">💡 Sur le terrain : saisis juste un <b className="text-white">nom d'utilisateur</b> → un mot de passe est généré. Le vendeur se connecte, puis met son vrai email et ses infos.</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <input value={form.username || ""} onChange={(e) => setForm((v) => ({ ...v, username: e.target.value }))} placeholder="Nom d'utilisateur (ex: boutiquefatou)" className="rounded-[9px] border border-[#6366F1]/50 bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+          <input value={form.full_name || ""} onChange={(e) => setForm((v) => ({ ...v, full_name: e.target.value }))} placeholder="Nom complet / boutique (optionnel)" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+          <input value={form.email || ""} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} placeholder="Email (optionnel)" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+          <input value={form.password || ""} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Mot de passe (auto si vide)" className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+          <select value={form.role} onChange={(e) => setForm((v) => ({ ...v, role: e.target.value }))} className="rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none">
+            <option value="user">👤 Utilisateur / Vendeur</option>
+            <option value="pro">🚀 Vendeur Pro (boutique)</option>
+            <option value="employee">👨‍💼 Employé (commercial)</option>
+            <option value="ambassador">🤝 Ambassadeur</option>
+          </select>
+        </div>
+        <button disabled={busy} className={`${btnP} mt-3 disabled:opacity-60`} onClick={createAccount}>{busy ? "⏳ Création…" : "Créer le compte"}</button>
 
-          {created && (
-            <div className="mt-3 rounded-[10px] border border-emerald-500/40 bg-emerald-500/10 p-3">
-              <p className="mb-1 text-[.82rem] font-bold text-emerald-300">✅ Compte créé — note ces identifiants (à donner au vendeur) :</p>
-              <div className="font-mono text-[.85rem] text-white">
-                <div>👤 Identifiant : <b className="select-all">{created.login}</b></div>
-                <div>🔑 Mot de passe : <b className="select-all">{created.password}</b></div>
-              </div>
-              <p className="mt-1 text-[.72rem] text-gray-400">Le vendeur se connecte avec ce nom d'utilisateur + mot de passe, puis modifie son compte (vrai email, infos).</p>
-              <button className="mt-2 rounded-[8px] bg-emerald-500/20 px-3 py-1 text-[.78rem] text-emerald-200" onClick={() => { navigator.clipboard?.writeText(`Identifiant: ${created.login}\nMot de passe: ${created.password}`); T("📋 Copié"); }}>📋 Copier</button>
+        {created && (
+          <div className="mt-3 rounded-[10px] border border-emerald-500/40 bg-emerald-500/10 p-3">
+            <p className="mb-1 text-[.82rem] font-bold text-emerald-300">✅ Compte créé — note ces identifiants (à donner au vendeur) :</p>
+            <div className="font-mono text-[.85rem] text-white">
+              <div>👤 Identifiant : <b className="select-all">{created.login}</b></div>
+              <div>🔑 Mot de passe : <b className="select-all">{created.password}</b></div>
             </div>
-          )}
-        </Card></div>
-      )}
-
-      <div className="mb-3">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Rechercher par nom, email ou téléphone…" className="w-full max-w-md rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
-      </div>
-      <Card>
-        {filtered.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucun utilisateur. Créez un compte ou ajoutez la clé service role pour tout voir.</div> : (
-          <div className="space-y-2">
-            {filtered.map((u: any) => (
-              <div key={u.id} className="flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-3">
-                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#21262D]">
-                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[.8rem] font-bold text-white">{(u.full_name || u.email || "?")[0]?.toUpperCase()}</div>}
-                </div>
-                <div className="min-w-[140px] flex-1">
-                  <div className="text-[.84rem] font-bold text-[#E6EDF3]">{u.full_name || "(sans nom)"}</div>
-                  <div className="text-[.72rem] text-[#8B949E]">{u.email || u.phone || "—"}</div>
-                </div>
-                <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${roleColor(u.role || "user")}`}>{u.role || "user"}</span>
-                {u.free_premium && <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[.68rem] font-bold text-amber-300">🎁 VIP</span>}
-                <div className="flex flex-wrap gap-1.5 shrink-0">
-                  <select value={u.role || "user"} onChange={(e) => setRole(u.id, e.target.value)} className="rounded-[7px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.7rem] font-bold text-[#A5B4FC] outline-none">
-                    {["user", "pro", "employee", "ambassador", "admin"].map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                  <button onClick={() => setVip(u.id, !u.free_premium)} className={`rounded-[7px] px-2.5 py-1 text-[.7rem] font-bold ${u.free_premium ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-[#FFC93C] hover:bg-amber-500/15"}`}>{u.free_premium ? "🎁 Retirer" : "🎁 VIP"}</button>
-                  {serverUsers && <button onClick={() => del(u.id)} className="rounded-[7px] bg-red-500/10 px-2.5 py-1 text-[.7rem] font-bold text-red-300 hover:bg-red-500/20">🗑️</button>}
-                </div>
-              </div>
-            ))}
+            <p className="mt-1 text-[.72rem] text-gray-400">Le vendeur se connecte avec ce nom d'utilisateur + mot de passe, puis modifie son compte (vrai email, infos).</p>
+            <button className="mt-2 rounded-[8px] bg-emerald-500/20 px-3 py-1 text-[.78rem] text-emerald-200" onClick={() => { navigator.clipboard?.writeText(`Identifiant: ${created.login}\nMot de passe: ${created.password}`); T("📋 Copié"); }}>📋 Copier</button>
           </div>
         )}
-      </Card>
-    </>
-  );
+      </Card></div>
+    )}
+
+    <div className="mb-3">
+      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Rechercher par nom, email ou téléphone…" className="w-full max-w-md rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.83rem] text-white outline-none focus:border-[#6366F1]" />
+    </div>
+    <Card>
+      {filtered.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucun utilisateur. Créez un compte ou ajoutez la clé service role pour tout voir.</div> : (
+        <div className="space-y-2">
+          {filtered.map((u: any) => (
+            <div key={u.id} className="flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-3">
+              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#21262D]">
+                {u.avatar_url ? <img src={u.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[.8rem] font-bold text-white">{(u.full_name || u.email || "?")[0]?.toUpperCase()}</div>}
+              </div>
+              <div className="min-w-[140px] flex-1">
+                <div className="text-[.84rem] font-bold text-[#E6EDF3]">{u.full_name || "(sans nom)"}</div>
+                <div className="text-[.72rem] text-[#8B949E]">{u.email || u.phone || "—"}</div>
+              </div>
+              <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${roleColor(u.role || "user")}`}>{u.role || "user"}</span>
+              {u.free_premium && <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[.68rem] font-bold text-amber-300">🎁 VIP</span>}
+              <div className="flex flex-wrap gap-1.5 shrink-0">
+                <select value={u.role || "user"} onChange={(e) => setRole(u.id, e.target.value)} className="rounded-[7px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.7rem] font-bold text-[#A5B4FC] outline-none">
+                  {["user", "pro", "employee", "ambassador", "admin"].map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <button onClick={() => setVip(u.id, !u.free_premium)} className={`rounded-[7px] px-2.5 py-1 text-[.7rem] font-bold ${u.free_premium ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-[#FFC93C] hover:bg-amber-500/15"}`}>{u.free_premium ? "🎁 Retirer" : "🎁 VIP"}</button>
+                {serverUsers && <button onClick={() => del(u.id)} className="rounded-[7px] bg-red-500/10 px-2.5 py-1 text-[.7rem] font-bold text-red-300 hover:bg-red-500/20">🗑️</button>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  </>
+);
 }
 
 function Finance({ purchases, counts }: { purchases: any[]; counts: any }) {
