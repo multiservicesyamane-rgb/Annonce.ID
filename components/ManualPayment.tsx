@@ -8,6 +8,10 @@ export default function ManualPayment({
   itemName,
   price,
   duration,
+  listingId,
+  boostKey,
+  subKey,
+  category,
 }: {
   itemName: string;
   price: number;
@@ -18,6 +22,33 @@ export default function ManualPayment({
   category?: string;
 }) {
   const [copied, setCopied] = useState("");
+  const [processing, setProcessing] = useState(false);
+
+  async function payTech() {
+    setProcessing(true);
+    try {
+      const res = await fetch("/api/paytech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: price,
+          itemName,
+          refCommand: `WMK-${Date.now()}`,
+          listingId: listingId || "",
+          boostKey: boostKey || "",
+          subKey: subKey || "",
+          category: category || "",
+        }),
+      });
+      if (res.status === 401) { alert("Connecte-toi d'abord pour payer en ligne."); window.location.href = "/connexion"; return; }
+      const data = await res.json();
+      if (data.redirect_url) window.location.href = data.redirect_url;
+      else { alert(data.error || "Erreur d'initialisation du paiement."); setProcessing(false); }
+    } catch {
+      alert("Erreur de connexion au paiement.");
+      setProcessing(false);
+    }
+  }
 
   function copy(num: string, label: string) {
     navigator.clipboard?.writeText(num.replace(/\s/g, ""));
@@ -77,7 +108,22 @@ export default function ManualPayment({
           💬 Envoyer mon reçu sur WhatsApp
         </a>
 
-        <p className="mt-5 text-center text-[.75rem] text-gray-400">🔒 Paiement vérifié manuellement par notre équipe · activation rapide</p>
+        {/* Alternative : paiement automatique en ligne (PayTech) */}
+        <div className="my-4 flex items-center gap-3 text-[.75rem] text-gray-400">
+          <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+          ou payer en ligne (automatique)
+          <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+        </div>
+
+        <button
+          onClick={payTech}
+          disabled={processing}
+          className="btn btn-block h-[52px] text-[1rem] font-bold text-white bg-gradient-to-r from-green-500 to-neon-gold shadow-lg disabled:opacity-70 transition-all hover:scale-[1.02]"
+        >
+          {processing ? "⏳ Ouverture du paiement…" : `💳 Payer ${formatNumber(price)} FCFA en ligne (PayTech)`}
+        </button>
+
+        <p className="mt-5 text-center text-[.75rem] text-gray-400">🔒 Wave · Orange Money · Carte · activation automatique ou par reçu</p>
       </div>
     </div>
   );

@@ -23,6 +23,22 @@ function dataURItoBlob(dataURI: string): Blob {
 export async function uploadImage(src: string, folder = "listings"): Promise<string> {
   if (!src || !src.startsWith("data:")) return src; // déjà une URL distante
 
+  // 1) Voie fiable : upload serveur (clé service_role, crée le bucket au besoin,
+  //    contourne les permissions Storage du navigateur).
+  try {
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataUri: src, folder }),
+    });
+    const data = await res.json();
+    if (res.ok && data?.url) return data.url;
+    console.warn("[storage] Upload serveur refusé:", data?.error);
+  } catch (e) {
+    console.warn("[storage] Upload serveur indisponible:", e);
+  }
+
+  // 2) Repli : upload direct côté navigateur (si policies Storage configurées).
   try {
     const supabase = createClient();
     const blob = dataURItoBlob(src);
@@ -39,7 +55,7 @@ export async function uploadImage(src: string, folder = "listings"): Promise<str
     return data.publicUrl;
   } catch (e) {
     console.warn("[storage] Upload échoué, repli sur base64:", e);
-    return src; // repli : on garde la base64 pour ne pas casser la publication
+    return src; // repli ultime : on garde la base64 pour ne pas casser la publication
   }
 }
 
