@@ -24,6 +24,7 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
   { id: "ads", icon: "📋", label: "Gérer mes annonces" },
   { id: "campaigns", icon: "🚀", label: "Marketing & Pub" },
   { id: "publish", icon: "➕", label: "Publier une annonce", isLink: true, href: "/publier" },
+  { id: "credits", icon: "🎟️", label: "Mes Crédits & Boosts" },
   { id: "purchases", icon: "🛒", label: "Historique d'achats" },
   { id: "showroom", icon: "🏪", label: "Ma Boutique" },
   { id: "favorites", icon: "❤", label: "Mes Favoris", section: "Interactions" },
