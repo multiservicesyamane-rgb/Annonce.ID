@@ -8,15 +8,14 @@
 // false = on n'affiche que le paiement manuel (recommandé pour l'instant).
 export const ONLINE_PAYMENT_ENABLED = false;
 
-// Numéro Wave où le client dépose (affiché tel quel)
-export const WAVE_NUMBER = "96 18 69 03";
+// Numéro Wave où le client dépose
+export const WAVE_NUMBER = "77 682 78 51";
 
-// Numéro Orange Money où le client dépose (à compléter)
-export const ORANGE_NUMBER = "96 18 69 03";
+// Numéro Orange Money où le client dépose
+export const ORANGE_NUMBER = "77 682 78 51";
 
 // Numéro WhatsApp (format international SANS +, ni espaces) pour recevoir le reçu.
-// Ex Sénégal : 2217XXXXXXXX. À COMPLÉTER avec ton vrai WhatsApp.
-export const WHATSAPP_NUMBER = "221961869003";
+export const WHATSAPP_NUMBER = "221776827851";
 
 /** Construit un lien wa.me avec un message pré-rempli. */
 export function whatsappLink(message: string): string {

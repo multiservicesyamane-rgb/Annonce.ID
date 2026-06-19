@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { sendInvoiceEmail } from "@/lib/email";
 
 // Forcer le rendu dynamique : cette route ne doit pas être évaluée au build
 export const dynamic = "force-dynamic";
@@ -95,6 +96,20 @@ export async function POST(req: Request) {
           const currentCredits = profile?.credits || 0;
           const newCredits = currentCredits + parseInt(item_price || "0", 10);
           await supabase.from("profiles").update({ credits: newCredits }).eq("id", userId);
+        }
+
+        // Facture par email
+        if (userId) {
+          try {
+            const { data: u } = await supabase.auth.admin.getUserById(userId);
+            const email = u?.user?.email || "";
+            const name = (u?.user?.user_metadata as any)?.full_name || "";
+            await sendInvoiceEmail({
+              to: email, customerName: name,
+              itemName: params.get("item_name") || (listingId ? "Boost annonce" : subKey ? "Abonnement" : "Crédits"),
+              amount: parseInt(item_price || "0", 10), method: "PayTech", ref: ref_command || undefined,
+            });
+          } catch (e) { console.error("Invoice email error:", e); }
         }
       }
     }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sendInvoiceEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +117,15 @@ export async function POST(req: Request) {
       const amt = Number(amount) || 0;
       const ref = `CASH-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
+      // Email + nom du client (pour la facture)
+      let custEmail = ""; let custName = "";
+      try {
+        const { data: u } = await sb.auth.admin.getUserById(userId);
+        custEmail = u?.user?.email || "";
+        custName = (u?.user?.user_metadata as any)?.full_name || "";
+      } catch { /* ignore */ }
+      if (!custName) { try { const { data: pr } = await sb.from("profiles").select("full_name").eq("id", userId).single(); custName = pr?.full_name || ""; } catch { /* ignore */ } }
+
       // 1) Enregistrer le paiement espèces (adaptatif)
       await adaptiveWrite(
         (p) => sb.from("purchases").insert(p),
@@ -153,6 +163,7 @@ export async function POST(req: Request) {
             }
             throw credErr;
           }
+          await sendInvoiceEmail({ to: custEmail, customerName: custName, itemName: `${qty} crédit(s) — ${planName || planKey || "Boost"}`, amount: amt, durationDays: days, method: "Espèces", ref });
           return NextResponse.json({ ok: true, ref, credits: qty });
         }
         await adaptiveWrite(
@@ -182,6 +193,7 @@ export async function POST(req: Request) {
         );
       }
 
+      await sendInvoiceEmail({ to: custEmail, customerName: custName, itemName: planName || planKey || (kind === "sub" ? "Abonnement" : "Boost"), amount: amt, durationDays: days, method: "Espèces", ref, expires });
       return NextResponse.json({ ok: true, ref, expires });
     }
 
