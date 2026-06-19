@@ -497,13 +497,13 @@ export default function Dashboard() {
       </aside>
 
       {/* Content */}
-      <div className="flex-1 min-w-0 bg-gray-50 dark:bg-dark-900 px-4 py-6 lg:p-8 overflow-y-auto w-full">
+      <div className="flex-1 min-w-0 bg-gray-50 dark:bg-dark-900 px-3 py-4 sm:px-4 sm:py-6 lg:p-8 overflow-y-auto w-full">
         {panel === "overview" && (
           <div className="animate-fadeUp max-w-[1000px] mx-auto">
             {/* Hero profil — Compact (Transport Style) */}
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-[16px] border border-gray-100 dark:border-dark-border bg-white dark:bg-[#161B22] p-5 shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="h-14 w-14 shrink-0 rounded-full border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-[#0D1117] overflow-hidden shadow-sm">
+            <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[16px] border border-gray-100 dark:border-dark-border bg-white dark:bg-[#161B22] p-4 sm:p-5 shadow-sm">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-full border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-[#0D1117] overflow-hidden shadow-sm">
                   {loadingProfile ? <div className="h-full w-full animate-pulse bg-gray-200 dark:bg-dark-800"></div> : avatarUrl
                     ? <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
                     : <div className="flex h-full w-full items-center justify-center text-[1.2rem] font-extrabold text-gray-400">{(displayName || 'U').slice(0, 2).toUpperCase()}</div>}
@@ -522,7 +522,7 @@ export default function Dashboard() {
               <Link href="/publier" className="btn btn-green h-10 px-5 w-full sm:w-auto text-[.85rem] shrink-0 font-bold">+ Publier</Link>
             </div>
 
-            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mb-4 sm:mb-6 grid grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-4">
               <KpiGrad gradient="bg-g1" icon="📦" label="Annonces actives" value={ads.filter(a => a.status === 'active' || !a.status).length} />
               <KpiGrad gradient="bg-g3" icon="👁️" label="Vues totales" value={ads.reduce((acc, ad) => acc + (ad.views || 0), 0)} />
               <KpiGrad gradient="bg-g5" icon="❤️" label="Favoris reçus" value={receivedFavsCount} />
@@ -2151,18 +2151,18 @@ function KpiGrad({ gradient, icon, label, value }: { gradient: string; icon: str
     return () => cancelAnimationFrame(raf);
   }, [value]);
   return (
-    <div className={`relative flex flex-col justify-between overflow-hidden rounded-[14px] p-4 shadow-sm text-white ${gradient}`}>
+    <div className={`relative flex flex-col justify-between overflow-hidden rounded-[14px] p-3 sm:p-4 shadow-sm text-white ${gradient}`}>
       <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10"></div>
       <div className="mb-2 flex items-center justify-between relative z-10">
-        <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-white/20 text-[.9rem]">
+        <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-[10px] bg-white/20 text-[.85rem] sm:text-[.9rem]">
           {icon}
         </div>
       </div>
       <div className="relative z-10">
-        <div className="font-display text-[1.4rem] font-extrabold leading-none">
+        <div className="font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold leading-none">
           {n.toLocaleString('fr-FR')}
         </div>
-        <div className="mt-1.5 text-[.7rem] font-medium opacity-90">
+        <div className="mt-1 sm:mt-1.5 text-[.66rem] sm:text-[.7rem] font-medium opacity-90">
           {label}
         </div>
       </div>
