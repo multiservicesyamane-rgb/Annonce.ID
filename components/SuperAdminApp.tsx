@@ -754,8 +754,10 @@ function Encaissement({ profiles, allListings, T, reload }: { profiles: any[]; a
   const [listingId, setListingId] = useState("");
   const [amount, setAmount] = useState<string>("");
   const [days, setDays] = useState<string>("");
+  const [asCredit, setAsCredit] = useState(false);
+  const [qty, setQty] = useState<string>("1");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<{ name: string; user: string; ref: string; expires: string } | null>(null);
+  const [done, setDone] = useState<{ name: string; user: string; ref: string; expires?: string; credits?: number } | null>(null);
 
   const selectedUser = profiles.find((p: any) => p.id === userId);
   const userLabel = (p: any) => p.full_name || p.email || p.phone || p.id?.slice(0, 8);
@@ -774,23 +776,30 @@ function Encaissement({ profiles, allListings, T, reload }: { profiles: any[]; a
     if (p) { setAmount(String(p.price)); setDays(String(parseDays(p.duration))); }
   }
 
+  // Pour un boost : si pas d'annonce sélectionnée ou si l'admin coche "crédit",
+  // on vend en crédit (réutilisable plus tard par le client).
+  const sellAsCredit = kind === "boost" && (asCredit || !listingId);
+  const nQty = Math.max(1, Math.min(50, Number(qty) || 1));
+
   async function activate() {
     if (!userId) { T("⚠ Choisis un client"); return; }
     if (!selectedPlan) { T("⚠ Choisis un plan"); return; }
-    if (kind === "boost" && !listingId) { T("⚠ Choisis l'annonce à booster"); return; }
     setBusy(true);
     try {
+      const baseAmount = Number(amount) || selectedPlan.price;
       const r = await adminApi("activatePlan", {
         userId, kind, planKey,
         planName: selectedPlan.name,
-        amount: Number(amount) || selectedPlan.price,
+        amount: sellAsCredit ? baseAmount * nQty : baseAmount,
         durationDays: Number(days) || parseDays(selectedPlan.duration),
-        listingId: kind === "boost" ? listingId : undefined,
+        listingId: kind === "boost" && !sellAsCredit ? listingId : undefined,
+        asCredit: sellAsCredit,
+        quantity: sellAsCredit ? nQty : 1,
       });
-      setDone({ name: selectedPlan.name, user: userLabel(selectedUser), ref: r.ref, expires: r.expires });
-      T("✅ Plan activé (espèces encaissées)");
+      setDone({ name: selectedPlan.name, user: userLabel(selectedUser), ref: r.ref, expires: r.expires, credits: r.credits });
+      T(sellAsCredit ? `✅ ${nQty} crédit(s) vendu(s)` : "✅ Plan activé (espèces encaissées)");
       reload();
-      setPlanKey(""); setListingId(""); setAmount(""); setDays("");
+      setPlanKey(""); setListingId(""); setAmount(""); setDays(""); setAsCredit(false); setQty("1");
     } catch (e: any) { T(`❌ ${e.message}`); }
     finally { setBusy(false); }
   }
@@ -803,8 +812,17 @@ function Encaissement({ profiles, allListings, T, reload }: { profiles: any[]; a
 
       {done && (
         <div className="mb-3 rounded-[12px] border border-emerald-500/40 bg-emerald-500/10 p-3">
-          <p className="text-[.85rem] font-bold text-emerald-300">✅ {done.name} activé pour {done.user}</p>
-          <p className="text-[.74rem] text-gray-300">Réf : {done.ref} · expire le {new Date(done.expires).toLocaleDateString("fr-FR")}</p>
+          {done.credits ? (
+            <>
+              <p className="text-[.85rem] font-bold text-emerald-300">✅ {done.credits} crédit(s) « {done.name} » vendu(s) à {done.user}</p>
+              <p className="text-[.74rem] text-gray-300">Réf : {done.ref} · le client les utilisera depuis son tableau de bord → Crédits.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-[.85rem] font-bold text-emerald-300">✅ {done.name} activé pour {done.user}</p>
+              <p className="text-[.74rem] text-gray-300">Réf : {done.ref}{done.expires ? ` · expire le ${new Date(done.expires).toLocaleDateString("fr-FR")}` : ""}</p>
+            </>
+          )}
         </div>
       )}
 
@@ -843,21 +861,38 @@ function Encaissement({ profiles, allListings, T, reload }: { profiles: any[]; a
             {plans.map((p: any) => <option key={p.key} value={p.key}>{p.name} · {formatNumber(p.price)} FCFA · {p.duration}</option>)}
           </select>
 
-          {kind === "boost" && userId && (
-            <select value={listingId} onChange={(e) => setListingId(e.target.value)} className={`${inp} mb-2 w-full`}>
-              <option value="">— Annonce à booster —</option>
-              {userListings.map((l: any) => <option key={l.id} value={l.id}>{l.title || l.name || l.id?.slice(0, 8)}</option>)}
-            </select>
+          {kind === "boost" && userId && userListings.length > 0 && (
+            <>
+              <label className="mb-1 flex items-center gap-2 text-[.78rem] text-[#A5B4FC]">
+                <input type="checkbox" checked={asCredit} onChange={(e) => setAsCredit(e.target.checked)} />
+                Vendre comme crédit (le client l'utilisera plus tard)
+              </label>
+              {!asCredit && (
+                <select value={listingId} onChange={(e) => setListingId(e.target.value)} className={`${inp} mb-2 w-full`}>
+                  <option value="">— Annonce à booster maintenant —</option>
+                  {userListings.map((l: any) => <option key={l.id} value={l.id}>{l.title || l.name || l.id?.slice(0, 8)}</option>)}
+                </select>
+              )}
+            </>
           )}
-          {kind === "boost" && userId && userListings.length === 0 && <p className="mb-2 text-[.74rem] text-amber-300">⚠ Ce client n'a aucune annonce. Il doit d'abord en publier une.</p>}
+          {kind === "boost" && userId && userListings.length === 0 && (
+            <div className="mb-2 rounded-[9px] border border-[#6366F1]/40 bg-[#6366F1]/10 p-2.5 text-[.76rem] text-[#A5B4FC]">
+              💳 Ce client n'a pas encore d'annonce → la vente se fait en <b>crédit boost</b>. Il l'utilisera quand il publiera une annonce.
+            </div>
+          )}
+
+          {sellAsCredit && (
+            <div className="mb-2"><label className="mb-1 block text-[.7rem] text-[#8B949E]">Nombre de crédits</label><input value={qty} onChange={(e) => setQty(e.target.value)} placeholder="1" className={`${inp} w-full`} /></div>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="mb-1 block text-[.7rem] text-[#8B949E]">Montant reçu (FCFA)</label><input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className={`${inp} w-full`} /></div>
-            <div><label className="mb-1 block text-[.7rem] text-[#8B949E]">Durée (jours)</label><input value={days} onChange={(e) => setDays(e.target.value)} placeholder="30" className={`${inp} w-full`} /></div>
+            <div><label className="mb-1 block text-[.7rem] text-[#8B949E]">Montant unitaire (FCFA)</label><input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className={`${inp} w-full`} /></div>
+            <div><label className="mb-1 block text-[.7rem] text-[#8B949E]">Durée du boost (jours)</label><input value={days} onChange={(e) => setDays(e.target.value)} placeholder="30" className={`${inp} w-full`} /></div>
           </div>
+          {sellAsCredit && selectedPlan && <p className="mt-1 text-[.76rem] text-emerald-300">Total à encaisser : <b>{formatNumber((Number(amount) || selectedPlan.price) * nQty)} FCFA</b> pour {nQty} crédit(s)</p>}
 
           <button disabled={busy} onClick={activate} className={`${btnP} mt-3 w-full disabled:opacity-60`}>
-            {busy ? "⏳ Activation…" : `💵 Encaisser & activer${selectedUser ? ` pour ${userLabel(selectedUser)}` : ""}`}
+            {busy ? "⏳ En cours…" : sellAsCredit ? `💳 Vendre ${nQty} crédit(s)${selectedUser ? ` à ${userLabel(selectedUser)}` : ""}` : `💵 Encaisser & activer${selectedUser ? ` pour ${userLabel(selectedUser)}` : ""}`}
           </button>
         </Card>
       </div>

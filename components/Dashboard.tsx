@@ -64,6 +64,9 @@ export default function Dashboard() {
   const [receivedFavsCount, setReceivedFavsCount] = useState(0);
   const [ads, setAds] = useState<any[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
+  const [boostCredits, setBoostCredits] = useState<any[]>([]);
+  const [usingCredit, setUsingCredit] = useState<string | null>(null);
+  const [creditTarget, setCreditTarget] = useState<Record<string, string>>({});
   const [loadingProfile, setLoadingProfile] = useState(true);
   const supabase = createClient();
   const { favs } = useFavorites();
@@ -278,6 +281,29 @@ export default function Dashboard() {
     setTimeout(() => setToast(null), 2000);
   };
   const max = Math.max(...CHART);
+
+  // Crédits boost : vendus par l'admin (espèces) ou achetés, utilisables sur ses annonces
+  async function loadBoostCredits() {
+    try {
+      const res = await fetch("/api/credits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "list" }) });
+      const d = await res.json();
+      setBoostCredits(d.credits || []);
+    } catch { /* ignore */ }
+  }
+  useEffect(() => { if (panel === "credits") loadBoostCredits(); }, [panel]);
+
+  async function useBoostCredit(creditId: string) {
+    const listingId = creditTarget[creditId];
+    if (!listingId) { show("Choisis l'annonce à booster"); return; }
+    setUsingCredit(creditId);
+    try {
+      const res = await fetch("/api/credits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "use", creditId, listingId }) });
+      const d = await res.json();
+      if (d.ok) { show("✓ Boost appliqué à ton annonce !"); loadBoostCredits(); }
+      else show(`❌ ${d.error || "Erreur"}`);
+    } catch { show("❌ Erreur de connexion"); }
+    finally { setUsingCredit(null); }
+  }
 
   const displayName = profileName || profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || user?.phone || "Utilisateur";
   const displayEmail = user?.email || user?.phone || "Nouvel utilisateur";
@@ -1784,6 +1810,44 @@ export default function Dashboard() {
 
         {panel === "credits" && (
           <div className="animate-fadeUp max-w-[1000px] mx-auto">
+            {/* Crédits boost disponibles (vendus par l'admin en espèces, ou achetés) */}
+            {(() => {
+              const available = boostCredits.filter((c: any) => c.status === "available");
+              if (available.length === 0) return null;
+              return (
+                <div className="mb-10 rounded-2xl border-2 border-green/40 bg-green/5 p-5 sm:p-6">
+                  <h3 className="font-display text-[1.1rem] sm:text-[1.3rem] font-extrabold dark:text-white mb-1">🎟️ Mes crédits boost ({available.length})</h3>
+                  <p className="text-sm text-gray-500 mb-4">Utilise un crédit pour booster une de tes annonces — sans payer.</p>
+                  <div className="space-y-3">
+                    {available.map((c: any) => (
+                      <div key={c.id} className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-3">
+                        <div className="flex-1 min-w-0">
+                          <span className="font-bold dark:text-white">{c.boost_name || c.boost_key}</span>
+                          <span className="ml-2 text-[.78rem] text-gray-500">{c.duration_days} jours</span>
+                        </div>
+                        <select
+                          value={creditTarget[c.id] || ""}
+                          onChange={(e) => setCreditTarget((v) => ({ ...v, [c.id]: e.target.value }))}
+                          className="bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-border rounded-lg px-3 py-2 text-sm outline-none focus:border-green sm:w-[220px]"
+                        >
+                          <option value="">— Choisir une annonce —</option>
+                          {ads.map((a: any) => <option key={a.id} value={a.id}>{a.title || a.id}</option>)}
+                        </select>
+                        <button
+                          onClick={() => useBoostCredit(c.id)}
+                          disabled={usingCredit === c.id}
+                          className="btn btn-green whitespace-nowrap disabled:opacity-60"
+                        >
+                          {usingCredit === c.id ? "⏳…" : "⭐ Booster"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {ads.length === 0 && <p className="mt-3 text-[.8rem] text-amber-600">💡 Publie une annonce pour pouvoir utiliser tes crédits.</p>}
+                </div>
+              );
+            })()}
+
             <div className="text-center mb-8">
               <h2 className="font-display text-[1.3rem] sm:text-[1.6rem] font-extrabold dark:text-white mb-2">Acheter des Crédits</h2>
               <p className="text-sm text-gray-500">Obtenez plus de visibilité en utilisant vos crédits pour booster vos annonces.</p>

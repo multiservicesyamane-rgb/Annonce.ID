@@ -107,7 +107,7 @@ export async function POST(req: Request) {
     // Encaissement manuel (espèces) : activer un boost d'annonce OU un abonnement
     // de compte, enregistrer la transaction et appliquer les avantages.
     if (action === "activatePlan") {
-      const { userId, kind, planKey, planName, amount, durationDays, listingId } = body;
+      const { userId, kind, planKey, planName, amount, durationDays, listingId, asCredit, quantity } = body;
       if (!userId) return NextResponse.json({ error: "Utilisateur requis." }, { status: 400 });
 
       const days = Number(durationDays) || 30;
@@ -133,8 +133,28 @@ export async function POST(req: Request) {
       );
 
       if (kind === "boost") {
-        if (!listingId) return NextResponse.json({ error: "Annonce requise pour un boost." }, { status: 400 });
         const featured = planKey === "alaune" || planKey === "vip";
+        // Sans annonce (ou vente explicite en crédit) → on crée des bons de boost
+        // réutilisables plus tard par le client sur ses annonces.
+        if (asCredit || !listingId) {
+          const qty = Math.max(1, Math.min(50, Number(quantity) || 1));
+          const rows = Array.from({ length: qty }, () => ({
+            user_id: userId,
+            boost_key: planKey || "basic",
+            boost_name: planName || planKey || "Boost",
+            duration_days: days,
+            status: "available",
+            source: "cash",
+          }));
+          const { error: credErr } = await sb.from("boost_credits").insert(rows);
+          if (credErr) {
+            if (/boost_credits/.test(credErr.message || "")) {
+              return NextResponse.json({ error: "Table boost_credits manquante. Exécute MIGRATION_CREDITS.sql dans Supabase." }, { status: 500 });
+            }
+            throw credErr;
+          }
+          return NextResponse.json({ ok: true, ref, credits: qty });
+        }
         await adaptiveWrite(
           (p) => sb.from("listings").update(p).eq("id", listingId),
           {
