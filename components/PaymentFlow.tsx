@@ -20,10 +20,10 @@ export default function PaymentFlow({
   subKey?: string;
   category?: string;
 }) {
-  const [processing, setProcessing] = useState<"" | "paytech" | "cinetpay">("");
+  const [processing, setProcessing] = useState<"" | "paytech" | "cinetpay" | "wave">("");
   const total = price;
 
-  async function pay(provider: "paytech" | "cinetpay") {
+  async function pay(provider: "paytech" | "cinetpay" | "wave") {
     setProcessing(provider);
     try {
       const res = await fetch(`/api/${provider}`, {
@@ -81,15 +81,29 @@ export default function PaymentFlow({
         </div>
 
         <button
+          onClick={() => pay("wave")}
+          disabled={!!processing}
+          className="btn btn-block h-[56px] text-[1.1rem] font-bold text-white bg-[#1DC8FF] hover:bg-[#08b4ec] shadow-lg shadow-[#1DC8FF]/30 disabled:opacity-70 transition-all hover:scale-[1.02]"
+        >
+          {processing === "wave" ? "⏳ Ouverture de Wave…" : `🌊 PAYER ${formatNumber(total)} FCFA avec Wave`}
+        </button>
+
+        <div className="my-4 flex items-center gap-3 text-[.75rem] text-gray-400">
+          <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+          ou autre moyen
+          <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+        </div>
+
+        <button
           onClick={() => pay("cinetpay")}
           disabled={!!processing}
-          className="btn btn-green btn-block h-[56px] text-[1.1rem] font-bold shadow-lg shadow-green/30 disabled:opacity-70 transition-all hover:scale-[1.02]"
+          className="btn btn-green btn-block h-[52px] text-[1rem] font-bold shadow-lg shadow-green/30 disabled:opacity-70 transition-all hover:scale-[1.02]"
         >
-          {processing === "cinetpay" ? "⏳ Ouverture du paiement…" : `💳 PAYER ${formatNumber(total)} FCFA`}
+          {processing === "cinetpay" ? "⏳ Ouverture du paiement…" : `💳 Orange Money · MTN · Moov · Carte`}
         </button>
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[.75rem] text-gray-400">
-          <span>🔒 Paiement 100% sécurisé · Orange Money · Wave · MTN · Moov · Carte</span>
+          <span>🔒 Paiement 100% sécurisé · Wave · Orange Money · MTN · Moov · Carte</span>
         </div>
       </div>
     </div>
