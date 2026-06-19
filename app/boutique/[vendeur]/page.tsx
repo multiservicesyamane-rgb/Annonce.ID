@@ -86,10 +86,10 @@ export default async function BoutiquePage({ params }: Props) {
 
       {/* Carte profil (chevauche la couverture) */}
       <div className="wrap">
-        <div className="relative -mt-10 sm:-mt-14 mb-2 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-6 shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-            {/* Logo entreprise */}
-            <Image src={avatar} alt={name} width={104} height={104} className="-mt-14 sm:-mt-20 h-[88px] w-[88px] sm:h-[104px] sm:w-[104px] rounded-2xl border-4 border-white dark:border-dark-800 object-cover shadow-xl bg-white" />
+        <div className="relative z-10 -mt-10 sm:-mt-14 mb-2 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-6 shadow-lg">
+          <div className="flex flex-col items-center text-center sm:flex-row sm:items-end sm:text-left gap-4">
+            {/* Logo entreprise — toujours au premier plan, chevauche la couverture */}
+            <Image src={avatar} alt={name} width={112} height={112} className="relative z-20 -mt-16 sm:-mt-24 h-[96px] w-[96px] sm:h-[112px] sm:w-[112px] rounded-2xl border-4 border-white dark:border-dark-800 object-cover shadow-2xl bg-white shrink-0" />
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">

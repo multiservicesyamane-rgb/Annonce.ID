@@ -9,6 +9,7 @@ import { formatNumber } from "@/lib/utils";
 import FilterDrawer from "./FilterDrawer";
 import EmptyState from "./EmptyState";
 import { SkeletonGrid } from "./SkeletonCard";
+import { CATEGORIES } from "@/lib/constants";
 
 /**
  * Vue listing avec filtres (sidebar desktop / drawer mobile), tri,
@@ -117,6 +118,15 @@ export default function ListingView({
     router.replace(`?${params.toString()}`, { scroll: false });
   }
 
+  function selectCategory(name: string) {
+    setCategory(name);
+    setVisibleCount(12);
+    const params = new URLSearchParams(searchParams.toString());
+    if (name !== "Toutes") params.set("category", name);
+    else params.delete("category");
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }
+
   function handleSortChange(newSort: string) {
     setSort(newSort);
     const params = new URLSearchParams(searchParams.toString());
@@ -134,6 +144,20 @@ export default function ListingView({
         />
 
         <div className="min-w-0">
+          {/* Catégories visibles directement (en devant) */}
+          <div className="no-scrollbar -mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1">
+            {["Toutes", ...CATEGORIES.map((c) => c.name)].map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => selectCategory(name)}
+                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[.8rem] font-semibold transition ${category === name ? "bg-green text-white shadow-sm" : "bg-gray-100 dark:bg-dark-800 text-gray-600 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-dark-700"}`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2.5">
             <div>
               <h1 className="font-display text-[1.2rem] font-bold dark:text-white">{title}</h1>

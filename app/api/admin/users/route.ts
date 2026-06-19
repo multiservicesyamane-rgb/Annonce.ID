@@ -202,6 +202,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ref, expires });
     }
 
+    // Nettoyage des sessions lourdes : retire les images base64 / champs trop
+    // longs de user_metadata (cause de l'erreur 494 « headers too large »).
+    if (action === "cleanupMetadata") {
+      let cleaned = 0, scanned = 0;
+      for (let page = 1; page <= 20; page++) {
+        const { data: list, error } = await sb.auth.admin.listUsers({ page, perPage: 200 });
+        if (error) throw error;
+        const users = list.users;
+        if (users.length === 0) break;
+        for (const u of users) {
+          scanned++;
+          const meta: any = { ...(u.user_metadata || {}) };
+          let changed = false;
+          for (const k of Object.keys(meta)) {
+            const v = meta[k];
+            if (typeof v === "string" && (v.startsWith("data:") || v.length > 800)) { delete meta[k]; changed = true; }
+          }
+          if (changed) {
+            await sb.auth.admin.updateUserById(u.id, { user_metadata: meta });
+            cleaned++;
+          }
+        }
+        if (users.length < 200) break;
+      }
+      return NextResponse.json({ ok: true, scanned, cleaned });
+    }
+
     // Achats / transactions (bypass RLS pour les Finances admin)
     if (action === "purchases") {
       const { data } = await sb.from("purchases").select("*").order("created_at", { ascending: false }).limit(500);

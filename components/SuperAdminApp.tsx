@@ -1300,6 +1300,14 @@ function Settings({ T }: { T: (m: string) => void }) {
           <button disabled={busy} className={`${btnP} mt-3 w-full disabled:opacity-60`} onClick={save}>{busy ? "⏳…" : "💾 Sauvegarder"}</button>
         </Card>
 
+        <Card title="🧹 Maintenance — corriger l'erreur 494 (cookies)">
+          <p className="mb-2 text-[.78rem] text-[#8B949E]">Retire les images base64 stockées par erreur dans les sessions (cause des cookies trop lourds). À lancer une fois.</p>
+          <button className={`${btnP} w-full`} onClick={async () => {
+            try { const d = await adminApi("cleanupMetadata"); T(`✅ ${d.cleaned}/${d.scanned} comptes nettoyés`); }
+            catch (e: any) { T(`❌ ${e.message}`); }
+          }}>Nettoyer les sessions lourdes</button>
+        </Card>
+
         <Card title="Toggles système">
           <div className="space-y-2.5">
             {TOGGLE_KEYS.map((n) => {
