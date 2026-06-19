@@ -12,6 +12,7 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
   { id: "overview", icon: "📊", label: "Vue d'ensemble", section: "Tableau de bord" },
   { id: "crm", icon: "🎯", label: "CRM Prospects", badge: 23 },
   { id: "marketing", icon: "📢", label: "Centre Marketing" },
+  { id: "campagne_ia", icon: "🚀", label: "Campagne IA 2025" },
   { id: "campagnes", icon: "📨", label: "Campagnes" },
   { id: "employes", icon: "👨‍💼", label: "Employés", section: "Commercial" },
   { id: "ambassadeurs", icon: "🤝", label: "Ambassadeurs" },
@@ -310,6 +311,7 @@ export default function SuperAdminApp() {
             {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} />}
             {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} />}
             {page === "marketing" && <Marketing T={T} />}
+            {page === "campagne_ia" && <CampagneIA T={T} />}
             {page === "campagnes" && <Campagnes campaigns={campaigns} addCampaign={addCampaign} T={T} />}
             {page === "employes" && <Employes employees={employees} addEmployee={addEmployee} T={T} />}
             {page === "ambassadeurs" && <Ambassadeurs T={T} ambassadors={ambassadors} />}
@@ -504,6 +506,128 @@ function Marketing({ T }: { T: (m: string) => void }) {
             <button onClick={() => { navigator.clipboard?.writeText(view.p); T("📋 Copié !"); }} className={`${btnP} mt-3 w-full`}>📋 Copier le texte</button>
           </div>
         </div>
+      )}
+    </>
+  );
+}
+
+function CampagneIA({ T }: { T: (m: string) => void }) {
+  const [stats, setStats] = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [boosts, setBoosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fPlat, setFPlat] = useState("all");
+  const [fStatus, setFStatus] = useState("all");
+
+  useEffect(() => {
+    adminApi("campaign").then((d) => { setStats(d.stats || []); setPosts(d.posts || []); setBoosts(d.boosts || []); })
+      .catch(() => { /* tables pas encore créées */ }).finally(() => setLoading(false));
+  }, []);
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://wanteermako.com";
+  const last7 = (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0, 10); })();
+  const sum = (arr: any[], k: string) => arr.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+  const week = stats.filter((s) => s.date >= last7);
+  const latestDate = stats[0]?.date;
+  const viewsToday = sum(stats.filter((s) => s.date === latestDate), "views");
+  const newFollowersWeek = sum(week, "new_followers");
+  const engRows = week.filter((s) => Number(s.engagement_rate) > 0);
+  const avgEng = engRows.length ? (sum(engRows, "engagement_rate") / engRows.length) : 0;
+  const clicksWeek = sum(week, "clicks_to_site");
+  const waFollowers = sum(stats.filter((s) => s.platform === "whatsapp"), "new_followers");
+  const boostRevenue = sum(boosts.filter((b) => b.status === "active" || b.status === "completed"), "budget_fcfa");
+
+  const KPIS = [
+    { grad: "bg-g1", icon: "👁️", label: "Vues / jour", value: viewsToday, target: 10000 },
+    { grad: "bg-g4", icon: "➕", label: "Nouv. abonnés / sem", value: newFollowersWeek, target: 500 },
+    { grad: "bg-g5", icon: "💥", label: "Engagement moyen %", value: Math.round(avgEng), target: 8 },
+    { grad: "bg-g3", icon: "🔗", label: "Clics vers le site / sem", value: clicksWeek, target: 5000 },
+    { grad: "bg-g8", icon: "💬", label: "Abonnés WhatsApp", value: waFollowers, target: 1000 },
+    { grad: "bg-g6", icon: "💰", label: "Revenus boosts (FCFA)", value: boostRevenue, target: 200000 },
+  ];
+
+  const filtered = posts.filter((p) => (fPlat === "all" || p.platform === fPlat) && (fStatus === "all" || p.status === fStatus));
+  const statusColor = (s: string) => s === "published" ? "bg-emerald-500/15 text-emerald-300" : s === "scheduled" ? "bg-amber-500/15 text-amber-300" : s === "boosted" ? "bg-violet-500/15 text-violet-300" : "bg-white/10 text-gray-400";
+
+  const endpoints = [
+    ["POST", "/api/campaign/post-published", "Make → enregistre un post publié"],
+    ["POST", "/api/campaign/stats-update", "Make → met à jour les stats du jour"],
+    ["POST", "/api/campaign/weekly-report", "Make → rapport hebdomadaire"],
+    ["GET", "/api/campaign/pending-annonces", "Make (15 min) → annonces sans post"],
+    ["POST", "/api/campaign/boost-request", "Crée un boost + déclenche Meta Ads"],
+  ];
+
+  return (
+    <>
+      <PageHead title="🚀 Campagne IA 2025" sub="Croissance Facebook · Instagram · WhatsApp — automatisée via Make.com" />
+
+      {loading ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Chargement…</div> : (
+        <>
+          {/* KPIs */}
+          <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3">
+            {KPIS.map((k) => {
+              const pct = Math.min(100, Math.round((k.value / k.target) * 100));
+              return (
+                <div key={k.label} className={`relative overflow-hidden rounded-[14px] p-3.5 text-white ${k.grad}`}>
+                  <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-white/10" />
+                  <div className="relative">
+                    <div className="mb-1 text-[1rem]">{k.icon}</div>
+                    <div className="font-display text-[1.3rem] font-extrabold leading-none">{k.value.toLocaleString("fr-FR")}</div>
+                    <div className="mt-1 text-[.66rem] font-medium opacity-90">{k.label}</div>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-black/20"><div className="h-full rounded-full bg-white/80" style={{ width: `${pct}%` }} /></div>
+                    <div className="mt-1 text-[.6rem] opacity-80">Objectif : {k.target.toLocaleString("fr-FR")} ({pct}%)</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Suivi des posts */}
+          <Card title={`📋 Suivi des posts (${posts.length})`}>
+            <div className="mb-3 flex flex-wrap gap-2">
+              <select value={fPlat} onChange={(e) => setFPlat(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.78rem] text-white">
+                <option value="all">Toutes plateformes</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="whatsapp">WhatsApp</option>
+              </select>
+              <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.78rem] text-white">
+                <option value="all">Tous statuts</option><option value="draft">Brouillon</option><option value="scheduled">Planifié</option><option value="published">Publié</option><option value="boosted">Boosté</option>
+              </select>
+            </div>
+            {filtered.length === 0 ? (
+              <div className="py-8 text-center text-[.82rem] text-[#8B949E]">Aucun post pour l'instant. Make.com les ajoutera automatiquement après configuration.</div>
+            ) : (
+              <Tbl head={["Plateforme", "Légende", "Statut", "Reach", "Réactions", "Partages", "Date", ""]}>
+                {filtered.map((p) => (
+                  <tr key={p.id} className="hover:bg-white/[.02]">
+                    <Td bold>{p.platform}</Td>
+                    <Td><span className="line-clamp-1 max-w-[200px] inline-block">{p.caption || "—"}</span></Td>
+                    <Td><span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${statusColor(p.status)}`}>{p.status}</span></Td>
+                    <Td>{p.reach || 0}</Td><Td>{p.reactions || 0}</Td><Td>{p.shares || 0}</Td>
+                    <Td>{p.published_at ? new Date(p.published_at).toLocaleDateString("fr-FR") : "—"}</Td>
+                    <Td>{p.post_url ? <a href={p.post_url} target="_blank" rel="noopener noreferrer" className="text-[#A5B4FC] font-bold">Voir ↗</a> : "—"}</Td>
+                  </tr>
+                ))}
+              </Tbl>
+            )}
+          </Card>
+
+          {/* Configuration Make.com */}
+          <div className="mt-3"><Card title="⚙️ Connexion Make.com — Endpoints à copier">
+            <p className="mb-2 text-[.78rem] text-[#8B949E]">Colle ces URLs dans tes scénarios Make.com. Ajoute le header <code className="text-[#A5B4FC]">x-campaign-secret</code> = ta valeur <code className="text-[#A5B4FC]">CAMPAIGN_WEBHOOK_SECRET</code> (sur Vercel).</p>
+            <div className="space-y-1.5">
+              {endpoints.map(([m, path, desc]) => (
+                <div key={path} className="flex flex-wrap items-center gap-2 rounded-[8px] bg-[#0D1117] p-2">
+                  <span className={`rounded px-1.5 py-0.5 text-[.62rem] font-bold ${m === "GET" ? "bg-blue-500/20 text-blue-300" : "bg-emerald-500/20 text-emerald-300"}`}>{m}</span>
+                  <code className="text-[.74rem] text-[#E6EDF3]">{origin}{path}</code>
+                  <button onClick={() => { navigator.clipboard?.writeText(`${origin}${path}`); T("📋 Copié"); }} className="ml-auto rounded bg-white/5 px-2 py-0.5 text-[.68rem] text-[#A5B4FC]">Copier</button>
+                  <span className="w-full text-[.68rem] text-[#8B949E]">{desc}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 rounded-[8px] border border-[#6366F1]/30 bg-[#6366F1]/10 p-2.5 text-[.74rem] text-[#A5B4FC]">
+              ℹ️ Variables à mettre sur Vercel : <b>CAMPAIGN_WEBHOOK_SECRET</b>, MAKE_WEBHOOK_URL, META_PAGE_ID, META_ACCESS_TOKEN, OPENAI_API_KEY, CANVA_ACCESS_TOKEN, BUFFER_ACCESS_TOKEN, MANYCHAT_API_KEY.
+            </div>
+          </Card></div>
+        </>
       )}
     </>
   );

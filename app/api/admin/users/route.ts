@@ -229,6 +229,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, scanned, cleaned });
     }
 
+    // Données du module Campagne IA (stats, posts, boosts) — bypass RLS
+    if (action === "campaign") {
+      const [stats, posts, boosts] = await Promise.all([
+        sb.from("campaign_daily_stats").select("*").order("date", { ascending: false }).limit(120),
+        sb.from("campaign_posts").select("*").order("created_at", { ascending: false }).limit(100),
+        sb.from("campaign_boosts").select("*").order("created_at", { ascending: false }).limit(100),
+      ]);
+      return NextResponse.json({ stats: stats.data || [], posts: posts.data || [], boosts: boosts.data || [] });
+    }
+
     // Achats / transactions (bypass RLS pour les Finances admin)
     if (action === "purchases") {
       const { data } = await sb.from("purchases").select("*").order("created_at", { ascending: false }).limit(500);
