@@ -76,17 +76,27 @@ export default function ContactActions({ phone, title, adId, sellerId }: { phone
 
     // Auto-send the first message
     const msg = `Bonjour, l'annonce "${title}" m'intéresse. Est-elle toujours disponible ?`;
-    
-    const { error } = await supabase.from("messages").insert([{
+
+    // Insertion adaptative : si une colonne n'existe pas encore, on la retire et on réessaie
+    let payload: Record<string, any> = {
       sender_id: sessionData.session.user.id,
       receiver_id: sellerId,
       listing_id: adId,
       content: msg,
-      type: "text"
-    }]);
-
-    if (error) {
-      show("Erreur SQL: " + error.message);
+      type: "text",
+    };
+    let lastErr: any = null;
+    for (let i = 0; i < 6; i++) {
+      const { error } = await supabase.from("messages").insert([payload]);
+      if (!error) { lastErr = null; break; }
+      lastErr = error;
+      const m = error.message || "";
+      const match = m.match(/'([^']+)' column/) || m.match(/column "([^"]+)"/) || m.match(/Could not find the '([^']+)'/);
+      if (match && match[1] in payload) { delete payload[match[1]]; continue; }
+      break;
+    }
+    if (lastErr) {
+      show("Impossible d'envoyer le message. Réessayez.");
       setIsSending(false);
       return;
     }

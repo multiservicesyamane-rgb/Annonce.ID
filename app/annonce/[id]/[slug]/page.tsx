@@ -167,29 +167,31 @@ export default async function AnnoncePage({ params }: Props) {
 
           </div>
 
-          <section className="mt-5 rounded-xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm">
-            <h3 className="mb-4 font-display text-[1.1rem] font-bold uppercase tracking-wider text-gray-900 dark:text-white">Description du produit</h3>
-            <p className="whitespace-pre-line text-[.95rem] leading-[1.8] text-gray-700 dark:text-gray-300">{ad.description}</p>
+          <section className="mt-4 sm:mt-5 rounded-xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-6 shadow-sm">
+            <h3 className="mb-3 font-display text-[1rem] sm:text-[1.1rem] font-bold uppercase tracking-wider text-gray-900 dark:text-white">Description du produit</h3>
+            <p className="whitespace-pre-line text-[.9rem] sm:text-[.95rem] leading-[1.7] text-gray-700 dark:text-gray-300">{ad.description}</p>
           </section>
 
-          <section className="mt-5 rounded-xl border border-gray-100 dark:border-white/5 bg-white dark:bg-[#111722]/80 dark:backdrop-blur-xl p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-display text-[1.1rem] font-bold text-gray-900 dark:text-white uppercase tracking-wider">Caractéristiques Techniques</h3>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-              {Object.entries(ad.specs).map(([k, v]) => (
-                <div key={k} className="flex flex-col rounded-[12px] bg-gray-50 dark:bg-black/40 border border-gray-100 dark:border-white/5 p-4 transition-all hover:border-green-500/30">
-                  <span className="text-[.65rem] font-bold uppercase tracking-wider text-gray-500 mb-1">{k}</span>
-                  <span className="font-display font-bold text-[.95rem] text-gray-900 dark:text-white">{String(v)}</span>
-                </div>
-              ))}
-            </div>
-          </section>
+          {Object.keys(ad.specs || {}).length > 0 && (
+            <section className="mt-4 sm:mt-5 rounded-xl border border-gray-100 dark:border-white/5 bg-white dark:bg-[#111722]/80 dark:backdrop-blur-xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display text-[1rem] sm:text-[1.1rem] font-bold text-gray-900 dark:text-white uppercase tracking-wider">Caractéristiques</h3>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
+                {Object.entries(ad.specs).map(([k, v]) => (
+                  <div key={k} className="flex flex-col rounded-[10px] bg-gray-50 dark:bg-black/40 border border-gray-100 dark:border-white/5 p-3">
+                    <span className="text-[.62rem] font-bold uppercase tracking-wider text-gray-500 mb-0.5">{k}</span>
+                    <span className="font-display font-bold text-[.88rem] text-gray-900 dark:text-white">{String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
-          <section className="mt-5 rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5">
-            <h3 className="mb-3 font-display text-[1.05rem] font-bold dark:text-white">📍 Localisation</h3>
-            <div className="flex h-40 items-center justify-center rounded-[10px] border-[1.5px] border-dashed border-gray-300 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-[.85rem] text-gray-500 dark:text-white/50 relative overflow-hidden">
+          <section className="mt-4 sm:mt-5 rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-5">
+            <h3 className="mb-3 font-display text-[1rem] font-bold dark:text-white">📍 Localisation</h3>
+            <div className="flex h-24 sm:h-36 items-center justify-center rounded-[10px] border-[1.5px] border-dashed border-gray-300 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-[.82rem] text-gray-500 dark:text-white/50 relative overflow-hidden">
               <div className="absolute inset-0 opacity-20 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=Dakar&zoom=12&size=600x300&sensor=false')] bg-cover bg-center"></div>
               <div className="relative z-10 flex flex-col items-center gap-2">
                 <span className="text-2xl">🗺️</span>
@@ -211,7 +213,7 @@ export default async function AnnoncePage({ params }: Props) {
 
         {/* DROITE : panneau contact sticky */}
         <div>
-          <div className="flex flex-col gap-4 rounded-[20px] border border-gray-100 dark:border-white/5 bg-white dark:bg-[#111722]/80 dark:backdrop-blur-xl p-6 lg:sticky lg:top-[calc(64px+1.5rem)] shadow-lg">
+          <div className="flex flex-col gap-4 rounded-[20px] border border-gray-100 dark:border-white/5 bg-white dark:bg-[#111722]/80 dark:backdrop-blur-xl p-4 sm:p-6 lg:sticky lg:top-[calc(64px+1.5rem)] shadow-lg">
             {ad.premium && (
               <div className="flex items-center gap-2 rounded-[12px] bg-gradient-to-r from-neon-gold/20 to-[#D4891A]/10 border border-neon-gold/30 px-3 py-2 text-[.75rem] font-bold text-neon-gold uppercase tracking-widest shadow-[0_0_15px_rgba(245,166,35,0.15)] w-max">
                 <span className="animate-pulse">✨</span> Premium Collection

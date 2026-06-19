@@ -111,6 +111,12 @@ create table if not exists public.messages (
   read boolean not null default false,
   created_at timestamptz not null default now()
 );
+-- colonnes ajoutées si la table messages existait déjà sans elles
+alter table public.messages add column if not exists listing_id uuid;
+alter table public.messages add column if not exists content text;
+alter table public.messages add column if not exists media_url text;
+alter table public.messages add column if not exists type text default 'text';
+alter table public.messages add column if not exists read boolean default false;
 create index if not exists idx_messages_pair on public.messages (sender_id, receiver_id, created_at);
 alter table public.messages enable row level security;
 
