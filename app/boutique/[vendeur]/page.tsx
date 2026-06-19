@@ -62,13 +62,26 @@ export default async function BoutiquePage({ params }: Props) {
     views: ad.views ?? 0,
   }));
 
+  const totalViews = (dbListings || []).reduce((s: number, a: any) => s + (a.views || 0), 0);
+  const categories = Array.from(new Set(ads.map((a: any) => a.category))).slice(0, 8);
+  const social = socialLinks as Record<string, string>;
+  const socialIcons: { key: string; label: string; icon: string; prefix?: string }[] = [
+    { key: "website", label: "Site web", icon: "🌐" },
+    { key: "facebook", label: "Facebook", icon: "📘" },
+    { key: "instagram", label: "Instagram", icon: "📸" },
+    { key: "tiktok", label: "TikTok", icon: "🎵" },
+  ];
+
   return (
     <div>
       {/* ── En-tête boutique : couverture + logo + contact ── */}
       {/* Bande de couverture */}
-      <div className="relative h-[130px] sm:h-[200px] overflow-hidden bg-gradient-to-br from-dark-900 via-dark-800 to-green-900">
-        {profile?.cover_url && <Image src={profile.cover_url} alt="Couverture" fill sizes="100vw" className="object-cover" />}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+      <div className="relative h-[150px] sm:h-[230px] overflow-hidden bg-gradient-to-br from-green-700 via-green-900 to-dark-900">
+        {profile?.cover_url && <Image src={profile.cover_url} alt="Couverture" fill sizes="100vw" className="object-cover" priority />}
+        {!profile?.cover_url && (
+          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, #fff 1.5px, transparent 1.5px), radial-gradient(circle at 70% 60%, #fff 1.5px, transparent 1.5px)", backgroundSize: "32px 32px" }} />
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
       </div>
 
       {/* Carte profil (chevauche la couverture) */}
@@ -103,15 +116,50 @@ export default async function BoutiquePage({ params }: Props) {
               )}
             </div>
           </div>
+
+          {/* Bandeau statistiques */}
+          <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-100 dark:border-dark-border py-2.5 text-center">
+              <div className="font-display text-[1.15rem] sm:text-[1.4rem] font-extrabold text-gray-900 dark:text-white">{ads.length}</div>
+              <div className="text-[.66rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">Annonces</div>
+            </div>
+            <div className="rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-100 dark:border-dark-border py-2.5 text-center">
+              <div className="font-display text-[1.15rem] sm:text-[1.4rem] font-extrabold text-gray-900 dark:text-white">{formatNumber(totalViews)}</div>
+              <div className="text-[.66rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">Vues</div>
+            </div>
+            <div className="rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-100 dark:border-dark-border py-2.5 text-center">
+              <div className="font-display text-[1.15rem] sm:text-[1.4rem] font-extrabold text-gold">★ 4.8</div>
+              <div className="text-[.66rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">Note</div>
+            </div>
+          </div>
+
+          {/* Liens sociaux */}
+          {socialIcons.some((s) => social[s.key]) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {socialIcons.filter((s) => social[s.key]).map((s) => (
+                <a key={s.key} href={social[s.key].startsWith("http") ? social[s.key] : `https://${social[s.key]}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-900 px-3 py-1.5 text-[.74rem] font-semibold text-gray-700 dark:text-white/80 hover:border-green transition">
+                  <span>{s.icon}</span> {s.label}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="wrap py-8">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="font-display text-[1.2rem] font-bold">Annonces de {name}</h2>
-          <Link href="/recherche" className="text-[.82rem] font-semibold text-green">Voir tout →</Link>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold">Annonces de {name}</h2>
+          <Link href="/recherche" className="text-[.82rem] font-semibold text-green hover:underline">Voir tout →</Link>
         </div>
-        
+        {categories.length > 0 && (
+          <div className="mb-5 flex flex-wrap gap-2">
+            {categories.map((c) => (
+              <span key={c} className="rounded-full bg-green/10 px-3 py-1 text-[.74rem] font-semibold text-green">{c}</span>
+            ))}
+          </div>
+        )}
+
         {ads.length === 0 ? (
           <div className="py-10 text-center text-gray-500">
             Ce vendeur n'a pas encore d'annonces en ligne.
