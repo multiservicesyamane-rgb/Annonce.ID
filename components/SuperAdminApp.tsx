@@ -655,6 +655,8 @@ async function setVip(userId: string, value: boolean) {
   catch (e: any) { T(`❌ ${e.message}`); }
 }
 async function del(userId: string) {
+}
+async function del(userId: string) {
   if (!confirm("Supprimer définitivement ce compte ?")) return;
   try { await adminApi("delete", { userId }); T("🗑️ Compte supprimé"); refreshList(); reload(); }
   catch (e: any) { T(`❌ ${e.message}`); }
