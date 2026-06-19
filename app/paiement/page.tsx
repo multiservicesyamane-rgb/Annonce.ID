@@ -103,73 +103,75 @@ function PaiementContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black py-8 transition-colors">
-      <div className="wrap max-w-5xl">
-        <div className="text-center mb-8">
-          <h1 className="font-display text-[1.8rem] md:text-[2.2rem] font-extrabold text-gray-900 dark:text-white leading-tight">
-            Paiements & Boosts
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 max-w-lg mx-auto">
-            Propulsez la visibilité de vos annonces ou créez votre boutique professionnelle certifiée.
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50/50 via-gray-50 to-white dark:from-[#0c0f1d] dark:via-black dark:to-black py-6 sm:py-10 transition-colors">
+      <div className="wrap max-w-5xl px-3 sm:px-4">
+        {/* Header sublime */}
+        <div className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#6366F1] via-[#7C5CFC] to-[#A855F7] px-5 py-7 sm:py-9 text-center text-white mb-6 sm:mb-8 shadow-[0_12px_40px_-12px_rgba(124,92,252,0.5)]">
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 15% 20%, #fff 1.5px, transparent 1.5px)", backgroundSize: "26px 26px" }} />
+          <div className="relative">
+            <h1 className="font-display text-[1.5rem] sm:text-[2.1rem] font-extrabold leading-tight">Boostez votre visibilité 🚀</h1>
+            <p className="mx-auto mt-2 max-w-lg text-[.85rem] sm:text-[.95rem] text-white/85">
+              Propulsez vos annonces ou créez votre boutique professionnelle certifiée.
+            </p>
+          </div>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex bg-white dark:bg-dark-900 border border-gray-200 dark:border-white/10 rounded-full p-1 shadow-sm">
+        <div className="flex justify-center mb-6 sm:mb-8 px-1">
+          <div className="inline-flex w-full max-w-md bg-white dark:bg-dark-900 border border-gray-200 dark:border-white/10 rounded-full p-1 shadow-sm">
             <button
               onClick={() => setActiveTab("boost")}
-              className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all uppercase tracking-wider ${
+              className={`flex-1 px-3 sm:px-5 py-2.5 rounded-full text-[.7rem] sm:text-xs font-bold transition-all uppercase tracking-wide ${
                 activeTab === "boost"
-                  ? "bg-gradient-to-r from-green-500 to-neon-gold text-white shadow-md"
+                  ? "bg-gradient-to-r from-[#6366F1] to-[#A855F7] text-white shadow-md"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              🚀 Booster une Annonce
+              🚀 Booster
             </button>
             <button
               onClick={() => setActiveTab("subscription")}
-              className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all uppercase tracking-wider ${
+              className={`flex-1 px-3 sm:px-5 py-2.5 rounded-full text-[.7rem] sm:text-xs font-bold transition-all uppercase tracking-wide ${
                 activeTab === "subscription"
-                  ? "bg-gradient-to-r from-green-500 to-neon-gold text-white shadow-md"
+                  ? "bg-gradient-to-r from-[#6366F1] to-[#A855F7] text-white shadow-md"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              Store Boutique Pro
+              💼 Boutique Pro
             </button>
           </div>
         </div>
 
         {/* BOOSTS LIST */}
         {activeTab === "boost" && (
-          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {BOOSTS.filter((b) => b.price > 0).map((b) => (
               <div
                 key={b.key}
                 onClick={() => handleSelectBoost(b)}
-                className="relative flex flex-col justify-between rounded-[16px] border border-gray-200 dark:border-white/10 bg-white dark:bg-dark-900 p-6 shadow-sm transition hover:border-gold hover:shadow-md cursor-pointer group hover:-translate-y-1 transform duration-300"
+                className={`relative flex flex-col justify-between rounded-[16px] border bg-white dark:bg-dark-900 p-4 sm:p-5 shadow-sm transition cursor-pointer group hover:-translate-y-1 hover:shadow-[0_12px_30px_-12px_rgba(124,92,252,0.4)] duration-300 ${b.popular ? "border-indigo-400 ring-1 ring-indigo-300/50" : "border-gray-200 dark:border-white/10 hover:border-indigo-400"}`}
               >
                 {b.popular && (
-                  <span className="absolute -top-3 right-4 rounded-full bg-gradient-to-r from-gold to-[#F3E5AB] px-3 py-0.5 text-[.6rem] font-extrabold text-black uppercase tracking-wider shadow-sm">
+                  <span className="absolute -top-3 right-4 rounded-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-3 py-0.5 text-[.6rem] font-extrabold text-white uppercase tracking-wider shadow-sm">
                     POPULAIRE
                   </span>
                 )}
                 <div>
-                  <h3 className="text-[1.05rem] font-bold text-gray-800 dark:text-white group-hover:text-gold transition-colors">{b.name}</h3>
-                  <div className="mt-2 font-display text-[1.35rem] font-extrabold text-green">
+                  <h3 className="text-[1.05rem] font-bold text-gray-800 dark:text-white group-hover:text-indigo-600 transition-colors">{b.name}</h3>
+                  <div className="mt-2 font-display text-[1.35rem] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#6366F1] to-[#A855F7]">
                     {formatNumber(boostPrice(b))} FCFA
                   </div>
                   <p className="mb-4 mt-1 text-[.75rem] text-gray-400">Durée : {b.duration}</p>
                   <div className="space-y-1.5 text-[.8rem] text-gray-600 dark:text-gray-300 pt-3 border-t border-gray-100 dark:border-white/5">
                     {b.features.map((f) => (
                       <div key={f} className="flex items-center gap-1.5">
-                        <span className="text-gold">✓</span> {f}
+                        <span className="text-indigo-500">✓</span> {f}
                       </div>
                     ))}
                   </div>
                 </div>
-                <button className="mt-6 w-full rounded-xl bg-gray-50 dark:bg-white/5 py-2.5 text-center text-[.8rem] font-bold text-gray-700 dark:text-gray-300 transition group-hover:bg-gold group-hover:text-black">
-                  Sélectionner
+                <button className="mt-5 w-full rounded-xl bg-indigo-50 dark:bg-white/5 py-2.5 text-center text-[.82rem] font-bold text-indigo-600 dark:text-indigo-300 transition group-hover:bg-gradient-to-r group-hover:from-[#6366F1] group-hover:to-[#A855F7] group-hover:text-white">
+                  Sélectionner →
                 </button>
               </div>
             ))}
@@ -180,7 +182,7 @@ function PaiementContent() {
         {activeTab === "subscription" && (
           <div>
             {/* Category selection pills */}
-            <div className="flex flex-wrap justify-center gap-2 mb-8">
+            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 mb-6 sm:flex-wrap sm:justify-center">
               {(
                 [
                   { key: "vehicules", label: "Véhicules 🚗" },
@@ -192,9 +194,9 @@ function PaiementContent() {
                 <button
                   key={cat.key}
                   onClick={() => setSelectedCategory(cat.key)}
-                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                  className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${
                     selectedCategory === cat.key
-                      ? "bg-gold/10 border-gold text-gold"
+                      ? "bg-indigo-500/10 border-indigo-400 text-indigo-600 dark:text-indigo-300"
                       : "bg-white dark:bg-dark-900 border-gray-200 dark:border-white/10 text-gray-500 hover:text-gray-900 dark:hover:text-white"
                   }`}
                 >
@@ -204,26 +206,28 @@ function PaiementContent() {
             </div>
 
             {/* Plans grid */}
-            <div className="grid gap-6 sm:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               {SUBSCRIPTION_PLANS[selectedCategory]
                 .filter((s) => s.price > 0)
-                .map((s) => (
+                .map((s, i) => (
                   <div
                     key={s.key}
                     onClick={() => handleSelectSubscription(s, selectedCategory)}
-                    className="relative flex flex-col justify-between rounded-[16px] border border-gray-200 dark:border-white/10 bg-white dark:bg-dark-900 p-6 shadow-sm transition hover:border-gold hover:shadow-md cursor-pointer group hover:-translate-y-1 transform duration-300"
+                    className={`relative flex flex-col justify-between rounded-[16px] border bg-white dark:bg-dark-900 p-4 sm:p-5 shadow-sm transition cursor-pointer group hover:-translate-y-1 hover:shadow-[0_12px_30px_-12px_rgba(124,92,252,0.4)] duration-300 ${i === 1 ? "border-indigo-400 ring-1 ring-indigo-300/50" : "border-gray-200 dark:border-white/10 hover:border-indigo-400"}`}
                   >
+                    {i === 1 && (
+                      <span className="absolute -top-3 right-4 rounded-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-3 py-0.5 text-[.6rem] font-extrabold text-white uppercase tracking-wider shadow-sm">POPULAIRE</span>
+                    )}
                     <div>
-                      <h3 className="text-[1.1rem] font-bold text-gray-800 dark:text-white group-hover:text-gold transition-colors">
+                      <h3 className="text-[1.1rem] font-bold text-gray-800 dark:text-white group-hover:text-indigo-600 transition-colors">
                         {s.name}
                       </h3>
-                      <div className="mt-2 font-display text-[1.5rem] font-extrabold text-green">
+                      <div className="mt-2 font-display text-[1.5rem] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#6366F1] to-[#A855F7]">
                         {formatNumber(subPrice(selectedCategory, s))} FCFA <span className="text-xs font-normal text-gray-400">/ mois</span>
                       </div>
                       <p className="mb-4 mt-1 text-[.75rem] text-gray-400">Facturation mensuelle</p>
-                      
-                      {/* Limits summary */}
-                      <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 mb-4 space-y-1.5 text-[.75rem]">
+
+                      <div className="bg-indigo-50/60 dark:bg-white/5 rounded-xl p-3 mb-4 space-y-1.5 text-[.75rem]">
                         <div className="flex justify-between">
                           <span className="text-gray-500">Annonces actives :</span>
                           <span className="font-bold text-gray-800 dark:text-white">{s.limits.activeAds}</span>
@@ -234,18 +238,17 @@ function PaiementContent() {
                         </div>
                       </div>
 
-                      {/* Features */}
                       <div className="space-y-1.5 text-[.8rem] text-gray-600 dark:text-gray-300 pt-3 border-t border-gray-100 dark:border-white/5">
                         {s.features.map((f) => (
                           <div key={f} className="flex items-start gap-1.5 leading-snug">
-                            <span className="text-gold shrink-0 mt-0.5">✓</span>
+                            <span className="text-indigo-500 shrink-0 mt-0.5">✓</span>
                             <span>{f}</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <button className="mt-6 w-full rounded-xl bg-gray-50 dark:bg-white/5 py-2.5 text-center text-[.8rem] font-bold text-gray-700 dark:text-gray-300 transition group-hover:bg-gold group-hover:text-black">
-                      S'abonner
+                    <button className="mt-5 w-full rounded-xl bg-indigo-50 dark:bg-white/5 py-2.5 text-center text-[.82rem] font-bold text-indigo-600 dark:text-indigo-300 transition group-hover:bg-gradient-to-r group-hover:from-[#6366F1] group-hover:to-[#A855F7] group-hover:text-white">
+                      S'abonner →
                     </button>
                   </div>
                 ))}
