@@ -1718,17 +1718,19 @@ export default function Dashboard() {
             </div>
 
             {/* Colonne Droite : Live Preview */}
-            <div className={`fixed inset-0 z-[900] bg-black/80 lg:bg-transparent lg:static lg:flex lg:w-[350px] lg:shrink-0 justify-center items-start lg:pt-4 ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
+            <div className={`fixed inset-0 z-[900] bg-black/80 backdrop-blur-sm flex justify-center items-center p-3 lg:p-0 lg:static lg:bg-transparent lg:backdrop-blur-none lg:w-[350px] lg:shrink-0 lg:justify-center lg:items-start lg:pt-4 ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
               {/* Mobile Close Button */}
               {livePreviewOpen && (
-                <button onClick={() => setLivePreviewOpen(false)} className="lg:hidden absolute top-4 right-4 text-white bg-white/10 rounded-full w-10 h-10 flex items-center justify-center text-xl backdrop-blur-md z-50">
+                <button onClick={() => setLivePreviewOpen(false)} className="lg:hidden fixed top-4 right-4 text-white bg-white/15 rounded-full w-10 h-10 flex items-center justify-center text-xl backdrop-blur-md z-[950]">
                   ✕
                 </button>
               )}
-              {/* Phone Mockup Frame */}
-              <div className="relative w-full h-full lg:max-w-[350px] lg:h-[700px] bg-[#0A0E14] lg:rounded-[3rem] lg:border-[10px] lg:border-gray-900 lg:dark:border-black shadow-2xl overflow-hidden flex flex-col mx-auto mt-0 lg:mt-0">
+              {/* Phone Mockup Frame (iPhone Pro Max) — cadre fixe, contenu scrollable à l'intérieur */}
+              <div className="relative w-full max-w-[360px] h-[86vh] max-h-[760px] lg:max-w-[350px] lg:h-[700px] bg-[#0A0E14] rounded-[2.8rem] border-[10px] border-gray-900 dark:border-black shadow-2xl overflow-hidden flex flex-col mx-auto">
+                {/* Dynamic Island / notch */}
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-full z-[60]" />
                 {/* Mockup Content (The Store Page) */}
-                <div className="flex-1 overflow-y-auto bg-[#0A0E14] scrollbar-hide flex flex-col pt-6 lg:pt-0">
+                <div className="flex-1 overflow-y-auto bg-[#0A0E14] scrollbar-hide flex flex-col pt-9">
                   {/* Banner & Profile Section */}
                   <div className="relative bg-gradient-to-b from-[#1c2333] to-[#0A0E14] pb-4 shrink-0">
                     <div className="pt-4 px-4">

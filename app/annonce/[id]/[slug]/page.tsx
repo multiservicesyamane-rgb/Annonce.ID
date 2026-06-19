@@ -7,6 +7,7 @@ import ContactActions from "@/components/ContactActions";
 import AdCard from "@/components/AdCard";
 import AdBanner from "@/components/AdBanner";
 import ShareButton from "@/components/ShareButton";
+import ReportListing from "@/components/ReportListing";
 import { createClient } from "@supabase/supabase-js";
 import { formatNumber } from "@/lib/utils";
 
@@ -282,6 +283,9 @@ export default async function AnnoncePage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Signaler l'annonce */}
+      <ReportListing listingId={ad.id} />
 
       {/* SIMILAIRES */}
       <section className="py-9">
