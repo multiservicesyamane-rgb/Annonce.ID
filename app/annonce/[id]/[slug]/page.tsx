@@ -178,11 +178,11 @@ export default async function AnnoncePage({ params }: Props) {
                 <span className="h-5 w-1.5 rounded-full bg-gradient-to-b from-indigo-400 to-purple-500"></span>
                 <h3 className="font-display text-[1rem] sm:text-[1.1rem] font-extrabold text-gray-900 dark:text-white">Caractéristiques</h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {Object.entries(ad.specs).map(([k, v]) => (
-                  <div key={k} className="flex items-center justify-between gap-3 border-b border-indigo-100/70 dark:border-white/5 py-2 last:border-0">
-                    <span className="text-[.78rem] text-gray-500 dark:text-gray-400">{k}</span>
-                    <span className="text-right text-[.84rem] font-bold text-indigo-900 dark:text-white">{String(v)}</span>
+                  <div key={k} className="flex flex-col rounded-[10px] border border-indigo-100/70 dark:border-white/5 bg-white/70 dark:bg-white/[0.03] px-2.5 py-2">
+                    <span className="text-[.62rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 truncate">{k}</span>
+                    <span className="text-[.82rem] font-bold text-indigo-900 dark:text-white truncate">{String(v)}</span>
                   </div>
                 ))}
               </div>
