@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import PaymentFlow from "@/components/PaymentFlow";
+import ManualPayment from "@/components/ManualPayment";
+import { ONLINE_PAYMENT_ENABLED } from "@/lib/payment";
 import { BOOSTS, SUBSCRIPTION_PLANS } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
 
@@ -68,15 +70,27 @@ function PaiementContent() {
           >
             ← Retour aux formules
           </button>
-          <PaymentFlow
-            itemName={checkoutInfo.itemName}
-            price={checkoutInfo.price}
-            duration={checkoutInfo.duration}
-            listingId={initialAnnonceId}
-            boostKey={checkoutInfo.boostKey}
-            subKey={checkoutInfo.subKey}
-            category={checkoutInfo.category}
-          />
+          {ONLINE_PAYMENT_ENABLED ? (
+            <PaymentFlow
+              itemName={checkoutInfo.itemName}
+              price={checkoutInfo.price}
+              duration={checkoutInfo.duration}
+              listingId={initialAnnonceId}
+              boostKey={checkoutInfo.boostKey}
+              subKey={checkoutInfo.subKey}
+              category={checkoutInfo.category}
+            />
+          ) : (
+            <ManualPayment
+              itemName={checkoutInfo.itemName}
+              price={checkoutInfo.price}
+              duration={checkoutInfo.duration}
+              listingId={initialAnnonceId}
+              boostKey={checkoutInfo.boostKey}
+              subKey={checkoutInfo.subKey}
+              category={checkoutInfo.category}
+            />
+          )}
         </div>
       </div>
     );

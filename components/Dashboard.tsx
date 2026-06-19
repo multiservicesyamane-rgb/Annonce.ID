@@ -8,6 +8,7 @@ import Link from "next/link";
 import AdCard from "./AdCard";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage";
+import { whatsappLink } from "@/lib/payment";
 import { formatNumber } from "@/lib/utils";
 import ConfirmModal from "./ConfirmModal";
 import EmptyState from "./EmptyState";
@@ -1871,35 +1872,14 @@ export default function Dashboard() {
                     <li className="flex gap-2">✓ Boosts applicables instantanément</li>
                     <li className="flex gap-2">✓ Priorité support client</li>
                   </ul>
-                  <button
-                    onClick={async () => {
-                      const numericPrice = pack.credits === 50 ? 5000 : pack.credits === 150 ? 12000 : 35000;
-                      show("Redirection vers PayTech...");
-                      try {
-                        const res = await fetch("/api/cinetpay", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            amount: numericPrice,
-                            itemName: `Achat de ${pack.credits} Crédits - ${pack.name}`,
-                            refCommand: `CRE-${Date.now()}`,
-                            userId: user?.id
-                          })
-                        });
-                        const data = await res.json();
-                        if (data.redirect_url) {
-                          window.location.href = data.redirect_url;
-                        } else {
-                          show(`❌ ${data.error || "Erreur lors de l'initialisation du paiement."}`);
-                        }
-                      } catch (error) {
-                        show("❌ Erreur de connexion avec PayTech.");
-                      }
-                    }}
-                    className={`w-full py-3 rounded-lg font-bold transition ${pack.popular ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700"}`}
+                  <a
+                    href={whatsappLink(`Bonjour 👋, je souhaite acheter le *${pack.name}* (${pack.credits} crédits - ${pack.price}). Je fais le dépôt et j'envoie le reçu.`)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`w-full py-3 rounded-lg font-bold transition text-center block ${pack.popular ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700"}`}
                   >
-                    Acheter maintenant
-                  </button>
+                    💬 Commander (dépôt + WhatsApp)
+                  </a>
                 </div>
               ))}
             </div>
@@ -2100,13 +2080,18 @@ export default function Dashboard() {
               if (user) {
                 try {
                   const coverUrl = await uploadImage(base64, "covers");
-                  const { error } = await supabase.from('profiles').update({ cover_url: coverUrl }).eq('id', user.id);
-                  if (error) throw error;
-                  setShowroomCover(coverUrl);
-                  setProfile((prev: any) => prev ? { ...prev, cover_url: coverUrl } : { cover_url: coverUrl });
-                  show("✓ Image de couverture mise à jour !");
+                  // Sécurité : on n'enregistre JAMAIS une base64 (échec d'upload = bucket manquant)
+                  if (coverUrl.startsWith("data:")) {
+                    show("❌ Stockage d'images non configuré : crée le bucket public « images » dans Supabase → Storage.");
+                  } else {
+                    const { error } = await supabase.from('profiles').update({ cover_url: coverUrl }).eq('id', user.id);
+                    if (error) throw error;
+                    setShowroomCover(coverUrl);
+                    setProfile((prev: any) => prev ? { ...prev, cover_url: coverUrl } : { cover_url: coverUrl });
+                    show("✓ Image de couverture mise à jour !");
+                  }
                 } catch (e: any) {
-                  show("❌ Erreur (colonne cover_url manquante ? Lancez le SQL).");
+                  show("❌ Erreur (colonne cover_url manquante ? Lancez MIGRATION_VIP.sql).");
                   console.error(e);
                 }
               }
@@ -2114,19 +2099,19 @@ export default function Dashboard() {
             if (cropModalZone === 'avatar') {
               if (user) {
                 try {
-                  // Envoi vers Supabase Storage (URL légère au lieu d'une base64 lourde)
+                  // Envoi vers Supabase Storage (URL légère). On NE stocke PAS de base64
+                  // dans la session/profil (sinon cookie géant → erreur 494).
                   const avatarUrl = await uploadImage(base64, "avatars");
-                  const { error: authError } = await supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
-                  if (authError) throw authError;
-                  const { error: dbError } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', user.id);
-                  if (dbError) throw dbError;
-
-                  const { data } = await supabase.auth.getUser();
-                  if (data?.user) setUser(data.user);
-                  setProfile((prev: any) => prev ? { ...prev, avatar_url: avatarUrl } : { avatar_url: avatarUrl });
-                  show("✓ Photo mise à jour !");
+                  if (avatarUrl.startsWith("data:")) {
+                    show("❌ Stockage d'images non configuré : crée le bucket public « images » dans Supabase → Storage.");
+                  } else {
+                    const { error: dbError } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', user.id);
+                    if (dbError) throw dbError;
+                    setProfile((prev: any) => prev ? { ...prev, avatar_url: avatarUrl } : { avatar_url: avatarUrl });
+                    show("✓ Photo mise à jour !");
+                  }
                 } catch (e: any) {
-                  show("❌ Erreur: L'image est peut-être trop volumineuse (Max 1 Mo suggéré).");
+                  show("❌ Erreur lors de l'enregistrement de la photo.");
                   console.error(e);
                 }
               }
