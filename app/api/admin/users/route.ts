@@ -126,21 +126,26 @@ export async function POST(req: Request) {
       } catch { /* ignore */ }
       if (!custName) { try { const { data: pr } = await sb.from("profiles").select("full_name").eq("id", userId).single(); custName = pr?.full_name || ""; } catch { /* ignore */ } }
 
-      // 1) Enregistrer le paiement espèces (adaptatif)
-      await adaptiveWrite(
-        (p) => sb.from("purchases").insert(p),
-        {
-          user_id: userId,
-          amount: amt,
-          ref_command: ref,
-          status: "success",
-          type: kind === "sub" ? "subscription" : "boost",
-          method: "cash",
-          plan_key: planKey || null,
-          plan_name: planName || null,
-          expires_at: expires,
-        }
-      );
+      // 1) Enregistrer le paiement espèces (best-effort : ne doit jamais bloquer
+      //    l'activation du plan, même si la table purchases est absente/partielle)
+      try {
+        await adaptiveWrite(
+          (p) => sb.from("purchases").insert(p),
+          {
+            user_id: userId,
+            amount: amt,
+            ref_command: ref,
+            status: "success",
+            type: kind === "sub" ? "subscription" : "boost",
+            method: "cash",
+            plan_key: planKey || null,
+            plan_name: planName || null,
+            expires_at: expires,
+          }
+        );
+      } catch (e: any) {
+        console.error("activatePlan: purchases insert échoué (ignoré):", e?.message);
+      }
 
       if (kind === "boost") {
         const featured = planKey === "alaune" || planKey === "vip";

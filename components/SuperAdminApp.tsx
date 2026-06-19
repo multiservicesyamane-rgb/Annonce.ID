@@ -746,6 +746,9 @@ function parseDays(duration: string): number {
 
 // Encaissement manuel (espèces) : activer un plan pour un client qui paie en main propre
 function Encaissement({ profiles, allListings, T, reload }: { profiles: any[]; allListings: any[]; T: (m: string) => void; reload: () => void }) {
+  const [serverUsers, setServerUsers] = useState<any[] | null>(null);
+  useEffect(() => { adminApi("list").then((d) => setServerUsers(d.users || [])).catch(() => setServerUsers(null)); }, []);
+  const allUsers = serverUsers ?? profiles;
   const [search, setSearch] = useState("");
   const [userId, setUserId] = useState("");
   const [kind, setKind] = useState<"boost" | "sub">("boost");
@@ -759,10 +762,10 @@ function Encaissement({ profiles, allListings, T, reload }: { profiles: any[]; a
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ name: string; user: string; ref: string; expires?: string; credits?: number } | null>(null);
 
-  const selectedUser = profiles.find((p: any) => p.id === userId);
+  const selectedUser = allUsers.find((p: any) => p.id === userId);
   const userLabel = (p: any) => p.full_name || p.email || p.phone || p.id?.slice(0, 8);
-  const filteredUsers = !search ? profiles.slice(0, 30)
-    : profiles.filter((p: any) => `${p.full_name || ""} ${p.email || ""} ${p.phone || ""}`.toLowerCase().includes(search.toLowerCase())).slice(0, 30);
+  const filteredUsers = !search ? allUsers.slice(0, 40)
+    : allUsers.filter((p: any) => `${p.full_name || ""} ${p.email || ""} ${p.phone || ""}`.toLowerCase().includes(search.toLowerCase())).slice(0, 40);
 
   const userListings = allListings.filter((l: any) => (l.user_id || l.owner_id || l.profile_id) === userId);
 
