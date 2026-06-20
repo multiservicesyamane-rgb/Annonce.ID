@@ -1381,7 +1381,7 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
       {/* 1. Planifier / Créer Post */}
       {selSlot && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={() => setSelSlot(null)}>
-          <div className="w-full max-w-[500px] rounded-[14px] border border-[#30363D] bg-[#161B22] p-5 text-white" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-[500px] max-h-[90vh] overflow-y-auto scrollbar-thin rounded-[14px] border border-[#30363D] bg-[#161B22] p-5 text-white" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[1rem] font-bold text-white">🗓️ Planifier une publication</h3>
               <button onClick={() => setSelSlot(null)} className="text-gray-400 text-xl hover:text-white">✕</button>
@@ -1515,7 +1515,7 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
       {/* 2. Détails du Post */}
       {selPost && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={() => setSelPost(null)}>
-          <div className="w-full max-w-[480px] rounded-[14px] border border-[#30363D] bg-[#161B22] p-5 text-white" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-[480px] max-h-[90vh] overflow-y-auto scrollbar-thin rounded-[14px] border border-[#30363D] bg-[#161B22] p-5 text-white" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[1rem] font-bold text-white">📋 Détails de la publication</h3>
               <button onClick={() => setSelPost(null)} className="text-gray-400 text-xl hover:text-white">✕</button>
