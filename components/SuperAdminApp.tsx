@@ -311,7 +311,7 @@ export default function SuperAdminApp() {
             {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} />}
             {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} />}
             {page === "marketing" && <Marketing T={T} />}
-            {page === "campagne_ia" && <CampagneIA T={T} />}
+            {page === "campagne_ia" && <CampagneIA T={T} allListings={allListings} />}
             {page === "campagnes" && <Campagnes campaigns={campaigns} addCampaign={addCampaign} T={T} />}
             {page === "employes" && <Employes employees={employees} addEmployee={addEmployee} T={T} />}
             {page === "ambassadeurs" && <Ambassadeurs T={T} ambassadors={ambassadors} />}
@@ -511,29 +511,250 @@ function Marketing({ T }: { T: (m: string) => void }) {
   );
 }
 
-function CampagneIA({ T }: { T: (m: string) => void }) {
+function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: any[] }) {
   const [stats, setStats] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [boosts, setBoosts] = useState<any[]>([]);
+  const [influ, setInflu] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"dashboard" | "planning" | "influenceurs" | "rapports">("dashboard");
   const [fPlat, setFPlat] = useState("all");
   const [fStatus, setFStatus] = useState("all");
+  const [fWeek, setFWeek] = useState("all");
 
-  useEffect(() => {
-    adminApi("campaign").then((d) => { setStats(d.stats || []); setPosts(d.posts || []); setBoosts(d.boosts || []); })
+  // Modals & Forms
+  const [iForm, setIForm] = useState<Record<string, any>>({ collaboration_type: "barter", status: "contacte" });
+  const [showI, setShowI] = useState(false);
+  const [showContact, setShowContact] = useState(false);
+  const [contactInflu, setContactInflu] = useState<any>(null);
+  const [contactMsg, setContactMsg] = useState("");
+
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selPost, setSelPost] = useState<any>(null);
+  const [selSlot, setSelSlot] = useState<{ day: Date; slotIndex: number } | null>(null);
+  const [pForm, setPForm] = useState<Record<string, any>>({ platform: "all", status: "scheduled" });
+
+  const [selBoostPost, setSelBoostPost] = useState<any>(null);
+  const [showR, setShowR] = useState(false);
+  const [rForm, setRForm] = useState<Record<string, any>>({
+    week_start: new Date().toISOString().slice(0, 10),
+    total_views: 0,
+    total_new_followers: 0,
+    avg_engagement_rate: 0,
+    total_clicks: 0,
+    revenue_fcfa: 0,
+    boosts_sold: 0,
+    notes: ""
+  });
+
+  function loadCampaign() {
+    adminApi("campaign").then((d) => { setStats(d.stats || []); setPosts(d.posts || []); setBoosts(d.boosts || []); setInflu(d.influ || []); setReports(d.reports || []); })
       .catch(() => { /* tables pas encore créées */ }).finally(() => setLoading(false));
-  }, []);
+  }
+  useEffect(() => { loadCampaign(); }, []);
+
+  function getSlotDateTimeString(day: Date, slotIndex: number) {
+    const yyyymmdd = day.toISOString().slice(0, 10);
+    const times = ["07:00:00", "10:00:00", "13:00:00", "16:00:00", "20:30:00"];
+    return `${yyyymmdd}T${times[slotIndex]}+01:00`;
+  }
+
+  // Post Actions
+  async function savePost() {
+    if (!pForm.caption) { T("⚠ Légende requise"); return; }
+    const dt = getSlotDateTimeString(selSlot!.day, selSlot!.slotIndex);
+    const payload = {
+      id: pForm.id || undefined,
+      platform: pForm.platform || "all",
+      caption: pForm.caption,
+      image_url: pForm.image_url || null,
+      scheduled_at: dt,
+      status: pForm.status || "scheduled",
+      annonce_id: pForm.annonce_id || null,
+    };
+    try {
+      await adminApi("campaignPostSave", { row: payload });
+      T(pForm.id ? "✅ Post mis à jour" : "✅ Post planifié");
+      setSelSlot(null);
+      setPForm({ platform: "all", status: "scheduled" });
+      loadCampaign();
+    } catch (e: any) {
+      T(`❌ ${e.message}`);
+    }
+  }
+
+  async function deletePost(id: string) {
+    if (!confirm("Supprimer ce post ?")) return;
+    try {
+      await adminApi("campaignPostDelete", { id });
+      T("🗑️ Post supprimé");
+      setSelPost(null);
+      loadCampaign();
+    } catch (e: any) {
+      T(`❌ ${e.message}`);
+    }
+  }
+
+  async function triggerRepublier(post: any) {
+    if (!confirm("Republier ce post ? Cela va déclencher le webhook Make.com.")) return;
+    try {
+      await adminApi("campaignPostRepublish", { postId: post.id });
+      T("🚀 Webhook de republication envoyé à Make.com !");
+    } catch (e: any) {
+      T(`❌ ${e.message}`);
+    }
+  }
+
+  async function handleBoostPost(plan: any) {
+    if (!selBoostPost) return;
+    try {
+      const days = plan.key === "vip" ? 30 : 7;
+      await adminApi("campaignBoostSave", {
+        row: {
+          annonce_id: selBoostPost.annonce_id || null,
+          plan_key: plan.key,
+          duration_days: days,
+          platform: selBoostPost.platform || "both",
+          budget_fcfa: plan.price,
+          status: "active"
+        }
+      });
+      T(`🔥 Boost "${plan.name}" activé pour l'annonce !`);
+      setSelBoostPost(null);
+      loadCampaign();
+    } catch (e: any) {
+      T(`❌ ${e.message}`);
+    }
+  }
+
+  // Influenceur Actions
+  async function saveInflu() {
+    if (!iForm.nom) { T("⚠ Nom requis"); return; }
+    try {
+      await adminApi("campaignInfluSave", {
+        row: {
+          id: iForm.id || undefined,
+          nom: iForm.nom,
+          plateforme: iForm.plateforme || null,
+          handle: iForm.handle || null,
+          followers: Number(iForm.followers) || 0,
+          collaboration_type: iForm.collaboration_type || "barter",
+          cout_fcfa: Number(iForm.cout_fcfa) || 0,
+          status: iForm.status || "contacte",
+          reach_genere: Number(iForm.reach_genere) || 0
+        }
+      });
+      T("✅ Influenceur enregistré");
+      setShowI(false);
+      setIForm({ collaboration_type: "barter", status: "contacte" });
+      loadCampaign();
+    } catch (e: any) {
+      T(`❌ ${e.message}`);
+    }
+  }
+
+  async function setInfluStatus(id: string, status: string) {
+    try {
+      await adminApi("campaignInfluSave", { row: { id, status } });
+      loadCampaign();
+    } catch (e: any) {
+      T(`❌ ${e.message}`);
+    }
+  }
+
+  async function delInflu(id: string) {
+    if (!confirm("Supprimer cet influenceur ?")) return;
+    try {
+      await adminApi("campaignInfluDelete", { id });
+      T("🗑️ Supprimé");
+      loadCampaign();
+    } catch (e: any) {
+      T(`❌ ${e.message}`);
+    }
+  }
+
+  const openContact = (inf: any) => {
+    setContactInflu(inf);
+    const msg = `Bonjour ${inf.nom} ! 👋 \n\nNous adorons votre travail sur ${inf.handle} (${inf.followers.toLocaleString("fr-FR")} abonnés). \n\nNous gérons la plateforme d'annonces localisées wanteermako.com et aimerions collaborer avec vous pour faire grandir notre communauté. Seriez-vous disponible pour en discuter ? \n\nMerci !`;
+    setContactMsg(msg);
+    setShowContact(true);
+  };
+
+  const handleContactAction = () => {
+    navigator.clipboard?.writeText(contactMsg);
+    T("📋 Message copié !");
+    setShowContact(false);
+
+    const cleanHandle = (contactInflu.handle || "").replace('@', '').trim();
+    const plat = (contactInflu.plateforme || "").toLowerCase();
+    let url = "https://instagram.com";
+    if (plat.includes("instagram")) {
+      url = `https://instagram.com/${cleanHandle}`;
+    } else if (plat.includes("tiktok")) {
+      url = `https://tiktok.com/@${cleanHandle}`;
+    } else if (plat.includes("facebook")) {
+      url = `https://facebook.com/${cleanHandle}`;
+    }
+    window.open(url, "_blank");
+  };
+
+  // Report Actions
+  async function saveReport() {
+    if (!rForm.week_start) { T("⚠ Date de début requise"); return; }
+    try {
+      await adminApi("campaignReportSave", {
+        row: {
+          id: rForm.id || undefined,
+          week_start: rForm.week_start,
+          total_views: Number(rForm.total_views) || 0,
+          total_new_followers: Number(rForm.total_new_followers) || 0,
+          avg_engagement_rate: Number(rForm.avg_engagement_rate) || 0,
+          total_clicks: Number(rForm.total_clicks) || 0,
+          revenue_fcfa: Number(rForm.revenue_fcfa) || 0,
+          boosts_sold: Number(rForm.boosts_sold) || 0,
+          notes: rForm.notes || null,
+        }
+      });
+      T("✅ Rapport enregistré");
+      setShowR(false);
+      setRForm({
+        week_start: new Date().toISOString().slice(0, 10),
+        total_views: 0,
+        total_new_followers: 0,
+        avg_engagement_rate: 0,
+        total_clicks: 0,
+        revenue_fcfa: 0,
+        boosts_sold: 0,
+        notes: ""
+      });
+      loadCampaign();
+    } catch (e: any) {
+      T(`❌ ${e.message}`);
+    }
+  }
+
+  async function delReport(id: string) {
+    if (!confirm("Supprimer ce rapport ?")) return;
+    try {
+      await adminApi("campaignReportDelete", { id });
+      T("🗑️ Rapport supprimé");
+      loadCampaign();
+    } catch (e: any) {
+      T(`❌ ${e.message}`);
+    }
+  }
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://wanteermako.com";
   const last7 = (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0, 10); })();
   const sum = (arr: any[], k: string) => arr.reduce((a, x) => a + (Number(x[k]) || 0), 0);
-  const week = stats.filter((s) => s.date >= last7);
+  const weekStats = stats.filter((s) => s.date >= last7);
   const latestDate = stats[0]?.date;
   const viewsToday = sum(stats.filter((s) => s.date === latestDate), "views");
-  const newFollowersWeek = sum(week, "new_followers");
-  const engRows = week.filter((s) => Number(s.engagement_rate) > 0);
+  const newFollowersWeek = sum(weekStats, "new_followers");
+  const engRows = weekStats.filter((s) => Number(s.engagement_rate) > 0);
   const avgEng = engRows.length ? (sum(engRows, "engagement_rate") / engRows.length) : 0;
-  const clicksWeek = sum(week, "clicks_to_site");
+  const clicksWeek = sum(weekStats, "clicks_to_site");
   const waFollowers = sum(stats.filter((s) => s.platform === "whatsapp"), "new_followers");
   const boostRevenue = sum(boosts.filter((b) => b.status === "active" || b.status === "completed"), "budget_fcfa");
 
@@ -542,12 +763,15 @@ function CampagneIA({ T }: { T: (m: string) => void }) {
     { grad: "bg-g4", icon: "➕", label: "Nouv. abonnés / sem", value: newFollowersWeek, target: 500 },
     { grad: "bg-g5", icon: "💥", label: "Engagement moyen %", value: Math.round(avgEng), target: 8 },
     { grad: "bg-g3", icon: "🔗", label: "Clics vers le site / sem", value: clicksWeek, target: 5000 },
-    { grad: "bg-g8", icon: "💬", label: "Abonnés WhatsApp", value: waFollowers, target: 1000 },
+    { grad: "bg-[#00C853]/90", icon: "💬", label: "Abonnés WhatsApp", value: waFollowers, target: 1000 },
     { grad: "bg-g6", icon: "💰", label: "Revenus boosts (FCFA)", value: boostRevenue, target: 200000 },
   ];
 
-  const filtered = posts.filter((p) => (fPlat === "all" || p.platform === fPlat) && (fStatus === "all" || p.status === fStatus));
-  const statusColor = (s: string) => s === "published" ? "bg-emerald-500/15 text-emerald-300" : s === "scheduled" ? "bg-amber-500/15 text-amber-300" : s === "boosted" ? "bg-violet-500/15 text-violet-300" : "bg-white/10 text-gray-400";
+  const statusColor = (s: string) =>
+    s === "published" ? "bg-emerald-500/15 text-emerald-300" :
+    s === "scheduled" ? "bg-amber-500/15 text-amber-300" :
+    s === "boosted" ? "bg-violet-500/15 text-violet-300" :
+    "bg-white/10 text-gray-400";
 
   const endpoints = [
     ["POST", "/api/campaign/post-published", "Make → enregistre un post publié"],
@@ -557,77 +781,938 @@ function CampagneIA({ T }: { T: (m: string) => void }) {
     ["POST", "/api/campaign/boost-request", "Crée un boost + déclenche Meta Ads"],
   ];
 
+  // Planning logic
+  const getWeekDays = () => {
+    const current = new Date();
+    current.setDate(current.getDate() + weekOffset * 7);
+    const day = current.getDay();
+    const diff = current.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(current.setDate(diff));
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  };
+
+  const getPostForSlot = (dayStr: string, slotIndex: number) => {
+    return posts.find((p) => {
+      const dtStr = p.scheduled_at || p.published_at || p.created_at;
+      if (!dtStr) return false;
+      const d = new Date(dtStr);
+      const pDayStr = d.toISOString().slice(0, 10);
+      if (pDayStr !== dayStr) return false;
+      const hour = d.getHours();
+      if (slotIndex === 0) return hour >= 5 && hour < 9;
+      if (slotIndex === 1) return hour >= 9 && hour < 12;
+      if (slotIndex === 2) return hour >= 12 && hour < 15;
+      if (slotIndex === 3) return hour >= 15 && hour < 18;
+      if (slotIndex === 4) return hour >= 18 && hour < 23;
+      return false;
+    });
+  };
+
+  const weekDays = getWeekDays();
+
+  // Filters for Suivi des posts
+  const filtered = posts.filter((p) => {
+    const matchPlat = fPlat === "all" || p.platform === fPlat;
+    const matchStatus = fStatus === "all" || p.status === fStatus;
+
+    if (fWeek === "current") {
+      const dtStr = p.scheduled_at || p.published_at || p.created_at;
+      if (!dtStr) return false;
+      const pDay = dtStr.slice(0, 10);
+      const start = weekDays[0].toISOString().slice(0, 10);
+      const end = weekDays[6].toISOString().slice(0, 10);
+      return matchPlat && matchStatus && pDay >= start && pDay <= end;
+    }
+
+    return matchPlat && matchStatus;
+  });
+
+  const sortedReps = [...reports].sort((a, b) => a.week_start.localeCompare(b.week_start));
+  const maxFollowers = Math.max(...sortedReps.map(r => r.total_new_followers), 100);
+  const maxRevenue = Math.max(...sortedReps.map(r => r.revenue_fcfa), 10000);
+
+  const topPosts = [...posts]
+    .sort((a, b) => (b.reach || 0) - (a.reach || 0))
+    .slice(0, 5);
+
   return (
     <>
       <PageHead title="🚀 Campagne IA 2025" sub="Croissance Facebook · Instagram · WhatsApp — automatisée via Make.com" />
 
+      <div className="no-scrollbar -mx-1 mb-4 flex gap-2 overflow-x-auto px-1">
+        {([["dashboard", "📊 Tableau de bord"], ["planning", "🗓️ Planning"], ["influenceurs", "🤝 Influenceurs"], ["rapports", "📄 Rapports"]] as const).map(([id, label]) => (
+          <button key={id} onClick={() => setTab(id)} className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[.78rem] font-bold ${tab === id ? "bg-g1 text-white" : "bg-white/5 text-[#A5B4FC]"}`}>{label}</button>
+        ))}
+      </div>
+
       {loading ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Chargement…</div> : (
         <>
-          {/* KPIs */}
-          <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3">
-            {KPIS.map((k) => {
-              const pct = Math.min(100, Math.round((k.value / k.target) * 100));
-              return (
-                <div key={k.label} className={`relative overflow-hidden rounded-[14px] p-3.5 text-white ${k.grad}`}>
-                  <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-white/10" />
-                  <div className="relative">
-                    <div className="mb-1 text-[1rem]">{k.icon}</div>
-                    <div className="font-display text-[1.3rem] font-extrabold leading-none">{k.value.toLocaleString("fr-FR")}</div>
-                    <div className="mt-1 text-[.66rem] font-medium opacity-90">{k.label}</div>
-                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-black/20"><div className="h-full rounded-full bg-white/80" style={{ width: `${pct}%` }} /></div>
-                    <div className="mt-1 text-[.6rem] opacity-80">Objectif : {k.target.toLocaleString("fr-FR")} ({pct}%)</div>
+          {tab === "dashboard" && (
+            <>
+              {/* KPIs */}
+              <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3">
+                {KPIS.map((k) => {
+                  const pct = Math.min(100, Math.round((k.value / k.target) * 100));
+                  return (
+                    <div key={k.label} className={`relative overflow-hidden rounded-[14px] p-3.5 text-white ${k.grad}`}>
+                      <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-white/10" />
+                      <div className="relative">
+                        <div className="mb-1 text-[1rem]">{k.icon}</div>
+                        <div className="font-display text-[1.3rem] font-extrabold leading-none">{k.value.toLocaleString("fr-FR")}</div>
+                        <div className="mt-1 text-[.66rem] font-medium opacity-90">{k.label}</div>
+                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-black/20"><div className="h-full rounded-full bg-white/80" style={{ width: `${pct}%` }} /></div>
+                        <div className="mt-1 text-[.6rem] opacity-80">Objectif : {k.target.toLocaleString("fr-FR")} ({pct}%)</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Suivi des posts */}
+              <Card title={`📋 Suivi des posts (${posts.length})`}>
+                <div className="mb-3 flex flex-wrap gap-2 items-center">
+                  <select value={fPlat} onChange={(e) => setFPlat(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.78rem] text-white">
+                    <option value="all">Toutes plateformes</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="whatsapp">WhatsApp</option>
+                  </select>
+                  <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.78rem] text-white">
+                    <option value="all">Tous statuts</option>
+                    <option value="draft">Brouillon</option>
+                    <option value="scheduled">Planifié</option>
+                    <option value="published">Publié</option>
+                    <option value="boosted">Boosté</option>
+                  </select>
+                  <select value={fWeek} onChange={(e) => setFWeek(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.78rem] text-white">
+                    <option value="all">Toutes les semaines</option>
+                    <option value="current">Cette semaine</option>
+                  </select>
+                </div>
+                {filtered.length === 0 ? (
+                  <div className="py-8 text-center text-[.82rem] text-[#8B949E]">Aucun post pour l'instant. Make.com les ajoutera automatiquement après configuration.</div>
+                ) : (
+                  <Tbl head={["Annonce", "Plateforme", "Statut", "Reach", "Réactions", "Partages", "Date publication", "Actions"]}>
+                    {filtered.map((p) => {
+                      const ad = allListings.find(a => a.id === p.annonce_id);
+                      return (
+                        <tr key={p.id} className="hover:bg-white/[.02] border-b border-[#21262D]">
+                          <Td>
+                            {ad ? (
+                              <div className="flex items-center gap-2">
+                                <img src={ad.image || "https://placehold.co/50x50?text=WMK"} className="h-8 w-8 rounded object-cover shrink-0" alt="" />
+                                <div className="min-w-0">
+                                  <div className="font-bold text-[#E6EDF3] truncate max-w-[120px]">{ad.title}</div>
+                                  <div className="text-[.65rem] text-emerald-400 font-bold">{ad.price} F</div>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-[#8B949E] text-[.75rem]">Post libre (Branding)</span>
+                            )}
+                          </Td>
+                          <Td bold>{p.platform}</Td>
+                          <Td><span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${statusColor(p.status)}`}>{p.status}</span></Td>
+                          <Td>{(p.reach || 0).toLocaleString("fr-FR")}</Td>
+                          <Td>{(p.reactions || 0).toLocaleString("fr-FR")}</Td>
+                          <Td>{(p.shares || 0).toLocaleString("fr-FR")}</Td>
+                          <Td>{p.published_at ? new Date(p.published_at).toLocaleDateString("fr-FR") : p.scheduled_at ? new Date(p.scheduled_at).toLocaleDateString("fr-FR") : "—"}</Td>
+                          <Td>
+                            <div className="flex items-center gap-2">
+                              {p.post_url ? (
+                                <a href={p.post_url} target="_blank" rel="noopener noreferrer" className="text-[#A5B4FC] font-bold hover:underline text-[.72rem]">Voir ↗</a>
+                              ) : (
+                                <span className="text-[#8B949E] text-[.72rem]">—</span>
+                              )}
+                              <button onClick={() => setSelBoostPost(p)} className="rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[.68rem] font-bold text-amber-300 hover:bg-amber-500/20">
+                                ⭐ Booster
+                              </button>
+                              <button onClick={() => triggerRepublier(p)} className="rounded bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 text-[.68rem] font-bold text-indigo-300 hover:bg-indigo-500/20">
+                                🔄 Republier
+                              </button>
+                            </div>
+                          </Td>
+                        </tr>
+                      );
+                    })}
+                  </Tbl>
+                )}
+              </Card>
+
+              {/* Configuration Make.com */}
+              <div className="mt-3">
+                <Card title="⚙️ Connexion Make.com — Endpoints à copier">
+                  <p className="mb-2 text-[.78rem] text-[#8B949E]">Colle ces URLs dans tes scénarios Make.com. Ajoute le header <code className="text-[#A5B4FC]">x-campaign-secret</code> = ta valeur <code className="text-[#A5B4FC]">CAMPAIGN_WEBHOOK_SECRET</code> (sur Vercel).</p>
+                  <div className="space-y-1.5">
+                    {endpoints.map(([m, path, desc]) => (
+                      <div key={path} className="flex flex-wrap items-center gap-2 rounded-[8px] bg-[#0D1117] p-2">
+                        <span className={`rounded px-1.5 py-0.5 text-[.62rem] font-bold ${m === "GET" ? "bg-blue-500/20 text-blue-300" : "bg-emerald-500/20 text-emerald-300"}`}>{m}</span>
+                        <code className="text-[.74rem] text-[#E6EDF3]">{origin}{path}</code>
+                        <button onClick={() => { navigator.clipboard?.writeText(`${origin}${path}`); T("📋 Copié"); }} className="ml-auto rounded bg-white/5 px-2 py-0.5 text-[.68rem] text-[#A5B4FC]">Copier</button>
+                        <span className="w-full text-[.68rem] text-[#8B949E]">{desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 rounded-[8px] border border-[#6366F1]/30 bg-[#6366F1]/10 p-2.5 text-[.74rem] text-[#A5B4FC]">
+                    ℹ️ Variables à mettre sur Vercel : <b>CAMPAIGN_WEBHOOK_SECRET</b>, MAKE_WEBHOOK_URL, META_PAGE_ID, META_ACCESS_TOKEN, OPENAI_API_KEY, CANVA_ACCESS_TOKEN, BUFFER_ACCESS_TOKEN, MANYCHAT_API_KEY.
+                  </div>
+                </Card>
+              </div>
+            </>
+          )}
+
+          {tab === "planning" && (
+            <Card title="🗓️ Calendrier des publications">
+              <p className="mb-4 text-[.78rem] text-[#8B949E]">
+                Visualise et planifie les publications de la campagne IA. Vert = Publié/Boosté, Orange = Planifié, Gris = Emplacement libre.
+              </p>
+
+              <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <button onClick={() => setWeekOffset(w => w - 1)} className="rounded-[9px] bg-[#21262D] border border-[#30363D] hover:bg-[#30363D] px-3.5 py-1.5 text-[.78rem] font-bold text-[#C9D1D9]">
+                  ⬅️ Semaine Précédente
+                </button>
+                <span className="font-bold text-[.82rem] text-[#A5B4FC]">
+                  Semaine du {weekDays[0].toLocaleDateString("fr-FR")} au {weekDays[6].toLocaleDateString("fr-FR")}
+                </span>
+                <button onClick={() => setWeekOffset(w => w + 1)} className="rounded-[9px] bg-[#21262D] border border-[#30363D] hover:bg-[#30363D] px-3.5 py-1.5 text-[.78rem] font-bold text-[#C9D1D9]">
+                  Semaine Suivante ➡️
+                </button>
+              </div>
+
+              <div className="overflow-x-auto rounded-[12px] border border-[#30363D]">
+                <table className="w-full border-collapse min-w-[700px]">
+                  <thead>
+                    <tr className="bg-[#161B22]">
+                      <th className="border border-[#30363D] p-3 text-left text-[.72rem] font-bold uppercase tracking-wide text-[#8B949E] w-[140px]">WAT Time</th>
+                      {weekDays.map((day, i) => (
+                        <th key={i} className="border border-[#30363D] p-3 text-center text-[.72rem] font-bold uppercase tracking-wide text-white">
+                          <div>{["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"][i]}</div>
+                          <div className="text-[.62rem] text-[#8B949E] mt-0.5">{day.toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' })}</div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {["🌅 07h00 WAT", "📈 10h00 WAT", "☀️ 13h00 WAT", "🚀 16h00 WAT", "🌙 20h30 WAT"].map((slotName, slotIdx) => (
+                      <tr key={slotIdx}>
+                        <td className="border border-[#30363D] p-3 text-[.72rem] font-bold text-[#8B949E] bg-[#161B22]">{slotName}</td>
+                        {weekDays.map((day, dayIdx) => {
+                          const dayStr = day.toISOString().slice(0, 10);
+                          const post = getPostForSlot(dayStr, slotIdx);
+                          return (
+                            <td
+                              key={dayIdx}
+                              onClick={() => {
+                                if (post) {
+                                  setSelPost(post);
+                                } else {
+                                  setSelSlot({ day, slotIndex: slotIdx });
+                                  setPForm({ platform: "all", status: "scheduled", caption: "" });
+                                }
+                              }}
+                              className={`border border-[#30363D] p-2 text-[.7rem] cursor-pointer transition text-center min-h-[60px] h-[75px] relative group ${
+                                post
+                                  ? post.status === "published" || post.status === "boosted"
+                                    ? "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-300"
+                                    : "bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 text-amber-300"
+                                  : "bg-[#0D1117] hover:bg-white/[0.03] text-gray-600"
+                              }`}
+                            >
+                              {post ? (
+                                <div className="flex flex-col justify-between h-full text-left">
+                                  <div className="flex justify-between items-center text-[.6rem] font-extrabold uppercase">
+                                    <span>{post.platform}</span>
+                                    {post.status === "boosted" && <span className="text-amber-400">⭐</span>}
+                                  </div>
+                                  <div className="line-clamp-2 leading-tight text-[.65rem] my-0.5">{post.caption}</div>
+                                  <div className="text-[.65rem] opacity-75 font-semibold">{post.status}</div>
+                                </div>
+                              ) : (
+                                <span className="opacity-30 group-hover:opacity-80 transition">+ Planifier</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+
+          {tab === "influenceurs" && (
+            <>
+              <div className="mb-3 flex justify-between items-center">
+                <h3 className="text-[.9rem] font-bold text-[#E6EDF3]">Influenceurs affiliés Wanteermako</h3>
+                <button className="rounded-[9px] bg-[#21262D] border border-[#30363D] hover:bg-[#30363D] px-3 py-1.5 text-[.78rem] font-bold text-[#C9D1D9]" onClick={() => { setIForm({ collaboration_type: "barter", status: "contacte" }); setShowI(true); }}>
+                  + Nouvel Influenceur
+                </button>
+              </div>
+
+              <Card title={`🤝 Influenceurs (${influ.length})`}>
+                {influ.length === 0 ? (
+                  <div className="py-8 text-center text-[.82rem] text-[#8B949E]">
+                    Aucun influenceur. Ajoutez-en un pour suivre vos partenariats marketing !
+                  </div>
+                ) : (
+                  <Tbl head={["Nom", "Platform/Handle", "Abonnés", "Type Collab", "Reach Généré", "Coût", "Statut", "Actions"]}>
+                    {influ.map((inf) => {
+                      const cleanHandle = (inf.handle || "").replace('@', '').trim();
+                      const plat = (inf.plateforme || "").toLowerCase();
+                      let link = "https://instagram.com";
+                      if (plat.includes("instagram")) link = `https://instagram.com/${cleanHandle}`;
+                      else if (plat.includes("tiktok")) link = `https://tiktok.com/@${cleanHandle}`;
+                      else if (plat.includes("facebook")) link = `https://facebook.com/${cleanHandle}`;
+
+                      return (
+                        <tr key={inf.id} className="hover:bg-white/[.02] border-b border-[#21262D]">
+                          <Td bold>{inf.nom}</Td>
+                          <Td>
+                            <div className="text-[.78rem]">
+                              <span className="text-[#8B949E] uppercase font-bold text-[.6rem] block">{inf.plateforme || "instagram"}</span>
+                              <a href={link} target="_blank" rel="noopener noreferrer" className="text-[#A5B4FC] font-semibold hover:underline">
+                                {inf.handle || "@—"}
+                              </a>
+                            </div>
+                          </Td>
+                          <Td>{(inf.followers || 0).toLocaleString("fr-FR")}</Td>
+                          <Td>
+                            <span className={`rounded-md px-1.5 py-0.5 text-[.65rem] font-bold ${inf.collaboration_type === "paid" ? "bg-amber-500/10 text-amber-300" : "bg-blue-500/10 text-blue-300"}`}>
+                              {inf.collaboration_type === "paid" ? "Payant (Paid)" : "Échange (Barter)"}
+                            </span>
+                          </Td>
+                          <Td>
+                            <span className="text-emerald-400 font-bold">{(inf.reach_genere || 0).toLocaleString("fr-FR")}</span>
+                          </Td>
+                          <Td>{(inf.cout_fcfa || 0).toLocaleString("fr-FR")} F</Td>
+                          <Td>
+                            <select
+                              value={inf.status || "contacte"}
+                              onChange={(e) => setInfluStatus(inf.id, e.target.value)}
+                              className="rounded bg-[#0D1117] border border-[#30363D] px-1.5 py-0.5 text-[.68rem] text-white"
+                            >
+                              <option value="contacte">Contacté</option>
+                              <option value="actif">Actif</option>
+                              <option value="termine">Terminé</option>
+                            </select>
+                          </Td>
+                          <Td>
+                            <div className="flex gap-2">
+                              <button onClick={() => openContact(inf)} className="rounded bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[.68rem] font-bold text-emerald-300 hover:bg-emerald-500/20">
+                                💬 Contacter
+                              </button>
+                              <button onClick={() => { setIForm(inf); setShowI(true); }} className="rounded bg-white/5 px-2 py-0.5 text-[.68rem] font-bold text-[#A5B4FC] hover:bg-white/10">
+                                ✏️ Modifier
+                              </button>
+                              <button onClick={() => delInflu(inf.id)} className="rounded bg-red-500/10 border border-red-500/20 px-2 py-0.5 text-[.68rem] font-bold text-red-300 hover:bg-red-500/20">
+                                🗑️
+                              </button>
+                            </div>
+                          </Td>
+                        </tr>
+                      );
+                    })}
+                  </Tbl>
+                )}
+              </Card>
+            </>
+          )}
+
+          {tab === "rapports" && (
+            <>
+              <div className="mb-3 flex justify-between items-center">
+                <h3 className="text-[.9rem] font-bold text-[#E6EDF3]">Performance Hebdomadaire & Statistiques</h3>
+                <button className="rounded-[9px] bg-[#21262D] border border-[#30363D] hover:bg-[#30363D] px-3 py-1.5 text-[.78rem] font-bold text-[#C9D1D9]" onClick={() => {
+                  setRForm({
+                    week_start: new Date().toISOString().slice(0, 10),
+                    total_views: 0,
+                    total_new_followers: 0,
+                    avg_engagement_rate: 0,
+                    total_clicks: 0,
+                    revenue_fcfa: 0,
+                    boosts_sold: 0,
+                    notes: ""
+                  });
+                  setShowR(true);
+                }}>
+                  + Nouveau Rapport Hebdo
+                </button>
+              </div>
+
+              {/* Graphs Section */}
+              {sortedReps.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-2 mb-4">
+                  <Card title="📈 Nouveaux Abonnés par Semaine">
+                    <div className="flex items-center justify-center p-3 bg-[#0D1117] rounded-lg">
+                      <svg width="100%" height="200" viewBox="0 0 500 200" preserveAspectRatio="none">
+                        {[0, 0.25, 0.5, 0.75, 1].map((p, idx) => (
+                          <line key={idx} x1="40" y1={String(170 - p * 140)} x2="480" y2={String(170 - p * 140)} stroke="#30363D" strokeWidth="0.5" strokeDasharray="4 4" />
+                        ))}
+                        <path
+                          fill="none"
+                          stroke="#00C853"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d={sortedReps.map((r, i) => {
+                            const x = 40 + i * ((500 - 60) / Math.max(sortedReps.length - 1, 1));
+                            const y = 170 - (r.total_new_followers / maxFollowers) * 140;
+                            return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                          }).join(" ")}
+                        />
+                        {sortedReps.map((r, i) => {
+                          const x = 40 + i * ((500 - 60) / Math.max(sortedReps.length - 1, 1));
+                          const y = 170 - (r.total_new_followers / maxFollowers) * 140;
+                          return (
+                            <g key={i}>
+                              <circle cx={x} cy={y} r="5" fill="#00C853" stroke="#161B22" strokeWidth="2" />
+                              <text x={x} y={y - 10} fill="#E6EDF3" fontSize="8" fontWeight="bold" textAnchor="middle">
+                                {r.total_new_followers}
+                              </text>
+                              <text x={x} y="190" fill="#8B949E" fontSize="7" textAnchor="middle">
+                                {new Date(r.week_start).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' })}
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    </div>
+                  </Card>
+
+                  <Card title="💰 Revenus Générés via Boosts (FCFA)">
+                    <div className="flex items-center justify-center p-3 bg-[#0D1117] rounded-lg">
+                      <svg width="100%" height="200" viewBox="0 0 500 200" preserveAspectRatio="none">
+                        {[0, 0.25, 0.5, 0.75, 1].map((p, idx) => (
+                          <line key={idx} x1="50" y1={String(170 - p * 140)} x2="480" y2={String(170 - p * 140)} stroke="#30363D" strokeWidth="0.5" strokeDasharray="4 4" />
+                        ))}
+                        {sortedReps.map((r, i) => {
+                          const w = Math.max(12, (500 - 80) / sortedReps.length - 15);
+                          const x = 50 + i * ((500 - 80) / sortedReps.length) + 10;
+                          const h = (r.revenue_fcfa / maxRevenue) * 140;
+                          const y = 170 - h;
+                          return (
+                            <g key={i}>
+                              <rect x={x} y={y} width={w} height={h} fill="#6366F1" rx="4" />
+                              <text x={x + w/2} y={y - 8} fill="#E6EDF3" fontSize="8" fontWeight="bold" textAnchor="middle">
+                                {r.revenue_fcfa >= 1000 ? `${(r.revenue_fcfa / 1000).toFixed(0)}k` : r.revenue_fcfa}
+                              </text>
+                              <text x={x + w/2} y="190" fill="#8B949E" fontSize="7" textAnchor="middle">
+                                {new Date(r.week_start).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' })}
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    </div>
+                  </Card>
+                </div>
+              ) : (
+                <div className="py-6 text-center text-[.82rem] text-[#8B949E] bg-[#161B22] border border-[#21262D] rounded-xl mb-4">
+                  Aucune donnée disponible pour tracer les graphiques. Simulez/Créez un rapport pour voir le rendu visuel !
+                </div>
+              )}
+
+              {/* Top 5 Posts */}
+              <div className="grid gap-3 sm:grid-cols-2 mb-4">
+                <Card title="🔥 Top 5 Publications par Reach">
+                  {topPosts.length === 0 ? (
+                    <div className="py-4 text-center text-[.78rem] text-[#8B949E]">Aucune publication disponible.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {topPosts.map((p, idx) => {
+                        const ad = allListings.find(a => a.id === p.annonce_id);
+                        return (
+                          <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-[#0D1117] border border-[#21262D]">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[.9rem] font-extrabold text-[#A5B4FC] w-4">{idx + 1}</span>
+                              {ad?.image && (
+                                <img src={ad.image} className="h-8 w-8 rounded object-cover shrink-0" alt="" />
+                              )}
+                              <div className="min-w-0">
+                                <div className="text-[.76rem] font-bold text-white truncate max-w-[150px]">{p.caption}</div>
+                                <div className="text-[.62rem] text-[#8B949E] uppercase font-bold">{p.platform}</div>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="text-[.82rem] font-extrabold text-[#00C853]">{(p.reach || 0).toLocaleString("fr-FR")}</div>
+                              <div className="text-[.58rem] text-[#8B949E] uppercase font-bold">Reach</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Card>
+
+                <Card title="📊 Synthèse des stats de campagne">
+                  <div className="space-y-2.5 text-[.82rem]">
+                    <div className="flex justify-between border-b border-[#21262D] pb-1.5">
+                      <span className="text-[#8B949E]">Total Vues de la Campagne</span>
+                      <span className="font-extrabold text-white">{(sum(reports, "total_views")).toLocaleString("fr-FR")}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-[#21262D] pb-1.5">
+                      <span className="text-[#8B949E]">Abonnés acquis au total</span>
+                      <span className="font-extrabold text-white">{(sum(reports, "total_new_followers")).toLocaleString("fr-FR")}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-[#21262D] pb-1.5">
+                      <span className="text-[#8B949E]">Clics vers wanteermako.com</span>
+                      <span className="font-extrabold text-white">{(sum(reports, "total_clicks")).toLocaleString("fr-FR")}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-[#21262D] pb-1.5">
+                      <span className="text-[#8B949E]">Boosts Meta Ads vendus</span>
+                      <span className="font-extrabold text-white">{(sum(reports, "boosts_sold")).toLocaleString("fr-FR")}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#8B949E]">Chiffre d'Affaires Boosts</span>
+                      <span className="font-extrabold text-emerald-400">{(sum(reports, "revenue_fcfa")).toLocaleString("fr-FR")} FCFA</span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Reports Table */}
+              <Card title="📋 Rapports hebdomadaires réels">
+                {reports.length === 0 ? (
+                  <div className="py-8 text-center text-[.82rem] text-[#8B949E]">Aucun rapport hebdomadaire enregistré.</div>
+                ) : (
+                  <Tbl head={["Semaine", "Vues", "Abonnés", "Eng. %", "Clics", "Boosts", "CA", "Notes", ""]}>
+                    {reports.map((rep) => (
+                      <tr key={rep.id} className="hover:bg-white/[.02] border-b border-[#21262D]">
+                        <Td bold>{new Date(rep.week_start).toLocaleDateString("fr-FR")}</Td>
+                        <Td>{(rep.total_views || 0).toLocaleString("fr-FR")}</Td>
+                        <Td>+{(rep.total_new_followers || 0).toLocaleString("fr-FR")}</Td>
+                        <Td>{rep.avg_engagement_rate}%</Td>
+                        <Td>{(rep.total_clicks || 0).toLocaleString("fr-FR")}</Td>
+                        <Td>{rep.boosts_sold || 0}</Td>
+                        <Td bold className="text-emerald-400">{(rep.revenue_fcfa || 0).toLocaleString("fr-FR")} F</Td>
+                        <Td><span className="line-clamp-1 max-w-[150px] inline-block text-[.74rem] text-[#8B949E]">{rep.notes || "—"}</span></Td>
+                        <Td>
+                          <div className="flex gap-2">
+                            <button onClick={() => { setRForm(rep); setShowR(true); }} className="rounded bg-white/5 px-2 py-0.5 text-[.68rem] font-bold text-[#A5B4FC] hover:bg-white/10">
+                              ✏️ Modifier
+                            </button>
+                            <button onClick={() => delReport(rep.id)} className="rounded bg-red-500/10 border border-red-500/20 px-2 py-0.5 text-[.68rem] font-bold text-red-300 hover:bg-red-500/20">
+                              🗑️
+                            </button>
+                          </div>
+                        </Td>
+                      </tr>
+                    ))}
+                  </Tbl>
+                )}
+              </Card>
+            </>
+          )}
+        </>
+      )}
+
+      {/* MODALS */}
+      {/* 1. Planifier / Créer Post */}
+      {selSlot && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={() => setSelSlot(null)}>
+          <div className="w-full max-w-[500px] rounded-[14px] border border-[#30363D] bg-[#161B22] p-5 text-white" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[1rem] font-bold text-white">🗓️ Planifier une publication</h3>
+              <button onClick={() => setSelSlot(null)} className="text-gray-400 text-xl hover:text-white">✕</button>
+            </div>
+            <p className="mb-4 text-[.75rem] text-[#8B949E]">
+              Date : {selSlot.day.toLocaleDateString("fr-FR")} à {["07h00", "10h00", "13h00", "16h00", "20h30"][selSlot.slotIndex]} WAT
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[.75rem] text-[#8B949E] mb-1">Plateforme *</label>
+                <select
+                  value={pForm.platform || "all"}
+                  onChange={(e) => setPForm({ ...pForm, platform: e.target.value })}
+                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                >
+                  <option value="all">Toutes (Meta + WA)</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="whatsapp">WhatsApp</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[.75rem] text-[#8B949E] mb-1">Associer à un produit (Annonce)</label>
+                <select
+                  value={pForm.annonce_id || ""}
+                  onChange={(e) => {
+                    const selectedAd = allListings.find(a => a.id === e.target.value);
+                    setPForm({
+                      ...pForm,
+                      annonce_id: e.target.value || null,
+                      caption: selectedAd ? `🔥 À NE PAS MANQUER ! \n\n👉 ${selectedAd.title} à ${selectedAd.price} FCFA \n\n📍 Disponible à ${selectedAd.location || "Dakar"}. Contactez le vendeur sur wanteermako.com !` : pForm.caption,
+                      image_url: selectedAd ? selectedAd.image : pForm.image_url
+                    });
+                  }}
+                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                >
+                  <option value="">-- Aucun (Post libre/branding) --</option>
+                  {allListings.map((a) => (
+                    <option key={a.id} value={a.id}>{a.title} ({a.price} F)</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[.75rem] text-[#8B949E] mb-1">Légende (Caption) *</label>
+                <textarea
+                  value={pForm.caption || ""}
+                  onChange={(e) => setPForm({ ...pForm, caption: e.target.value })}
+                  placeholder="Écrivez le texte de votre publication..."
+                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none h-24 resize-none focus:border-[#6366F1]"
+                />
+              </div>
+              <div>
+                <label className="block text-[.75rem] text-[#8B949E] mb-1">URL de l'image (Visuel)</label>
+                <input
+                  type="text"
+                  value={pForm.image_url || ""}
+                  onChange={(e) => setPForm({ ...pForm, image_url: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                />
+                {pForm.image_url && (
+                  <img src={pForm.image_url} alt="Aperçu" className="mt-2 h-20 rounded-md object-cover" />
+                )}
+              </div>
+              <div>
+                <label className="block text-[.75rem] text-[#8B949E] mb-1">Statut *</label>
+                <select
+                  value={pForm.status || "scheduled"}
+                  onChange={(e) => setPForm({ ...pForm, status: e.target.value })}
+                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                >
+                  <option value="scheduled">Planifié (Scheduled)</option>
+                  <option value="draft">Brouillon (Draft)</option>
+                  <option value="published">Publié (Published)</option>
+                </select>
+              </div>
+            </div>
+            <button onClick={savePost} className="rounded-[9px] bg-[#00C853] hover:bg-[#00E676] px-3 py-1.5 text-[.78rem] font-bold mt-5 w-full text-white">Enregistrer la publication</button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Détails du Post */}
+      {selPost && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={() => setSelPost(null)}>
+          <div className="w-full max-w-[480px] rounded-[14px] border border-[#30363D] bg-[#161B22] p-5 text-white" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[1rem] font-bold text-white">📋 Détails de la publication</h3>
+              <button onClick={() => setSelPost(null)} className="text-gray-400 text-xl hover:text-white">✕</button>
+            </div>
+            <div className="space-y-4">
+              {selPost.image_url && (
+                <img src={selPost.image_url} alt="" className="w-full h-40 object-cover rounded-lg" />
+              )}
+              <div>
+                <div className="text-[.68rem] text-[#8B949E] uppercase font-bold">Plateforme</div>
+                <div className="text-[.88rem] text-white font-bold">{selPost.platform}</div>
+              </div>
+              <div>
+                <div className="text-[.68rem] text-[#8B949E] uppercase font-bold">Légende</div>
+                <div className="text-[.83rem] text-gray-200 bg-[#0D1117] p-3 rounded-lg whitespace-pre-wrap leading-relaxed">{selPost.caption}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[.68rem] text-[#8B949E] uppercase font-bold">Statut</div>
+                  <span className={`inline-block mt-1 rounded-md px-2 py-0.5 text-[.68rem] font-bold ${statusColor(selPost.status)}`}>{selPost.status}</span>
+                </div>
+                <div>
+                  <div className="text-[.68rem] text-[#8B949E] uppercase font-bold">Planifié/Publié le</div>
+                  <div className="text-[.78rem] text-white mt-1">
+                    {new Date(selPost.scheduled_at || selPost.published_at || selPost.created_at).toLocaleDateString("fr-FR")}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Suivi des posts */}
-          <Card title={`📋 Suivi des posts (${posts.length})`}>
-            <div className="mb-3 flex flex-wrap gap-2">
-              <select value={fPlat} onChange={(e) => setFPlat(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.78rem] text-white">
-                <option value="all">Toutes plateformes</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="whatsapp">WhatsApp</option>
-              </select>
-              <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.78rem] text-white">
-                <option value="all">Tous statuts</option><option value="draft">Brouillon</option><option value="scheduled">Planifié</option><option value="published">Publié</option><option value="boosted">Boosté</option>
-              </select>
+              </div>
+              <div className="grid grid-cols-3 gap-2 border-t border-[#21262D] pt-3 text-center">
+                <div>
+                  <div className="text-[1rem] font-extrabold text-[#A5B4FC]">{selPost.reach || 0}</div>
+                  <div className="text-[.6rem] text-[#8B949E] uppercase">Reach</div>
+                </div>
+                <div>
+                  <div className="text-[1rem] font-extrabold text-[#A5B4FC]">{selPost.reactions || 0}</div>
+                  <div className="text-[.6rem] text-[#8B949E] uppercase">Réactions</div>
+                </div>
+                <div>
+                  <div className="text-[1rem] font-extrabold text-[#A5B4FC]">{selPost.shares || 0}</div>
+                  <div className="text-[.6rem] text-[#8B949E] uppercase">Partages</div>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-3">
+                {selPost.post_url && (
+                  <a href={selPost.post_url} target="_blank" rel="noopener noreferrer" className="rounded-[9px] bg-[#21262D] border border-[#30363D] hover:bg-[#30363D] px-4 py-2 text-[.78rem] font-bold text-[#C9D1D9] flex-1 text-center">
+                    Voir en ligne ↗
+                  </a>
+                )}
+                <button onClick={() => deletePost(selPost.id)} className="rounded-[9px] bg-red-500/10 border border-red-500/20 px-4 py-2 text-[.78rem] font-bold text-red-300 hover:bg-red-500/20">
+                  🗑️ Supprimer
+                </button>
+              </div>
             </div>
-            {filtered.length === 0 ? (
-              <div className="py-8 text-center text-[.82rem] text-[#8B949E]">Aucun post pour l'instant. Make.com les ajoutera automatiquement après configuration.</div>
-            ) : (
-              <Tbl head={["Plateforme", "Légende", "Statut", "Reach", "Réactions", "Partages", "Date", ""]}>
-                {filtered.map((p) => (
-                  <tr key={p.id} className="hover:bg-white/[.02]">
-                    <Td bold>{p.platform}</Td>
-                    <Td><span className="line-clamp-1 max-w-[200px] inline-block">{p.caption || "—"}</span></Td>
-                    <Td><span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${statusColor(p.status)}`}>{p.status}</span></Td>
-                    <Td>{p.reach || 0}</Td><Td>{p.reactions || 0}</Td><Td>{p.shares || 0}</Td>
-                    <Td>{p.published_at ? new Date(p.published_at).toLocaleDateString("fr-FR") : "—"}</Td>
-                    <Td>{p.post_url ? <a href={p.post_url} target="_blank" rel="noopener noreferrer" className="text-[#A5B4FC] font-bold">Voir ↗</a> : "—"}</Td>
-                  </tr>
-                ))}
-              </Tbl>
-            )}
-          </Card>
+          </div>
+        </div>
+      )}
 
-          {/* Configuration Make.com */}
-          <div className="mt-3"><Card title="⚙️ Connexion Make.com — Endpoints à copier">
-            <p className="mb-2 text-[.78rem] text-[#8B949E]">Colle ces URLs dans tes scénarios Make.com. Ajoute le header <code className="text-[#A5B4FC]">x-campaign-secret</code> = ta valeur <code className="text-[#A5B4FC]">CAMPAIGN_WEBHOOK_SECRET</code> (sur Vercel).</p>
-            <div className="space-y-1.5">
-              {endpoints.map(([m, path, desc]) => (
-                <div key={path} className="flex flex-wrap items-center gap-2 rounded-[8px] bg-[#0D1117] p-2">
-                  <span className={`rounded px-1.5 py-0.5 text-[.62rem] font-bold ${m === "GET" ? "bg-blue-500/20 text-blue-300" : "bg-emerald-500/20 text-emerald-300"}`}>{m}</span>
-                  <code className="text-[.74rem] text-[#E6EDF3]">{origin}{path}</code>
-                  <button onClick={() => { navigator.clipboard?.writeText(`${origin}${path}`); T("📋 Copié"); }} className="ml-auto rounded bg-white/5 px-2 py-0.5 text-[.68rem] text-[#A5B4FC]">Copier</button>
-                  <span className="w-full text-[.68rem] text-[#8B949E]">{desc}</span>
+      {/* 3. Ajouter / Modifier Influenceur */}
+      {showI && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={() => setShowI(false)}>
+          <div className="w-full max-w-[500px] rounded-[14px] border border-[#30363D] bg-[#161B22] p-5 text-white" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[1rem] font-bold text-white">🤝 {iForm.id ? "Modifier l'influenceur" : "Ajouter un influenceur"}</h3>
+              <button onClick={() => setShowI(false)} className="text-gray-400 text-xl hover:text-white">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[.75rem] text-[#8B949E] mb-1">Nom Complet *</label>
+                <input
+                  type="text"
+                  value={iForm.nom || ""}
+                  onChange={(e) => setIForm({ ...iForm, nom: e.target.value })}
+                  placeholder="Ex: Khalil"
+                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Plateforme *</label>
+                  <select
+                    value={iForm.plateforme || "Instagram"}
+                    onChange={(e) => setIForm({ ...iForm, plateforme: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  >
+                    <option value="Instagram">Instagram</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Handle / Identifiant *</label>
+                  <input
+                    type="text"
+                    value={iForm.handle || ""}
+                    onChange={(e) => setIForm({ ...iForm, handle: e.target.value })}
+                    placeholder="Ex: @khalil_marketing"
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Abonnés *</label>
+                  <input
+                    type="number"
+                    value={iForm.followers || 0}
+                    onChange={(e) => setIForm({ ...iForm, followers: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Type de collab</label>
+                  <select
+                    value={iForm.collaboration_type || "barter"}
+                    onChange={(e) => setIForm({ ...iForm, collaboration_type: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  >
+                    <option value="barter">Échange (Barter)</option>
+                    <option value="paid">Payant (Paid)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Coût (FCFA)</label>
+                  <input
+                    type="number"
+                    value={iForm.cout_fcfa || 0}
+                    onChange={(e) => setIForm({ ...iForm, cout_fcfa: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Reach généré</label>
+                  <input
+                    type="number"
+                    value={iForm.reach_genere || 0}
+                    onChange={(e) => setIForm({ ...iForm, reach_genere: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[.75rem] text-[#8B949E] mb-1">Statut *</label>
+                <select
+                  value={iForm.status || "contacte"}
+                  onChange={(e) => setIForm({ ...iForm, status: e.target.value })}
+                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                >
+                  <option value="contacte">Contacté</option>
+                  <option value="actif">Actif</option>
+                  <option value="termine">Terminé</option>
+                </select>
+              </div>
+            </div>
+            <button onClick={saveInflu} className="rounded-[9px] bg-[#00C853] hover:bg-[#00E676] px-3 py-1.5 text-[.78rem] font-bold mt-5 w-full text-white">Sauvegarder l'influenceur</button>
+          </div>
+        </div>
+      )}
+
+      {/* 4. DM Contact */}
+      {showContact && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={() => setShowContact(false)}>
+          <div className="w-full max-w-[480px] rounded-[14px] border border-[#30363D] bg-[#161B22] p-5 text-white" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[1rem] font-bold text-white">✉️ Contacter {contactInflu?.nom}</h3>
+              <button onClick={() => setShowContact(false)} className="text-gray-400 text-xl hover:text-white">✕</button>
+            </div>
+            <p className="mb-3 text-[.75rem] text-[#8B949E]">
+              Ce message va être copié dans votre presse-papiers, puis nous allons ouvrir son profil public {contactInflu?.plateforme || "Instagram"} dans un nouvel onglet.
+            </p>
+            <textarea
+              value={contactMsg}
+              onChange={(e) => setContactMsg(e.target.value)}
+              className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none h-40 resize-none leading-relaxed focus:border-[#6366F1]"
+            />
+            <button onClick={handleContactAction} className="rounded-[9px] bg-[#00C853] hover:bg-[#00E676] px-3 py-1.5 text-[.78rem] font-bold mt-4 w-full text-white">
+              📋 Copier & Ouvrir la plateforme
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Booster Post */}
+      {selBoostPost && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={() => setSelBoostPost(null)}>
+          <div className="w-full max-w-[600px] rounded-[14px] border border-[#30363D] bg-[#161B22] p-5 text-white overflow-y-auto max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[1rem] font-bold text-white">⭐ Activer un Boost Sponsorisé (Meta Ads)</h3>
+              <button onClick={() => setSelBoostPost(null)} className="text-gray-400 text-xl hover:text-white">✕</button>
+            </div>
+            <p className="mb-4 text-[.76rem] text-[#8B949E]">
+              Associez cette publication de campagne à l'une des formules de visibilité de Wanteermako.com. Cela simulera le paiement et déclenchera les Meta Ads.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {BOOSTS.filter((b) => b.price > 0).map((b) => (
+                <div key={b.key} className="rounded-xl border border-[#30363D] bg-[#0D1117] p-4 flex flex-col justify-between hover:border-[#00C853] transition">
+                  <div>
+                    <h4 className="text-[.88rem] font-bold text-white">{b.name}</h4>
+                    <div className="text-[1.1rem] font-extrabold text-[#FFC93C] my-1">{b.price.toLocaleString("fr-FR")} FCFA</div>
+                    <div className="text-[.7rem] text-[#8B949E] mb-2">Durée : {b.duration}</div>
+                    <div className="space-y-1 text-[.68rem] text-[#8B949E]">
+                      {b.features.slice(0, 3).map((f) => <div key={f}>- {f}</div>)}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleBoostPost(b)}
+                    className="mt-4 w-full rounded-[8px] bg-[#00C853] hover:bg-[#00E676] py-1.5 text-[.74rem] font-bold text-white transition"
+                  >
+                    Sélectionner ce plan
+                  </button>
                 </div>
               ))}
             </div>
-            <div className="mt-3 rounded-[8px] border border-[#6366F1]/30 bg-[#6366F1]/10 p-2.5 text-[.74rem] text-[#A5B4FC]">
-              ℹ️ Variables à mettre sur Vercel : <b>CAMPAIGN_WEBHOOK_SECRET</b>, MAKE_WEBHOOK_URL, META_PAGE_ID, META_ACCESS_TOKEN, OPENAI_API_KEY, CANVA_ACCESS_TOKEN, BUFFER_ACCESS_TOKEN, MANYCHAT_API_KEY.
+          </div>
+        </div>
+      )}
+
+      {/* 6. Ajouter / Modifier Rapport Hebdo */}
+      {showR && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={() => setShowR(false)}>
+          <div className="w-full max-w-[500px] rounded-[14px] border border-[#30363D] bg-[#161B22] p-5 text-white" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[1rem] font-bold text-white">📊 {rForm.id ? "Modifier le rapport" : "Créer un rapport hebdomadaire"}</h3>
+              <button onClick={() => setShowR(false)} className="text-gray-400 text-xl hover:text-white">✕</button>
             </div>
-          </Card></div>
-        </>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[.75rem] text-[#8B949E] mb-1">Semaine du (Date début) *</label>
+                <input
+                  type="date"
+                  value={rForm.week_start || ""}
+                  onChange={(e) => setRForm({ ...rForm, week_start: e.target.value })}
+                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Vues de la semaine</label>
+                  <input
+                    type="number"
+                    value={rForm.total_views || 0}
+                    onChange={(e) => setRForm({ ...rForm, total_views: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Nouveaux Abonnés</label>
+                  <input
+                    type="number"
+                    value={rForm.total_new_followers || 0}
+                    onChange={(e) => setRForm({ ...rForm, total_new_followers: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Engagement moyen (%)</label>
+                  <input
+                    type="number"
+                    value={rForm.avg_engagement_rate || 0}
+                    onChange={(e) => setRForm({ ...rForm, avg_engagement_rate: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Clics vers le site</label>
+                  <input
+                    type="number"
+                    value={rForm.total_clicks || 0}
+                    onChange={(e) => setRForm({ ...rForm, total_clicks: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Revenus Boosts (FCFA)</label>
+                  <input
+                    type="number"
+                    value={rForm.revenue_fcfa || 0}
+                    onChange={(e) => setRForm({ ...rForm, revenue_fcfa: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[.75rem] text-[#8B949E] mb-1">Boosts vendus</label>
+                  <input
+                    type="number"
+                    value={rForm.boosts_sold || 0}
+                    onChange={(e) => setRForm({ ...rForm, boosts_sold: e.target.value })}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[.75rem] text-[#8B949E] mb-1">Notes / Synthèse</label>
+                <textarea
+                  value={rForm.notes || ""}
+                  onChange={(e) => setRForm({ ...rForm, notes: e.target.value })}
+                  placeholder="Ex: Excellente semaine, Khalil a généré un bon reach."
+                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none h-20 resize-none focus:border-[#6366F1]"
+                />
+              </div>
+            </div>
+            <button onClick={saveReport} className="rounded-[9px] bg-[#00C853] hover:bg-[#00E676] px-3 py-1.5 text-[.78rem] font-bold mt-5 w-full text-white">Sauvegarder le rapport</button>
+          </div>
+        </div>
       )}
     </>
   );

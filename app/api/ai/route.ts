@@ -1,21 +1,16 @@
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 
-// Route serveur — la clé ANTHROPIC_API_KEY reste secrète côté serveur.
+// Route serveur — Utilise le modèle Gemini 1.5 Flash (Gratuit) via l'API Key.
 export const dynamic = "force-dynamic";
-
-// ── Maîtrise des coûts ──
-// Utilisateurs (public)  → Haiku 4.5 (≈ gratuit, ~0,002 $/génération)
-// Super admin            → Opus 4.8 (qualité max)
-const MODELS = { user: "claude-haiku-4-5", admin: "claude-opus-4-8" } as const;
 
 // Rate limiting basique en mémoire (anti-abus)
 const rl = new Map<string, { count: number; ts: number }>();
 const RL_WINDOW = 60 * 1000;
-const RL_MAX = 12; // 12 générations / minute / IP
+const RL_MAX = 15; // 15 générations / minute / IP
 
-const SYSTEM = `Tu es l'assistant commercial IA d'Wanteermako (plateforme de petites annonces et de marketing B2B en Afrique de l'Ouest, par YamaneTech).
-Tu écris en français, ton professionnel, chaleureux et persuasif, adapté au marché ouest-africain (Sénégal, Côte d'Ivoire, Mali, etc.).
+const SYSTEM_INSTRUCTION = `Tu es l'assistant commercial IA de la plateforme Wanteermako.
+Tu rédiges TOUS les textes UNIQUEMENT en Français standard de manière chaleureuse, persuasive et professionnelle.
+Il ne faut absolument JAMAIS utiliser de Wolof ni d'autre langue locale dans tes réponses. Tout doit être rédigé en Français uniquement.
 Réponds UNIQUEMENT avec le texte demandé, sans préambule ni commentaire, prêt à copier-coller.`;
 
 function buildPrompt(body: any): string {
@@ -44,9 +39,6 @@ Termine par un appel à l'action (proposer une présentation de 15 min). Format 
 }
 
 // ── FALLBACK GRATUIT (sans API) ──
-// Modèles de texte intégrés : utilisés quand la clé Claude est absente ou que
-// l'appel échoue (pas de crédits, erreur réseau...). Permet de tester l'outil
-// AVANT tout paiement. Bascule auto sur Claude dès que les crédits sont dispo.
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 function templateText(body: any): string {
@@ -90,7 +82,7 @@ Cordialement,
 L'équipe Wanteermako`;
     }
     case "whatsapp": {
-      const intros = ["Bonjour 👋", "Bonjour, j'espère que vous allez bien 🙂", "Salam 👋"];
+      const intros = ["Bonjour 👋", "Bonjour, j'espère que vous allez bien 🙂", "Bonjour 👋"];
       const fins = [
         `Puis-je vous présenter notre offre en 5 min ? 🙏`,
         `Ça vous intéresse d'en savoir plus ? 😊`,
@@ -162,32 +154,44 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
-  // Pas de clé → on sert directement le modèle gratuit (fonctionne avant paiement)
-  if (!apiKey) {
+  // Pas de clé → on sert directement le modèle de secours gratuit (template)
+  if (!apiKey || apiKey.includes("your_gemini")) {
     return NextResponse.json({ text: templateText(body), source: "template" });
   }
 
-  const client = new Anthropic({ apiKey });
-  const model = body?.tier === "admin" ? MODELS.admin : MODELS.user;
-
   try {
-    const msg = await client.messages.create({
-      model,
-      max_tokens: 1500,
-      system: SYSTEM,
-      messages: [{ role: "user", content: buildPrompt(body) }],
+    const prompt = buildPrompt(body);
+    const fullPrompt = `${SYSTEM_INSTRUCTION}\n\n[Consigne de rédaction]:\n${prompt}`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: fullPrompt }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1000
+        }
+      })
     });
-    const text = msg.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("\n")
-      .trim();
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error?.message || response.statusText);
+    }
+
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    if (!text) {
+      throw new Error("Gemini a retourné une réponse vide.");
+    }
+
     return NextResponse.json({ text, source: "ai" });
   } catch (error: any) {
-    // Crédits épuisés / erreur API → on bascule sur le modèle gratuit (jamais bloquant)
-    console.warn("AI fallback (template):", error?.status, error?.message);
+    console.warn("Gemini API error (falling back to templates):", error?.message);
     return NextResponse.json({ text: templateText(body), source: "template" });
   }
 }

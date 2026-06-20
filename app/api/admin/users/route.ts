@@ -229,14 +229,165 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, scanned, cleaned });
     }
 
-    // Données du module Campagne IA (stats, posts, boosts) — bypass RLS
+    // Données du module Campagne IA (stats, posts, boosts, influenceurs, rapports) — bypass RLS
     if (action === "campaign") {
-      const [stats, posts, boosts] = await Promise.all([
+      const [stats, posts, boosts, influ, reports] = await Promise.all([
         sb.from("campaign_daily_stats").select("*").order("date", { ascending: false }).limit(120),
         sb.from("campaign_posts").select("*").order("created_at", { ascending: false }).limit(100),
         sb.from("campaign_boosts").select("*").order("created_at", { ascending: false }).limit(100),
+        sb.from("campaign_influenceurs").select("*").order("created_at", { ascending: false }).limit(100),
+        sb.from("campaign_weekly_reports").select("*").order("week_start", { ascending: false }).limit(52),
       ]);
-      return NextResponse.json({ stats: stats.data || [], posts: posts.data || [], boosts: boosts.data || [] });
+      return NextResponse.json({ stats: stats.data || [], posts: posts.data || [], boosts: boosts.data || [], influ: influ.data || [], reports: reports.data || [] });
+    }
+
+    // Influenceurs : créer / mettre à jour / supprimer
+    if (action === "campaignInfluSave") {
+      const { row } = body;
+      if (!row) return NextResponse.json({ error: "Données manquantes." }, { status: 400 });
+      const res = row.id
+        ? await sb.from("campaign_influenceurs").update(row).eq("id", row.id)
+        : await sb.from("campaign_influenceurs").insert(row);
+      if (res.error) {
+        if (/campaign_influenceurs/.test(res.error.message || "")) return NextResponse.json({ error: "Table manquante. Exécute MIGRATION_CAMPAIGN.sql." }, { status: 500 });
+        throw res.error;
+      }
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "campaignInfluDelete") {
+      const { id } = body;
+      const { error } = await sb.from("campaign_influenceurs").delete().eq("id", id);
+      if (error) throw error;
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "campaignPostSave") {
+      const { row } = body;
+      if (!row) return NextResponse.json({ error: "Données manquantes." }, { status: 400 });
+      const res = row.id
+        ? await sb.from("campaign_posts").update(row).eq("id", row.id)
+        : await sb.from("campaign_posts").insert(row);
+      if (res.error) throw res.error;
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "campaignPostDelete") {
+      const { id } = body;
+      const { error } = await sb.from("campaign_posts").delete().eq("id", id);
+      if (error) throw error;
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "campaignReportSave") {
+      const { row } = body;
+      if (!row) return NextResponse.json({ error: "Données manquantes." }, { status: 400 });
+      const res = row.id
+        ? await sb.from("campaign_weekly_reports").update(row).eq("id", row.id)
+        : await sb.from("campaign_weekly_reports").insert(row);
+      if (res.error) throw res.error;
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "campaignReportDelete") {
+      const { id } = body;
+      const { error } = await sb.from("campaign_weekly_reports").delete().eq("id", id);
+      if (error) throw error;
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "campaignBoostSave") {
+      const { row } = body;
+      if (!row) return NextResponse.json({ error: "Données manquantes." }, { status: 400 });
+      const res = row.id
+        ? await sb.from("campaign_boosts").update(row).eq("id", row.id)
+        : await sb.from("campaign_boosts").insert(row).select().single();
+      if (res.error) throw res.error;
+
+      // Déclenche Make.com (Meta Ads) si l'URL est configurée et que c'est une création
+      if (!row.id && res.data) {
+        const hook = process.env.MAKE_WEBHOOK_URL;
+        if (hook) {
+          try {
+            await fetch(hook, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ event: "boost_request", boost_id: res.data.id, ...row }),
+            });
+          } catch (e) { console.error("Make webhook error in admin route:", e); }
+        }
+      }
+      return NextResponse.json({ ok: true });
+    }
+    if (action === "campaignPostRepublish") {
+      const { postId } = body;
+      const { data: post } = await sb.from("campaign_posts").select("*").eq("id", postId).single();
+      if (!post) return NextResponse.json({ error: "Post introuvable." }, { status: 404 });
+      
+      let listing = null;
+      if (post.annonce_id) {
+        const { data: listData } = await sb.from("listings").select("*").eq("id", post.annonce_id).single();
+        listing = listData;
+      }
+
+      const pageId = process.env.META_PAGE_ID;
+      const accessToken = process.env.META_ACCESS_TOKEN;
+
+      if (!pageId || !accessToken || pageId === "your_facebook_page_id" || accessToken.includes("your_meta")) {
+        return NextResponse.json({ error: "Configuration API Meta Facebook (META_PAGE_ID ou META_ACCESS_TOKEN) manquante ou invalide dans .env.local." }, { status: 400 });
+      }
+
+      let caption = post.caption;
+      if (!caption && listing) {
+        caption = `🔥 À NE PAS MANQUER ! 👉 ${listing.title}\n💰 Prix : ${listing.price ? listing.price + " FCFA" : "Sur devis"}\n📍 Disponible à ${listing.location || 'Sénégal'}.\nContactez le vendeur sur wanteermako.com !`;
+      }
+
+      let facebookPostId = "";
+      const imageUrl = post.image_url || listing?.image;
+      const linkUrl = listing ? `https://wanteermako.com/annonce/${listing.id}/${listing.slug}` : "https://wanteermako.com";
+      const fullMessage = `${caption}\n\n👉 Voir l'annonce : ${linkUrl}`;
+
+      try {
+        if (imageUrl && imageUrl.startsWith("http")) {
+          // Publication avec Photo
+          const fbRes = await fetch(`https://graph.facebook.com/v18.0/${pageId}/photos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              url: imageUrl,
+              message: fullMessage,
+              access_token: accessToken
+            })
+          });
+          const fbData = await fbRes.json();
+          if (!fbRes.ok) {
+            throw new Error(`Erreur Facebook Graph API (Photos) : ${fbData?.error?.message || fbRes.statusText}`);
+          }
+          facebookPostId = fbData.post_id || fbData.id;
+        } else {
+          // Publication sans Photo (Lien uniquement)
+          const fbRes = await fetch(`https://graph.facebook.com/v18.0/${pageId}/feed`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              link: linkUrl,
+              message: caption,
+              access_token: accessToken
+            })
+          });
+          const fbData = await fbRes.json();
+          if (!fbRes.ok) {
+            throw new Error(`Erreur Facebook Graph API (Feed) : ${fbData?.error?.message || fbRes.statusText}`);
+          }
+          facebookPostId = fbData.id;
+        }
+
+        // Mettre à jour l'état du post en Base de Données
+        await sb.from("campaign_posts").update({
+          status: "published",
+          published_at: new Date().toISOString(),
+          post_url: facebookPostId ? `https://facebook.com/${facebookPostId}` : null
+        }).eq("id", postId);
+
+        return NextResponse.json({ ok: true, facebookPostId });
+      } catch (err: any) {
+        console.error("Facebook Direct Publish Error:", err);
+        return NextResponse.json({ error: err.message || "Erreur de publication sur Facebook." }, { status: 500 });
+      }
     }
 
     // Achats / transactions (bypass RLS pour les Finances admin)

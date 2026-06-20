@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   // annonces actives récentes
   const { data: listings, error } = await sb
     .from("listings")
-    .select("id, title, description, price, category, location, image")
+    .select("id, title, slug, description, price, category, location, image")
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(40);
