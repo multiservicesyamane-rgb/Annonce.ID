@@ -1,0 +1,12 @@
+# Configuration Netlify pour Next.js (Wanteermako)
+# Le plugin officiel @netlify/plugin-nextjs gère le SSR, les routes API
+# (runtime Node → le crypto des paiements fonctionne), l'ISR et le middleware.
+
+[build]
+  command = "next build"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
