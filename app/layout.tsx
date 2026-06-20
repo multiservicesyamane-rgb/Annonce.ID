@@ -20,6 +20,13 @@ export const metadata: Metadata = {
     siteName: "Wanteermako",
     title: "Wanteermako — Petites Annonces Premium au Sénégal",
     description: "Tout le Sénégal à portée de main · Achetez et vendez facilement.",
+    images: [{ url: "/logo-icon.png", width: 512, height: 512, alt: "Wanteermako" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Wanteermako — Petites Annonces Premium au Sénégal",
+    description: "Tout le Sénégal à portée de main · Achetez et vendez facilement.",
+    images: ["/logo-icon.png"],
   },
   robots: { index: true, follow: true },
   other: { "google-adsense-account": "ca-pub-8749142175860365" },
@@ -30,9 +37,9 @@ export const metadata: Metadata = {
     capable: true,
   },
   icons: {
-    icon: "/logonavi.jpeg",
-    shortcut: "/logonavi.jpeg",
-    apple: "/logonavi.jpeg",
+    icon: "/logo-icon.png",
+    shortcut: "/logo-icon.png",
+    apple: "/logo-icon.png",
   },
 };
 

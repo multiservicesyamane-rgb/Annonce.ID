@@ -104,7 +104,7 @@ export default function PublishWizard() {
   const activeFields = cat ? [...cat.fields, ...((cat.subFields && subCategory && cat.subFields[subCategory]) || [])] : [];
   const show = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
 
-  // Aide IA (gratuit via modèles intégrés, ou Claude si crédits dispo)
+  // Aide IA (gratuit via modèles intégrés, ou Gemini si la clé est active)
   async function aiHelp(kind: "listing_title" | "listing_description") {
     const topic = (title || subCategory || cat?.name || "mon article").trim();
     setAiLoading(kind);
@@ -112,14 +112,43 @@ export default function PublishWizard() {
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, topic, city: region, tier: "user" }),
+        body: JSON.stringify({ kind, topic, city: region, category: subCategory || cat?.name, tier: "user" }),
       });
       const data = await res.json();
       if (data.text) {
         if (kind === "listing_title") setTitle(data.text.replace(/^["']|["']$/g, "").slice(0, 80));
         else setDesc(data.text.slice(0, 2000));
-        show(data.source === "ai" ? "✨ Généré par l'IA Claude" : "📝 Suggestion générée");
+        show(data.source === "ai" ? "✨ Généré par l'IA Gemini" : "📝 Suggestion générée");
       } else show("⚠ " + (data.error || "Erreur IA"));
+    } catch { show("⚠ Erreur IA"); }
+    finally { setAiLoading(""); }
+  }
+
+  // « Tout générer » : l'IA propose titre + description + caractéristiques d'un coup.
+  async function aiGenerateAll() {
+    const topic = (title || subCategory || cat?.name || "").trim();
+    if (!topic) { show("⚠ Indiquez d'abord un titre ou une catégorie"); return; }
+    setAiLoading("all");
+    try {
+      const fields = activeFields.map((f) => ({ label: f.label, options: f.options }));
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "listing_all", topic, city: region, category: subCategory || cat?.name, fields, tier: "user" }),
+      });
+      const data = await res.json();
+      if (data.title) setTitle(data.title.replace(/^["']|["']$/g, "").slice(0, 80));
+      if (data.description) setDesc(data.description.slice(0, 2000));
+      if (data.specs && typeof data.specs === "object") {
+        // On ne garde que les caractéristiques connues de la catégorie, non vides.
+        const valid = new Set(activeFields.map((f) => f.label));
+        const next: Record<string, string> = { ...specs };
+        for (const [k, v] of Object.entries(data.specs)) {
+          if (valid.has(k) && v) next[k] = String(v);
+        }
+        setSpecs(next);
+      }
+      show(data.source === "ai" ? "✨ Annonce générée par l'IA Gemini" : "📝 Annonce pré-remplie");
     } catch { show("⚠ Erreur IA"); }
     finally { setAiLoading(""); }
   }
@@ -223,6 +252,18 @@ export default function PublishWizard() {
     }
 
     localStorage.removeItem("annonceid_draft");
+
+    // Publication instantanée sur les réseaux (Telegram/Facebook…) si l'annonce
+    // est active dès maintenant. Idempotent côté serveur ; "fire-and-forget".
+    const isActiveNow = !editModeId && (boost === 0 || isVipFree || isKonnecta);
+    if (isActiveNow && data?.id) {
+      fetch("/api/campaign/publish-listing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId: data.id }),
+      }).catch(() => { /* la publication réseaux ne doit jamais bloquer l'utilisateur */ });
+    }
+
     if (editModeId) { show("✅ Annonce mise à jour !"); setTimeout(() => router.push("/dashboard"), 1500); }
     else if (boost === 0 || isKonnecta) { show("✅ Annonce publiée !"); setTimeout(() => router.push("/dashboard"), 1500); }
     else { router.push(`/paiement?annonce_id=${data.id}`); }
@@ -337,7 +378,14 @@ export default function PublishWizard() {
         {/* STEP 3: Détails */}
         {step === 3 && (
           <div className="animate-fadeUp space-y-3">
-            <h2 className="font-display text-[1rem] md:text-[1.15rem] font-bold text-gray-900 dark:text-white">Informations</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-display text-[1rem] md:text-[1.15rem] font-bold text-gray-900 dark:text-white">Informations</h2>
+              <button type="button" onClick={aiGenerateAll} disabled={!!aiLoading}
+                className="shrink-0 rounded-full bg-gradient-to-r from-green-500 to-neon-gold px-3 py-1.5 text-[.72rem] font-bold text-white shadow hover:opacity-90 transition disabled:opacity-50">
+                {aiLoading === "all" ? "⏳ Génération…" : "✨ Tout générer avec l'IA"}
+              </button>
+            </div>
+            <p className="text-[.7rem] text-gray-400 -mt-1">L'IA propose un titre, une description et les caractéristiques à partir de votre catégorie.</p>
             <div>
               <div className="flex items-center justify-between">
                 <label className="label">Titre <span className="text-brand-red">*</span></label>

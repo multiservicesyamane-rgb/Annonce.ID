@@ -99,12 +99,12 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
   return (
     <div ref={wrapRef} className={`relative ${big ? "max-w-[620px]" : "mx-auto w-full max-w-[680px] flex-1"}`}>
       <div
-        className={`search-shell flex items-center overflow-hidden rounded-full border border-gray-200 dark:border-transparent dark:bg-gradient-to-r dark:from-neon-cyan/40 dark:via-neon-magenta/20 dark:to-neon-magenta/50 bg-white dark:p-[1px] p-0 transition-all focus-within:shadow-[0_0_12px_rgba(99,102,241,0.15)] dark:focus-within:shadow-[0_0_20px_rgba(255,42,109,0.3)] ${
+        className={`search-shell flex items-center overflow-hidden rounded-full border border-gray-200 dark:border-transparent dark:bg-gradient-to-r dark:from-[#6366F1]/40 dark:via-[#F5A623]/20 dark:to-[#F5A623]/40 bg-white dark:p-[1px] p-0 transition-all focus-within:shadow-[0_0_12px_rgba(99,102,241,0.15)] dark:focus-within:shadow-[0_0_20px_rgba(245,166,35,0.25)] ${
           big ? "shadow-md" : "shadow-sm"
         }`}
       >
         <div className="flex w-full items-center bg-white dark:bg-[#0A0E14]/90 backdrop-blur-md rounded-full px-3 py-1.5 sm:py-2">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-neon-cyan mr-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-indigo-400 mr-2">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
@@ -122,7 +122,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
           <button
             type="button"
             onClick={() => setFilterOpen(!filterOpen)}
-            className="ml-2 text-gray-400 dark:text-neon-magenta hover:text-green dark:hover:text-white transition-colors relative"
+            className="ml-2 text-gray-400 dark:text-neon-gold hover:text-green dark:hover:text-white transition-colors relative"
             aria-label="Filtres"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -195,7 +195,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
                 <span
                   key={t}
                   onClick={() => submit(t)}
-                  className="cursor-pointer rounded-[20px] border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-2.5 py-1 text-[.78rem] text-gray-700 dark:text-gray-300 transition hover:border-gold dark:hover:border-neon-cyan hover:bg-gold-pale dark:hover:bg-neon-cyan/20 hover:text-green dark:hover:text-white"
+                  className="cursor-pointer rounded-[20px] border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-2.5 py-1 text-[.78rem] text-gray-700 dark:text-gray-300 transition hover:border-gold dark:hover:border-indigo-500 hover:bg-gold-pale dark:hover:bg-indigo-500/20 hover:text-green dark:hover:text-white"
                 >
                   {t}
                 </span>

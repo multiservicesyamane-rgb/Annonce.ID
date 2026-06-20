@@ -358,3 +358,39 @@ html:not(.dark) .cat-strip {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
+/* ───────── Premium visual enhancements ───────── */
+.avatar-ring-premium {
+  background: linear-gradient(220deg, #F5A623, #FA709A, #8B5CF6, #6366F1);
+  padding: 3px;
+  border-radius: 9999px;
+  animation: rotateGrad 8s linear infinite;
+  background-size: 200% 200%;
+}
+
+.avatar-ring-standard {
+  background: linear-gradient(135deg, #6366F1, #818CF8, #c7d2fe);
+  padding: 2.5px;
+  border-radius: 9999px;
+}
+
+@keyframes rotateGrad {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Card glass effects */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+html.dark .glass-card {
+  background: rgba(17, 23, 34, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}

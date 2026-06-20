@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -11,11 +11,26 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [redirectQuery, setRedirectQuery] = useState("");
   const supabase = createClient();
+
+  // Conserve ?redirect=/... à travers les liens connexion ⇄ inscription.
+  useEffect(() => {
+    const r = new URLSearchParams(window.location.search).get("redirect");
+    if (r && r.startsWith("/") && !r.startsWith("//")) setRedirectQuery(`?redirect=${encodeURIComponent(r)}`);
+  }, []);
 
   const show = (m: string) => {
     setToast(m);
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Destination après connexion : ?redirect=/... (ex. la fiche produit visée),
+  // sinon le tableau de bord. On n'accepte que des chemins internes (sécurité).
+  const getRedirect = () => {
+    if (typeof window === "undefined") return "/dashboard";
+    const r = new URLSearchParams(window.location.search).get("redirect") || "";
+    return r.startsWith("/") && !r.startsWith("//") ? r : "/dashboard";
   };
 
   async function handleEmailAuth(e: React.FormEvent) {
@@ -36,7 +51,7 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
           await supabase.from("profiles").upsert({ id: data.user.id, full_name: fullName || email.split("@")[0] }, { onConflict: "id" });
         }
         if (data.session) {
-          window.location.href = "/dashboard";
+          window.location.href = getRedirect();
         } else {
           show("✅ Compte créé ! Vérifiez votre email pour confirmer (si demandé), puis connectez-vous.");
         }
@@ -45,7 +60,7 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
         const loginId = email.includes("@") ? email.trim() : `${email.trim().toLowerCase()}@wanteermako.app`;
         const { error } = await supabase.auth.signInWithPassword({ email: loginId, password });
         if (error) throw error;
-        window.location.href = "/dashboard";
+        window.location.href = getRedirect();
       }
     } catch (err: any) {
       const m = err?.message || "Erreur";
@@ -61,7 +76,8 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
       onClick={async () => {
         show("Redirection vers Google...");
         // Utilise TOUJOURS le domaine courant (wanteermako.com, vercel.app ou localhost)
-        const redirectUrl = `${window.location.origin}/auth/callback`;
+        const dest = getRedirect();
+        const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(dest)}`;
         await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirectUrl } });
       }}
       className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-gray-100 bg-white py-3 text-[.92rem] font-semibold text-gray-700 hover:border-gray-300 transition-colors shadow-sm hover:shadow-md"
@@ -98,8 +114,10 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
 
       {/* Panneau droit (formulaire) */}
       <div className="flex w-full flex-col justify-center bg-white px-6 py-8 md:w-[460px] md:shrink-0">
-        <Link href="/" className="mb-6 font-display text-[1.4rem] font-extrabold text-green text-center">
-          Wanteer<span className="text-gold-dark">mako</span>
+        <Link href="/" className="mb-6 flex justify-center">
+          <span className="inline-flex rounded-2xl bg-[#0A0E14] px-5 py-3">
+            <img src="/logo-header.png" alt="Wanteermako" className="h-10 w-auto object-contain" />
+          </span>
         </Link>
 
         <h2 className="mb-2 font-display text-[1.4rem] font-extrabold text-center text-gray-900">
@@ -128,9 +146,9 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
 
         <p className="mt-6 text-center text-[.85rem] text-gray-500">
           {mode === "signup" ? (
-            <>Déjà un compte ? <Link href="/connexion" className="font-bold text-green">Se connecter</Link></>
+            <>Déjà un compte ? <Link href={`/connexion${redirectQuery}`} className="font-bold text-green">Se connecter</Link></>
           ) : (
-            <>Pas encore de compte ? <Link href="/inscription" className="font-bold text-green">Créer un compte</Link></>
+            <>Pas encore de compte ? <Link href={`/inscription${redirectQuery}`} className="font-bold text-green">Créer un compte</Link></>
           )}
         </p>
       </div>

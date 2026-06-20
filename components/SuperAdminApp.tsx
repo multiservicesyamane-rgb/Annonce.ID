@@ -70,7 +70,7 @@ const AMBASSADEURS = [
   { n: "Binta Koné", l: "🥉 Bronze", lc: "text-[#CD7F32]", v: 1, c: 7500, g: "bg-g7" },
 ];
 
-const ADMIN_CREDS = { email: "admin@yamanetech.com", pass: "YamaneTech@2025" };
+const ADMIN_CREDS = { email: "multiservicesyamane@gmail.com", pass: "YamaneTech@2025", emails: ["multiservicesyamane@gmail.com", "multiserviceyamane@gmail.com"] };
 
 /* ───────── Composants UI ───────── */
 function Kpi({ grad, icon, label, value, trend, suffix }: { grad: string; icon: string; label: string; value: number; trend?: string; suffix?: string }) {
@@ -225,7 +225,7 @@ export default function SuperAdminApp() {
   useEffect(() => { loadAllData(); }, [authed]);
 
   function doLogin() {
-    if (email === ADMIN_CREDS.email && pass === ADMIN_CREDS.pass && (code === "1234" || code === "")) {
+    if (ADMIN_CREDS.emails.includes(email.toLowerCase().trim()) && pass === ADMIN_CREDS.pass && (code === "1234" || code === "")) {
       sessionStorage.setItem("sa_authed", "1"); sessionStorage.setItem("sa_pass", pass); setAuthed(true); T("✅ Bienvenue, Super Administrateur");
     } else T("❌ Identifiants incorrects");
   }
@@ -245,7 +245,7 @@ export default function SuperAdminApp() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0D1117] p-4">
         <div className="w-full max-w-[400px] rounded-[24px] border border-[#30363D] bg-[#161B22] p-5 sm:p-8 shadow-[0_0_60px_rgba(99,102,241,.15)]">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-g1 text-[1.3rem] font-extrabold text-white shadow-[0_0_30px_rgba(99,102,241,.4)]">SA</div>
+          <img src="/logo-icon.png" alt="Wanteermako" className="mx-auto mb-4 h-16 w-16 rounded-2xl object-contain shadow-[0_0_30px_rgba(99,102,241,.4)]" />
           <h1 className="text-center text-[1.2rem] font-extrabold text-white">Super Admin</h1>
           <p className="mb-6 text-center text-[.82rem] text-[#8B949E]">Wanteermako · YamaneTech</p>
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email administrateur" />
@@ -264,7 +264,7 @@ export default function SuperAdminApp() {
       {/* Sidebar */}
       <aside className={`fixed top-0 bottom-0 z-[200] w-[240px] flex flex-col border-r border-[#21262D] bg-[#161B22] transition-transform ${sbOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
         <div className="flex items-center gap-2.5 border-b border-[#21262D] px-4 py-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-g1 text-[.8rem] font-extrabold text-white shadow-[0_0_16px_rgba(99,102,241,.4)]">SA</div>
+          <img src="/logo-icon.png" alt="Wanteermako" className="h-9 w-9 rounded-[9px] object-contain shadow-[0_0_16px_rgba(99,102,241,.4)]" />
           <div className="font-extrabold leading-tight text-[.88rem]">YamaneTech<span className="block text-[.64rem] font-semibold tracking-wide text-[#FFC93C]">SUPER ADMIN</span></div>
         </div>
         <div className="m-2.5 flex items-center gap-2.5 rounded-[11px] border border-[#6366F1]/20 bg-[#6366F1]/10 px-3 py-2.5">
@@ -548,11 +548,29 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
     notes: ""
   });
 
+  const [publishing, setPublishing] = useState(false);
+
   function loadCampaign() {
     adminApi("campaign").then((d) => { setStats(d.stats || []); setPosts(d.posts || []); setBoosts(d.boosts || []); setInflu(d.influ || []); setReports(d.reports || []); })
       .catch(() => { /* tables pas encore créées */ }).finally(() => setLoading(false));
   }
   useEffect(() => { loadCampaign(); }, []);
+
+  // Publication automatique multi-réseaux (Gemini + Telegram/Facebook) à la demande.
+  async function runAutoPublish() {
+    if (publishing) return;
+    setPublishing(true);
+    try {
+      const d = await adminApi("campaignAutoPublish");
+      if (d.message) T(`ℹ️ ${d.message}`);
+      else T(`✅ ${d.published} post(s) publié(s) sur ${(d.platforms || []).join(", ")}`);
+      loadCampaign();
+    } catch (e: any) {
+      T(`❌ ${e.message || "Échec de la publication"}`);
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   function getSlotDateTimeString(day: Date, timeStr: string) {
     const yyyymmdd = day.toISOString().slice(0, 10);
@@ -874,7 +892,21 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
 
   return (
     <>
-      <PageHead title="🚀 Campagne IA 2025" sub="Croissance Facebook · Instagram · WhatsApp — automatisée via Make.com" />
+      <PageHead title="🚀 Campagne IA 2025" sub="Publication automatique native (Gemini + Telegram · Facebook) — gratuite, sans Make.com" />
+
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[14px] border border-[#30363D] bg-[#0D1117] p-3.5">
+        <div className="flex-1 min-w-[180px]">
+          <div className="text-[.85rem] font-bold text-white">⚡ Publication automatique</div>
+          <div className="text-[.7rem] text-[#8B949E]">Génère les textes avec Gemini et publie les annonces en attente sur vos réseaux configurés.</div>
+        </div>
+        <button
+          onClick={runAutoPublish}
+          disabled={publishing}
+          className="shrink-0 rounded-[10px] bg-g1 px-4 py-2 text-[.82rem] font-bold text-white disabled:opacity-50"
+        >
+          {publishing ? "⏳ Publication…" : "🚀 Publier maintenant"}
+        </button>
+      </div>
 
       <div className="no-scrollbar -mx-1 mb-4 flex gap-2 overflow-x-auto px-1">
         {([["dashboard", "📊 Tableau de bord"], ["planning", "🗓️ Planning"], ["influenceurs", "🤝 Influenceurs"], ["rapports", "📄 Rapports"]] as const).map(([id, label]) => (
@@ -910,6 +942,7 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
                 <div className="mb-3 flex flex-wrap gap-2 items-center">
                   <select value={fPlat} onChange={(e) => setFPlat(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.78rem] text-white">
                     <option value="all">Toutes plateformes</option>
+                    <option value="telegram">Telegram</option>
                     <option value="facebook">Facebook</option>
                     <option value="instagram">Instagram</option>
                     <option value="whatsapp">WhatsApp</option>
@@ -1397,7 +1430,8 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
                   onChange={(e) => setPForm({ ...pForm, platform: e.target.value })}
                   className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
                 >
-                  <option value="all">Toutes (Meta + WA)</option>
+                  <option value="all">Tous les réseaux configurés</option>
+                  <option value="telegram">Telegram</option>
                   <option value="facebook">Facebook</option>
                   <option value="instagram">Instagram</option>
                   <option value="whatsapp">WhatsApp</option>
@@ -2060,6 +2094,12 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
   const [form, setForm] = useState<Record<string, string>>({ role: "employee" });
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<{ login: string; password: string } | null>(null);
+  const [userPage, setUserPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setUserPage(1);
+  }, [search]);
 
   async function refreshList() {
     try { const d = await adminApi("list"); setServerUsers(d.users || []); }
@@ -2101,6 +2141,10 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
   }
   async function setVip(userId: string, value: boolean) {
     try { await adminApi("setVip", { userId, value }); T(value ? "🎁 VIP gratuit activé" : "VIP retiré"); refreshList(); reload(); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+  }
+  async function setVerified(userId: string, value: boolean) {
+    try { await adminApi("setVerified", { userId, value }); T(value ? "✅ Compte vérifié" : "Vérification retirée"); refreshList(); reload(); }
     catch (e: any) { T(`❌ ${e.message}`); }
   }
   async function del(userId: string) {
@@ -2153,28 +2197,59 @@ return (
     </div>
     <Card>
       {filtered.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucun utilisateur. Créez un compte ou ajoutez la clé service role pour tout voir.</div> : (
-        <div className="space-y-2">
-          {filtered.map((u: any) => (
-            <div key={u.id} className="flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-3">
-              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#21262D]">
-                {u.avatar_url ? <img src={u.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[.8rem] font-bold text-white">{(u.full_name || u.email || "?")[0]?.toUpperCase()}</div>}
+        <>
+          <div className="space-y-2">
+            {filtered.slice((userPage - 1) * itemsPerPage, userPage * itemsPerPage).map((u: any) => (
+              <div key={u.id} className="flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-3">
+                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#21262D]">
+                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-[.8rem] font-bold text-white">{(u.full_name || u.email || "?")[0]?.toUpperCase()}</div>}
+                </div>
+                <div className="min-w-[140px] flex-1">
+                  <div className="text-[.84rem] font-bold text-[#E6EDF3]">{u.full_name || "(sans nom)"}</div>
+                  <div className="text-[.72rem] text-[#8B949E]">{u.email || u.phone || "—"}</div>
+                </div>
+                <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${roleColor(u.role || "user")}`}>{u.role || "user"}</span>
+                {u.free_premium && <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[.68rem] font-bold text-amber-300">🎁 VIP</span>}
+                {u.is_verified && <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[.68rem] font-bold text-emerald-300">✓ Vérifié</span>}
+                <div className="flex flex-wrap gap-1.5 shrink-0">
+                  <select value={u.role || "user"} onChange={(e) => setRole(u.id, e.target.value)} className="rounded-[7px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.7rem] font-bold text-[#A5B4FC] outline-none">
+                    {["user", "pro", "employee", "ambassador", "admin"].map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <button onClick={() => setVip(u.id, !u.free_premium)} className={`rounded-[7px] px-2.5 py-1 text-[.7rem] font-bold ${u.free_premium ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-[#FFC93C] hover:bg-amber-500/15"}`}>{u.free_premium ? "🎁 Retirer" : "🎁 VIP"}</button>
+                  <button onClick={() => setVerified(u.id, !u.is_verified)} className={`rounded-[7px] px-2.5 py-1 text-[.7rem] font-bold ${u.is_verified ? "bg-emerald-500/20 text-emerald-300" : "bg-white/5 text-emerald-400 hover:bg-emerald-500/15"}`}>{u.is_verified ? "✓ Annuler" : "✓ Vérifier"}</button>
+                  {serverUsers && <button onClick={() => del(u.id)} className="rounded-[7px] bg-red-500/10 px-2.5 py-1 text-[.7rem] font-bold text-red-300 hover:bg-red-500/20">🗑️</button>}
+                </div>
               </div>
-              <div className="min-w-[140px] flex-1">
-                <div className="text-[.84rem] font-bold text-[#E6EDF3]">{u.full_name || "(sans nom)"}</div>
-                <div className="text-[.72rem] text-[#8B949E]">{u.email || u.phone || "—"}</div>
-              </div>
-              <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${roleColor(u.role || "user")}`}>{u.role || "user"}</span>
-              {u.free_premium && <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[.68rem] font-bold text-amber-300">🎁 VIP</span>}
-              <div className="flex flex-wrap gap-1.5 shrink-0">
-                <select value={u.role || "user"} onChange={(e) => setRole(u.id, e.target.value)} className="rounded-[7px] border border-[#30363D] bg-[#0D1117] px-2 py-1 text-[.7rem] font-bold text-[#A5B4FC] outline-none">
-                  {["user", "pro", "employee", "ambassador", "admin"].map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
-                <button onClick={() => setVip(u.id, !u.free_premium)} className={`rounded-[7px] px-2.5 py-1 text-[.7rem] font-bold ${u.free_premium ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-[#FFC93C] hover:bg-amber-500/15"}`}>{u.free_premium ? "🎁 Retirer" : "🎁 VIP"}</button>
-                {serverUsers && <button onClick={() => del(u.id)} className="rounded-[7px] bg-red-500/10 px-2.5 py-1 text-[.7rem] font-bold text-red-300 hover:bg-red-500/20">🗑️</button>}
-              </div>
+            ))}
+          </div>
+          {filtered.length > itemsPerPage && (
+            <div className="mt-4 flex flex-wrap justify-center items-center gap-1.5 border-t border-[#21262D] pt-4">
+              <button
+                disabled={userPage === 1}
+                onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                className="px-3 py-1.5 rounded-lg border border-[#30363D] bg-[#21262D] text-[0.8rem] font-bold disabled:opacity-40 hover:text-white"
+              >
+                ‹ Précédent
+              </button>
+              {Array.from({ length: Math.ceil(filtered.length / itemsPerPage) }, (_, idx) => idx + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setUserPage(p)}
+                  className={`h-8 w-8 rounded-lg text-[0.8rem] font-bold transition ${p === userPage ? "bg-[#6366F1] text-white" : "border border-[#30363D] bg-[#161B22] hover:text-white"}`}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                disabled={userPage === Math.ceil(filtered.length / itemsPerPage)}
+                onClick={() => setUserPage(p => Math.min(Math.ceil(filtered.length / itemsPerPage), p + 1))}
+                className="px-3 py-1.5 rounded-lg border border-[#30363D] bg-[#21262D] text-[0.8rem] font-bold disabled:opacity-40 hover:text-white"
+              >
+                Suivant ›
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </Card>
   </>
@@ -2386,6 +2461,13 @@ function Finance({ purchases, counts }: { purchases: any[]; counts: any }) {
 function AdsAdmin({ allListings, T, reload }: { allListings: any[]; T: (m: string) => void; reload: () => void }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [adPage, setAdPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setAdPage(1);
+  }, [filter, search]);
+
   const filtered = allListings.filter(a => {
     if (filter !== "all" && a.status !== filter) return false;
     if (search && !(a.title || "").toLowerCase().includes(search.toLowerCase())) return false;
@@ -2417,21 +2499,54 @@ function AdsAdmin({ allListings, T, reload }: { allListings: any[]; T: (m: strin
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Chercher…" className="ml-auto rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-1.5 text-[.8rem] text-white outline-none focus:border-[#6366F1] w-full sm:w-auto sm:max-w-[200px]" />
       </div>
       <Card>
-        {filtered.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucune annonce trouvée</div> : filtered.map((a) => (
-          <div key={a.id} className="mb-2 flex flex-wrap items-center gap-3 rounded-[9px] border border-[#21262D] bg-[#0D1117] p-3">
-            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-[#21262D]">{a.image && <img src={a.image} alt="" className="h-full w-full object-cover" />}</div>
-            <div className="min-w-[120px] flex-1">
-              <div className="text-[.84rem] font-bold text-[#E6EDF3] truncate">{a.title}</div>
-              <div className="text-[.72rem] text-[#8B949E]">{a.category || "—"} · {a.location || "—"} · {a.views || 0} vues · {a.price || "—"}</div>
+        {filtered.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucune annonce trouvée</div> : (
+          <>
+            <div className="space-y-2">
+              {filtered.slice((adPage - 1) * itemsPerPage, adPage * itemsPerPage).map((a) => (
+                <div key={a.id} className="mb-2 flex flex-wrap items-center gap-3 rounded-[9px] border border-[#21262D] bg-[#0D1117] p-3">
+                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-[#21262D]">{a.image && <img src={a.image} alt="" className="h-full w-full object-cover" />}</div>
+                  <div className="min-w-[120px] flex-1">
+                    <div className="text-[.84rem] font-bold text-[#E6EDF3] truncate">{a.title}</div>
+                    <div className="text-[.72rem] text-[#8B949E]">{a.category || "—"} · {a.location || "—"} · {a.views || 0} vues · {a.price || "—"}</div>
+                  </div>
+                  <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${a.status === "active" ? "bg-emerald-500/15 text-emerald-300" : a.status === "pending" ? "bg-amber-500/15 text-amber-300" : a.status === "sold" ? "bg-blue-500/15 text-blue-300" : a.status === "rejected" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400"}`}>{a.status || "—"}</span>
+                  <div className="flex gap-1.5 shrink-0">
+                    {a.status !== "active" && <button onClick={() => changeStatus(a.id, "active")} className="rounded-[7px] bg-emerald-500/15 px-2 py-1 text-[.68rem] font-bold text-emerald-300 hover:bg-emerald-500/25">✓ Activer</button>}
+                    {a.status !== "rejected" && <button onClick={() => changeStatus(a.id, "rejected")} className="rounded-[7px] bg-red-500/15 px-2 py-1 text-[.68rem] font-bold text-red-300 hover:bg-red-500/25">✕ Rejeter</button>}
+                    {a.status !== "inactive" && a.status !== "rejected" && <button onClick={() => changeStatus(a.id, "inactive")} className="rounded-[7px] bg-white/5 px-2 py-1 text-[.68rem] font-bold text-gray-400 hover:text-white">⏸ Désactiver</button>}
+                  </div>
+                </div>
+              ))}
             </div>
-            <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${a.status === "active" ? "bg-emerald-500/15 text-emerald-300" : a.status === "pending" ? "bg-amber-500/15 text-amber-300" : a.status === "sold" ? "bg-blue-500/15 text-blue-300" : a.status === "rejected" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400"}`}>{a.status || "—"}</span>
-            <div className="flex gap-1.5 shrink-0">
-              {a.status !== "active" && <button onClick={() => changeStatus(a.id, "active")} className="rounded-[7px] bg-emerald-500/15 px-2 py-1 text-[.68rem] font-bold text-emerald-300 hover:bg-emerald-500/25">✓ Activer</button>}
-              {a.status !== "rejected" && <button onClick={() => changeStatus(a.id, "rejected")} className="rounded-[7px] bg-red-500/15 px-2 py-1 text-[.68rem] font-bold text-red-300 hover:bg-red-500/25">✕ Rejeter</button>}
-              {a.status !== "inactive" && a.status !== "rejected" && <button onClick={() => changeStatus(a.id, "inactive")} className="rounded-[7px] bg-white/5 px-2 py-1 text-[.68rem] font-bold text-gray-400 hover:text-white">⏸ Désactiver</button>}
-            </div>
-          </div>
-        ))}
+            {filtered.length > itemsPerPage && (
+              <div className="mt-4 flex flex-wrap justify-center items-center gap-1.5 border-t border-[#21262D] pt-4">
+                <button
+                  disabled={adPage === 1}
+                  onClick={() => setAdPage(p => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 rounded-lg border border-[#30363D] bg-[#21262D] text-[0.8rem] font-bold disabled:opacity-40 hover:text-white"
+                >
+                  ‹ Précédent
+                </button>
+                {Array.from({ length: Math.ceil(filtered.length / itemsPerPage) }, (_, idx) => idx + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setAdPage(p)}
+                    className={`h-8 w-8 rounded-lg text-[0.8rem] font-bold transition ${p === adPage ? "bg-[#6366F1] text-white" : "border border-[#30363D] bg-[#161B22] hover:text-white"}`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  disabled={adPage === Math.ceil(filtered.length / itemsPerPage)}
+                  onClick={() => setAdPage(p => Math.min(Math.ceil(filtered.length / itemsPerPage), p + 1))}
+                  className="px-3 py-1.5 rounded-lg border border-[#30363D] bg-[#21262D] text-[0.8rem] font-bold disabled:opacity-40 hover:text-white"
+                >
+                  Suivant ›
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </Card>
     </>
   );

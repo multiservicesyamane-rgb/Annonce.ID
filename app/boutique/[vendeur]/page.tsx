@@ -46,7 +46,7 @@ export default async function BoutiquePage({ params }: Props) {
   }
   const bio = profile?.bio || "La référence en bonnes affaires";
   const avatar = profile?.avatar_url || "https://placehold.co/120x120?text=B";
-  const role = profile?.role === 'admin' ? 'Administrateur' : profile?.role === 'pro' ? 'Boutique Pro' : 'Vendeur vérifié';
+  const role = profile?.role === 'admin' ? 'Administrateur' : profile?.role === 'pro' ? 'Boutique Pro' : profile?.role === 'ambassador' ? 'Ambassadeur' : profile?.role === 'employee' ? 'Commercial' : 'Vendeur';
   const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '2024';
   const socialLinks = profile?.social_links || {};
   const phoneDigits = (profile?.phone || "").replace(/\D/g, "");
@@ -89,7 +89,9 @@ export default async function BoutiquePage({ params }: Props) {
         <div className="relative z-10 -mt-10 sm:-mt-14 mb-2 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-6 shadow-lg">
           <div className="flex flex-col items-center text-center sm:flex-row sm:items-end sm:text-left gap-4">
             {/* Logo entreprise — toujours au premier plan, chevauche la couverture */}
-            <Image src={avatar} alt={name} width={112} height={112} className="relative z-20 -mt-16 sm:-mt-24 h-[96px] w-[96px] sm:h-[112px] sm:w-[112px] rounded-2xl border-4 border-white dark:border-dark-800 object-cover shadow-2xl bg-white shrink-0" />
+            <div className="relative z-20 -mt-16 sm:-mt-24 h-[104px] w-[104px] sm:h-[120px] sm:w-[120px] rounded-[18px] p-[3px] avatar-ring-premium shrink-0 shadow-2xl">
+              <img src={avatar} alt={name} className="h-full w-full rounded-[15px] border-2 border-white dark:border-dark-800 object-cover bg-white" />
+            </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -100,7 +102,11 @@ export default async function BoutiquePage({ params }: Props) {
               </div>
               <p className="text-gray-500 dark:text-white/60 text-[.82rem] sm:text-[.9rem] mt-0.5 line-clamp-2">{bio}</p>
               <div className="mt-2 flex flex-wrap gap-1.5 text-[.7rem] sm:text-[.78rem]">
-                <span className="rounded-full bg-green/10 px-2.5 py-1 font-bold text-green">✅ {role}</span>
+                {profile?.is_verified ? (
+                  <span className="rounded-full bg-green/10 px-2.5 py-1 font-bold text-green">✅ {role} vérifié</span>
+                ) : (
+                  <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2.5 py-1 font-medium text-gray-600 dark:text-white/70">👤 {role}</span>
+                )}
                 <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2.5 py-1 font-medium text-gray-600 dark:text-white/70">🗓️ Depuis {memberSince}</span>
                 <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2.5 py-1 font-medium text-gray-600 dark:text-white/70">📦 {ads.length} annonces</span>
               </div>

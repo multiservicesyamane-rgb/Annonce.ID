@@ -23,7 +23,7 @@ async function fetchAd(idParam: string) {
     if (isNaN(Number(idParam))) return null;
   }
 
-  const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url, phone)').eq('id', idParam).single();
+  const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url, phone, role, is_verified)').eq('id', idParam).single();
   if (data) {
     return {
       id: data.id,
@@ -49,7 +49,8 @@ async function fetchAd(idParam: string) {
         phone: data.profiles?.phone || "+221770000000",
         rating: "Nouveau",
         sales: 0,
-        isPro: false
+        isPro: data.profiles?.role === "pro",
+        isVerified: !!data.profiles?.is_verified
       }
     } as any;
   }
@@ -257,15 +258,19 @@ export default async function AnnoncePage({ params }: Props) {
             <div className="my-2 hidden lg:block border-t border-gray-100 dark:border-dark-border"></div>
 
             {seller && (
-              <div className="flex items-center gap-3 rounded-[10px] bg-gray-50 p-3">
-                <Image src={seller.avatar} alt={seller.name} width={46} height={46} className="h-[46px] w-[46px] rounded-full border-2 border-gold object-cover" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[.88rem] font-semibold">
-                    {seller.name} {seller.isPro && <span className="badge b-pro !text-[.6rem]">PRO</span>}
-                  </div>
-                  <div className="text-[.72rem] text-gray-500">⭐ {seller.rating} · {seller.sales} ventes</div>
+              <div className="flex items-center gap-3 rounded-[16px] bg-gray-50/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 p-3 sm:p-3.5 shadow-sm">
+                <div className="avatar-ring-standard p-[2px] flex items-center justify-center h-[46px] w-[46px] rounded-full shrink-0">
+                  <Image src={seller.avatar} alt={seller.name} width={42} height={42} className="h-full w-full rounded-full border border-white dark:border-[#111722] object-cover" />
                 </div>
-                <Link href={`/boutique/${seller.id}`} className="btn btn-sm btn-outline">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[0.88rem] font-bold text-gray-900 dark:text-white truncate">
+                    {seller.name} 
+                    {seller.isPro && <span className="badge b-pro !text-[0.58rem] ml-1">PRO</span>}
+                    {seller.isVerified && <span className="ml-1 rounded bg-green/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-green">✓ Vérifié</span>}
+                  </div>
+                  <div className="text-[0.72rem] text-gray-500 dark:text-gray-400 mt-0.5">⭐ {seller.rating} · {seller.sales} ventes</div>
+                </div>
+                <Link href={`/boutique/${seller.id}`} className="btn btn-xs sm:btn-sm btn-outline dark:border-white/20 dark:text-white hover:bg-[#6366F1] dark:hover:bg-green dark:hover:border-green text-[0.75rem] px-2.5 font-bold rounded-lg shrink-0">
                   Boutique
                 </Link>
               </div>

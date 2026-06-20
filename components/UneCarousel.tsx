@@ -59,16 +59,17 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
   return (
     <div
       ref={scrollRef}
-      className="no-scrollbar flex gap-2 md:gap-3 overflow-x-auto pb-4"
+      className="no-scrollbar flex gap-3 md:gap-4 overflow-x-auto pb-4 px-1"
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {displayListings.map((ad, i) => (
         <React.Fragment key={ad.id}>
           <Link
             href={`/annonce/${ad.id}/${ad.slug}`}
-            className="group relative flex flex-col shrink-0 w-[185px] md:w-[260px] bg-gradient-to-br from-[#6366F1] via-[#7C5CFC] to-[#A855F7] rounded-[16px] p-1.5 md:p-2 shadow-[0_8px_24px_rgba(99,102,241,0.25)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_14px_38px_rgba(124,92,252,0.4)]"
+            className="group relative flex flex-col shrink-0 w-[170px] md:w-[260px] bg-gradient-to-br from-[#6366F1] via-[#7C5CFC] to-[#A855F7] rounded-[20px] p-1.5 md:p-2 shadow-[0_10px_25px_rgba(99,102,241,0.2)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_16px_40px_rgba(124,92,252,0.35)]"
           >
-            <div className="relative w-full aspect-square rounded-[12px] overflow-hidden mb-1.5 md:mb-2">
+            {/* Image Container */}
+            <div className="relative w-full aspect-square rounded-[14px] overflow-hidden mb-2">
               <Image
                 src={ad.image}
                 alt={ad.title}
@@ -76,32 +77,63 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
                 height={300}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#4338CA]/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute top-1.5 left-1.5 bg-white/95 text-[#6D28D9] text-[8px] md:text-[9px] font-extrabold px-1.5 md:px-2 py-0.5 rounded-full tracking-wide uppercase shadow-md flex items-center gap-0.5">
-                <span className="text-[9px] md:text-[10px]">✨</span> À la Une
+              <div className="absolute inset-0 bg-gradient-to-t from-[#4338CA]/70 via-transparent to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-300"></div>
+              
+              {/* Featured Badge */}
+              <div className="absolute top-1.5 left-1.5 bg-white/95 dark:bg-dark-900/90 text-[#6D28D9] dark:text-neon-gold text-[8px] md:text-[9px] font-extrabold px-2 py-0.5 rounded-full tracking-wider uppercase shadow-md flex items-center gap-0.5 border border-purple-200 dark:border-white/5">
+                <span>✦</span> À la Une
               </div>
             </div>
 
-            <div className="flex justify-between gap-1.5 flex-1 px-1">
+            {/* Info details */}
+            <div className="flex justify-between gap-1 flex-1 px-1">
               <div className="flex flex-col flex-1 min-w-0">
-                <div className="font-bold text-white text-[.65rem] md:text-[.8rem] leading-tight line-clamp-2 mb-1">{ad.title}</div>
-                <div className="font-display font-extrabold text-white text-[.78rem] md:text-[.95rem] mb-1 drop-shadow">{ad.price}</div>
-                <div className="text-[.6rem] md:text-[.7rem] text-white/75 flex items-center gap-1 mt-auto">
+                <div className="font-bold text-white text-[0.7rem] md:text-[0.85rem] leading-tight line-clamp-2 mb-1 group-hover:underline">
+                  {ad.title}
+                </div>
+                <div className="font-display font-black text-white text-[0.82rem] md:text-[1.05rem] mb-1.5 drop-shadow-sm">
+                  {ad.price}
+                </div>
+                <div className="text-[0.6rem] md:text-[0.7rem] text-white/80 flex items-center gap-1 mt-auto font-medium">
                   <span>📍</span> <span className="truncate">{ad.location}</span>
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5 justify-end hidden sm:flex">
-                <button className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-lg bg-white/20 border border-white/30 text-white hover:bg-white hover:text-[#6366F1] transition-all duration-300 shadow-sm text-[.9rem] md:text-[1rem]">📞</button>
-                <button className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-lg bg-white/20 border border-white/30 text-white hover:bg-[#25D366] hover:border-[#25D366] transition-all duration-300 shadow-sm text-[.9rem] md:text-[1rem]">💬</button>
+              
+              {/* Call/Message button icons (visible on all screens) */}
+              <div className="flex flex-col gap-1 justify-end ml-1">
+                <div 
+                  className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-lg bg-white/15 border border-white/20 text-white hover:bg-white hover:text-[#6366F1] transition-all duration-300 shadow-sm text-[0.75rem] md:text-[0.9rem] cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.location.href = `/annonce/${ad.id}/${ad.slug}#contact`;
+                  }}
+                >
+                  📞
+                </div>
+                <div 
+                  className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-lg bg-white/15 border border-white/20 text-white hover:bg-[#25D366] hover:border-[#25D366] transition-all duration-300 shadow-sm text-[0.75rem] md:text-[0.9rem] cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.location.href = `/annonce/${ad.id}/${ad.slug}#contact`;
+                  }}
+                >
+                  💬
+                </div>
               </div>
             </div>
 
-            <div className="mt-2 mx-1 pt-1.5 border-t border-white/20 flex items-center gap-1.5">
-              <div className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0 bg-white/15 border border-white/30 rounded-full flex items-center justify-center text-[.6rem] md:text-[.7rem] text-white">👑</div>
-              <div className="text-[.55rem] md:text-[.65rem] font-bold text-white/80 uppercase tracking-wider truncate">Certifié</div>
+            {/* Bottom certification strip */}
+            <div className="mt-2.5 mx-0.5 pt-2 border-t border-white/15 flex items-center gap-1.5">
+              <div className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0 bg-white/15 border border-white/25 rounded-full flex items-center justify-center text-[0.55rem] md:text-[0.65rem] text-white">
+                👑
+              </div>
+              <div className="text-[0.55rem] md:text-[0.65rem] font-extrabold text-white/90 uppercase tracking-widest truncate">
+                Garanti Vérifié
+              </div>
             </div>
           </Link>
-
         </React.Fragment>
       ))}
     </div>

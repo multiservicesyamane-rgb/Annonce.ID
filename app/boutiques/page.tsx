@@ -14,28 +14,13 @@ export default async function BoutiquesPage() {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Fetch all profiles that have at least an avatar or a bio (= configured shop)
   const { data: allProfiles } = await supabase
     .from('profiles')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(100);
+    .limit(200);
 
-  // Filter to keep only "real" boutiques (with avatar, bio, or pro role)
-  const boutiques = (allProfiles || []).filter((p: any) => {
-    if (p.role === 'pro' || p.role === 'business') return true;
-    if (p.bio && p.bio.trim() !== '') return true;
-    if (p.avatar_url && p.avatar_url.trim() !== '') return true;
-    const name = (p.full_name || '').toLowerCase();
-    const isProName = name.includes('multiservice') || name.includes('entreprise') || 
-                      name.includes('sarl') || name.includes('suarl') || 
-                      name.includes('boutique') || name.includes('shop') || 
-                      name.includes('store') || name.includes('tech') ||
-                      name.includes('immo') || name.includes('auto');
-    return isProName;
-  });
-
-  // Fetch listing counts per user in one query
+  // Nombre d'annonces ACTIVES par vendeur
   const { data: listingCounts } = await supabase
     .from('listings')
     .select('user_id')
@@ -45,6 +30,12 @@ export default async function BoutiquesPage() {
   (listingCounts || []).forEach((l: any) => {
     countMap[l.user_id] = (countMap[l.user_id] || 0) + 1;
   });
+
+  // La boutique s'ouvre AUTOMATIQUEMENT dès qu'un vendeur a publié au moins une
+  // annonce. Le vendeur peut éventuellement la masquer (has_boutique === false).
+  const boutiques = (allProfiles || []).filter(
+    (p: any) => (countMap[p.id] || 0) > 0 && p.has_boutique !== false,
+  );
 
   return (
     <div className="wrap py-6">

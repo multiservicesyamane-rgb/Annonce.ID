@@ -38,6 +38,12 @@ const LinkIcon = () => (
 export default function MarketingPanel({ ads, user }: { ads: any[], user: any }) {
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [customMessage, setCustomMessage] = useState("");
+  const [promoPage, setPromoPage] = useState(1);
+  const itemsPerPage = 6;
+
+  useEffect(() => {
+    setPromoPage(1);
+  }, [ads]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && user) {
@@ -251,53 +257,84 @@ export default function MarketingPanel({ ads, user }: { ads: any[], user: any })
             Aucun produit à promouvoir. <Link href="/publier" className="text-green underline">Ajouter une annonce</Link>.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {ads.map((ad) => (
-              <div key={ad.id} className="bg-white dark:bg-dark-800 p-4 rounded-xl border border-gray-200 dark:border-dark-border flex flex-col gap-4">
-                <div className="flex gap-4">
-                  <img src={ad.image || "https://placehold.co/100x100"} alt={ad.title} className="w-16 h-16 rounded-lg object-cover" />
-                  <div>
-                    <h4 className="font-bold text-sm line-clamp-2 text-gray-900 dark:text-white">{ad.title}</h4>
-                    <div className="text-green font-extrabold text-sm mt-1">{ad.price} FCFA</div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {ads.slice((promoPage - 1) * itemsPerPage, promoPage * itemsPerPage).map((ad) => (
+                <div key={ad.id} className="bg-white dark:bg-dark-800 p-4 rounded-xl border border-gray-200 dark:border-dark-border flex flex-col gap-4">
+                  <div className="flex gap-4">
+                    <img src={ad.image || "https://placehold.co/100x100"} alt={ad.title} className="w-16 h-16 rounded-lg object-cover" />
+                    <div>
+                      <h4 className="font-bold text-sm line-clamp-2 text-gray-900 dark:text-white">{ad.title}</h4>
+                      <div className="text-green font-extrabold text-sm mt-1">{ad.price} FCFA</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 mt-auto">
+                    <a 
+                      href={generateWhatsAppLink(ad)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Partager sur WhatsApp"
+                      className="flex items-center justify-center py-2 px-3 text-lg rounded-lg bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white transition"
+                    >
+                      <WhatsappIcon />
+                    </a>
+                    <a 
+                      href={generateFacebookLink(ad)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Partager sur Facebook"
+                      className="flex items-center justify-center py-2 px-3 text-lg rounded-lg bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white transition"
+                    >
+                      <FacebookIcon />
+                    </a>
+                    <button 
+                      onClick={() => handleInstagramAdShare(ad)}
+                      title="Partager sur Instagram"
+                      className="flex items-center justify-center py-2 px-3 text-lg rounded-lg bg-gradient-to-tr from-[#f09433]/10 via-[#dc2743]/10 to-[#bc1888]/10 text-[#bc1888] hover:from-[#f09433] hover:via-[#dc2743] hover:to-[#bc1888] hover:text-white transition"
+                    >
+                      <InstagramIcon />
+                    </button>
+                    <button 
+                      onClick={() => handleCopy(ad)}
+                      title="Copier le lien"
+                      className="flex items-center justify-center py-2 px-3 text-lg rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700 transition"
+                    >
+                      {copiedLink === ad.id ? "✓" : <LinkIcon />}
+                    </button>
                   </div>
                 </div>
-                <div className="grid grid-cols-4 gap-2 mt-auto">
-                  <a 
-                    href={generateWhatsAppLink(ad)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Partager sur WhatsApp"
-                    className="flex items-center justify-center py-2 px-3 text-lg rounded-lg bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white transition"
+              ))}
+            </div>
+
+            {/* PAGINATION PROMO */}
+            {ads.length > itemsPerPage && (
+              <div className="mt-6 flex justify-center items-center gap-1">
+                <button
+                  disabled={promoPage === 1}
+                  onClick={() => setPromoPage(p => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
+                >
+                  ‹ Précédent
+                </button>
+                {Array.from({ length: Math.ceil(ads.length / itemsPerPage) }, (_, idx) => idx + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPromoPage(p)}
+                    className={`h-8 w-8 rounded-lg text-[0.8rem] font-bold transition ${p === promoPage ? "bg-green text-white" : "border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"}`}
                   >
-                    <WhatsappIcon />
-                  </a>
-                  <a 
-                    href={generateFacebookLink(ad)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Partager sur Facebook"
-                    className="flex items-center justify-center py-2 px-3 text-lg rounded-lg bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white transition"
-                  >
-                    <FacebookIcon />
-                  </a>
-                  <button 
-                    onClick={() => handleInstagramAdShare(ad)}
-                    title="Partager sur Instagram"
-                    className="flex items-center justify-center py-2 px-3 text-lg rounded-lg bg-gradient-to-tr from-[#f09433]/10 via-[#dc2743]/10 to-[#bc1888]/10 text-[#bc1888] hover:from-[#f09433] hover:via-[#dc2743] hover:to-[#bc1888] hover:text-white transition"
-                  >
-                    <InstagramIcon />
+                    {p}
                   </button>
-                  <button 
-                    onClick={() => handleCopy(ad)}
-                    title="Copier le lien"
-                    className="flex items-center justify-center py-2 px-3 text-lg rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700 transition"
-                  >
-                    {copiedLink === ad.id ? "✓" : <LinkIcon />}
-                  </button>
-                </div>
+                ))}
+                <button
+                  disabled={promoPage === Math.ceil(ads.length / itemsPerPage)}
+                  onClick={() => setPromoPage(p => Math.min(Math.ceil(ads.length / itemsPerPage), p + 1))}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
+                >
+                  Suivant ›
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 

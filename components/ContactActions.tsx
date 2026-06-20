@@ -70,7 +70,9 @@ export default function ContactActions({ phone, title, adId, sellerId }: { phone
     const { data: sessionData } = await supabase.auth.getSession();
     
     if (!sessionData?.session) {
-      router.push("/connexion");
+      // Après connexion, revenir sur cette fiche produit (pas le dashboard).
+      const back = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
+      router.push(`/connexion?redirect=${encodeURIComponent(back)}`);
       return;
     }
 

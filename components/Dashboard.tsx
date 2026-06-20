@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [profileBio, setProfileBio] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
   const [profileLanguage, setProfileLanguage] = useState("Français");
+  const [hasBoutique, setHasBoutique] = useState(false);
 
   // Security Panel States
   const [currentPassword, setCurrentPassword] = useState("");
@@ -81,6 +82,29 @@ export default function Dashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [adTab, setAdTab] = useState("en_ligne");
   const [searchQuery, setSearchQuery] = useState("");
+  const [adPage, setAdPage] = useState(1);
+  const [favPage, setFavPage] = useState(1);
+  const [purchasePage, setPurchasePage] = useState(1);
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const itemsPerPage = 5;
+
+  useEffect(() => {
+    setAdPage(1);
+  }, [adTab, searchQuery]);
+
+  useEffect(() => {
+    setFavPage(1);
+  }, [favs]);
+
+  useEffect(() => {
+    setPurchasePage(1);
+  }, [purchases]);
+
+  const [showroomPage, setShowroomPage] = useState(1);
+
+  useEffect(() => {
+    setShowroomPage(1);
+  }, [ads]);
   const [marketingTab, setMarketingTab] = useState("whatsapp");
   const [campaignWeeks, setCampaignWeeks] = useState(1);
   const [fileHero, setFileHero] = useState<string | null>(null);
@@ -105,7 +129,6 @@ export default function Dashboard() {
   const [campaignStartDate, setCampaignStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeCampaign, setActiveCampaign] = useState<any>(null);
   const [editingCampaignId, setEditingCampaignId] = useState<number | null>(null);
-  const [purchases, setPurchases] = useState<any[]>([]);
 
   const getCampaignPrice = (weeks: number) => {
     if (weeks === 1) return 10000;
@@ -171,6 +194,7 @@ export default function Dashboard() {
             setShowroomBio(profData.bio || "La référence en bonnes affaires");
             setShowroomSocials(profData.social_links || {});
             setShowroomCover(profData.cover_url || "");
+            setHasBoutique(profData.has_boutique !== false);
             setAlertPrefs(profData.alert_prefs || { messages: true, expired: true, stats: false, search: true, promos: false });
           } else {
             setProfileName(defaultName);
@@ -453,7 +477,9 @@ export default function Dashboard() {
               <div><div className="text-[1rem] font-extrabold leading-none">{receivedFavsCount}</div><div className="text-[.62rem] opacity-80">Favoris</div></div>
             </div>
             <div className="mt-2.5 flex flex-wrap gap-1">
-              <span className="rounded-md border border-white/30 bg-white/20 px-1.5 py-0.5 text-[.62rem] font-bold">✓ Vérifié</span>
+              {profile?.is_verified && (
+                <span className="rounded-md border border-white/30 bg-white/20 px-1.5 py-0.5 text-[.62rem] font-bold">✓ Vérifié</span>
+              )}
               {(profile?.role === "pro" || profile?.role === "business") && <span className="rounded-md border border-white/30 bg-white/20 px-1.5 py-0.5 text-[.62rem] font-bold">🏆 Pro</span>}
             </div>
           </div>
@@ -514,8 +540,12 @@ export default function Dashboard() {
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[.75rem] text-gray-500 dark:text-[#8B949E]">
                     <span className="capitalize">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="rounded bg-green/10 px-1.5 py-0.5 font-bold text-green">✓ Vendeur vérifié</span>
+                    {profile?.is_verified && (
+                      <>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="rounded bg-green/10 px-1.5 py-0.5 font-bold text-green">✓ Vendeur vérifié</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -774,69 +804,98 @@ export default function Dashboard() {
                 <Link href="/publier" className="btn btn-green">Poster une annonce</Link>
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
-                {filteredAds.map((ad) => (
-                  <div key={ad.id} className="relative group flex items-start gap-4 rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-3 sm:p-4">
-                    <Link href={`/annonce/${ad.id}/${ad.slug}`} className="shrink-0">
-                      <img src={ad.image || "https://placehold.co/150x150?text=Sans+Image"} alt="" className="h-20 w-20 sm:h-24 sm:w-24 rounded-md object-cover" />
-                    </Link>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
-                        <Link href={`/annonce/${ad.id}/${ad.slug}`} className="truncate block text-[1rem] font-bold dark:text-white hover:text-green max-w-full">
-                          {ad.title}
-                        </Link>
-                        <div className="text-[.9rem] font-bold text-green dark:text-neon-green shrink-0">{ad.price}</div>
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[.75rem] text-gray-500 dark:text-white/50">
-                        {ad.category} · {ad.views || 0} vues ·
-                        <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[.65rem] font-bold uppercase ${ad.status === 'inactive' ? 'bg-gray-100 text-gray-500 dark:bg-dark-700 dark:text-gray-300' : ad.status === 'sold' ? 'bg-red-50 text-brand-red dark:bg-red-900/20' : 'bg-green/10 text-green'}`}>
-                          {ad.status === 'inactive' ? '⏸️ Inactif' : ad.status === 'sold' ? '📦 Vendu' : '✓ Actif'}
-                        </span>
-                      </div>
-
-                      {/* Mobile stats text */}
-                      <div className="mt-2 text-[.75rem] text-gray-400 sm:hidden">
-                        Créée le {new Date(ad.created_at).toLocaleDateString('fr-FR')}
-                      </div>
-                    </div>
-
-                    {/* 3-dots Menu Button */}
-                    <div className="flex items-center gap-2 shrink-0 relative ml-auto">
-                      <Link href={`/paiement?annonce_id=${ad.id}`} className="btn btn-gold btn-sm h-7 text-[.7rem] px-2 whitespace-nowrap hidden sm:inline-flex">
-                        ⭐ Booster
+              <>
+                <div className="flex flex-col gap-2">
+                  {filteredAds.slice((adPage - 1) * itemsPerPage, adPage * itemsPerPage).map((ad) => (
+                    <div key={ad.id} className="relative group flex items-center gap-3 rounded-xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-2 sm:p-2.5 hover:shadow-md transition">
+                      <Link href={`/annonce/${ad.id}/${ad.slug}`} className="shrink-0">
+                        <img src={ad.image || "https://placehold.co/100x100?text=Sans+Image"} alt="" className="h-14 w-14 sm:h-16 sm:w-16 rounded-lg object-cover" />
                       </Link>
-                      <button
-                        onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === ad.id ? null : ad.id); }}
-                        className="dots-btn p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-dark-900 rounded-full transition"
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
-                      </button>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                          <Link href={`/annonce/${ad.id}/${ad.slug}`} className="truncate block text-[0.88rem] sm:text-[0.95rem] font-bold text-gray-900 dark:text-white hover:text-green max-w-full">
+                            {ad.title}
+                          </Link>
+                          <div className="text-[0.82rem] sm:text-[0.9rem] font-bold text-green dark:text-neon-green shrink-0">{ad.price}</div>
+                        </div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[0.72rem] text-gray-500 dark:text-white/50">
+                          <span>{ad.category}</span>
+                          <span>•</span>
+                          <span>{ad.views || 0} vues</span>
+                          <span>•</span>
+                          <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.62rem] font-bold uppercase ${ad.status === 'inactive' ? 'bg-gray-100 text-gray-500 dark:bg-dark-700 dark:text-gray-300' : ad.status === 'sold' ? 'bg-red-50 text-brand-red dark:bg-red-900/20' : 'bg-green/10 text-green'}`}>
+                            {ad.status === 'inactive' ? '⏸️ Inactif' : ad.status === 'sold' ? '📦 Vendu' : '✓ Actif'}
+                          </span>
+                        </div>
+                      </div>
 
-                      {/* Dropdown Menu */}
-                      {openMenuId === ad.id && (
-                        <div className="absolute right-0 top-10 w-48 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-border py-2 z-50 animate-fadeUp">
-                          <Link href={`/publier?edit=${ad.id}`} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">✏️ Modifier</Link>
-                          <button onClick={() => toggleActive(ad.id)} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">
-                            {ad.status === 'inactive' ? '▶️ Activer l\'annonce' : '⏸️ Désactiver l\'annonce'}
-                          </button>
-                          <button onClick={() => toggleSold(ad.id)} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">
-                            {ad.status === 'sold' ? '📦 Remettre en vente' : '✅ Marquer comme vendu'}
-                          </button>
-                          <Link href={`/paiement?annonce_id=${ad.id}`} className="block w-full text-left px-4 py-2 text-[.85rem] text-gold font-bold hover:bg-gray-50 dark:hover:bg-dark-700 sm:hidden">⭐ Booster</Link>
-                          <div className="my-1 border-t border-gray-100 dark:border-dark-border"></div>
-                          <button onClick={() => { setAdToDelete(ad.id); setOpenMenuId(null); }} className="block w-full text-left px-4 py-2 text-[.85rem] text-brand-red font-bold hover:bg-red-50 dark:hover:bg-red-900/10">🗑️ Supprimer</button>
+                      {/* 3-dots Menu Button */}
+                      <div className="flex items-center gap-2 shrink-0 relative ml-auto z-10">
+                        <Link href={`/paiement?annonce_id=${ad.id}`} className="btn btn-gold btn-sm h-7 text-[.7rem] px-2.5 rounded-lg whitespace-nowrap hidden sm:inline-flex">
+                          ⭐ Booster
+                        </Link>
+                        <button
+                          onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === ad.id ? null : ad.id); }}
+                          className="dots-btn p-1.5 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-dark-900 rounded-full transition"
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {openMenuId === ad.id && (
+                          <div className="absolute right-0 top-8 w-48 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-border py-2 z-50 animate-fadeUp">
+                            <Link href={`/publier?edit=${ad.id}`} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">✏️ Modifier</Link>
+                            <button onClick={() => toggleActive(ad.id)} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">
+                              {ad.status === 'inactive' ? '▶️ Activer l\'annonce' : '⏸️ Désactiver l\'annonce'}
+                            </button>
+                            <button onClick={() => toggleSold(ad.id)} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">
+                              {ad.status === 'sold' ? '📦 Remettre en vente' : '✅ Marquer comme vendu'}
+                            </button>
+                            <Link href={`/paiement?annonce_id=${ad.id}`} className="block w-full text-left px-4 py-2 text-[.85rem] text-gold font-bold hover:bg-gray-50 dark:hover:bg-dark-700 sm:hidden">⭐ Booster</Link>
+                            <div className="my-1 border-t border-gray-100 dark:border-dark-border"></div>
+                            <button onClick={() => { setAdToDelete(ad.id); setOpenMenuId(null); }} className="block w-full text-left px-4 py-2 text-[.85rem] text-brand-red font-bold hover:bg-red-50 dark:hover:bg-red-900/10">🗑️ Supprimer</button>
+                          </div>
+                        )}
+                      </div>
+
+                      {ad.status === 'sold' && (
+                        <div className="absolute inset-0 bg-white/60 dark:bg-black/60 z-[5] flex items-center justify-center backdrop-blur-[1px] pointer-events-none rounded-xl">
+                          <span className="bg-brand-red text-white font-bold px-3 py-1 rounded-lg rotate-[-12deg] text-sm border-2 border-white shadow-md">VENDU</span>
                         </div>
                       )}
                     </div>
+                  ))}
+                </div>
 
-                    {ad.status === 'sold' && (
-                      <div className="absolute inset-0 bg-white/60 dark:bg-black/60 z-[5] flex items-center justify-center backdrop-blur-[1px] pointer-events-none rounded-[10px]">
-                        <span className="bg-brand-red text-white font-bold px-3 py-1 rounded-lg rotate-[-12deg] text-sm border-2 border-white shadow-md">VENDU</span>
-                      </div>
-                    )}
+                {/* PAGINATION ADS */}
+                {filteredAds.length > itemsPerPage && (
+                  <div className="mt-6 flex justify-center items-center gap-1">
+                    <button
+                      disabled={adPage === 1}
+                      onClick={() => setAdPage(p => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
+                    >
+                      ‹ Précédent
+                    </button>
+                    {Array.from({ length: Math.ceil(filteredAds.length / itemsPerPage) }, (_, idx) => idx + 1).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setAdPage(p)}
+                        className={`h-8 w-8 rounded-lg text-[0.8rem] font-bold transition ${p === adPage ? "bg-green text-white" : "border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"}`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      disabled={adPage === Math.ceil(filteredAds.length / itemsPerPage)}
+                      onClick={() => setAdPage(p => Math.min(Math.ceil(filteredAds.length / itemsPerPage), p + 1))}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
+                    >
+                      Suivant ›
+                    </button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -856,11 +915,42 @@ export default function Dashboard() {
                 emoji="❤️"
               />
             ) : (
-              <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {favListings.map((ad) => (
-                  <AdCard key={ad.id} ad={ad} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {favListings.slice((favPage - 1) * itemsPerPage, favPage * itemsPerPage).map((ad) => (
+                    <AdCard key={ad.id} ad={ad} />
+                  ))}
+                </div>
+
+                {/* PAGINATION FAVORITES */}
+                {favListings.length > itemsPerPage && (
+                  <div className="mt-6 flex justify-center items-center gap-1">
+                    <button
+                      disabled={favPage === 1}
+                      onClick={() => setFavPage(p => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
+                    >
+                      ‹ Précédent
+                    </button>
+                    {Array.from({ length: Math.ceil(favListings.length / itemsPerPage) }, (_, idx) => idx + 1).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setFavPage(p)}
+                        className={`h-8 w-8 rounded-lg text-[0.8rem] font-bold transition ${p === favPage ? "bg-green text-white" : "border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"}`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      disabled={favPage === Math.ceil(favListings.length / itemsPerPage)}
+                      onClick={() => setFavPage(p => Math.min(Math.ceil(favListings.length / itemsPerPage), p + 1))}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
+                    >
+                      Suivant ›
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -929,6 +1019,24 @@ export default function Dashboard() {
                     <option value="Wolof">Wolof</option>
                   </select>
                 </div>
+
+                {/* Ouvrir une boutique = décision personnelle du vendeur */}
+                <div className="flex items-start justify-between gap-4 rounded-xl border-[1.5px] border-gray-100 dark:border-dark-border bg-gray-50/60 dark:bg-dark-900/40 p-4">
+                  <div>
+                    <h3 className="font-display text-[.95rem] font-bold dark:text-white">🏪 Ma boutique publique</h3>
+                    <p className="mt-1 text-[.8rem] text-gray-500 dark:text-white/60">
+                      Votre boutique s'ouvre <b>automatiquement</b> dès que vous publiez une annonce, et apparaît dans la page « Boutiques ». Désactivez ici si vous préférez la <b>masquer</b>.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHasBoutique((v) => !v)}
+                    aria-pressed={hasBoutique}
+                    className={`relative mt-1 h-7 w-12 shrink-0 rounded-full transition ${hasBoutique ? "bg-green" : "bg-gray-300 dark:bg-dark-border"}`}
+                  >
+                    <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${hasBoutique ? "left-6" : "left-1"}`} />
+                  </button>
+                </div>
               </div>
               <button
                 onClick={async () => {
@@ -938,11 +1046,13 @@ export default function Dashboard() {
                     bio: profileBio,
                     phone: profilePhone
                   }).eq('id', user.id);
+                  // Activation boutique (best-effort : nécessite la colonne has_boutique)
+                  await supabase.from('profiles').update({ has_boutique: hasBoutique }).eq('id', user.id);
                   if (error) {
                     show("❌ Erreur : " + error.message);
                   } else {
                     show("✓ Profil sauvegardé avec succès !");
-                    setProfile((prev: any) => prev ? { ...prev, full_name: profileName, bio: profileBio, phone: profilePhone } : { full_name: profileName, bio: profileBio, phone: profilePhone });
+                    setProfile((prev: any) => prev ? { ...prev, full_name: profileName, bio: profileBio, phone: profilePhone, has_boutique: hasBoutique } : { full_name: profileName, bio: profileBio, phone: profilePhone, has_boutique: hasBoutique });
                   }
                 }}
                 className="btn btn-green mt-6"
@@ -1520,34 +1630,65 @@ export default function Dashboard() {
                 ctaHref="/publier"
               />
             ) : (
-              <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-border overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[600px]">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-dark-900 border-b border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 text-sm">
-                      <th className="p-4 font-semibold">ID Commande</th>
-                      <th className="p-4 font-semibold">Date</th>
-                      <th className="p-4 font-semibold">Description</th>
-                      <th className="p-4 font-semibold">Montant</th>
-                      <th className="p-4 font-semibold">Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {purchases.map((p, i) => (
-                      <tr key={i} className="border-b border-gray-100 dark:border-dark-border last:border-0 hover:bg-gray-50 dark:hover:bg-dark-900 transition">
-                        <td className="p-4 font-mono text-sm text-gray-600 dark:text-gray-300">{p.id}</td>
-                        <td className="p-4 text-sm text-gray-600 dark:text-gray-300">{new Date(p.date).toLocaleDateString('fr-FR')}</td>
-                        <td className="p-4 text-sm font-semibold text-gray-900 dark:text-white">{p.type}</td>
-                        <td className="p-4 text-sm font-bold text-gray-900 dark:text-white">{p.amount.toLocaleString('fr-FR')} FCFA</td>
-                        <td className="p-4">
-                          <span className="bg-green/10 text-green px-2.5 py-1 rounded-full text-[.75rem] font-bold border border-green/20">
-                            {p.status}
-                          </span>
-                        </td>
+              <>
+                <div className="bg-white dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-dark-border overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[600px]">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-dark-900 border-b border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 text-sm">
+                        <th className="p-4 font-semibold">ID Commande</th>
+                        <th className="p-4 font-semibold">Date</th>
+                        <th className="p-4 font-semibold">Description</th>
+                        <th className="p-4 font-semibold">Montant</th>
+                        <th className="p-4 font-semibold">Statut</th>
                       </tr>
+                    </thead>
+                    <tbody>
+                      {purchases.slice((purchasePage - 1) * itemsPerPage, purchasePage * itemsPerPage).map((p, i) => (
+                        <tr key={i} className="border-b border-gray-100 dark:border-dark-border last:border-0 hover:bg-gray-50 dark:hover:bg-dark-900 transition">
+                          <td className="p-4 font-mono text-sm text-gray-600 dark:text-gray-300">{p.id}</td>
+                          <td className="p-4 text-sm text-gray-600 dark:text-gray-300">{new Date(p.date).toLocaleDateString('fr-FR')}</td>
+                          <td className="p-4 text-sm font-semibold text-gray-900 dark:text-white">{p.type}</td>
+                          <td className="p-4 text-sm font-bold text-gray-900 dark:text-white">{p.amount.toLocaleString('fr-FR')} FCFA</td>
+                          <td className="p-4">
+                            <span className="bg-green/10 text-green px-2.5 py-1 rounded-full text-[.75rem] font-bold border border-green/20">
+                              {p.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* PAGINATION PURCHASES */}
+                {purchases.length > itemsPerPage && (
+                  <div className="mt-6 flex justify-center items-center gap-1">
+                    <button
+                      disabled={purchasePage === 1}
+                      onClick={() => setPurchasePage(p => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
+                    >
+                      ‹ Précédent
+                    </button>
+                    {Array.from({ length: Math.ceil(purchases.length / itemsPerPage) }, (_, idx) => idx + 1).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setPurchasePage(p)}
+                        className={`h-8 w-8 rounded-lg text-[0.8rem] font-bold transition ${p === purchasePage ? "bg-green text-white" : "border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"}`}
+                      >
+                        {p}
+                      </button>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                    <button
+                      disabled={purchasePage === Math.ceil(purchases.length / itemsPerPage)}
+                      onClick={() => setPurchasePage(p => Math.min(Math.ceil(purchases.length / itemsPerPage), p + 1))}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
+                    >
+                      Suivant ›
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -1699,7 +1840,7 @@ export default function Dashboard() {
 
               {/* Draggable Products List */}
               <div className="space-y-3">
-                {ads.length > 0 ? ads.map((prod, idx) => (
+                {ads.length > 0 ? ads.slice((showroomPage - 1) * 5, showroomPage * 5).map((prod, idx) => (
                   <div key={prod.id || idx} className="flex items-center gap-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border rounded-xl p-3 shadow-sm cursor-move hover:border-green transition">
                     <div className="text-gray-300 flex flex-col gap-1 px-1">
                       <div className="w-1 h-1 bg-current rounded-full"></div>
@@ -1719,10 +1860,39 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
+
+              {/* PAGINATION SHOWROOM PRODUCTS */}
+              {ads.length > 5 && (
+                <div className="mt-4 flex justify-center items-center gap-1">
+                  <button
+                    disabled={showroomPage === 1}
+                    onClick={() => setShowroomPage(p => Math.max(1, p - 1))}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
+                  >
+                    ‹ Précédent
+                  </button>
+                  {Array.from({ length: Math.ceil(ads.length / 5) }, (_, idx) => idx + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setShowroomPage(p)}
+                      className={`h-8 w-8 rounded-lg text-[0.8rem] font-bold transition ${p === showroomPage ? "bg-green text-white" : "border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    disabled={showroomPage === Math.ceil(ads.length / 5)}
+                    onClick={() => setShowroomPage(p => Math.min(Math.ceil(ads.length / 5), p + 1))}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
+                  >
+                    Suivant ›
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Colonne Droite : Live Preview */}
-            <div className={`fixed inset-0 z-[900] bg-black/80 backdrop-blur-sm flex justify-center items-center p-3 lg:p-0 lg:static lg:bg-transparent lg:backdrop-blur-none lg:w-[350px] lg:shrink-0 lg:justify-center lg:items-start lg:pt-4 ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
+            <div className={`fixed inset-0 z-[900] bg-black/80 backdrop-blur-sm flex justify-center items-center p-3 lg:p-0 lg:sticky lg:top-[95px] lg:bg-transparent lg:backdrop-blur-none lg:w-[330px] lg:shrink-0 lg:justify-center lg:items-start lg:h-[calc(100vh-120px)] ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
               {/* Mobile Close Button */}
               {livePreviewOpen && (
                 <button onClick={() => setLivePreviewOpen(false)} className="lg:hidden fixed top-4 right-4 text-white bg-white/15 rounded-full w-10 h-10 flex items-center justify-center text-xl backdrop-blur-md z-[950]">
@@ -1730,7 +1900,7 @@ export default function Dashboard() {
                 </button>
               )}
               {/* Phone Mockup Frame (iPhone Pro Max) — cadre fixe, contenu scrollable à l'intérieur */}
-              <div className="relative w-full max-w-[360px] h-[86vh] max-h-[760px] lg:max-w-[350px] lg:h-[700px] bg-[#0A0E14] rounded-[2.8rem] border-[10px] border-gray-900 dark:border-black shadow-2xl overflow-hidden flex flex-col mx-auto">
+              <div className="relative w-full max-w-[330px] h-[82vh] max-h-[680px] lg:h-[560px] bg-[#0A0E14] rounded-[2.5rem] border-[8px] border-gray-900 dark:border-black shadow-2xl overflow-hidden flex flex-col mx-auto">
                 {/* Dynamic Island / notch */}
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-full z-[60]" />
                 {/* Mockup Content (The Store Page) */}
@@ -1756,9 +1926,11 @@ export default function Dashboard() {
 
                       {/* Badges Grid */}
                       <div className="flex flex-wrap gap-1.5">
-                        <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
-                          <span className="text-green-400 bg-green-400/20 rounded-sm w-3 h-3 flex items-center justify-center text-[.5rem]">✓</span> Vendeur vérifié
-                        </div>
+                        {profile?.is_verified && (
+                          <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
+                            <span className="text-green-400 bg-green-400/20 rounded-sm w-3 h-3 flex items-center justify-center text-[.5rem]">✓</span> Vendeur vérifié
+                          </div>
+                        )}
                         <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
                           <span>📅</span> Membre depuis {new Date().getFullYear()}
                         </div>

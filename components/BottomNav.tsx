@@ -66,10 +66,10 @@ export default function BottomNav() {
         if (it.primary) {
           return (
             <Link key={it.href} href={it.href} className="relative flex flex-1 flex-col items-center justify-start group">
-              <div className="absolute -top-8 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-neon-magenta to-[#FF5E8E] text-white shadow-[0_4px_15px_rgba(255,42,109,0.5)] dark:shadow-glow-magenta transition-transform group-hover:scale-105 border-[3px] border-white dark:border-[#0A0E14]">
+              <div className="absolute -top-8 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-[#F5A623] to-[#FFD166] text-dark-900 shadow-[0_4px_15px_rgba(245,166,35,0.4)] transition-transform group-hover:scale-105 border-[3px] border-white dark:border-[#0A0E14]">
                 {it.icon}
               </div>
-              <span className="mt-8 text-[.6rem] font-medium text-neon-magenta">
+              <span className="mt-8 text-[.6rem] font-bold text-[#F5A623] dark:text-[#F5A623]">
                 {it.label}
               </span>
             </Link>

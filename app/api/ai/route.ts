@@ -140,6 +140,49 @@ ${topic} disponible dès maintenant sur Wanteermako. ${pick(["Qualité au top, p
   }
 }
 
+// ── Mode "tout générer" : titre + description + caractéristiques en JSON ──
+function buildAllPrompt(body: any): string {
+  const topic = (body?.topic || "").trim() || "mon article";
+  const category = (body?.category || "").trim() || "général";
+  const city = (body?.city || "").trim() || "Dakar";
+  const fields: { label: string; options?: string[] }[] = Array.isArray(body?.fields) ? body.fields : [];
+  const fieldsDesc = fields.length
+    ? fields.map((f) => (f.options?.length ? `- ${f.label} (choisir UNIQUEMENT parmi : ${f.options.join(", ")})` : `- ${f.label}`)).join("\n")
+    : "(aucune)";
+
+  return `Pour cette annonce — produit/service : "${topic}" (catégorie : ${category}, ville : ${city}) —
+génère un objet JSON STRICT (aucun texte autour, pas de backticks) avec exactement ces clés :
+{
+  "title": "titre accrocheur, max 70 caractères, avec 1 emoji et mots-clés",
+  "description": "description vendeuse de 80 à 120 mots, avec puces ✅ et un appel à l'action",
+  "specs": { "<libellé exact>": "<valeur plausible>", ... }
+}
+Pour "specs", donne une valeur réaliste pour chacune de ces caractéristiques (respecte les options imposées ; mets "" si vraiment inconnu) :
+${fieldsDesc}
+Réponds UNIQUEMENT avec le JSON valide.`;
+}
+
+function templateAll(body: any) {
+  return {
+    title: templateText({ ...body, kind: "listing_title" }).replace(/^["']|["']$/g, "").slice(0, 70),
+    description: templateText({ ...body, kind: "listing_description" }),
+    specs: {} as Record<string, string>,
+  };
+}
+
+function parseAll(raw: string): { title?: string; description?: string; specs?: Record<string, string> } | null {
+  try {
+    const cleaned = raw.replace(/```json|```/gi, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start < 0 || end < 0) return null;
+    const obj = JSON.parse(cleaned.slice(start, end + 1));
+    return obj && typeof obj === "object" ? obj : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   // Rate limit par IP
   const ip = req.headers.get("x-forwarded-for") || "unknown";
@@ -155,41 +198,49 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const apiKey = process.env.GEMINI_API_KEY;
+  const isAll = body?.kind === "listing_all";
+  const hasKey = apiKey && !apiKey.includes("your_gemini");
 
-  // Pas de clé → on sert directement le modèle de secours gratuit (template)
-  if (!apiKey || apiKey.includes("your_gemini")) {
-    return NextResponse.json({ text: templateText(body), source: "template" });
-  }
-
-  try {
-    const prompt = buildPrompt(body);
-    const fullPrompt = `${SYSTEM_INSTRUCTION}\n\n[Consigne de rédaction]:\n${prompt}`;
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+  // Appel Gemini commun. Lance une erreur si échec (pour basculer sur le template).
+  async function callGemini(prompt: string): Promise<string> {
+    const fullPrompt = `${SYSTEM_INSTRUCTION}\n\n[Consigne]:\n${prompt}`;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || "gemini-2.5-flash"}:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: fullPrompt }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000
-        }
-      })
+        contents: [{ parts: [{ text: fullPrompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1200 },
+      }),
     });
-
     const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data?.error?.message || response.statusText);
-    }
-
+    if (!response.ok) throw new Error(data?.error?.message || response.statusText);
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-    if (!text) {
-      throw new Error("Gemini a retourné une réponse vide.");
-    }
+    if (!text) throw new Error("Réponse vide");
+    return text;
+  }
 
-    return NextResponse.json({ text, source: "ai" });
+  // ── Mode "tout générer" : renvoie { title, description, specs } ──
+  if (isAll) {
+    if (!hasKey) return NextResponse.json({ ...templateAll(body), source: "template" });
+    try {
+      const parsed = parseAll(await callGemini(buildAllPrompt(body)));
+      if (!parsed) throw new Error("JSON invalide");
+      return NextResponse.json({
+        title: (parsed.title || "").slice(0, 80),
+        description: (parsed.description || "").slice(0, 2000),
+        specs: parsed.specs && typeof parsed.specs === "object" ? parsed.specs : {},
+        source: "ai",
+      });
+    } catch (error: any) {
+      console.warn("Gemini all error (fallback template):", error?.message);
+      return NextResponse.json({ ...templateAll(body), source: "template" });
+    }
+  }
+
+  // ── Mode texte simple (titre, description, email, whatsapp, facebook…) ──
+  if (!hasKey) return NextResponse.json({ text: templateText(body), source: "template" });
+  try {
+    return NextResponse.json({ text: await callGemini(buildPrompt(body)), source: "ai" });
   } catch (error: any) {
     console.warn("Gemini API error (falling back to templates):", error?.message);
     return NextResponse.json({ text: templateText(body), source: "template" });

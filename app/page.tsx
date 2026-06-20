@@ -258,7 +258,7 @@ export default async function HomePage() {
             </Link>
           </div>
           
-          <div className="no-scrollbar flex gap-6 overflow-x-auto pb-4 snap-x">
+          <div className="no-scrollbar flex gap-4 md:gap-6 overflow-x-auto pb-4 snap-x">
             {boutiques.map((b: any) => {
               // Éviter d'afficher l'email si full_name n'est pas configuré
               let displayName = b.full_name || 'Boutique Pro';
@@ -266,12 +266,16 @@ export default async function HomePage() {
                 displayName = displayName.split('@')[0];
               }
               
+              const isPro = b.role === 'pro' || b.role === 'business' || (b.full_name || '').toLowerCase().includes('multiservice') || (b.full_name || '').toLowerCase().includes('tech');
+              
               return (
-                <Link key={b.id} href={`/boutique/${b.id}`} className="flex flex-col items-center gap-3 w-[100px] shrink-0 snap-start group">
-                  <div className="w-[85px] h-[85px] rounded-full overflow-hidden border-[3px] border-gray-100 dark:border-dark-border group-hover:border-gold transition-all shadow-sm">
-                    <Image src={b.avatar_url} alt={displayName} width={85} height={85} className="w-full h-full object-cover" />
+                <Link key={b.id} href={`/boutique/${b.id}`} className="flex flex-col items-center gap-2.5 w-[90px] md:w-[110px] shrink-0 snap-start group">
+                  <div className={`w-[75px] h-[75px] md:w-[95px] md:h-[95px] flex items-center justify-center transition-transform duration-300 group-hover:scale-105 ${isPro ? 'avatar-ring-premium shadow-[0_0_15px_rgba(245,166,35,0.15)]' : 'avatar-ring-standard'}`}>
+                    <div className="w-full h-full rounded-full overflow-hidden border-[3px] border-white dark:border-[#0D1117] bg-white dark:bg-[#161B22]">
+                      <Image src={b.avatar_url} alt={displayName} width={90} height={90} className="w-full h-full object-cover rounded-full" />
+                    </div>
                   </div>
-                  <span className="text-[.8rem] font-bold text-center leading-tight line-clamp-2 text-gray-800 dark:text-white group-hover:text-green">
+                  <span className="text-[0.72rem] md:text-[0.8rem] font-bold text-center leading-tight line-clamp-2 text-gray-800 dark:text-white group-hover:text-[#6366F1] dark:group-hover:text-green-400 transition-colors">
                     {displayName}
                   </span>
                 </Link>

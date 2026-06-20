@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendInvoiceEmail } from "@/lib/email";
+import { configuredPlatforms } from "@/lib/social";
+import { publishPendingAnnonces, publishDueScheduled, publishOneListing } from "@/lib/campaign-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +59,7 @@ export async function POST(req: Request) {
         full_name: byId[u.id]?.full_name || u.user_metadata?.full_name || "",
         role: byId[u.id]?.role || "user",
         free_premium: !!byId[u.id]?.free_premium,
+        is_verified: !!byId[u.id]?.is_verified,
         phone: byId[u.id]?.phone || "",
         avatar_url: byId[u.id]?.avatar_url || "",
       }));
@@ -102,6 +105,14 @@ export async function POST(req: Request) {
       const { error } = await sb.from("profiles").update({ free_premium: !!value }).eq("id", userId);
       if (error) throw error;
       await sb.from("listings").update({ premium: !!value }).eq("user_id", userId);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Activer/retirer la vérification de l'utilisateur
+    if (action === "setVerified") {
+      const { userId, value } = body;
+      const { error } = await sb.from("profiles").update({ is_verified: !!value }).eq("id", userId);
+      if (error) throw error;
       return NextResponse.json({ ok: true });
     }
 
@@ -184,6 +195,8 @@ export async function POST(req: Request) {
             boost_expires_at: expires,
           }
         );
+        // Publication instantanée sur les réseaux dès l'activation (idempotent).
+        try { await publishOneListing(sb, listingId); } catch (e) { console.warn("publishOneListing:", e); }
       } else {
         // Abonnement de compte : avantages premium jusqu'à expiration
         await adaptiveWrite(
@@ -388,6 +401,28 @@ export async function POST(req: Request) {
         console.error("Facebook Direct Publish Error:", err);
         return NextResponse.json({ error: err.message || "Erreur de publication sur Facebook." }, { status: 500 });
       }
+    }
+
+    // Publication automatique multi-réseaux (Telegram + Facebook…) via Gemini.
+    // Déclenchement manuel depuis l'admin (même moteur que le cron /api/campaign/auto-publish).
+    if (action === "campaignAutoPublish") {
+      const platforms = configuredPlatforms();
+      if (!platforms.length) {
+        return NextResponse.json({ error: "Aucun réseau configuré (TELEGRAM_BOT_TOKEN/CHANNEL_ID ou META_PAGE_ID/ACCESS_TOKEN)." }, { status: 400 });
+      }
+
+      // Phase 1 : posts planifiés arrivés à échéance. Phase 2 : nouvelles annonces sans post.
+      const scheduled = await publishDueScheduled(sb);
+      const pending = await publishPendingAnnonces(sb);
+
+      const published =
+        pending.summary.reduce((n: number, s: any) => n + s.results.filter((r: any) => r.ok).length, 0) +
+        scheduled.summary.filter((s: any) => s.published).length;
+
+      if (!published && !pending.annonces && !scheduled.due) {
+        return NextResponse.json({ ok: true, published: 0, message: "Aucune annonce ni post planifié en attente.", platforms });
+      }
+      return NextResponse.json({ ok: true, published, platforms, scheduled, pending });
     }
 
     // Achats / transactions (bypass RLS pour les Finances admin)

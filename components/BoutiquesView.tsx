@@ -63,7 +63,9 @@ export default function BoutiquesView({ boutiques }: { boutiques: Shop[] }) {
                 {s.isPro && <span className="absolute right-2 top-2 z-10 rounded-full bg-gradient-to-r from-neon-gold to-[#D4891A] px-2 py-0.5 text-[.55rem] font-bold uppercase tracking-wider text-dark-900 shadow-sm">PRO</span>}
               </div>
               <div className="flex flex-col items-center -mt-7 px-3 pb-4">
-                <img src={s.avatar} alt={s.name} className="h-14 w-14 rounded-full border-[3px] border-white dark:border-dark-800 object-cover shadow-md bg-white group-hover:scale-105 transition-transform" />
+                <div className={`${s.isPro ? 'avatar-ring-premium' : 'avatar-ring-standard'} p-[2px] h-14 w-14 rounded-full shadow-md bg-white group-hover:scale-105 transition-transform shrink-0`}>
+                  <img src={s.avatar} alt={s.name} className="h-full w-full rounded-full border border-white dark:border-dark-800 object-cover bg-white" />
+                </div>
                 <h3 className="mt-1.5 line-clamp-1 text-center font-display text-[.85rem] font-bold text-gray-900 dark:text-white group-hover:text-green">{s.name}</h3>
                 <div className="mt-1 text-[.68rem] text-gray-500">📦 <b className="text-gray-700 dark:text-white">{s.adCount}</b> annonce{s.adCount > 1 ? "s" : ""}</div>
                 <span className="mt-2 w-full rounded-lg bg-gray-50 dark:bg-white/5 py-1.5 text-center text-[.72rem] font-bold text-green group-hover:bg-green group-hover:text-white transition-all">Voir →</span>
@@ -78,7 +80,9 @@ export default function BoutiquesView({ boutiques }: { boutiques: Shop[] }) {
         <div className="flex flex-col gap-2">
           {filtered.map((s) => (
             <Link key={s.id} href={`/boutique/${s.id}`} className="group flex items-center gap-3 rounded-[12px] border border-gray-100 dark:border-white/10 bg-white dark:bg-[#111722]/80 p-3 shadow-sm hover:border-gold/40 hover:shadow-md transition-all">
-              <img src={s.avatar} alt={s.name} className="h-12 w-12 shrink-0 rounded-xl object-cover bg-white border border-gray-100 dark:border-white/10" />
+              <div className={`${s.isPro ? 'avatar-ring-premium' : 'avatar-ring-standard'} p-[1.5px] h-12 w-12 rounded-xl shadow-sm bg-white shrink-0`}>
+                <img src={s.avatar} alt={s.name} className="h-full w-full rounded-[10px] object-cover bg-white" />
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="truncate font-bold text-[.9rem] text-gray-900 dark:text-white group-hover:text-green">{s.name}</h3>
@@ -104,7 +108,9 @@ export default function BoutiquesView({ boutiques }: { boutiques: Shop[] }) {
                 {s.isPro && <span className="absolute right-3 top-3 rounded-full bg-gradient-to-r from-neon-gold to-[#D4891A] px-2.5 py-0.5 text-[.6rem] font-bold uppercase tracking-wider text-dark-900 shadow">PRO</span>}
               </div>
               <div className="flex gap-3 px-4 pb-4">
-                <img src={s.avatar} alt={s.name} className="-mt-8 h-16 w-16 rounded-2xl border-4 border-white dark:border-dark-800 object-cover shadow-lg bg-white shrink-0" />
+                <div className={`-mt-8 ${s.isPro ? 'avatar-ring-premium' : 'avatar-ring-standard'} p-[2.5px] h-16 w-16 rounded-[14px] shadow-lg bg-white shrink-0 z-10`}>
+                  <img src={s.avatar} alt={s.name} className="h-full w-full rounded-[12px] object-cover bg-white" />
+                </div>
                 <div className="min-w-0 flex-1 pt-2">
                   <h3 className="truncate font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white group-hover:text-green">{s.name}</h3>
                   <p className="line-clamp-2 text-[.78rem] text-gray-500 dark:text-gray-400 mt-0.5">{s.bio}</p>

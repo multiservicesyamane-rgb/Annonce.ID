@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { sendInvoiceEmail } from "@/lib/email";
+import { publishOneListing } from "@/lib/campaign-engine";
 
 // Forcer le rendu dynamique : cette route ne doit pas être évaluée au build
 export const dynamic = "force-dynamic";
@@ -81,6 +82,9 @@ export async function POST(req: Request) {
           }
 
           await supabase.from("listings").update(updateData).eq("id", listingId);
+
+          // Publication instantanée sur les réseaux dès l'activation (idempotent).
+          try { await publishOneListing(supabase, listingId); } catch (e) { console.warn("publishOneListing:", e); }
         } else if (subKey && userId) {
           // Activer la formule d'abonnement boutique sur le profil de l'utilisateur
           await supabase.from("profiles").update({

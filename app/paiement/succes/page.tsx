@@ -10,6 +10,12 @@ export default function PaymentSuccess({ searchParams }: { searchParams: { listi
       const supabase = createClient();
       supabase.from('listings').update({ status: 'active', premium: true }).eq('id', searchParams.listing_id).then(({ error }) => {
         if (error) console.error("Error activating listing:", error);
+        // Publication instantanée sur les réseaux (idempotent ; filet si le webhook n'a pas tourné).
+        fetch("/api/campaign/publish-listing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ listingId: searchParams.listing_id }),
+        }).catch(() => { /* ne jamais bloquer l'utilisateur */ });
       });
     }
   }, [searchParams.listing_id]);

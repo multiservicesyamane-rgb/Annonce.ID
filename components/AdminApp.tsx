@@ -11,7 +11,7 @@ import { COUNTRIES } from "@/lib/constants";
  * EN PRODUCTION : hash bcrypt en base, vraie 2FA TOTP, rôle 'admin', audit log,
  * et NE JAMAIS committer ces identifiants. Voir README + lib/supabase.
  */
-const DEMO = { email: "admin@yamanetech.com", pass: "YamaneTech@2025", twofa: "1234" };
+const DEMO = { email: "multiservicesyamane@gmail.com", pass: "YamaneTech@2025", twofa: "1234", emails: ["multiservicesyamane@gmail.com", "multiserviceyamane@gmail.com"] };
 
 type Panel = "overview" | "moderation" | "users" | "listings" | "ads" | "finance" | "countries" | "categories" | "reports" | "logs" | "settings";
 const NAV: { id: Panel; label: string; badge?: number }[] = [
@@ -101,7 +101,7 @@ export default function AdminApp() {
   };
 
   function login() {
-    if (email === DEMO.email && pass === DEMO.pass && (twofa === DEMO.twofa || twofa === "")) {
+    if (DEMO.emails.includes(email.toLowerCase().trim()) && pass === DEMO.pass && (twofa === DEMO.twofa || twofa === "")) {
       setAuthed(true);
       show("✓ Bienvenue, Administrateur");
     } else {

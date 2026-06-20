@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { publishOneListing } from "@/lib/campaign-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,8 @@ export async function POST(req: Request) {
       });
       if (listingId) {
         await supabase.from("listings").update({ status: "active", premium: true }).eq("id", listingId);
+        // Publication instantanée sur les réseaux (idempotent).
+        try { await publishOneListing(supabase, listingId); } catch (e) { console.warn("publishOneListing:", e); }
       }
     }
 
