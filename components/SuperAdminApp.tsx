@@ -554,16 +554,15 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
   }
   useEffect(() => { loadCampaign(); }, []);
 
-  function getSlotDateTimeString(day: Date, slotIndex: number) {
+  function getSlotDateTimeString(day: Date, timeStr: string) {
     const yyyymmdd = day.toISOString().slice(0, 10);
-    const times = ["07:00:00", "10:00:00", "13:00:00", "16:00:00", "20:30:00"];
-    return `${yyyymmdd}T${times[slotIndex]}+01:00`;
+    return `${yyyymmdd}T${timeStr || "07:00"}:00+01:00`;
   }
 
   // Post Actions
   async function savePost() {
     if (!pForm.caption) { T("⚠ Légende requise"); return; }
-    const dt = getSlotDateTimeString(selSlot!.day, selSlot!.slotIndex);
+    const dt = getSlotDateTimeString(selSlot!.day, pForm.time || "07:00");
     const payload = {
       id: pForm.id || undefined,
       platform: pForm.platform || "all",
@@ -797,8 +796,8 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
     return days;
   };
 
-  const getPostForSlot = (dayStr: string, slotIndex: number) => {
-    return posts.find((p) => {
+  const getPostsForSlot = (dayStr: string, slotIndex: number) => {
+    return posts.filter((p) => {
       const dtStr = p.scheduled_at || p.published_at || p.created_at;
       if (!dtStr) return false;
       const d = new Date(dtStr);
@@ -1003,38 +1002,46 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
                         <td className="border border-[#30363D] p-3 text-[.72rem] font-bold text-[#8B949E] bg-[#161B22]">{slotName}</td>
                         {weekDays.map((day, dayIdx) => {
                           const dayStr = day.toISOString().slice(0, 10);
-                          const post = getPostForSlot(dayStr, slotIdx);
+                          const slotPosts = getPostsForSlot(dayStr, slotIdx);
                           return (
                             <td
                               key={dayIdx}
-                              onClick={() => {
-                                if (post) {
-                                  setSelPost(post);
-                                } else {
-                                  setSelSlot({ day, slotIndex: slotIdx });
-                                  setPForm({ platform: "all", status: "scheduled", caption: "" });
-                                }
-                              }}
-                              className={`border border-[#30363D] p-2 text-[.7rem] cursor-pointer transition text-center min-h-[60px] h-[75px] relative group ${
-                                post
-                                  ? post.status === "published" || post.status === "boosted"
-                                    ? "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-300"
-                                    : "bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 text-amber-300"
-                                  : "bg-[#0D1117] hover:bg-white/[0.03] text-gray-600"
-                              }`}
+                              className="border border-[#30363D] p-2 text-[.7rem] transition text-center min-h-[90px] h-[110px] relative group bg-[#0D1117]"
                             >
-                              {post ? (
-                                <div className="flex flex-col justify-between h-full text-left">
-                                  <div className="flex justify-between items-center text-[.6rem] font-extrabold uppercase">
-                                    <span>{post.platform}</span>
-                                    {post.status === "boosted" && <span className="text-amber-400">⭐</span>}
-                                  </div>
-                                  <div className="line-clamp-2 leading-tight text-[.65rem] my-0.5">{post.caption}</div>
-                                  <div className="text-[.65rem] opacity-75 font-semibold">{post.status}</div>
+                              <div className="flex flex-col justify-between h-full space-y-1">
+                                <div className="space-y-1 overflow-y-auto max-h-[75px] scrollbar-thin">
+                                  {slotPosts.map((p) => (
+                                    <div
+                                      key={p.id}
+                                      onClick={() => setSelPost(p)}
+                                      className={`p-1 rounded text-left text-[0.63rem] font-medium cursor-pointer truncate ${
+                                        p.status === "published" || p.status === "boosted"
+                                          ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+                                          : "bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
+                                      }`}
+                                      title={p.caption}
+                                    >
+                                      <span className="font-extrabold uppercase mr-1">[{p.platform}]</span>
+                                      {p.caption || "Annonce"}
+                                    </div>
+                                  ))}
                                 </div>
-                              ) : (
-                                <span className="opacity-30 group-hover:opacity-80 transition">+ Planifier</span>
-                              )}
+                                <button
+                                  onClick={() => {
+                                    const defaultTimes = ["07:00", "10:00", "13:00", "16:00", "20:30"];
+                                    setSelSlot({ day, slotIndex: slotIdx });
+                                    setPForm({
+                                      platform: "all",
+                                      status: "scheduled",
+                                      caption: "",
+                                      time: defaultTimes[slotIdx]
+                                    });
+                                  }}
+                                  className="w-full py-0.5 rounded border border-dashed border-[#30363D] hover:border-gray-500 text-gray-500 hover:text-gray-300 text-[0.62rem] font-bold mt-auto"
+                                >
+                                  + Planifier
+                                </button>
+                              </div>
                             </td>
                           );
                         })}
@@ -1322,7 +1329,7 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
               <button onClick={() => setSelSlot(null)} className="text-gray-400 text-xl hover:text-white">✕</button>
             </div>
             <p className="mb-4 text-[.75rem] text-[#8B949E]">
-              Date : {selSlot.day.toLocaleDateString("fr-FR")} à {["07h00", "10h00", "13h00", "16h00", "20h30"][selSlot.slotIndex]} WAT
+              Date : {selSlot.day.toLocaleDateString("fr-FR")}
             </p>
             <div className="space-y-3">
               <div>
@@ -1337,6 +1344,15 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
                   <option value="instagram">Instagram</option>
                   <option value="whatsapp">WhatsApp</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-[.75rem] text-[#8B949E] mb-1">Heure de publication *</label>
+                <input
+                  type="time"
+                  value={pForm.time || "07:00"}
+                  onChange={(e) => setPForm({ ...pForm, time: e.target.value })}
+                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                />
               </div>
               <div>
                 <label className="block text-[.75rem] text-[#8B949E] mb-1">Associer à un produit (Annonce)</label>
@@ -1445,15 +1461,48 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
                   <div className="text-[.6rem] text-[#8B949E] uppercase">Partages</div>
                 </div>
               </div>
-              <div className="flex gap-2 pt-3">
-                {selPost.post_url && (
-                  <a href={selPost.post_url} target="_blank" rel="noopener noreferrer" className="rounded-[9px] bg-[#21262D] border border-[#30363D] hover:bg-[#30363D] px-4 py-2 text-[.78rem] font-bold text-[#C9D1D9] flex-1 text-center">
-                    Voir en ligne ↗
-                  </a>
+              <div className="flex flex-col gap-2 pt-3">
+                {selPost.status !== "published" && selPost.status !== "boosted" && (
+                  <button
+                    onClick={() => {
+                      triggerRepublier(selPost);
+                      setSelPost(null);
+                    }}
+                    className="rounded-[9px] bg-[#00C853] hover:bg-[#00E676] px-4 py-2 text-[.78rem] font-bold text-white w-full text-center"
+                  >
+                    🚀 Publier maintenant sur Facebook
+                  </button>
                 )}
-                <button onClick={() => deletePost(selPost.id)} className="rounded-[9px] bg-red-500/10 border border-red-500/20 px-4 py-2 text-[.78rem] font-bold text-red-300 hover:bg-red-500/20">
-                  🗑️ Supprimer
-                </button>
+                <div className="flex gap-2 w-full">
+                  <button
+                    onClick={() => {
+                      const dt = new Date(selPost.scheduled_at || selPost.published_at || selPost.created_at);
+                      const timeStr = dt.toTimeString().slice(0, 5); // "HH:MM"
+                      setSelSlot({ day: dt, slotIndex: 0 });
+                      setPForm({
+                        id: selPost.id,
+                        platform: selPost.platform,
+                        status: selPost.status,
+                        caption: selPost.caption,
+                        image_url: selPost.image_url,
+                        annonce_id: selPost.annonce_id,
+                        time: timeStr
+                      });
+                      setSelPost(null);
+                    }}
+                    className="rounded-[9px] bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-[.78rem] font-bold text-white flex-1 text-center"
+                  >
+                    ✏️ Modifier
+                  </button>
+                  {selPost.post_url && (
+                    <a href={selPost.post_url} target="_blank" rel="noopener noreferrer" className="rounded-[9px] bg-[#21262D] border border-[#30363D] hover:bg-[#30363D] px-4 py-2 text-[.78rem] font-bold text-[#C9D1D9] flex-1 text-center">
+                      Voir ↗
+                    </a>
+                  )}
+                  <button onClick={() => deletePost(selPost.id)} className="rounded-[9px] bg-red-500/10 border border-red-500/20 px-4 py-2 text-[.78rem] font-bold text-red-300 hover:bg-red-500/20 flex-1 text-center">
+                    🗑️ Supprimer
+                  </button>
+                </div>
               </div>
             </div>
           </div>
