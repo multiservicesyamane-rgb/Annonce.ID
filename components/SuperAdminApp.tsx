@@ -2546,6 +2546,6 @@ function Tbl({ head, children }: { head: string[]; children: React.ReactNode }) 
     </div>
   );
 }
-function Td({ children, bold }: { children: React.ReactNode; bold?: boolean }) {
-  return <td className={`border-b border-[#21262D] px-3 py-2.5 text-[.82rem] ${bold ? "font-bold text-[#E6EDF3]" : "text-[#C9D1D9]"}`}>{children}</td>;
+function Td({ children, bold, className }: { children: React.ReactNode; bold?: boolean; className?: string }) {
+  return <td className={`border-b border-[#21262D] px-3 py-2.5 text-[.82rem] ${bold ? "font-bold text-[#E6EDF3]" : "text-[#C9D1D9]"} ${className || ""}`}>{children}</td>;
 }
