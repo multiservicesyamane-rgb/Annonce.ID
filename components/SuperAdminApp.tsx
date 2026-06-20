@@ -561,20 +561,52 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
 
   // Post Actions
   async function savePost() {
-    if (!pForm.caption) { T("⚠ Légende requise"); return; }
+    if (!pForm.caption && (!pForm.annonce_ids || pForm.annonce_ids.length === 0)) {
+      T("⚠ Légende requise ou sélectionnez au moins un produit");
+      return;
+    }
     const dt = getSlotDateTimeString(selSlot!.day, pForm.time || "07:00");
-    const payload = {
-      id: pForm.id || undefined,
-      platform: pForm.platform || "all",
-      caption: pForm.caption,
-      image_url: pForm.image_url || null,
-      scheduled_at: dt,
-      status: pForm.status || "scheduled",
-      annonce_id: pForm.annonce_id || null,
-    };
+    const scheduledDate = new Date(dt);
+    const now = new Date();
+
+    // Empecher de planifier dans le passé
+    if (scheduledDate < now && (pForm.status === "scheduled" || pForm.status === "published")) {
+      T("⚠ L'heure choisie est dans le passé. Veuillez choisir une heure future.");
+      return;
+    }
+
     try {
-      await adminApi("campaignPostSave", { row: payload });
-      T(pForm.id ? "✅ Post mis à jour" : "✅ Post planifié");
+      if (!pForm.id && pForm.annonce_ids && pForm.annonce_ids.length > 0) {
+        // Planification multiple : boucle sur chaque annonce sélectionnée
+        for (const adId of pForm.annonce_ids) {
+          const ad = allListings.find(a => a.id === adId);
+          const customCaption = `🔥 À NE PAS MANQUER ! \n\n👉 ${ad?.title || "Produit"} à ${(ad?.price || 0).toLocaleString("fr-FR")} FCFA \n\n📍 Disponible à ${ad?.location || "Dakar"}. Contactez le vendeur sur wanteermako.com !`;
+          const payload = {
+            platform: pForm.platform || "all",
+            caption: customCaption,
+            image_url: ad?.image || pForm.image_url || null,
+            scheduled_at: dt,
+            status: pForm.status || "scheduled",
+            annonce_id: adId,
+          };
+          await adminApi("campaignPostSave", { row: payload });
+        }
+        T("✅ Publications planifiées avec succès");
+      } else {
+        // Sauvegarde d'une seule publication
+        if (!pForm.caption) { T("⚠ Légende requise"); return; }
+        const payload = {
+          id: pForm.id || undefined,
+          platform: pForm.platform || "all",
+          caption: pForm.caption,
+          image_url: pForm.image_url || null,
+          scheduled_at: dt,
+          status: pForm.status || "scheduled",
+          annonce_id: pForm.annonce_id || null,
+        };
+        await adminApi("campaignPostSave", { row: payload });
+        T(pForm.id ? "✅ Post mis à jour" : "✅ Post planifié");
+      }
       setSelSlot(null);
       setPForm({ platform: "all", status: "scheduled" });
       loadCampaign();
@@ -1003,44 +1035,70 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
                         {weekDays.map((day, dayIdx) => {
                           const dayStr = day.toISOString().slice(0, 10);
                           const slotPosts = getPostsForSlot(dayStr, slotIdx);
+
+                          const slotPast = (() => {
+                            const defaultTimes = ["07:00", "10:00", "13:00", "16:00", "20:30"];
+                            const yyyymmdd = day.toISOString().slice(0, 10);
+                            const dt = new Date(`${yyyymmdd}T${defaultTimes[slotIdx]}:00+01:00`);
+                            return dt < new Date();
+                          })();
+
+                          const getPlatIcon = (plat: string) => {
+                            if (plat === "facebook") return "🔵";
+                            if (plat === "whatsapp") return "🟢";
+                            if (plat === "instagram") return "🟣";
+                            return "📱";
+                          };
+
                           return (
                             <td
                               key={dayIdx}
-                              className="border border-[#30363D] p-2 text-[.7rem] transition text-center min-h-[90px] h-[110px] relative group bg-[#0D1117]"
+                              className={`border border-[#30363D] p-1 text-[.7rem] transition text-center min-h-[90px] h-[105px] relative group ${
+                                slotPast ? "bg-[#0D1117]/40 opacity-70" : "bg-[#0D1117]"
+                              }`}
                             >
                               <div className="flex flex-col justify-between h-full space-y-1">
-                                <div className="space-y-1 overflow-y-auto max-h-[75px] scrollbar-thin">
-                                  {slotPosts.map((p) => (
-                                    <div
-                                      key={p.id}
-                                      onClick={() => setSelPost(p)}
-                                      className={`p-1 rounded text-left text-[0.63rem] font-medium cursor-pointer truncate ${
-                                        p.status === "published" || p.status === "boosted"
-                                          ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
-                                          : "bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
-                                      }`}
-                                      title={p.caption}
-                                    >
-                                      <span className="font-extrabold uppercase mr-1">[{p.platform}]</span>
-                                      {p.caption || "Annonce"}
-                                    </div>
-                                  ))}
+                                <div className="space-y-0.5 overflow-y-auto max-h-[70px] scrollbar-thin">
+                                  {slotPosts.map((p) => {
+                                    // Extraction de texte propre et court
+                                    const matchTitle = p.caption.match(/👉\s*([^\n]+)/);
+                                    const shortTitle = matchTitle ? matchTitle[1].slice(0, 14) : p.caption.slice(0, 14);
+                                    return (
+                                      <div
+                                        key={p.id}
+                                        onClick={() => setSelPost(p)}
+                                        className={`px-1 py-0.5 rounded text-left text-[0.62rem] font-extrabold cursor-pointer truncate ${
+                                          p.status === "published" || p.status === "boosted"
+                                            ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+                                            : "bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
+                                        }`}
+                                        title={p.caption}
+                                      >
+                                        <span className="mr-0.5">{getPlatIcon(p.platform)}</span>
+                                        {shortTitle}...
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                                <button
-                                  onClick={() => {
-                                    const defaultTimes = ["07:00", "10:00", "13:00", "16:00", "20:30"];
-                                    setSelSlot({ day, slotIndex: slotIdx });
-                                    setPForm({
-                                      platform: "all",
-                                      status: "scheduled",
-                                      caption: "",
-                                      time: defaultTimes[slotIdx]
-                                    });
-                                  }}
-                                  className="w-full py-0.5 rounded border border-dashed border-[#30363D] hover:border-gray-500 text-gray-500 hover:text-gray-300 text-[0.62rem] font-bold mt-auto"
-                                >
-                                  + Planifier
-                                </button>
+                                {!slotPast ? (
+                                  <button
+                                    onClick={() => {
+                                      const defaultTimes = ["07:00", "10:00", "13:00", "16:00", "20:30"];
+                                      setSelSlot({ day, slotIndex: slotIdx });
+                                      setPForm({
+                                        platform: "all",
+                                        status: "scheduled",
+                                        caption: "",
+                                        time: defaultTimes[slotIdx]
+                                      });
+                                    }}
+                                    className="w-full py-0.5 rounded border border-dashed border-[#30363D] hover:border-gray-500 text-gray-500 hover:text-gray-300 text-[0.6rem] font-bold mt-auto transition duration-150"
+                                  >
+                                    + Planifier
+                                  </button>
+                                ) : (
+                                  <span className="text-[0.58rem] text-gray-600 font-semibold mt-auto block select-none">Passé</span>
+                                )}
                               </div>
                             </td>
                           );
@@ -1355,25 +1413,64 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
                 />
               </div>
               <div>
-                <label className="block text-[.75rem] text-[#8B949E] mb-1">Associer à un produit (Annonce)</label>
-                <select
-                  value={pForm.annonce_id || ""}
-                  onChange={(e) => {
-                    const selectedAd = allListings.find(a => a.id === e.target.value);
-                    setPForm({
-                      ...pForm,
-                      annonce_id: e.target.value || null,
-                      caption: selectedAd ? `🔥 À NE PAS MANQUER ! \n\n👉 ${selectedAd.title} à ${selectedAd.price} FCFA \n\n📍 Disponible à ${selectedAd.location || "Dakar"}. Contactez le vendeur sur wanteermako.com !` : pForm.caption,
-                      image_url: selectedAd ? selectedAd.image : pForm.image_url
-                    });
-                  }}
-                  className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
-                >
-                  <option value="">-- Aucun (Post libre/branding) --</option>
-                  {allListings.map((a) => (
-                    <option key={a.id} value={a.id}>{a.title} ({a.price} F)</option>
-                  ))}
-                </select>
+                {!pForm.id ? (
+                  <>
+                    <label className="block text-[.75rem] text-[#8B949E] mb-1">Associer à un ou plusieurs produits (Annonces) *</label>
+                    <div className="max-h-32 overflow-y-auto border border-[#30363D] bg-[#0D1117] rounded-[9px] p-2 space-y-1.5 scrollbar-thin">
+                      {allListings.map((a) => {
+                        const checked = (pForm.annonce_ids || []).includes(a.id);
+                        return (
+                          <label key={a.id} className="flex items-start gap-2 text-[.78rem] text-white cursor-pointer hover:bg-white/5 p-1 rounded">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                const currentIds = pForm.annonce_ids || [];
+                                const nextIds = e.target.checked
+                                  ? [...currentIds, a.id]
+                                  : currentIds.filter(id => id !== a.id);
+                                let nextCaption = pForm.caption || "";
+                                if (e.target.checked && (!nextCaption || nextCaption.includes("À NE PAS MANQUER"))) {
+                                  nextCaption = `🔥 À NE PAS MANQUER ! \n\n👉 ${a.title} à ${(a.price || 0).toLocaleString("fr-FR")} FCFA \n\n📍 Disponible à ${a.location || "Dakar"}. Contactez le vendeur sur wanteermako.com !`;
+                                }
+                                setPForm({
+                                  ...pForm,
+                                  annonce_ids: nextIds,
+                                  caption: nextCaption,
+                                  image_url: pForm.image_url || a.image
+                                });
+                              }}
+                              className="mt-0.5 rounded border-[#30363D] bg-[#0D1117] text-[#6366F1] focus:ring-[#6366F1]"
+                            />
+                            <span className="truncate">{a.title} ({(a.price || 0).toLocaleString("fr-FR")} F)</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <label className="block text-[.75rem] text-[#8B949E] mb-1">Associer à un produit (Annonce)</label>
+                    <select
+                      value={pForm.annonce_id || ""}
+                      onChange={(e) => {
+                        const selectedAd = allListings.find(a => a.id === e.target.value);
+                        setPForm({
+                          ...pForm,
+                          annonce_id: e.target.value || null,
+                          caption: selectedAd ? `🔥 À NE PAS MANQUER ! \n\n👉 ${selectedAd.title} à ${(selectedAd.price || 0).toLocaleString("fr-FR")} FCFA \n\n📍 Disponible à ${selectedAd.location || "Dakar"}. Contactez le vendeur sur wanteermako.com !` : pForm.caption,
+                          image_url: selectedAd ? selectedAd.image : pForm.image_url
+                        });
+                      }}
+                      className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]"
+                    >
+                      <option value="">-- Aucun (Post libre/branding) --</option>
+                      {allListings.map((a) => (
+                        <option key={a.id} value={a.id}>{a.title} ({(a.price || 0).toLocaleString("fr-FR")} F)</option>
+                      ))}
+                    </select>
+                  </>
+                )}
               </div>
               <div>
                 <label className="block text-[.75rem] text-[#8B949E] mb-1">Légende (Caption) *</label>
