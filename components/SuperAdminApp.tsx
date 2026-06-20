@@ -1428,7 +1428,7 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
                                 const currentIds = pForm.annonce_ids || [];
                                 const nextIds = e.target.checked
                                   ? [...currentIds, a.id]
-                                  : currentIds.filter(id => id !== a.id);
+                                  : currentIds.filter((id: string) => id !== a.id);
                                 let nextCaption = pForm.caption || "";
                                 if (e.target.checked && (!nextCaption || nextCaption.includes("À NE PAS MANQUER"))) {
                                   nextCaption = `🔥 À NE PAS MANQUER ! \n\n👉 ${a.title} à ${(a.price || 0).toLocaleString("fr-FR")} FCFA \n\n📍 Disponible à ${a.location || "Dakar"}. Contactez le vendeur sur wanteermako.com !`;
