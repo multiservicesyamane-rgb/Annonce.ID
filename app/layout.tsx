@@ -58,9 +58,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){
             var s=localStorage.getItem('annonceid_dark');
-            var dark;
-            if(s!==null){dark=s==='true';}
-            else{var h=new Date().getHours();dark=h<6||h>=19;}
+            /* Thème CLAIR par défaut. Sombre uniquement si le visiteur l'a choisi. */
+            var dark = s==='true';
             if(dark)document.documentElement.classList.add('dark');
             else document.documentElement.classList.remove('dark');
           })();

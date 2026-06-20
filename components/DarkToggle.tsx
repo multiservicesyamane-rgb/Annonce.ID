@@ -7,23 +7,15 @@ import { useEffect, useState } from "react";
  * L'utilisateur peut basculer manuellement. Son choix est respecté pour la session.
  */
 export default function DarkToggle() {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Vérifier si l'utilisateur a un choix enregistré
+    // Thème CLAIR par défaut ; on respecte le choix enregistré du visiteur.
     const stored = localStorage.getItem("annonceid_dark");
-    
-    if (stored !== null) {
-      const dark = stored === "true";
-      setIsDark(dark);
-      document.documentElement.classList.toggle("dark", dark);
-    } else {
-      const hour = new Date().getHours();
-      const shouldBeDark = hour < 6 || hour >= 19;
-      setIsDark(shouldBeDark);
-      document.documentElement.classList.toggle("dark", shouldBeDark);
-    }
+    const dark = stored === "true";
+    setIsDark(dark);
+    document.documentElement.classList.toggle("dark", dark);
     setMounted(true);
   }, []);
 

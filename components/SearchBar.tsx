@@ -141,15 +141,15 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
       </div>
 
       {filterOpen && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-50 animate-fadeUp rounded-[16px] border border-white/10 bg-[#0A0E14]/95 backdrop-blur-xl p-2 shadow-2xl w-[200px]">
-          <div className="px-3 py-2 text-[.75rem] font-bold uppercase tracking-wider text-gray-500">
+        <div className="absolute right-0 top-[calc(100%+6px)] z-[950] max-h-[65vh] w-[230px] max-w-[85vw] overflow-y-auto animate-fadeUp rounded-[16px] border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0A0E14]/95 backdrop-blur-xl p-2 shadow-2xl">
+          <div className="px-3 py-2 text-[.75rem] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Catégories
           </div>
           {CATEGORIES.map((c) => (
             <button
               key={c.slug}
               type="button"
-              className="w-full text-left px-3 py-2 text-[.85rem] text-white hover:bg-white/10 rounded-lg transition-colors flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-[.85rem] font-medium text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center gap-2"
               onClick={() => {
                 setFilterOpen(false);
                 router.push(`/categorie/${c.slug}`);
