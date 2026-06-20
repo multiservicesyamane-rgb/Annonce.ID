@@ -16,6 +16,10 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Mise en cache (ISR) : chaque fiche annonce est servie depuis le cache pendant
+// 5 min → réduit fortement le transfert serveur Vercel (page la plus visitée).
+export const revalidate = 300;
+
 async function fetchAd(idParam: string) {
   // UUID check rough regex to prevent invalid input errors in supabase
   if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(idParam)) {

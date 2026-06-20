@@ -16,14 +16,14 @@
   --neon-gold: #818CF8;
   --hh: 56px;
 
-  /* ── Design system Wanteermako (indigo) ── */
-  --bg: #F0F2F8;
-  --surf: #FFFFFF;
-  --surf2: #F7F9FC;
-  --line: #E8ECF4;
-  --ink: #1A1F36;
-  --ink2: #6B7280;
-  --ink3: #A0AEC0;
+  /* ── Design system Wanteermako (premium light slate) ── */
+  --bg: #F8FAFC;          /* slate-50: clean, premium background */
+  --surf: #FFFFFF;        /* card surface */
+  --surf2: #F1F5F9;       /* secondary surface */
+  --line: #E2E8F0;        /* slate-200: solid, visible border */
+  --ink: #0F172A;         /* slate-900: high contrast text */
+  --ink2: #334155;        /* slate-700: body text */
+  --ink3: #64748B;        /* slate-500: placeholders/muted text */
   --p: #6366F1;
   --pd: #4F46E5;
   --pl: #EEF2FF;
@@ -36,8 +36,8 @@
   --g6: linear-gradient(135deg, #FF9A56, #FF6A88);
   --g7: linear-gradient(135deg, #A18CD1, #FBC2EB);
   --g8: linear-gradient(135deg, #0BA360, #3CBA92);
-  --sh: 0 2px 8px rgba(20,30,80,.07);
-  --sh-lg: 0 12px 40px rgba(20,30,80,.12);
+  --sh: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --sh-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.12), 0 4px 6px -4px rgba(15, 23, 42, 0.06);
 }
 
 * {
@@ -51,8 +51,8 @@ html {
 
 /* ───────── LIGHT MODE (default) ───────── */
 body {
-  background: #F0F2F8;
-  color: #1A1F36;
+  background: var(--bg);
+  color: var(--ink);
   line-height: 1.6;
   overflow-x: hidden;
   font-size: 15px;
@@ -151,33 +151,33 @@ html:not(.dark) .header-shell .hover\:bg-white\/10:hover {
 html:not(.dark) .header-shell .hover\:bg-white\/20:hover {
   background-color: rgba(99,102,241,0.15) !important;
 }
-
 /* Hero: light mode adaptation */
 html:not(.dark) .hero-shell {
-  background: #F0F2F8 !important;
+  background: var(--bg) !important;
 }
 html:not(.dark) .hero-card {
-  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #F0F2F8 100%) !important;
-  border-color: #C7D2FE !important;
+  background: var(--surf) !important;
+  border-color: var(--line) !important;
+  box-shadow: var(--sh) !important;
 }
 html:not(.dark) .hero-card .text-white {
-  color: #1E1B4B !important;
+  color: var(--ink) !important;
 }
 html:not(.dark) .hero-card .text-gray-400 {
-  color: #6B7280 !important;
+  color: var(--ink2) !important;
 }
 html:not(.dark) .hero-card .border-gray-600 {
-  border-color: #6366F1 !important;
+  border-color: var(--line) !important;
 }
 
 /* Search bar light mode */
 html:not(.dark) .search-shell {
-  background: white !important;
-  border: 1px solid #E8ECF4 !important;
-  box-shadow: 0 2px 8px rgba(20,30,80,.07) !important;
+  background: var(--surf) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--sh) !important;
 }
 html:not(.dark) .search-shell input {
-  color: #1A1F36 !important;
+  color: var(--ink) !important;
 }
 html:not(.dark) .search-shell input::placeholder {
   color: #A0AEC0 !important;
@@ -185,8 +185,8 @@ html:not(.dark) .search-shell input::placeholder {
 
 /* Category strip light mode */
 html:not(.dark) .cat-strip {
-  background: white !important;
-  border-bottom-color: #E8ECF4 !important;
+  background: var(--surf) !important;
+  border-bottom-color: var(--line) !important;
 }
 
 /* Bottom nav light mode — already correct */
@@ -323,7 +323,7 @@ html:not(.dark) .cat-strip {
 
   /* Inputs */
   .input {
-    @apply w-full rounded-[10px] border-2 border-gray-100 bg-gray-50 px-3 py-2 text-[.88rem] text-gray-900 outline-none transition focus:border-green focus:bg-white focus:ring-4 focus:ring-green/10;
+    @apply w-full rounded-[10px] border-2 border-slate-200 bg-white px-3 py-2 text-[.88rem] text-slate-900 outline-none transition focus:border-green focus:bg-white focus:ring-4 focus:ring-green/10;
   }
   .label {
     @apply mb-1 block text-[.78rem] font-semibold text-gray-700;
