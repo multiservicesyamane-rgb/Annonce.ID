@@ -27,7 +27,7 @@ async function fetchAd(idParam: string) {
     if (isNaN(Number(idParam))) return null;
   }
 
-  const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url, phone, role, is_verified)').eq('id', idParam).single();
+  const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url, phone, role)').eq('id', idParam).single();
   if (data) {
     return {
       id: data.id,
