@@ -98,11 +98,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// Génère les routes statiques pour les annonces de démo (SSG)
-export function generateStaticParams() {
-  return []; // SSR needed for dynamic Supabase ads
-}
-
 export default async function AnnoncePage({ params }: Props) {
   const ad = await fetchAd(params.id);
   if (!ad) notFound();
