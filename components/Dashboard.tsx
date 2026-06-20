@@ -1932,11 +1932,13 @@ export default function Dashboard() {
                           </div>
                         )}
                         <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
-                          <span>📅</span> Membre depuis {new Date().getFullYear()}
+                          <span>📅</span> Membre depuis {profile?.created_at ? new Date(profile.created_at).getFullYear() : new Date().getFullYear()}
                         </div>
-                        <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
-                          <span className="text-[#FFB300]">⭐</span> 4.8/5 (12 avis)
-                        </div>
+                        {reviews.length > 0 && (
+                          <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
+                            <span className="text-[#FFB300]">⭐</span> {(reviews.reduce((a, r) => a + (r.rating || 0), 0) / reviews.length).toFixed(1)}/5 ({reviews.length} avis)
+                          </div>
+                        )}
                         <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
                           <span>📦</span> {ads.length} annonces
                         </div>

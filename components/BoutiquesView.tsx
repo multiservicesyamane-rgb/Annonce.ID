@@ -55,7 +55,7 @@ export default function BoutiquesView({ boutiques }: { boutiques: Shop[] }) {
 
       {/* MOSAÏQUE — 2 colonnes sur mobile */}
       {view === "mosaic" && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-6">
           {filtered.map((s) => (
             <Link key={s.id} href={`/boutique/${s.id}`} className="group flex flex-col overflow-hidden rounded-[16px] border border-gray-100 dark:border-white/10 bg-white dark:bg-[#111722]/80 shadow-sm hover:shadow-lg hover:border-gold/40 transition-all">
               <div className="relative h-14 sm:h-16 bg-gradient-to-br from-green-600/20 via-neon-gold/10 to-transparent">
@@ -68,7 +68,7 @@ export default function BoutiquesView({ boutiques }: { boutiques: Shop[] }) {
                 </div>
                 <h3 className="mt-1.5 line-clamp-1 text-center font-display text-[.85rem] font-bold text-gray-900 dark:text-white group-hover:text-green">{s.name}</h3>
                 <div className="mt-1 text-[.68rem] text-gray-500">📦 <b className="text-gray-700 dark:text-white">{s.adCount}</b> annonce{s.adCount > 1 ? "s" : ""}</div>
-                <span className="mt-2 w-full rounded-lg bg-gray-50 dark:bg-white/5 py-1.5 text-center text-[.72rem] font-bold text-green group-hover:bg-green group-hover:text-white transition-all">Voir →</span>
+                <span className="mt-2 w-full rounded-lg bg-gray-50 dark:bg-white/5 py-1.5 text-center text-[.7rem] font-bold text-green group-hover:bg-green group-hover:text-white transition-all">Voir la boutique →</span>
               </div>
             </Link>
           ))}

@@ -40,6 +40,11 @@ export default async function BoutiquePage({ params }: Props) {
   // Fetch their active listings
   const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, views').eq('user_id', resolvedId).eq('status', 'active').order('created_at', { ascending: false });
 
+  // Vraies notes/avis (aucune donnée fictive)
+  const { data: reviewRows } = await supabase.from('reviews').select('rating').eq('seller_id', resolvedId);
+  const reviewCount = reviewRows?.length || 0;
+  const avgRating = reviewCount ? (reviewRows!.reduce((s: number, r: any) => s + (r.rating || 0), 0) / reviewCount) : 0;
+
   let name = profile?.full_name || "Boutique Pro";
   if (name.includes('@')) {
     name = name.split('@')[0];
@@ -134,8 +139,8 @@ export default async function BoutiquePage({ params }: Props) {
               <div className="text-[.66rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">Vues</div>
             </div>
             <div className="rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-100 dark:border-dark-border py-2.5 text-center">
-              <div className="font-display text-[1.15rem] sm:text-[1.4rem] font-extrabold text-gold">★ 4.8</div>
-              <div className="text-[.66rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">Note</div>
+              <div className="font-display text-[1.15rem] sm:text-[1.4rem] font-extrabold text-gold">{reviewCount ? `★ ${avgRating.toFixed(1)}` : "★ —"}</div>
+              <div className="text-[.66rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">{reviewCount ? `${reviewCount} avis` : "Aucun avis"}</div>
             </div>
           </div>
 

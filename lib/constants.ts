@@ -72,7 +72,7 @@ export const CATEGORIES: Category[] = [
     name: "Immobilier",
     icon: "🏠",
     count: "45 230",
-    subs: ["Appartement", "Villa", "Studio", "Terrain", "Commerce", "Bureau"],
+    subs: ["Appartement", "Villa", "Studio", "Terrain", "Commerce", "Bureau", "Autre"],
     fields: [
       { label: "Transaction", type: "select", options: ["Vente", "Location", "Colocation"] },
       { label: "Surface (m²)", type: "number", placeholder: "Ex : 120" },
@@ -87,7 +87,7 @@ export const CATEGORIES: Category[] = [
     name: "Véhicules",
     icon: "🚗",
     count: "32 100",
-    subs: ["Voiture", "Moto", "Camion", "Bus", "Pièces"],
+    subs: ["Voiture", "Moto", "Camion", "Bus", "Pièces", "Autre"],
     fields: [
       { label: "Marque", type: "select", options: ["Toyota", "Mercedes", "BMW", "Honda", "Renault", "Peugeot", "Hyundai", "Autre"] },
       { label: "Modèle", type: "text", placeholder: "Ex : Corolla" },
@@ -103,7 +103,7 @@ export const CATEGORIES: Category[] = [
     name: "Électronique",
     icon: "📱",
     count: "58 400",
-    subs: ["Téléphone", "Ordinateur", "TV", "Console", "Tablette"],
+    subs: ["Téléphone", "Ordinateur", "TV", "Console", "Tablette", "Autre"],
     fields: [
       { label: "Marque", type: "select", options: ["Apple", "Samsung", "Huawei", "Xiaomi", "Dell", "HP", "Autre"] },
       { label: "Modèle", type: "text", placeholder: "Ex : iPhone 15" },
@@ -117,7 +117,7 @@ export const CATEGORIES: Category[] = [
     name: "Mode",
     icon: "👗",
     count: "28 900",
-    subs: ["Femme", "Homme", "Chaussures", "Sacs", "Accessoires"],
+    subs: ["Femme", "Homme", "Chaussures", "Sacs", "Accessoires", "Autre"],
     fields: [
       { label: "Genre", type: "select", options: ["Femme", "Homme", "Unisexe", "Enfant"] },
       { label: "Taille", type: "select", options: ["XS", "S", "M", "L", "XL", "Sur mesure"] },
@@ -130,7 +130,7 @@ export const CATEGORIES: Category[] = [
     name: "Montres & Bijoux",
     icon: "⌚",
     count: "9 800",
-    subs: ["Montres", "Colliers & Pendentifs", "Bagues", "Boucles d'oreilles", "Bracelets", "Parures"],
+    subs: ["Montres", "Colliers & Pendentifs", "Bagues", "Boucles d'oreilles", "Bracelets", "Parures", "Autre"],
     fields: [
       { label: "Type", type: "text", placeholder: "Ex : Montre automatique" },
       { label: "Matière principale", type: "select", options: ["Or", "Argent", "Plaqué or", "Acier", "Cuir", "Autre"] },
@@ -143,7 +143,7 @@ export const CATEGORIES: Category[] = [
     name: "Beauté & Santé",
     icon: "💄",
     count: "14 200",
-    subs: ["Parfums", "Cosmétiques", "Soins cheveux", "Soins peau", "Matériel beauté"],
+    subs: ["Parfums", "Cosmétiques", "Soins cheveux", "Soins peau", "Matériel beauté", "Autre"],
     fields: [
       { label: "Type de produit", type: "text", placeholder: "Ex : Parfum" },
       { label: "Marque", type: "text", placeholder: "Ex : Dior, Local..." },
@@ -156,7 +156,7 @@ export const CATEGORIES: Category[] = [
     name: "Emploi",
     icon: "💼",
     count: "12 050",
-    subs: ["Offre", "Demande", "Stage", "Freelance"],
+    subs: ["Offre", "Demande", "Stage", "Freelance", "Autre"],
     fields: [
       { label: "Contrat", type: "select", options: ["CDI", "CDD", "Stage", "Freelance", "Journalier"] },
       { label: "Secteur", type: "select", options: ["IT", "Commerce", "BTP", "Santé", "Éducation", "Autre"] },
@@ -169,7 +169,7 @@ export const CATEGORIES: Category[] = [
     name: "Maison",
     icon: "🛋",
     count: "19 800",
-    subs: ["Meubles", "Électroménager", "Décoration", "Jardin"],
+    subs: ["Meubles", "Électroménager", "Décoration", "Jardin", "Autre"],
     fields: [
       { label: "Type", type: "text", placeholder: "Ex : Canapé" },
       { label: "Matière", type: "text", placeholder: "Ex : Bois" },
@@ -182,7 +182,7 @@ export const CATEGORIES: Category[] = [
     name: "Alimentation",
     icon: "🍲",
     count: "8 200",
-    subs: ["Produits frais", "Épicerie", "Boissons", "Bio"],
+    subs: ["Produits frais", "Épicerie", "Boissons", "Bio", "Autre"],
     fields: [
       { label: "Produit", type: "text", placeholder: "Ex : Mangues" },
       { label: "Quantité", type: "text", placeholder: "Ex : 50 kg" },
@@ -261,7 +261,7 @@ export const CATEGORIES: Category[] = [
     name: "Animaux",
     icon: "🐐",
     count: "6 400",
-    subs: ["Bétail", "Volaille", "Compagnie", "Accessoires"],
+    subs: ["Bétail", "Volaille", "Compagnie", "Accessoires", "Autre"],
     fields: [
       { label: "Animal", type: "text", placeholder: "Ex : Mouton Ladoum" },
       { label: "Âge", type: "text", placeholder: "Ex : 2 ans" },
@@ -274,7 +274,7 @@ export const CATEGORIES: Category[] = [
     name: "Formation",
     icon: "📚",
     count: "4 100",
-    subs: ["Cours particuliers", "Formation pro", "Langues"],
+    subs: ["Cours particuliers", "Formation pro", "Langues", "Autre"],
     fields: [
       { label: "Domaine", type: "text", placeholder: "Ex : Maths" },
       { label: "Niveau", type: "select", options: ["Primaire", "Collège", "Lycée", "Université", "Tous"] },
@@ -287,7 +287,7 @@ export const CATEGORIES: Category[] = [
     name: "Agriculture",
     icon: "🌿",
     count: "7 300",
-    subs: ["Terrains", "Matériel", "Semences", "Récoltes"],
+    subs: ["Terrains", "Matériel", "Semences", "Récoltes", "Autre"],
     fields: [
       { label: "Type", type: "text", placeholder: "Ex : Tracteur" },
       { label: "Superficie", type: "text", placeholder: "Ex : 5 ha" },
@@ -300,7 +300,7 @@ export const CATEGORIES: Category[] = [
     name: "Sport",
     icon: "⚽",
     count: "9 500",
-    subs: ["Équipement", "Vélos", "Musique", "Jeux"],
+    subs: ["Équipement", "Vélos", "Musique", "Jeux", "Autre"],
     fields: [
       { label: "Type", type: "text", placeholder: "Ex : Vélo VTT" },
       { label: "Marque", type: "text", placeholder: "Ex : Decathlon" },
@@ -312,7 +312,7 @@ export const CATEGORIES: Category[] = [
     name: "Art & Artisanat",
     icon: "🎨",
     count: "3 200",
-    subs: ["Tableaux & Peintures", "Sculptures", "Poterie", "Tissus & Wax", "Décoration locale"],
+    subs: ["Tableaux & Peintures", "Sculptures", "Poterie", "Tissus & Wax", "Décoration locale", "Autre"],
     fields: [
       { label: "Origine", type: "select", options: ["Fabrication locale", "Importé", "Fait main", "Industriel"] },
       { label: "Matière", type: "text", placeholder: "Ex : Bois d'ébène, Cuir..." },
@@ -324,7 +324,7 @@ export const CATEGORIES: Category[] = [
     name: "Loisirs & Divertissement",
     icon: "🎸",
     count: "5 400",
-    subs: ["Instruments de musique", "Livres & Romans", "Jeux de société", "Films & Vinyles", "Collection"],
+    subs: ["Instruments de musique", "Livres & Romans", "Jeux de société", "Films & Vinyles", "Collection", "Autre"],
     fields: [
       { label: "Type", type: "text", placeholder: "Ex : Guitare acoustique" },
       { label: "État", type: "select", options: ["Neuf", "Très bon état", "Bon état", "Usagé"] },
@@ -336,7 +336,7 @@ export const CATEGORIES: Category[] = [
     name: "Bébé & Enfant",
     icon: "🧸",
     count: "11 500",
-    subs: ["Vêtements enfant", "Jouets", "Poussettes & Sièges", "Mobilier bébé", "Puériculture"],
+    subs: ["Vêtements enfant", "Jouets", "Poussettes & Sièges", "Mobilier bébé", "Puériculture", "Autre"],
     fields: [
       { label: "Âge", type: "select", options: ["0-12 mois", "1-3 ans", "4-7 ans", "8-12 ans", "Toutes tailles"] },
       { label: "Genre", type: "select", options: ["Fille", "Garçon", "Mixte"] },
@@ -348,7 +348,7 @@ export const CATEGORIES: Category[] = [
     name: "Matériaux & Pro",
     icon: "🧱",
     count: "8 900",
-    subs: ["Matériaux de construction", "Outillage manuel", "Machines industrielles", "Mobilier bureau", "Équipement médical"],
+    subs: ["Matériaux de construction", "Outillage manuel", "Machines industrielles", "Mobilier bureau", "Équipement médical", "Autre"],
     fields: [
       { label: "État", type: "select", options: ["Neuf", "Occasion", "Pour pièces"] },
       { label: "Quantité", type: "number", placeholder: "Ex : 50" },
@@ -361,7 +361,7 @@ export const CATEGORIES: Category[] = [
     name: "Produits Digitaux",
     icon: "💻",
     count: "4 200",
-    subs: ["Logiciels", "E-books & Formations", "Abonnements", "Templates & Scripts", "Cartes cadeaux", "Création Web"],
+    subs: ["Logiciels", "E-books & Formations", "Abonnements", "Templates & Scripts", "Cartes cadeaux", "Création Web", "Autre"],
     fields: [
       { label: "Type de produit", type: "text", placeholder: "Ex : Clé Windows, E-book PDF, Compte Netflix..." },
       { label: "Livraison", type: "select", options: ["Immédiate (Auto)", "Lien par Email", "Clé d'activation par message", "Transfert de compte"] },

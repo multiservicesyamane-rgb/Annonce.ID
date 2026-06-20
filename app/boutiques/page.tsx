@@ -57,10 +57,10 @@ export default async function BoutiquesPage() {
       {boutiques.length === 0 ? (
         <div className="py-16 text-center">
           <div className="text-5xl mb-4">🏪</div>
-          <h2 className="text-[1.2rem] font-bold text-gray-700 dark:text-gray-300 mb-2">Aucune boutique pour le moment</h2>
-          <p className="text-gray-500 text-[.9rem] mb-4">Soyez le premier à ouvrir votre boutique sur Wanteermako !</p>
+          <h2 className="text-[1.2rem] font-bold text-gray-700 dark:text-gray-300 mb-2">Aucune boutique active pour le moment</h2>
+          <p className="text-gray-500 text-[.9rem] mb-4">Une boutique apparaît ici automatiquement dès qu'un vendeur publie sa première annonce.</p>
           <Link href="/publier" className="btn btn-green">
-            + Ouvrir ma boutique
+            Publier une annonce
           </Link>
         </div>
       ) : (
