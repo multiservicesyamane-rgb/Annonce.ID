@@ -66,26 +66,26 @@ export default function AdCard({ ad }: { ad: Listing }) {
       </div>
 
       {/* Info Content Section */}
-      <div className="flex flex-1 flex-col gap-1 p-3">
+      <div className="flex flex-1 flex-col gap-1 p-2 md:p-3">
         {/* Category Label */}
         {ad.category && (
-          <span className="text-[0.58rem] md:text-[0.62rem] uppercase tracking-widest text-gray-400 dark:text-gray-500 font-bold mb-0.5">
+          <span className="text-[0.52rem] md:text-[0.6rem] uppercase tracking-widest text-gray-400 dark:text-gray-500 font-bold mb-0.5">
             {ad.category}
           </span>
         )}
 
         {/* Title */}
-        <h3 className={`line-clamp-2 text-[0.8rem] md:text-[0.88rem] font-bold leading-snug transition-colors mb-1 ${titleStyles}`}>
+        <h3 className={`line-clamp-2 text-[0.72rem] md:text-[0.86rem] font-bold leading-snug transition-colors mb-1 ${titleStyles}`}>
           {ad.title}
         </h3>
 
         {/* Price */}
-        <div className={`font-display text-[0.92rem] md:text-[1.05rem] font-extrabold tracking-tight mt-auto ${priceStyles}`}>
+        <div className={`font-display text-[0.85rem] md:text-[1.05rem] font-extrabold tracking-tight mt-auto ${priceStyles}`}>
           {ad.price}
         </div>
 
         {/* Location & Meta info */}
-        <div className="mt-1 flex items-center justify-between border-t border-gray-100 dark:border-white/5 pt-2 text-[0.62rem] text-gray-500 dark:text-gray-400">
+        <div className="mt-1 flex items-center justify-between border-t border-gray-100 dark:border-white/5 pt-2 text-[0.58rem] md:text-[0.66rem] text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1 truncate font-medium">
             <span className={isPremium ? 'text-neon-gold' : isFeatured ? 'text-purple-500' : 'opacity-60'}>📍</span>
             <span className="truncate">{ad.location}</span>

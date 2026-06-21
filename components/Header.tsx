@@ -61,6 +61,12 @@ export default function Header() {
 
             {/* Desktop Buttons */}
             <div className="hidden md:flex items-center gap-2">
+              <Link
+                href="/boutiques"
+                className="flex items-center px-3 py-1.5 border border-gold bg-gold/10 text-gold-dark dark:text-gold hover:bg-gold hover:text-dark-900 rounded-[10px] transition-colors font-bold text-[.8rem]"
+              >
+                🏪 Boutiques
+              </Link>
               {!user ? (
                 <Link
                   href="/connexion"
@@ -73,20 +79,12 @@ export default function Header() {
                   Connexion
                 </Link>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/boutiques"
-                    className="flex items-center px-3 py-1.5 border border-gold bg-gold/10 text-gold-dark dark:text-gold hover:bg-gold hover:text-dark-900 rounded-[10px] transition-colors font-bold text-[.8rem]"
-                  >
-                    🏪 Boutiques
-                  </Link>
-                  <Link
-                    href="/dashboard"
-                    className="flex items-center px-3 py-1.5 border border-green-500 bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500 hover:text-white rounded-[10px] transition-colors font-bold text-[.8rem]"
-                  >
-                    👤 Compte
-                  </Link>
-                </div>
+                <Link
+                  href="/dashboard"
+                  className="flex items-center px-3 py-1.5 border border-green-500 bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500 hover:text-white rounded-[10px] transition-colors font-bold text-[.8rem]"
+                >
+                  👤 Compte
+                </Link>
               )}
               
               <Link href="/publier" className="flex items-center px-3 py-1.5 bg-gradient-to-r from-green-500 to-[#F5A623] text-white hover:scale-105 rounded-[10px] transition-transform font-bold text-[.82rem] shadow-[0_0_12px_rgba(99,102,241,0.3)]">

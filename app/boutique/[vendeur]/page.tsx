@@ -9,7 +9,7 @@ type Props = { params: { vendeur: string } };
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: Props) {
-  return { title: `Boutique` };
+  return { title: `Boutique — Annonce.ID` };
 }
 
 export default async function BoutiquePage({ params }: Props) {

@@ -1699,16 +1699,19 @@ export default function Dashboard() {
             {/* Colonne Gauche : Editeur */}
             <div className="flex-1">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="font-display text-[1.3rem] sm:text-[1.6rem] font-extrabold dark:text-white">Ma Boutique</h2>
+                <div>
+                  <h2 className="font-display text-[1.4rem] sm:text-[1.8rem] font-extrabold dark:text-white">Ma Boutique</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Personnalisez l'apparence et les informations de votre espace de vente.</p>
+                </div>
                 <div className="flex items-center gap-3">
                   <button onClick={() => setLivePreviewOpen(true)} className="lg:hidden flex items-center gap-2 bg-dark-900 text-white dark:bg-white dark:text-black font-bold px-4 py-2 rounded-xl text-sm shadow-sm">
                     👁️ Aperçu
                   </button>
-                  <div className="flex items-center gap-2 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border px-4 py-2 rounded-xl shadow-sm">
-                    <span className="text-sm font-semibold text-gray-500 hidden sm:inline">
+                  <div className="flex items-center gap-2 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border px-3 py-1.5 rounded-xl shadow-sm">
+                    <span className="text-xs font-semibold text-gray-500 hidden sm:inline">
                       {typeof window !== 'undefined' ? `${window.location.origin}/boutique/${user?.id || ''}` : `boutique/${user?.id || ''}`}
                     </span>
-                    <span className="text-sm font-semibold text-gray-500 sm:hidden">Lien</span>
+                    <span className="text-xs font-semibold text-gray-500 sm:hidden">Lien</span>
                     <button
                       onClick={() => {
                         if (typeof window !== 'undefined' && user?.id) {
@@ -1719,96 +1722,114 @@ export default function Dashboard() {
                       className="text-gray-400 hover:text-green"
                       title="Copier le lien"
                     >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Image de couverture */}
-              <div className="mb-6">
-                <label className="relative block h-[140px] sm:h-[180px] w-full overflow-hidden rounded-2xl border border-gray-200 dark:border-dark-border bg-gradient-to-br from-dark-900 to-green-900 cursor-pointer group">
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setCropModalZone("cover");
-                      setCropModalImage(URL.createObjectURL(e.target.files[0]));
-                    }
-                  }} />
-                  {showroomCover && <img src={showroomCover} alt="couverture" className="absolute inset-0 h-full w-full object-cover" />}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition">
-                    <span className="rounded-full bg-white/90 px-4 py-2 text-[.8rem] font-bold text-gray-900">📷 {showroomCover ? "Changer la couverture" : "Ajouter une image de couverture"}</span>
-                  </div>
-                  {!showroomCover && <div className="absolute inset-0 flex items-center justify-center text-white/70 text-[.85rem] font-semibold">📷 Image de couverture de votre boutique</div>}
-                </label>
-              </div>
-
-              {/* Profile Card Editor */}
-              <div className="rounded-2xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6 relative">
-                <div className="flex flex-col sm:flex-row items-start gap-4">
-                  <label className="w-16 h-16 rounded-full bg-gray-100 dark:bg-dark-900 border border-gray-200 dark:border-dark-border flex items-center justify-center text-2xl shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition group relative">
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setCropModalZone("avatar");
-                        setCropModalImage(URL.createObjectURL(e.target.files[0]));
-                      }
-                    }} />
-                    <img src={avatarUrl} alt="logo" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                      <span className="text-white text-[.6rem] font-bold">Modifier</span>
-                    </div>
-                  </label>
-                  <div className="flex-1 w-full">
-                    <div className="flex justify-between items-start">
-                      <div className="w-full">
-                        <input
-                          className="showroom-name-input font-bold text-lg bg-transparent border-b border-transparent hover:border-gray-300 dark:text-white focus:outline-none focus:border-green mb-1 w-full"
-                          value={showroomName}
-                          onChange={(e) => setShowroomName(e.target.value)}
-                        />
-                        <div className="text-sm text-gray-500">@{showroomName.toLowerCase().replace(/\s+/g, '')}</div>
+              {/* Formulaire structured */}
+              <div className="rounded-2xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-5 sm:p-6 shadow-sm mb-6">
+                
+                {/* 1. Images de couverture & Logo */}
+                <div className="mb-6">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Identité visuelle</span>
+                  
+                  {/* Bannière de couverture */}
+                  <div className="relative mb-4">
+                    <label className="relative block h-[120px] sm:h-[150px] w-full overflow-hidden rounded-xl border border-gray-200 dark:border-dark-border bg-gradient-to-br from-dark-900 to-green-900 cursor-pointer group">
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setCropModalZone("cover");
+                          setCropModalImage(URL.createObjectURL(e.target.files[0]));
+                        }
+                      }} />
+                      {showroomCover ? (
+                        <img src={showroomCover} alt="couverture" className="absolute inset-0 h-full w-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 text-[0.8rem] font-semibold gap-1">
+                          <span className="text-xl">📷</span> Ajouter une image de couverture (3:1)
+                        </div>
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition">
+                        <span className="rounded-full bg-white/90 px-3.5 py-1.5 text-[0.75rem] font-bold text-gray-900">📷 Modifier la couverture</span>
                       </div>
-                      <button className="text-gray-400 hover:text-green ml-2">✏️</button>
-                    </div>
+                    </label>
 
-                    <textarea
-                      className="showroom-bio-input w-full text-sm mt-3 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-dark-border focus:border-green focus:outline-none resize-none text-gray-600 dark:text-gray-300 p-2 rounded -ml-2"
-                      rows={2}
-                      value={showroomBio}
-                      onChange={(e) => setShowroomBio(e.target.value)}
-                    />
-
-                    {/* Social links */}
-                    <div className="flex flex-wrap items-center gap-2 mt-4">
-                      {['instagram', 'tiktok', 'youtube', 'whatsapp', 'facebook'].map(social => {
-                        const hasLink = !!showroomSocials[social];
-                        return (
-                          <div key={social} className="flex items-center gap-1">
-                            <button
-                              onClick={() => setEditingSocial(editingSocial === social ? null : social)}
-                              className={`w-8 h-8 rounded-full flex items-center justify-center transition ${hasLink ? 'bg-green/10 text-green font-bold' : 'bg-gray-100 dark:bg-dark-900 text-gray-400 hover:text-green hover:bg-green/10'}`}
-                              title={hasLink ? `${social}: ${showroomSocials[social]}` : `Ajouter un lien ${social}`}
-                            >
-                              {social === 'whatsapp' ? '💬' : social === 'instagram' ? '📷' : social === 'facebook' ? 'f' : social === 'tiktok' ? '♪' : '▶'}
-                            </button>
-                            {editingSocial === social && (
-                              <input
-                                type="text"
-                                placeholder={`Lien ${social}...`}
-                                className="input py-1 px-2 text-xs w-32"
-                                value={showroomSocials[social] || ""}
-                                onChange={(e) => {
-                                  setShowroomSocials({ ...showroomSocials, [social]: e.target.value });
-                                }}
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
+                    {/* Logo/Avatar chevauchant la couverture */}
+                    <div className="absolute -bottom-6 left-6">
+                      <label className="w-16 h-16 rounded-full bg-white dark:bg-dark-800 border-[3px] border-white dark:border-dark-border flex items-center justify-center text-2xl shrink-0 overflow-hidden cursor-pointer hover:opacity-90 transition group relative shadow-md">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setCropModalZone("avatar");
+                            setCropModalImage(URL.createObjectURL(e.target.files[0]));
+                          }
+                        }} />
+                        <img src={avatarUrl} alt="logo" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                          <span className="text-white text-[0.55rem] font-bold">Modifier</span>
+                        </div>
+                      </label>
                     </div>
                   </div>
                 </div>
 
-                {/* Save Button for Showroom */}
+                {/* 2. Informations textuelles */}
+                <div className="space-y-4 mt-8">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Nom public de la boutique</label>
+                    <input
+                      type="text"
+                      className="input w-full font-semibold"
+                      placeholder="Ex: Yamane Multiservices"
+                      value={showroomName}
+                      onChange={(e) => setShowroomName(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 font-sans">Description & Biographie</label>
+                    <textarea
+                      className="input w-full min-h-[80px] resize-none text-[0.87rem]"
+                      rows={3}
+                      placeholder="Décrivez votre activité, vos spécialités et vos horaires..."
+                      value={showroomBio}
+                      onChange={(e) => setShowroomBio(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Réseaux Sociaux & Contact */}
+                <div className="mt-6 pt-5 border-t border-gray-100 dark:border-dark-border">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Réseaux sociaux & Contacts</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      { key: 'whatsapp', label: 'Numéro WhatsApp', icon: '💬', placeholder: 'Ex: 22177xxxxxxx' },
+                      { key: 'instagram', label: 'Lien Instagram', icon: '📷', placeholder: 'https://instagram.com/...' },
+                      { key: 'facebook', label: 'Lien Facebook', icon: '👤', placeholder: 'https://facebook.com/...' },
+                      { key: 'tiktok', label: 'Lien TikTok', icon: '♪', placeholder: 'https://tiktok.com/@...' },
+                      { key: 'youtube', label: 'Chaîne YouTube', icon: '▶', placeholder: 'https://youtube.com/...' },
+                    ].map((item) => (
+                      <div key={item.key}>
+                        <label className="block text-[0.72rem] font-bold text-gray-500 dark:text-gray-400 mb-1.5">{item.label}</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">{item.icon}</span>
+                          <input
+                            type="text"
+                            className="input w-full !pl-9 text-xs"
+                            placeholder={item.placeholder}
+                            value={showroomSocials[item.key] || ""}
+                            onChange={(e) => {
+                              setShowroomSocials({ ...showroomSocials, [item.key]: e.target.value });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action button */}
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={async () => {
@@ -1827,9 +1848,9 @@ export default function Dashboard() {
                         setProfile((prev: any) => prev ? { ...prev, full_name: showroomName, bio: showroomBio, social_links: showroomSocials } : { full_name: showroomName, bio: showroomBio, social_links: showroomSocials });
                       }
                     }}
-                    className="btn btn-green btn-sm shadow-sm"
+                    className="btn btn-green shadow-sm w-full sm:w-auto font-bold px-6"
                   >
-                    Sauvegarder la boutique
+                    Sauvegarder les modifications
                   </button>
                 </div>
               </div>
@@ -1850,7 +1871,7 @@ export default function Dashboard() {
                     <img src={prod.image || "https://placehold.co/150x150?text=Sans+Image"} alt={prod.title} className="w-14 h-14 rounded-lg object-cover" />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-bold text-sm text-gray-900 dark:text-white uppercase truncate">{prod.title}</h4>
-                      <div className="text-sm font-semibold text-green mt-0.5">{prod.price} FCFA</div>
+                      <div className="text-sm font-semibold text-green mt-0.5">{prod.price}</div>
                     </div>
                     <button className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white">⋮</button>
                   </div>
@@ -1964,7 +1985,7 @@ export default function Dashboard() {
                           <img src={prod.image || "https://placehold.co/400x400?text=Sans+Image"} alt={prod.title} className="w-full aspect-square object-cover" />
                           <div className="p-2.5">
                             <h4 className="font-bold text-[.75rem] text-white leading-tight line-clamp-2">{prod.title}</h4>
-                            <div className="text-[.75rem] font-black text-[#5C6BC0] mt-1">{prod.price} FCFA</div>
+                            <div className="text-[.75rem] font-black text-[#5C6BC0] mt-1">{prod.price}</div>
                             <div className="text-[.6rem] text-gray-500 mt-1 truncate">📍 {prod.location || "Dakar"}</div>
                           </div>
                         </div>

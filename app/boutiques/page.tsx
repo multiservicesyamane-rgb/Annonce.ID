@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import BoutiquesView from "@/components/BoutiquesView";
 
 export const metadata = {
-  title: "Boutiques — Wanteermako",
-  description: "Découvrez toutes les boutiques et vendeurs professionnels sur Wanteermako",
+  title: "Boutiques — Annonce.ID",
+  description: "Découvrez toutes les boutiques et vendeurs professionnels sur Annonce.ID",
 };
 
 // Mise en cache (ISR) : régénérée au max toutes les 5 min → réduit fortement
@@ -33,10 +33,11 @@ export default async function BoutiquesPage() {
     countMap[l.user_id] = (countMap[l.user_id] || 0) + 1;
   });
 
-  // La boutique s'ouvre AUTOMATIQUEMENT dès qu'un vendeur a publié au moins une
-  // annonce. Le vendeur peut éventuellement la masquer (has_boutique === false).
+  // La boutique s'ouvre automatiquement pour les professionnels, admins, ou toute personne ayant une annonce active.
   const boutiques = (allProfiles || []).filter(
-    (p: any) => (countMap[p.id] || 0) > 0 && p.has_boutique !== false,
+    (p: any) => 
+      (p.role === "pro" || p.role === "business" || p.role === "admin" || (countMap[p.id] || 0) > 0) && 
+      p.has_boutique !== false,
   );
 
   return (
@@ -47,7 +48,7 @@ export default async function BoutiquesPage() {
           🏪 Toutes les Boutiques
         </h1>
         <p className="text-gray-500 dark:text-gray-400 text-[.95rem] max-w-xl mx-auto">
-          Découvrez les vendeurs professionnels et boutiques partenaires sur Wanteermako
+          Découvrez les vendeurs professionnels et boutiques partenaires sur Annonce.ID
         </p>
         <div className="mt-3 inline-flex items-center gap-2 bg-green/10 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-[.82rem] font-bold">
           📦 {boutiques.length} boutique{boutiques.length > 1 ? 's' : ''} active{boutiques.length > 1 ? 's' : ''}
@@ -70,7 +71,7 @@ export default async function BoutiquesPage() {
             name: (shop.full_name || "Boutique").includes("@") ? (shop.full_name || "Boutique").split("@")[0] : (shop.full_name || "Boutique"),
             avatar: shop.avatar_url || "https://placehold.co/100x100?text=B",
             cover: shop.cover_url || null,
-            bio: shop.bio || "Vendeur sur Wanteermako",
+            bio: shop.bio || "Vendeur sur Annonce.ID",
             adCount: countMap[shop.id] || 0,
             isPro: shop.role === "pro" || shop.role === "business" || !!shop.free_premium,
             phone: shop.phone || "",
