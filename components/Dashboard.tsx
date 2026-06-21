@@ -1709,6 +1709,12 @@ export default function Dashboard() {
                 <div>
                   <h2 className="font-display text-[1.4rem] sm:text-[1.8rem] font-extrabold dark:text-white">Ma Boutique</h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Personnalisez l'apparence et les informations de votre espace de vente.</p>
+                  {user?.id && (
+                    <a href={`/boutique/${user.id}`} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-4 py-2 text-[.8rem] font-bold text-white shadow hover:scale-105 transition">
+                      🏪 Voir ma boutique en ligne →
+                    </a>
+                  )}
+                  <p className="mt-1.5 text-[.7rem] text-gray-400">Votre boutique est créée automatiquement et visible dès votre 1ʳᵉ annonce publiée.</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <button onClick={() => setLivePreviewOpen(true)} className="lg:hidden flex items-center gap-2 bg-dark-900 text-white dark:bg-white dark:text-black font-bold px-4 py-2 rounded-xl text-sm shadow-sm">

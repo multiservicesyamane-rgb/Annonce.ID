@@ -95,8 +95,8 @@ export default async function BoutiquePage({ params }: Props) {
         <div className="relative z-10 -mt-10 sm:-mt-14 mb-2 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-6 shadow-lg">
           <div className="flex flex-col items-center text-center sm:flex-row sm:items-end sm:text-left gap-4">
             {/* Logo entreprise — toujours au premier plan, chevauche la couverture */}
-            <div className="relative z-20 -mt-16 sm:-mt-24 h-[104px] w-[104px] sm:h-[120px] sm:w-[120px] rounded-[18px] p-[3px] avatar-ring-premium shrink-0 shadow-2xl">
-              <img src={avatar} alt={name} className="h-full w-full rounded-[15px] border-2 border-white dark:border-dark-800 object-cover bg-white" />
+            <div className="relative z-20 -mt-16 sm:-mt-24 h-[104px] w-[104px] sm:h-[120px] sm:w-[120px] rounded-full p-[3px] avatar-ring-premium shrink-0 shadow-2xl">
+              <img src={avatar} alt={name} className="h-full w-full rounded-full border-2 border-white dark:border-dark-800 object-cover bg-white" />
             </div>
 
             <div className="flex-1 min-w-0">

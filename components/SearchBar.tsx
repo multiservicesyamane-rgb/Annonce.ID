@@ -15,7 +15,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
   const [open, setOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
-  const [suggestions, setSuggestions] = useState<typeof LISTINGS>([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const wrapRef = useRef<HTMLDivElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout>>();
 
@@ -63,12 +63,22 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
   function liveSearch(value: string) {
     setQ(value);
     clearTimeout(debounce.current);
-    debounce.current = setTimeout(() => {
-      if (value.trim().length < 2) {
+    debounce.current = setTimeout(async () => {
+      const v = value.trim();
+      if (v.length < 2) {
         setSuggestions([]);
         return;
       }
-      setSuggestions(LISTINGS.filter((a) => fuzzyMatch(a.title, value.trim())).slice(0, 5));
+      // Suggestions sur de VRAIES annonces (API), repli sur la démo si hors-ligne
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(v)}`);
+        const data = await res.json();
+        if (Array.isArray(data?.results) && data.results.length) {
+          setSuggestions(data.results.slice(0, 5));
+          return;
+        }
+      } catch { /* repli ci-dessous */ }
+      setSuggestions(LISTINGS.filter((a) => fuzzyMatch(a.title, v)).slice(0, 5));
     }, 250);
   }
 

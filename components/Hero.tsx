@@ -17,11 +17,11 @@ export default function Hero() {
 
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-3">
             {/* Title Block */}
-            <div className="min-w-0 flex-1">
-              <h1 className="font-display text-[1.15rem] sm:text-[1.35rem] md:text-[1.5rem] font-extrabold leading-tight text-white tracking-tight">
-                Que recherchez-vous <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-neon-gold to-white">aujourd'hui ?</span>
+            <div className="min-w-0 flex-1 text-center md:text-left">
+              <h1 className="font-display text-[1.05rem] sm:text-[1.3rem] md:text-[1.5rem] font-extrabold leading-snug text-white tracking-tight">
+                Que recherchez-vous <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-neon-gold to-white">aujourd'hui&nbsp;?</span>
               </h1>
-              <p className="text-[0.72rem] sm:text-[0.78rem] text-gray-400 mt-0.5">
+              <p className="text-[0.7rem] sm:text-[0.78rem] text-gray-400 mt-0.5">
                 Des milliers d'annonces directes, sans commission.
               </p>
             </div>

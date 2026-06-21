@@ -58,6 +58,20 @@ export async function POST(req: Request) {
     catch (e: any) { errors.push(`cover ${p.id}: ${e?.message}`); }
   }
 
+  // listings.photos (galerie : tableau jsonb pouvant contenir du base64)
+  const { data: lp } = await sb.from("listings").select("id, photos").not("photos", "is", null).limit(60);
+  for (const l of lp || []) {
+    const arr = Array.isArray(l.photos) ? l.photos : [];
+    if (!arr.some((p: any) => typeof p === "string" && p.startsWith("data:"))) continue;
+    const next: string[] = [];
+    for (const p of arr) {
+      if (typeof p === "string" && p.startsWith("data:")) {
+        try { next.push(await up(sb, p, "listings")); migrated++; } catch { next.push(p); }
+      } else next.push(p);
+    }
+    try { await sb.from("listings").update({ photos: next }).eq("id", l.id); } catch { /* ignore */ }
+  }
+
   const { count: remL } = await sb.from("listings").select("id", { count: "exact", head: true }).like("image", "data:%");
   const { count: remA } = await sb.from("profiles").select("id", { count: "exact", head: true }).like("avatar_url", "data:%");
   const { count: remC } = await sb.from("profiles").select("id", { count: "exact", head: true }).like("cover_url", "data:%");
