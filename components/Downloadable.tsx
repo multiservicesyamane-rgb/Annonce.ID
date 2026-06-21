@@ -34,7 +34,7 @@ export default function Downloadable({ filename, label = "PNG", children }: { fi
       <button
         onClick={download}
         disabled={busy}
-        className="absolute bottom-3 right-3 z-50 rounded-lg bg-black/70 px-3 py-1.5 text-[.72rem] font-bold text-white opacity-0 backdrop-blur transition hover:bg-black/90 group-hover/dl:opacity-100 disabled:opacity-60"
+        className="absolute bottom-3 right-3 z-50 rounded-lg bg-black/70 px-3 py-1.5 text-[.72rem] font-bold text-white shadow-lg backdrop-blur transition hover:bg-black/90 disabled:opacity-60"
       >
         {busy ? "⏳…" : `⬇ ${label}`}
       </button>
