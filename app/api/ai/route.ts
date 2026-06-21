@@ -33,6 +33,10 @@ Termine par un appel à l'action (proposer une présentation de 15 min). Format 
       return `Rédige une description d'annonce vendeuse et structurée pour : "${topic}". Inclus caractéristiques, avantages et un appel à l'action. 80-120 mots.`;
     case "facebook":
       return `Rédige un post Facebook attractif (avec emojis et 3-5 hashtags pertinents) pour promouvoir cette annonce : "${topic}". Maximum 80 mots.`;
+    case "listing_price":
+      return `Pour ce produit/service : "${topic}" (catégorie : ${(body?.category || sector)}, ville : ${city}), donne UNIQUEMENT un prix conseillé réaliste pour le marché de l'occasion en Afrique de l'Ouest (FCFA). Réponds avec un NOMBRE ENTIER seul, sans texte, sans symbole, sans espace. Exemple : 150000`;
+    case "seller_tips":
+      return `Donne 4 conseils courts et concrets (format liste à puces avec emojis) pour vendre plus vite l'annonce "${topic}" sur une plateforme de petites annonces en Afrique de l'Ouest. Maximum 55 mots au total.`;
     default:
       return `Rédige un texte marketing professionnel en français pour : "${topic || company}".`;
   }
@@ -135,6 +139,10 @@ ${topic} disponible dès maintenant sur Wanteermako. ${pick(["Qualité au top, p
 
 #Wanteermako #${tag(sector || "BonPlan")} #${tag(city)} #Afrique #BonPlan`;
     }
+    case "seller_tips":
+      return `📸 Ajoutez plusieurs photos nettes et lumineuses\n💬 Répondez rapidement aux messages\n💰 Fixez un prix juste (et négociable)\n🚀 Boostez votre annonce pour 3× plus de vues`;
+    case "listing_price":
+      return ""; // pas d'estimation sans IA
     default:
       return `${topic} — disponible sur Wanteermako.`;
   }

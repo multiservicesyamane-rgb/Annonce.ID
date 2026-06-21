@@ -20,13 +20,13 @@ export default function Header() {
 
   return (
     <header className="header-shell sticky top-0 z-[900] w-full bg-[#0A0E14]/95 dark:bg-[#0A0E14]/95 backdrop-blur-md border-b border-gray-200 dark:border-white/5 transition-colors">
-      <div className="mx-auto max-w-[1320px] px-3 py-1.5 md:py-2.5">
+      <div className="mx-auto max-w-[1320px] px-3 py-1 md:py-1.5">
         
         <div className="flex items-center justify-between gap-2 md:gap-4">
           
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
-            <img src="/logo-header.png" alt="Wanteermako" className="h-[46px] md:h-[62px] w-auto object-contain" />
+            <img src="/logo-header.png" alt="Wanteermako" className="h-[40px] md:h-[50px] w-auto object-contain" />
           </Link>
 
           {/* Search Bar - Center on PC, Hidden on Mobile */}

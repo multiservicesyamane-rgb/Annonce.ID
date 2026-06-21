@@ -11,6 +11,7 @@ import { formatNumber } from "@/lib/utils";
 import { createClient } from "@supabase/supabase-js";
 
 import UneCarousel from "@/components/UneCarousel";
+import FeaturedSlider from "@/components/FeaturedSlider";
 
 import CategoryCarousel from "@/components/CategoryCarousel";
 import ScrollReveal from "@/components/ScrollReveal";
@@ -122,39 +123,28 @@ export default async function HomePage() {
     <>
       <Hero />
 
-      {/* PUBLICITÉ ADSENSE (Affiche sur tous les écrans) */}
-      <div className="wrap mt-2 md:mt-4 flex justify-center">
-        {/* Google AdSense Placeholder (Mince / Thin Banner) */}
-        {/* Mobile: 320x50, Desktop: 728x90 */}
-        <div className="relative flex items-center justify-center w-full max-w-[320px] h-[50px] md:max-w-[728px] md:h-[90px] bg-gray-200 dark:bg-[#111722] border border-gray-300 dark:border-white/5 rounded-md overflow-hidden shadow-sm">
-          <div className="flex flex-col items-center justify-center opacity-50">
-            <span className="text-[.7rem] md:text-[.8rem] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-              Publicité
-            </span>
-            <span className="text-[.6rem] md:text-[.7rem] text-gray-400 dark:text-gray-500">
-              Google AdSense (728x90 / 320x50)
-            </span>
-          </div>
-          <div className="absolute top-0 right-0 bg-gray-300 dark:bg-white/10 text-gray-600 dark:text-gray-400 text-[.5rem] px-1 py-0.5 rounded-bl-sm">
-            Ad
-          </div>
+      {/* Bandeau 5 affiches "À la Une" cliquables */}
+      <FeaturedSlider listings={uneList.slice(0, 5)} />
+
+      {/* Bannière AdSense MASQUÉE jusqu'à activation (remettre true le moment venu) */}
+      {false && (
+        <div className="wrap mt-2 flex justify-center">
+          <div className="h-[50px] w-full max-w-[320px] rounded-md bg-gray-200 dark:bg-[#111722] md:h-[90px] md:max-w-[728px]" />
         </div>
-      </div>
+      )}
 
-
-
-      {/* À LA UNE */}
+      {/* À LA UNE — section vedette, premium */}
       {uneList.length > 0 && (
-        <ScrollReveal className="wrap pt-3 pb-1 md:pt-5 md:pb-2" delay={100}>
-          <div className="mb-2 md:mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="flex items-center gap-2 font-display text-[1.1rem] md:text-[1.25rem] font-bold text-gray-900">
-              Annonces à la Une <span className="badge b-une">✦ UNE</span>
+        <ScrollReveal className="wrap pt-3 pb-1 md:pt-4" delay={100}>
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-2xl bg-gradient-to-r from-[#6366F1] via-[#7C5CFC] to-[#A855F7] px-4 py-2.5 shadow-[0_8px_24px_rgba(124,92,252,0.3)]">
+            <h2 className="flex items-center gap-2 font-display text-[1rem] md:text-[1.3rem] font-black text-white">
+              <span className="text-neon-gold drop-shadow">✦</span> Annonces à la Une
             </h2>
-            <Link href="/recherche" className="text-[.82rem] font-semibold text-green hover:text-gold-dark">
+            <Link href="/recherche" className="shrink-0 rounded-full bg-white/15 px-3.5 py-1.5 text-[.76rem] font-bold text-white backdrop-blur hover:bg-white/25">
               Voir tout →
             </Link>
           </div>
-          
+
           <UneCarousel listings={uneList} />
         </ScrollReveal>
       )}
@@ -244,6 +234,21 @@ export default async function HomePage() {
         <h2 className="mb-2 md:mb-3 font-display text-[1.15rem] md:text-[1.3rem] font-bold text-gray-900 dark:text-white">Explorer par catégorie</h2>
         {/* We will replace this with CategoryCarousel in the next step, for now it's just the wrapper */}
         <CategoryCarousel />
+      </ScrollReveal>
+
+      {/* BLOC PROMO — Vendez sur Wanteermako */}
+      <ScrollReveal className="wrap py-3">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#6366F1] via-[#7C5CFC] to-[#A855F7] p-5 sm:p-7 shadow-[0_10px_30px_rgba(124,92,252,0.3)]">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <div className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-[.6rem] font-black uppercase tracking-wider text-white">💼 Vendeurs</div>
+              <h2 className="font-display text-[1.4rem] sm:text-[2rem] font-black leading-tight text-white">Vendez sur Wanteermako, <span className="text-neon-gold">gagnez plus</span></h2>
+              <p className="mt-1 text-[.84rem] text-white/85">Publication gratuite · 0% commission · diffusion auto Telegram & Facebook</p>
+            </div>
+            <Link href="/publier" className="shrink-0 rounded-xl bg-white px-6 py-3 text-[.9rem] font-black text-[#6366F1] shadow-lg transition hover:scale-105">Publier une annonce →</Link>
+          </div>
+        </div>
       </ScrollReveal>
 
       {/* BOUTIQUES OFFICIELLES (Déplacé sous Premium) */}

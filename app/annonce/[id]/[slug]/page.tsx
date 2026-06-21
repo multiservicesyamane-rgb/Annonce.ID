@@ -8,6 +8,7 @@ import AdCard from "@/components/AdCard";
 import AdBanner from "@/components/AdBanner";
 import ShareButton from "@/components/ShareButton";
 import ReportListing from "@/components/ReportListing";
+import SharePublishedBanner from "@/components/SharePublishedBanner";
 import { createClient } from "@supabase/supabase-js";
 import { formatNumber } from "@/lib/utils";
 
@@ -131,6 +132,9 @@ export default async function AnnoncePage({ params }: Props) {
         <Link href={`/categorie/${ad.categorySlug}`} className="text-green hover:text-gold-dark">{ad.category}</Link> ›{" "}
         <b className="text-gray-700">{ad.title}</b>
       </nav>
+
+      {/* Bandeau de partage après publication (s'affiche si ?published=1) */}
+      <SharePublishedBanner title={ad.title} />
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
         {/* GAUCHE */}

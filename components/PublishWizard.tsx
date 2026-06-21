@@ -153,6 +153,25 @@ export default function PublishWizard() {
     finally { setAiLoading(""); }
   }
 
+  // 💡 Prix conseillé par l'IA
+  async function aiPrice() {
+    const topic = (title || subCategory || cat?.name || "").trim();
+    if (!topic) { show("⚠ Indiquez d'abord un titre ou une catégorie"); return; }
+    setAiLoading("price");
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "listing_price", topic, city: region, category: subCategory || cat?.name, tier: "user" }),
+      });
+      const data = await res.json();
+      const num = (data.text || "").replace(/[^0-9]/g, "");
+      if (num && data.source === "ai") { setPrice(formatNumber(num)); show("💡 Prix suggéré par l'IA — ajustez si besoin"); }
+      else show("⚠ Estimation indisponible pour l'instant");
+    } catch { show("⚠ Erreur IA"); }
+    finally { setAiLoading(""); }
+  }
+
   const isKonnecta = isOwner(userEmail);
   const freeAdsRemaining = isKonnecta ? 999 : (userProfile?.free_ads_remaining ?? 3);
 
@@ -264,8 +283,8 @@ export default function PublishWizard() {
       }).catch(() => { /* la publication réseaux ne doit jamais bloquer l'utilisateur */ });
     }
 
-    if (editModeId) { show("✅ Annonce mise à jour !"); setTimeout(() => router.push("/dashboard"), 1500); }
-    else if (boost === 0 || isKonnecta) { show("✅ Annonce publiée !"); setTimeout(() => router.push("/dashboard"), 1500); }
+    if (editModeId) { show("✅ Annonce mise à jour !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}`), 1200); }
+    else if (boost === 0 || isKonnecta) { show("✅ Annonce publiée !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}?published=1`), 1200); }
     else { router.push(`/paiement?annonce_id=${data.id}`); }
   }
 
@@ -398,7 +417,12 @@ export default function PublishWizard() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Prix (FCFA) {priceType !== "Sur devis" && <span className="text-brand-red">*</span>}</label>
+                <div className="flex items-center justify-between">
+                  <label className="label">Prix (FCFA) {priceType !== "Sur devis" && <span className="text-brand-red">*</span>}</label>
+                  <button type="button" onClick={aiPrice} disabled={!!aiLoading} className="mb-1 rounded-full bg-green/10 px-2.5 py-1 text-[.7rem] font-bold text-green hover:bg-green/20 transition disabled:opacity-50">
+                    {aiLoading === "price" ? "⏳…" : "💡 Prix IA"}
+                  </button>
+                </div>
                 <input className="input font-bold text-green" inputMode="numeric" value={price} onChange={(e) => setPrice(formatNumber(e.target.value.replace(/\D/g, "")))} placeholder="450 000" />
               </div>
               <div>

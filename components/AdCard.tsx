@@ -37,9 +37,9 @@ export default function AdCard({ ad }: { ad: Listing }) {
   let priceStyles = "text-[#6366F1] dark:text-green-400";
 
   if (isPremium) {
-    cardStyles = "border-[1.5px] border-neon-gold/70 shadow-[0_8px_20px_rgba(245,166,35,0.1)] hover:shadow-[0_12px_30px_rgba(245,166,35,0.25)] bg-gradient-to-b from-white to-[#fffbeb] dark:from-[#111722] dark:to-[#1a1710] hover:border-neon-gold";
-    titleStyles = "text-gray-900 dark:text-white group-hover:text-neon-gold";
-    priceStyles = "text-neon-gold font-black dark:drop-shadow-[0_0_8px_rgba(245,166,35,0.4)]";
+    cardStyles = "border-[1.5px] border-[#FFD24A] ring-1 ring-neon-gold/25 shadow-[0_10px_30px_rgba(245,166,35,0.18)] hover:shadow-[0_18px_46px_rgba(245,166,35,0.38)] bg-gradient-to-br from-[#FFFEF8] via-[#FFF4D6] to-[#FFE7AE] dark:from-[#211a07] dark:via-[#2a2009] dark:to-[#161208] hover:border-[#FFE08A]";
+    titleStyles = "text-gray-900 dark:text-white group-hover:text-[#D4891A] dark:group-hover:text-neon-gold";
+    priceStyles = "text-transparent bg-clip-text bg-gradient-to-r from-[#D4891A] via-[#F5A623] to-[#FFC93C] font-black dark:drop-shadow-[0_0_8px_rgba(245,166,35,0.4)]";
   } else if (isFeatured) {
     cardStyles = "border-[1.5px] border-purple-500/60 dark:border-purple-400/50 shadow-[0_8px_20px_rgba(168,85,247,0.1)] hover:shadow-[0_12px_30px_rgba(168,85,247,0.25)] bg-gradient-to-b from-white to-[#faf5ff] dark:from-[#111722] dark:to-[#17101a] hover:border-purple-500";
     titleStyles = "text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400";
@@ -51,7 +51,7 @@ export default function AdCard({ ad }: { ad: Listing }) {
       href={`/annonce/${ad.id}/${ad.slug}`}
       className={`group flex flex-col overflow-hidden rounded-[20px] transition-all duration-300 hover:-translate-y-1.5 w-full ${cardStyles}`}
     >
-      {/* Image Container — carré */}
+      {/* Image Container — carré, image pleine (cover) */}
       <div className="relative overflow-hidden w-full aspect-square bg-gray-50 dark:bg-black/40">
         <Image
           src={ad.image}
@@ -61,9 +61,6 @@ export default function AdCard({ ad }: { ad: Listing }) {
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 16vw"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
         />
-        
-        {/* Subtle top overlay gradient */}
-        <div className="absolute top-0 inset-x-0 h-14 bg-gradient-to-b from-black/35 to-transparent pointer-events-none"></div>
 
         {/* Badges Overlay */}
         <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 pointer-events-none">
@@ -88,8 +85,8 @@ export default function AdCard({ ad }: { ad: Listing }) {
 
       {/* Info Content Section — condensée */}
       <div className="flex flex-1 flex-col gap-0.5 p-2 md:p-2.5">
-        {/* Titre sur 1 ligne */}
-        <h3 className={`line-clamp-1 text-[0.74rem] md:text-[0.84rem] font-bold leading-tight transition-colors ${titleStyles}`}>
+        {/* Titre sur 2 lignes */}
+        <h3 className={`line-clamp-2 min-h-[2.1em] text-[0.74rem] md:text-[0.84rem] font-bold leading-snug transition-colors ${titleStyles}`}>
           {ad.title}
         </h3>
 
