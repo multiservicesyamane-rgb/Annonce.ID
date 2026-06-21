@@ -3,6 +3,27 @@ import Link from "next/link";
 import type { Listing } from "@/lib/types";
 import FavButton from "./FavButton";
 
+function getRelativeTime(dateString?: string) {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) return "À l'instant";
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "À l'instant";
+    if (diffMins < 60) return `Il y a ${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `Il y a ${diffHours} h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return "Hier";
+    if (diffDays < 7) return `Il y a ${diffDays} j`;
+    return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  } catch (e) {
+    return "";
+  }
+}
+
 /**
  * Carte annonce : Image parfaitement claire en haut, texte en bas.
  * Design premium distinct pour les annonces "À la Une".
@@ -90,6 +111,11 @@ export default function AdCard({ ad }: { ad: Listing }) {
             <span className={isPremium ? 'text-neon-gold' : isFeatured ? 'text-purple-500' : 'opacity-60'}>📍</span>
             <span className="truncate">{ad.location}</span>
           </span>
+          {ad.created_at && (
+            <span className="font-medium shrink-0 opacity-80">
+              {getRelativeTime(ad.created_at)}
+            </span>
+          )}
         </div>
       </div>
     </Link>

@@ -33,11 +33,9 @@ export default async function BoutiquesPage() {
     countMap[l.user_id] = (countMap[l.user_id] || 0) + 1;
   });
 
-  // La boutique s'ouvre automatiquement pour les professionnels, admins, ou toute personne ayant une annonce active.
+  // Tous les utilisateurs inscrits sont des vendeurs ayant leur propre boutique/showroom
   const boutiques = (allProfiles || []).filter(
-    (p: any) => 
-      (p.role === "pro" || p.role === "business" || p.role === "admin" || (countMap[p.id] || 0) > 0) && 
-      p.has_boutique !== false,
+    (p: any) => p.has_boutique !== false && p.full_name,
   );
 
   return (

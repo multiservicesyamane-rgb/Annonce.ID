@@ -3,8 +3,26 @@
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import type { Listing } from "@/lib/types";
-import AdCard from "./AdCard";
+function getRelativeTime(dateString?: string) {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) return "À l'instant";
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "À l'instant";
+    if (diffMins < 60) return `Il y a ${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `Il y a ${diffHours} h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return "Hier";
+    if (diffDays < 7) return `Il y a ${diffDays} j`;
+    return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  } catch (e) {
+    return "";
+  }
+}
 
 export default function UneCarousel({ listings }: { listings: Listing[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -94,8 +112,15 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
                 <div className="font-display font-black text-white text-[0.82rem] md:text-[1.05rem] mb-1.5 drop-shadow-sm">
                   {ad.price}
                 </div>
-                <div className="text-[0.6rem] md:text-[0.7rem] text-white/80 flex items-center gap-1 mt-auto font-medium">
-                  <span>📍</span> <span className="truncate">{ad.location}</span>
+                <div className="text-[0.6rem] md:text-[0.7rem] text-white/80 flex items-center justify-between gap-1 mt-auto font-medium">
+                  <span className="flex items-center gap-1 truncate">
+                    <span>📍</span> <span className="truncate">{ad.location}</span>
+                  </span>
+                  {ad.created_at && (
+                    <span className="shrink-0 text-white/60">
+                      {getRelativeTime(ad.created_at)}
+                    </span>
+                  )}
                 </div>
               </div>
               
