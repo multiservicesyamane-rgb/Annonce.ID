@@ -55,8 +55,8 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
       }
     };
 
-    // Défilement chaque 5 secondes (plus lent pour laisser le temps de lire)
-    intervalId = setInterval(scrollNext, 5000);
+    // Défilement plus rapide (toutes les 2,8 s)
+    intervalId = setInterval(scrollNext, 2800);
 
     const handleMouseEnter = () => (isHovered = true);
     const handleMouseLeave = () => (isHovered = false);
@@ -85,10 +85,10 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
         <React.Fragment key={ad.id}>
           <Link
             href={`/annonce/${ad.id}/${ad.slug}`}
-            className="group relative flex flex-col shrink-0 w-[200px] md:w-[280px] bg-gradient-to-br from-[#6366F1] via-[#7C5CFC] to-[#A855F7] rounded-[20px] p-1.5 md:p-2 shadow-[0_10px_25px_rgba(99,102,241,0.2)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_16px_40px_rgba(124,92,252,0.35)]"
+            className="group relative flex flex-col shrink-0 w-[156px] md:w-[250px] bg-gradient-to-br from-[#6366F1] via-[#7C5CFC] to-[#A855F7] rounded-[20px] p-1.5 md:p-2 shadow-[0_10px_25px_rgba(99,102,241,0.2)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_16px_40px_rgba(124,92,252,0.35)]"
           >
-            {/* Image Container — photo agrandie (4/5) */}
-            <div className="relative w-full aspect-[4/5] rounded-[14px] overflow-hidden mb-2">
+            {/* Image Container — carré */}
+            <div className="relative w-full aspect-square rounded-[14px] overflow-hidden mb-2">
               <Image
                 src={ad.image}
                 alt={ad.title}

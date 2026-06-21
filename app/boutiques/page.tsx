@@ -32,9 +32,9 @@ export default async function BoutiquesPage() {
     countMap[l.user_id] = (countMap[l.user_id] || 0) + 1;
   });
 
-  // Tous les utilisateurs inscrits sont des vendeurs ayant leur propre boutique/showroom
+  // Boutique = vendeur ayant publié AU MOINS 1 produit (sauf s'il l'a masquée)
   const boutiques = (allProfiles || []).filter(
-    (p: any) => p.has_boutique !== false && p.full_name,
+    (p: any) => (countMap[p.id] || 0) > 0 && p.has_boutique !== false,
   );
 
   return (

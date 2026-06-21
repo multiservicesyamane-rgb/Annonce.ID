@@ -87,6 +87,8 @@ export default function ImageCropperModal({ imageSrc, aspectRatio, maxWidth = 12
             image={imageSrc}
             crop={crop}
             zoom={zoom}
+            minZoom={1}
+            maxZoom={4}
             aspect={aspectRatio}
             onCropChange={setCrop}
             onCropComplete={onCropComplete}
@@ -96,17 +98,31 @@ export default function ImageCropperModal({ imageSrc, aspectRatio, maxWidth = 12
 
         <div className="p-4 border-t border-gray-100 dark:border-dark-border bg-white dark:bg-dark-900 relative z-10">
           <div className="mb-4">
-            <label className="text-sm font-bold text-gray-700 dark:text-white mb-2 block">Zoom</label>
-            <input
-              type="range"
-              value={zoom}
-              min={1}
-              max={3}
-              step={0.1}
-              aria-labelledby="Zoom"
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-full accent-green"
-            />
+            <label className="text-sm font-bold text-gray-700 dark:text-white mb-2 block">Zoom (avant / arrière)</label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                aria-label="Dézoomer"
+                onClick={() => setZoom((z) => Math.max(1, +(z - 0.2).toFixed(2)))}
+                className="h-9 w-9 shrink-0 rounded-lg border border-gray-300 dark:border-dark-border text-xl font-black text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10"
+              >−</button>
+              <input
+                type="range"
+                value={zoom}
+                min={1}
+                max={4}
+                step={0.1}
+                aria-labelledby="Zoom"
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-full accent-green"
+              />
+              <button
+                type="button"
+                aria-label="Zoomer"
+                onClick={() => setZoom((z) => Math.min(4, +(z + 0.2).toFixed(2)))}
+                className="h-9 w-9 shrink-0 rounded-lg border border-gray-300 dark:border-dark-border text-xl font-black text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10"
+              >+</button>
+            </div>
           </div>
           <div className="flex justify-end gap-3">
             <button onClick={onCancel} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border dark:text-white">

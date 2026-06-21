@@ -51,8 +51,8 @@ export default function AdCard({ ad }: { ad: Listing }) {
       href={`/annonce/${ad.id}/${ad.slug}`}
       className={`group flex flex-col overflow-hidden rounded-[20px] transition-all duration-300 hover:-translate-y-1.5 w-full ${cardStyles}`}
     >
-      {/* Image Container — photo agrandie (ratio 4/5) */}
-      <div className="relative overflow-hidden w-full aspect-[4/5] bg-gray-50 dark:bg-black/40">
+      {/* Image Container — carré */}
+      <div className="relative overflow-hidden w-full aspect-square bg-gray-50 dark:bg-black/40">
         <Image
           src={ad.image}
           alt={ad.title}
