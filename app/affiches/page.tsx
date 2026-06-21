@@ -48,6 +48,17 @@ export default function AffichesPage() {
           </p>
         </header>
 
+        {/* ── Affiches 100% HTML (sans captures) — moitié sombre / clair ── */}
+        <SectionTitle>🎨 Affiches HTML — stats & prix nets (moitié sombre / clair)</SectionTitle>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <AfficheStatsSplit />
+          <AfficheBoostsSplit />
+          <AfficheBoutiqueSplit />
+          <AfficheHeroSplit />
+          <AfficheAutoSplit />
+          <AfficheImmoSplit />
+        </div>
+
         {/* ── Affiches "preuve réelle" (carré) ── */}
         <SectionTitle>🖥️ Aperçu réel — confiance & transparence</SectionTitle>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -218,6 +229,168 @@ function AffichePortraitB2B() {
       </div>
       <FooterBig />
     </Poster>
+  );
+}
+
+/* ───────── Affiches HTML moitié sombre / clair ───────── */
+function SplitFrame({ dark, light }: { dark: React.ReactNode; light: React.ReactNode }) {
+  return (
+    <div className="relative flex aspect-square flex-col overflow-hidden rounded-[22px] border border-white/10 shadow-2xl">
+      <div className="relative flex min-h-[44%] flex-col justify-between overflow-hidden bg-[#0B1120] p-5">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(at_85%_0%,rgba(99,102,241,0.35)_0,transparent_60%)]" />
+        <div className="relative">{dark}</div>
+      </div>
+      <div className="h-[3px] w-full bg-gradient-to-r from-[#6366F1] via-[#FFC93C] to-[#FF2A6D]" />
+      <div className="relative flex flex-1 flex-col bg-[#F8FAFC] p-5">{light}</div>
+    </div>
+  );
+}
+function DarkHead({ badge, color }: { badge: string; color: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <LogoFull className="h-9" />
+      <span className="shrink-0 rounded-full px-2.5 py-1 text-[.58rem] font-bold uppercase tracking-wider" style={{ background: `${color}26`, color }}>{badge}</span>
+    </div>
+  );
+}
+function PriceRow({ name, price, sub, color }: { name: string; price: string; sub: string; color: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-black/5 py-2 last:border-0">
+      <div>
+        <div className="text-[.86rem] font-extrabold text-[#0B1120]">{name}</div>
+        <div className="text-[.64rem] text-[#0B1120]/50">{sub}</div>
+      </div>
+      <div className="font-display text-[1.05rem] font-black" style={{ color }}>{price}<span className="text-[.58rem] text-[#0B1120]/50"> FCFA</span></div>
+    </div>
+  );
+}
+function FooterLight() {
+  return (
+    <div className="mt-auto flex items-center justify-between border-t border-black/10 pt-2.5">
+      <span className="text-[.74rem] font-black text-[#6366F1]">www.wanteermako.com</span>
+      <span className="text-[.6rem] font-medium text-[#0B1120]/45">Achetez · Vendez · Trouvez</span>
+    </div>
+  );
+}
+
+function AfficheStatsSplit() {
+  const bars = [18, 17, 13, 13, 10, 9, 8];
+  return (
+    <SplitFrame
+      dark={<>
+        <DarkHead badge="Performance" color="#10B981" />
+        <h3 className="mt-3 font-display text-[1.5rem] font-black leading-tight text-white">La marketplace qui <span className="text-[#FFC93C]">fait vendre</span></h3>
+      </>}
+      light={<>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[["27", "Pays"], ["0%", "Commission"], ["2 min", "Pour publier"]].map(([n, l]) => (
+            <div key={l} className="rounded-xl bg-white py-2 shadow-sm">
+              <div className="font-display text-[1.25rem] font-black text-[#0B1120]">{n}</div>
+              <div className="text-[.58rem] font-bold uppercase tracking-wide text-[#0B1120]/50">{l}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 text-[.66rem] font-bold uppercase tracking-wide text-[#0B1120]/45">Visibilité par annonce</div>
+        <div className="mt-1.5 flex h-12 items-end gap-1.5">
+          {bars.map((v, i) => (
+            <div key={i} className="flex-1 rounded-t bg-gradient-to-t from-[#6366F1] to-[#A855F7]" style={{ height: `${(v / 18) * 100}%` }} />
+          ))}
+        </div>
+        <FooterLight />
+      </>}
+    />
+  );
+}
+
+function AfficheBoostsSplit() {
+  return (
+    <SplitFrame
+      dark={<>
+        <DarkHead badge="Boosts" color="#FF2A6D" />
+        <h3 className="mt-3 font-display text-[1.5rem] font-black leading-tight text-white">🚀 Boostez votre visibilité</h3>
+      </>}
+      light={<>
+        <PriceRow name="🚀 Standard" sub="7 jours · 3 photos" price="1 500" color="#6366F1" />
+        <PriceRow name="⭐ Premium" sub="14 jours · 5 photos" price="3 500" color="#6366F1" />
+        <PriceRow name="🔥 À la Une" sub="30 jours · accueil" price="7 500" color="#FF2A6D" />
+        <PriceRow name="👑 VIP" sub="60 jours · illimité" price="15 000" color="#D4891A" />
+        <FooterLight />
+      </>}
+    />
+  );
+}
+
+function AfficheBoutiqueSplit() {
+  return (
+    <SplitFrame
+      dark={<>
+        <DarkHead badge="Boutique Pro" color="#FFC93C" />
+        <h3 className="mt-3 font-display text-[1.5rem] font-black leading-tight text-white">🏪 Votre boutique <span className="text-[#FFC93C]">certifiée</span></h3>
+      </>}
+      light={<>
+        <PriceRow name="Standard" sub="15 annonces + vitrine" price="5 000" color="#6366F1" />
+        <PriceRow name="Premium" sub="50 annonces + 1 boost" price="10 000" color="#6366F1" />
+        <PriceRow name="VIP" sub="120 annonces + Vérifié" price="20 000" color="#D4891A" />
+        <div className="mt-2 text-[.62rem] text-[#0B1120]/50">Par mois · paiement Mobile Money</div>
+        <FooterLight />
+      </>}
+    />
+  );
+}
+
+function AfficheAutoSplit() {
+  return (
+    <SplitFrame
+      dark={<>
+        <DarkHead badge="Automobile" color="#6366F1" />
+        <h3 className="mt-3 font-display text-[1.5rem] font-black leading-tight text-white">🚗 Spécial garages & concessionnaires</h3>
+      </>}
+      light={<>
+        <PriceRow name="Standard Auto" sub="5 voitures actives" price="10 000" color="#6366F1" />
+        <PriceRow name="Premium Auto" sub="15 voitures + WhatsApp" price="25 000" color="#6366F1" />
+        <PriceRow name="VIP Auto" sub="50 voitures + Vérifié" price="50 000" color="#D4891A" />
+        <div className="mt-2 text-[.62rem] text-[#0B1120]/50">Par mois</div>
+        <FooterLight />
+      </>}
+    />
+  );
+}
+
+function AfficheImmoSplit() {
+  return (
+    <SplitFrame
+      dark={<>
+        <DarkHead badge="Immobilier" color="#10B981" />
+        <h3 className="mt-3 font-display text-[1.5rem] font-black leading-tight text-white">🏠 Spécial agences & courtiers</h3>
+      </>}
+      light={<>
+        <PriceRow name="Standard Immo" sub="5 biens actifs" price="15 000" color="#6366F1" />
+        <PriceRow name="Premium Immo" sub="15 biens + géoloc." price="35 000" color="#6366F1" />
+        <PriceRow name="VIP Immo" sub="40 biens + Vérifié" price="75 000" color="#D4891A" />
+        <div className="mt-2 text-[.62rem] text-[#0B1120]/50">Par mois</div>
+        <FooterLight />
+      </>}
+    />
+  );
+}
+
+function AfficheHeroSplit() {
+  return (
+    <SplitFrame
+      dark={<>
+        <DarkHead badge="100% gratuit" color="#10B981" />
+        <h3 className="mt-3 font-display text-[1.7rem] font-black leading-[1.05] text-white">Vendez en direct.</h3>
+      </>}
+      light={<>
+        <div className="font-display text-[1.7rem] font-black leading-[1.05] text-[#0B1120]">Sans <span className="text-[#6366F1]">commission.</span></div>
+        <ul className="mt-3 space-y-1.5 text-[.8rem] font-medium text-[#0B1120]/80">
+          <li>💬 Contact direct WhatsApp</li>
+          <li>🤖 Diffusion auto Telegram & Facebook</li>
+          <li>⚡ Publication en 2 minutes</li>
+        </ul>
+        <FooterLight />
+      </>}
+    />
   );
 }
 
