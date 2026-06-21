@@ -8,6 +8,7 @@ import Link from "next/link";
 import AdCard from "./AdCard";
 import SellerAiTips from "./SellerAiTips";
 import ReferralWidget from "./ReferralWidget";
+import BrandSocialStrip from "./BrandSocialStrip";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage";
 import { whatsappLink } from "@/lib/payment";
@@ -533,6 +534,7 @@ export default function Dashboard() {
               <SellerAiTips />
               <ReferralWidget />
             </div>
+            <div className="mb-4"><BrandSocialStrip /></div>
             {/* Hero profil — Compact (Transport Style) */}
             <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[16px] border border-gray-100 dark:border-dark-border bg-white dark:bg-[#161B22] p-4 sm:p-5 shadow-sm">
               <div className="flex items-center gap-3 sm:gap-4">

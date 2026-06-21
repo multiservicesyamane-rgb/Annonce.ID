@@ -17,6 +17,7 @@ import CategoryCarousel from "@/components/CategoryCarousel";
 import ScrollReveal from "@/components/ScrollReveal";
 import { SkeletonGrid } from "@/components/SkeletonCard";
 import RecentlyViewed from "@/components/RecentlyViewed";
+import RecommendedForYou from "@/components/RecommendedForYou";
 
 // Revalidate every 30s for fast loads + near-realtime data
 export const revalidate = 30;
@@ -322,6 +323,9 @@ export default async function HomePage() {
       </ScrollReveal>
 
 
+
+      {/* RECOMMANDÉ POUR VOUS (basé sur l'historique de vues) */}
+      <RecommendedForYou />
 
       {/* VUS RÉCEMMENT */}
       <RecentlyViewed />

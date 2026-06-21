@@ -9,6 +9,7 @@ import AdBanner from "@/components/AdBanner";
 import ShareButton from "@/components/ShareButton";
 import ReportListing from "@/components/ReportListing";
 import SharePublishedBanner from "@/components/SharePublishedBanner";
+import RecordView from "@/components/RecordView";
 import { createClient } from "@supabase/supabase-js";
 import { formatNumber } from "@/lib/utils";
 
@@ -30,6 +31,12 @@ async function fetchAd(idParam: string) {
 
   const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url, phone, role)').eq('id', idParam).single();
   if (data) {
+    // Statut "vérifié" du vendeur — requête séparée et sécurisée (la colonne peut ne pas exister)
+    let sellerVerified = false;
+    try {
+      const { data: sv } = await supabase.from('profiles').select('is_verified').eq('id', data.user_id).maybeSingle();
+      sellerVerified = !!sv?.is_verified;
+    } catch { /* colonne absente → false */ }
     return {
       id: data.id,
       title: data.title,
@@ -55,7 +62,7 @@ async function fetchAd(idParam: string) {
         rating: "Nouveau",
         sales: 0,
         isPro: data.profiles?.role === "pro",
-        isVerified: !!data.profiles?.is_verified
+        isVerified: sellerVerified
       }
     } as any;
   }
@@ -125,6 +132,7 @@ export default async function AnnoncePage({ params }: Props) {
   return (
     <div className="mx-auto max-w-[1320px] px-4">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <RecordView ad={{ id: ad.id, slug: ad.slug, title: ad.title, price: ad.price, location: ad.location, image: ad.image, category: ad.category, premium: ad.premium }} />
 
       {/* Breadcrumb */}
       <nav className="py-3.5 text-[.78rem] text-gray-500">
