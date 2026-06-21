@@ -105,48 +105,22 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
             </div>
 
             {/* Info details */}
-            <div className="flex justify-between gap-1 flex-1 px-1">
-              <div className="flex flex-col flex-1 min-w-0">
-                <div className="font-bold text-white text-[0.7rem] md:text-[0.82rem] leading-tight line-clamp-2 mb-0.5 group-hover:underline">
-                  {ad.title}
-                </div>
-                <div className="font-display font-black text-white text-[0.82rem] md:text-[1.05rem] mb-1.5 drop-shadow-sm">
-                  {ad.price}
-                </div>
-                <div className="text-[0.6rem] md:text-[0.7rem] text-white/80 flex items-center justify-between gap-1 mt-auto font-medium">
-                  <span className="flex items-center gap-1 truncate">
-                    <span>📍</span> <span className="truncate">{ad.location}</span>
-                  </span>
-                  {ad.created_at && (
-                    <span className="shrink-0 text-white/60">
-                      {getRelativeTime(ad.created_at)}
-                    </span>
-                  )}
-                </div>
+            <div className="flex-1 px-1">
+              <div className="font-bold text-white text-[0.7rem] md:text-[0.82rem] leading-tight line-clamp-2 mb-0.5 group-hover:underline">
+                {ad.title}
               </div>
-              
-              {/* Call/Message button icons (visible on all screens) */}
-              <div className="flex flex-col gap-1 justify-end ml-1">
-                <div 
-                  className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-lg bg-white/15 border border-white/20 text-white hover:bg-white hover:text-[#6366F1] transition-all duration-300 shadow-sm text-[0.75rem] md:text-[0.9rem] cursor-pointer"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    window.location.href = `/annonce/${ad.id}/${ad.slug}#contact`;
-                  }}
-                >
-                  📞
-                </div>
-                <div 
-                  className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-lg bg-white/15 border border-white/20 text-white hover:bg-[#25D366] hover:border-[#25D366] transition-all duration-300 shadow-sm text-[0.75rem] md:text-[0.9rem] cursor-pointer"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    window.location.href = `/annonce/${ad.id}/${ad.slug}#contact`;
-                  }}
-                >
-                  💬
-                </div>
+              <div className="font-display font-black text-white text-[0.82rem] md:text-[1.05rem] mb-1.5 drop-shadow-sm">
+                {ad.price}
+              </div>
+              <div className="text-[0.6rem] md:text-[0.7rem] text-white/80 flex items-center justify-between gap-1 mt-auto font-medium">
+                <span className="flex items-center gap-1 truncate">
+                  <span>📍</span> <span className="truncate">{ad.location}</span>
+                </span>
+                {ad.created_at && (
+                  <span className="shrink-0 text-white/60">
+                    {getRelativeTime(ad.created_at)}
+                  </span>
+                )}
               </div>
             </div>
 
