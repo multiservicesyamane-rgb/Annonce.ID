@@ -99,19 +99,20 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-// 11 affiches CLAIRES — mêmes captures, textes retravaillés + plus percutants
-const SHOTS_LIGHT: { src: string; badge: string; title: string; sub: string; accent: string }[] = [
-  { src: "/a1.PNG", badge: "Tableau de bord", title: "Tout votre business, un seul écran", sub: "Annonces, vues et favoris pilotés en temps réel.", accent: "#6366F1" },
-  { src: "/a2.PNG", badge: "Statistiques", title: "Vos chiffres parlent pour vous", sub: "Mesurez l'impact réel de chaque annonce.", accent: "#10B981" },
-  { src: "/A3.PNG", badge: "Gestion", title: "La gestion sans prise de tête", sub: "En ligne, brouillons, expirées — tout sous contrôle.", accent: "#6366F1" },
-  { src: "/A4.PNG", badge: "Marketing", title: "Un clic, partout à la fois", sub: "WhatsApp, Facebook, Instagram en un instant.", accent: "#FF2A6D" },
-  { src: "/A5.PNG", badge: "Assistant IA", title: "Laissez l'IA écrire à votre place", sub: "Titre, description et détails générés en 1 clic.", accent: "#FFC93C" },
-  { src: "/A6.PNG", badge: "Publication", title: "Publier n'a jamais été si simple", sub: "4 étapes, 2 minutes, et c'est en ligne.", accent: "#6366F1" },
-  { src: "/A7.PNG", badge: "Boosts", title: "Passez devant tout le monde", sub: "Standard, Premium, À la Une, VIP.", accent: "#FF2A6D" },
-  { src: "/A8.PNG", badge: "Boutique Pro", title: "Votre boutique, votre marque", sub: "Vitrine certifiée dès 5 000 FCFA/mois.", accent: "#FFC93C" },
-  { src: "/A9.PNG", badge: "Messagerie", title: "Parlez à vos clients, vendez plus", sub: "Chat intégré + WhatsApp & appel direct.", accent: "#10B981" },
-  { src: "/A11.PNG", badge: "À la une", title: "Soyez impossible à manquer", sub: "Mise en avant + badge « Garanti Vérifié ».", accent: "#FFC93C" },
-  { src: "/A12.PNG", badge: "Fiche produit", title: "Une fiche qui donne envie d'acheter", sub: "Galerie premium + Acheter / Discuter WhatsApp.", accent: "#6366F1" },
+// 11 affiches CLAIRES — mêmes captures, textes riches (vendeurs + acheteurs)
+type LightShot = { src: string; badge: string; title: string; sub: string; accent: string; audience: string; points: string[] };
+const SHOTS_LIGHT: LightShot[] = [
+  { src: "/a1.PNG", badge: "Tableau de bord", title: "Tout votre business, un seul écran", sub: "Pilotez votre activité en temps réel.", accent: "#6366F1", audience: "Vendeurs", points: ["📊 Vues & favoris en direct", "🔔 Alerte à chaque contact", "📱 Tout gérer depuis le mobile"] },
+  { src: "/a2.PNG", badge: "Statistiques", title: "Vos chiffres parlent pour vous", sub: "Des données 100% réelles.", accent: "#10B981", audience: "Vendeurs", points: ["📈 Vues par annonce", "🏆 Top de vos meilleures ventes", "🎯 Sachez quoi booster"] },
+  { src: "/A3.PNG", badge: "Gestion", title: "La gestion sans prise de tête", sub: "Toutes vos annonces sous contrôle.", accent: "#6366F1", audience: "Vendeurs", points: ["🗂️ En ligne · brouillons · expirées", "✏️ Modifiez en 1 clic", "🔁 Republiez les expirées"] },
+  { src: "/A4.PNG", badge: "Marketing", title: "Un clic, partout à la fois", sub: "Votre annonce sur tous les réseaux.", accent: "#FF2A6D", audience: "Vendeurs", points: ["📲 WhatsApp · Facebook · Instagram", "🤖 Diffusion auto Telegram & Facebook", "🔗 Lien de partage instantané"] },
+  { src: "/A5.PNG", badge: "Assistant IA", title: "Laissez l'IA écrire à votre place", sub: "Une annonce pro en 1 clic.", accent: "#FFC93C", audience: "Vendeurs", points: ["✍️ Titre & description générés", "🏷️ Caractéristiques auto-remplies", "⏱️ Gagnez du temps, vendez vite"] },
+  { src: "/A6.PNG", badge: "Publication", title: "Publier n'a jamais été si simple", sub: "En ligne en 2 minutes.", accent: "#6366F1", audience: "Vendeurs", points: ["1️⃣ Catégorie 2️⃣ Photos 3️⃣ Détails", "⚡ 2 minutes chrono", "🆓 Publication gratuite"] },
+  { src: "/A7.PNG", badge: "Boosts", title: "Passez devant tout le monde", sub: "Plus de vues, plus de ventes.", accent: "#FF2A6D", audience: "Vendeurs", points: ["🚀 Dès 1 500 FCFA", "🔝 Haut de l'accueil & recherche", "👑 VIP : visibilité maximale"] },
+  { src: "/A8.PNG", badge: "Boutique Pro", title: "Votre boutique, votre marque", sub: "Une vitrine pro qui rassure.", accent: "#FFC93C", audience: "Professionnels", points: ["🏪 Vitrine perso dès 5 000 FCFA/mois", "✅ Badge « Boutique Vérifiée »", "📈 Jusqu'à 120 annonces actives"] },
+  { src: "/A9.PNG", badge: "Messagerie", title: "Parlez à vos clients, vendez plus", sub: "Le contact direct, sans intermédiaire.", accent: "#10B981", audience: "Vendeurs & Acheteurs", points: ["💬 Chat intégré en temps réel", "📞 WhatsApp & appel direct", "🚫 Zéro commission"] },
+  { src: "/A11.PNG", badge: "À la une", title: "Soyez impossible à manquer", sub: "La visibilité qui fait la différence.", accent: "#FFC93C", audience: "Vendeurs", points: ["🔥 Mise en avant sur l'accueil", "🛡️ Badge « Garanti Vérifié »", "👀 Jusqu'à 3× plus de vues"] },
+  { src: "/A12.PNG", badge: "Fiche produit", title: "Une fiche qui donne envie d'acheter", sub: "Achetez en toute confiance.", accent: "#6366F1", audience: "Acheteurs", points: ["🖼️ Galerie photos premium", "💬 Bouton « Acheter / Discuter »", "📍 Localisation + prix clair"] },
 ];
 
 function BrandLight({ className = "h-7" }: { className?: string }) {
@@ -124,7 +125,7 @@ function BrandLight({ className = "h-7" }: { className?: string }) {
   );
 }
 
-function ShotCardLight({ src, badge, title, sub, accent }: { src: string; badge: string; title: string; sub: string; accent: string }) {
+function ShotCardLight({ src, badge, title, sub, accent, audience, points }: LightShot) {
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-[22px] border border-black/[0.06] bg-white p-5 shadow-xl">
       <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(at 88% 0%, ${accent}24 0, transparent 55%), radial-gradient(at 8% 100%, rgba(245,201,60,0.14) 0, transparent 50%)` }} />
@@ -139,12 +140,21 @@ function ShotCardLight({ src, badge, title, sub, accent }: { src: string; badge:
           <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
           <span className="ml-2 truncate rounded bg-black/5 px-2 py-0.5 text-[.6rem] text-black/40">wanteermako.com</span>
         </div>
-        <img src={src} alt={title} className="h-[210px] w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.05]" />
+        <img src={src} alt={title} className="h-[200px] w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.05]" />
       </div>
 
       <div className="relative mt-5">
-        <h3 className="font-display text-[1.3rem] font-extrabold leading-tight text-[#0B1120]">{title}</h3>
-        <p className="mt-1.5 text-[.84rem] text-[#0B1120]/60">{sub}</p>
+        <span className="rounded-full px-2 py-0.5 text-[.58rem] font-bold uppercase tracking-wider" style={{ background: `${accent}14`, color: accent }}>Pour {audience}</span>
+        <h3 className="mt-2 font-display text-[1.3rem] font-extrabold leading-tight text-[#0B1120]">{title}</h3>
+        <p className="mt-1 text-[.82rem] text-[#0B1120]/55">{sub}</p>
+        <ul className="mt-3 space-y-1.5">
+          {points.map((p) => (
+            <li key={p} className="flex items-start gap-2 rounded-lg bg-black/[0.03] px-2.5 py-1.5 text-[.8rem] font-medium text-[#0B1120]/85">
+              <span className="mt-[2px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: accent }} />
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
       </div>
       <div className="relative mt-4 flex items-center justify-between border-t border-black/10 pt-3">
         <span className="text-[.76rem] font-black text-[#6366F1]">www.wanteermako.com</span>
