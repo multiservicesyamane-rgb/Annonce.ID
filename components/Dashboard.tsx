@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import AdCard from "./AdCard";
 import SellerAiTips from "./SellerAiTips";
+import ReferralWidget from "./ReferralWidget";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage";
 import { whatsappLink } from "@/lib/payment";
@@ -527,8 +528,11 @@ export default function Dashboard() {
       <div className="flex-1 min-w-0 bg-gray-50 dark:bg-dark-900 px-3 py-4 sm:px-4 sm:py-6 lg:p-8 overflow-y-auto w-full">
         {panel === "overview" && (
           <div className="animate-fadeUp max-w-[1000px] mx-auto">
-            {/* Assistant IA vendeur */}
-            <div className="mb-4"><SellerAiTips /></div>
+            {/* Assistant IA vendeur + Parrainage */}
+            <div className="mb-4 grid gap-4 lg:grid-cols-2">
+              <SellerAiTips />
+              <ReferralWidget />
+            </div>
             {/* Hero profil — Compact (Transport Style) */}
             <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[16px] border border-gray-100 dark:border-dark-border bg-white dark:bg-[#161B22] p-4 sm:p-5 shadow-sm">
               <div className="flex items-center gap-3 sm:gap-4">

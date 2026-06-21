@@ -49,6 +49,11 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
         // Créer/compléter le profil
         if (data.user) {
           await supabase.from("profiles").upsert({ id: data.user.id, full_name: fullName || email.split("@")[0] }, { onConflict: "id" });
+          // Parrainage : si arrivé via ?ref=<id>, on crédite le parrain
+          const ref = new URLSearchParams(window.location.search).get("ref");
+          if (ref) {
+            fetch("/api/referral", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: data.user.id, ref }) }).catch(() => {});
+          }
         }
         if (data.session) {
           window.location.href = getRedirect();
