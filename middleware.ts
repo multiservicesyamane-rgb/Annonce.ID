@@ -55,6 +55,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/aide') ||
     pathname.startsWith('/securite') ||
     pathname.startsWith('/cgu') ||
+    pathname.startsWith('/affiches') ||
     // Liens courts d'annonces : /<slug> (slug terminant par l'horodatage, ex. -1781448052581)
     /^\/[^/]+-\d{10,}$/.test(pathname) ||
     pathname.startsWith('/api'); // Les APIs ont leurs propres vérifications d'auth
