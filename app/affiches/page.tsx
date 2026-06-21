@@ -65,6 +65,12 @@ export default function AffichesPage() {
           {SHOTS.map((s) => <ShotCard key={s.src} {...s} />)}
         </div>
 
+        {/* ── 11 affiches CLAIRES (fond blanc sublime néon, captures sombres) ── */}
+        <SectionTitle>☀️ Affiches claires — fond blanc sublime (néon)</SectionTitle>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {SHOTS_LIGHT.map((s) => <ShotCardLight key={s.src} {...s} />)}
+        </div>
+
         {/* ── Affiches message (carré) ── */}
         <SectionTitle>📐 Messages clés (format carré 1:1)</SectionTitle>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -90,6 +96,61 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
       <span className="h-5 w-1.5 rounded-full bg-gradient-to-b from-[#6366F1] to-[#FFC93C]" />
       {children}
     </h2>
+  );
+}
+
+// 11 affiches CLAIRES — mêmes captures, textes retravaillés + plus percutants
+const SHOTS_LIGHT: { src: string; badge: string; title: string; sub: string; accent: string }[] = [
+  { src: "/a1.PNG", badge: "Tableau de bord", title: "Tout votre business, un seul écran", sub: "Annonces, vues et favoris pilotés en temps réel.", accent: "#6366F1" },
+  { src: "/a2.PNG", badge: "Statistiques", title: "Vos chiffres parlent pour vous", sub: "Mesurez l'impact réel de chaque annonce.", accent: "#10B981" },
+  { src: "/A3.PNG", badge: "Gestion", title: "La gestion sans prise de tête", sub: "En ligne, brouillons, expirées — tout sous contrôle.", accent: "#6366F1" },
+  { src: "/A4.PNG", badge: "Marketing", title: "Un clic, partout à la fois", sub: "WhatsApp, Facebook, Instagram en un instant.", accent: "#FF2A6D" },
+  { src: "/A5.PNG", badge: "Assistant IA", title: "Laissez l'IA écrire à votre place", sub: "Titre, description et détails générés en 1 clic.", accent: "#FFC93C" },
+  { src: "/A6.PNG", badge: "Publication", title: "Publier n'a jamais été si simple", sub: "4 étapes, 2 minutes, et c'est en ligne.", accent: "#6366F1" },
+  { src: "/A7.PNG", badge: "Boosts", title: "Passez devant tout le monde", sub: "Standard, Premium, À la Une, VIP.", accent: "#FF2A6D" },
+  { src: "/A8.PNG", badge: "Boutique Pro", title: "Votre boutique, votre marque", sub: "Vitrine certifiée dès 5 000 FCFA/mois.", accent: "#FFC93C" },
+  { src: "/A9.PNG", badge: "Messagerie", title: "Parlez à vos clients, vendez plus", sub: "Chat intégré + WhatsApp & appel direct.", accent: "#10B981" },
+  { src: "/A11.PNG", badge: "À la une", title: "Soyez impossible à manquer", sub: "Mise en avant + badge « Garanti Vérifié ».", accent: "#FFC93C" },
+  { src: "/A12.PNG", badge: "Fiche produit", title: "Une fiche qui donne envie d'acheter", sub: "Galerie premium + Acheter / Discuter WhatsApp.", accent: "#6366F1" },
+];
+
+function BrandLight({ className = "h-7" }: { className?: string }) {
+  return (
+    <span className="flex items-center gap-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo-icon.png" alt="" className={`${className} w-auto rounded-lg object-contain`} />
+      <span className="font-display text-[.95rem] font-black bg-gradient-to-r from-[#6366F1] to-[#FFC93C] bg-clip-text text-transparent">Wanteermako</span>
+    </span>
+  );
+}
+
+function ShotCardLight({ src, badge, title, sub, accent }: { src: string; badge: string; title: string; sub: string; accent: string }) {
+  return (
+    <div className="group relative flex flex-col overflow-hidden rounded-[22px] border border-black/[0.06] bg-white p-5 shadow-xl">
+      <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(at 88% 0%, ${accent}24 0, transparent 55%), radial-gradient(at 8% 100%, rgba(245,201,60,0.14) 0, transparent 50%)` }} />
+      <div className="relative flex items-center justify-between gap-2">
+        <BrandLight />
+        <span className="shrink-0 rounded-full px-3 py-1 text-[.62rem] font-bold uppercase tracking-wider" style={{ background: `${accent}1f`, color: accent }}>{badge}</span>
+      </div>
+
+      {/* capture (reste sombre — image fixe) dans un cadre clair */}
+      <div className="relative mt-4 overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.12)]">
+        <div className="flex items-center gap-1.5 border-b border-black/10 bg-gray-50 px-3 py-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
+          <span className="ml-2 truncate rounded bg-black/5 px-2 py-0.5 text-[.6rem] text-black/40">wanteermako.com</span>
+        </div>
+        <img src={src} alt={title} className="h-[210px] w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.05]" />
+      </div>
+
+      <div className="relative mt-5">
+        <h3 className="font-display text-[1.3rem] font-extrabold leading-tight text-[#0B1120]">{title}</h3>
+        <p className="mt-1.5 text-[.84rem] text-[#0B1120]/60">{sub}</p>
+      </div>
+      <div className="relative mt-4 flex items-center justify-between border-t border-black/10 pt-3">
+        <span className="text-[.76rem] font-black text-[#6366F1]">www.wanteermako.com</span>
+        <span className="text-[.62rem] font-medium text-[#0B1120]/45">Achetez · Vendez · Trouvez</span>
+      </div>
+    </div>
   );
 }
 
