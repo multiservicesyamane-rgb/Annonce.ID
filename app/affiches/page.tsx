@@ -86,6 +86,21 @@ export default function AffichesPage() {
           <Downloadable filename="wanteermako-a4-grandpublic"><AffichePortrait /></Downloadable>
           <Downloadable filename="wanteermako-a4-pro"><AffichePortraitB2B /></Downloadable>
         </div>
+
+        {/* ── 10 affiches premium "style agence" ── */}
+        <SectionTitle>🏆 Affiches premium — style agence</SectionTitle>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <Downloadable filename="wanteermako-pro-services"><PaServices /></Downloadable>
+          <Downloadable filename="wanteermako-pro-vendre"><PaVendre /></Downloadable>
+          <Downloadable filename="wanteermako-pro-commission"><PaCommission /></Downloadable>
+          <Downloadable filename="wanteermako-pro-boutique"><PaBoutiqueShields /></Downloadable>
+          <Downloadable filename="wanteermako-pro-pourquoi"><PaPourquoi /></Downloadable>
+          <Downloadable filename="wanteermako-pro-pays"><PaStat /></Downloadable>
+          <Downloadable filename="wanteermako-pro-etapes"><PaEtapes /></Downloadable>
+          <Downloadable filename="wanteermako-pro-immo"><PaImmo /></Downloadable>
+          <Downloadable filename="wanteermako-pro-auto"><PaAuto /></Downloadable>
+          <Downloadable filename="wanteermako-pro-confiance"><PaConfiance /></Downloadable>
+        </div>
       </div>
     </div>
   );
@@ -463,6 +478,183 @@ function AfficheHeroSplit() {
         <FooterLight />
       </>}
     />
+  );
+}
+
+/* ───────── 10 affiches premium "style agence" ───────── */
+function Seal({ a, b, c, color }: { a: string; b: string; c?: string; color: string }) {
+  return (
+    <div className="flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 flex-col items-center justify-center rounded-full text-center"
+      style={{ background: `radial-gradient(circle at 30% 25%, ${color}, ${color}bb)`, boxShadow: `0 0 0 4px ${color}33, 0 12px 30px rgba(0,0,0,.45)` }}>
+      <div className="font-display text-[1.6rem] font-black leading-none text-white">{a}</div>
+      <div className="text-[.58rem] font-bold uppercase tracking-wider text-white/95">{b}</div>
+      {c && <div className="mt-0.5 text-[.5rem] leading-tight text-white/80">{c}</div>}
+    </div>
+  );
+}
+function Svc({ icon, label }: { icon: string; label: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-white/10 py-2.5 last:border-0">
+      <span className="flex items-center gap-2.5 text-[.95rem] font-semibold text-white"><span className="text-[1.2rem]">{icon}</span>{label}</span>
+      <span className="text-[#FFC93C] text-[.9rem]">◄</span>
+    </div>
+  );
+}
+function Shield({ name, price, sub, color }: { name: string; price: string; sub: string; color: string }) {
+  return (
+    <div className="flex flex-col items-center rounded-t-[26px] rounded-b-xl border border-white/12 bg-white/[0.05] px-2 py-4 text-center">
+      <div className="text-[.62rem] font-bold uppercase tracking-wide text-white/70">{name}</div>
+      <div className="mt-1 font-display text-[1.1rem] font-black leading-none" style={{ color }}>{price}</div>
+      <div className="mt-1 text-[.54rem] text-white/55">{sub}</div>
+    </div>
+  );
+}
+function Check({ children }: { children: React.ReactNode }) {
+  return <li className="flex items-center gap-2 text-[.86rem] text-white/90"><span className="text-[#10B981]">✓</span>{children}</li>;
+}
+function CallBar() {
+  return (
+    <div className="mt-auto flex items-center justify-between rounded-xl bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-4 py-2.5">
+      <span className="text-[.76rem] font-black text-white">www.wanteermako.com</span>
+      <span className="rounded-full bg-[#10B981] px-3 py-1 text-[.64rem] font-black text-white">VISITER →</span>
+    </div>
+  );
+}
+
+function PaServices() {
+  return (
+    <Poster className="aspect-square bg-[radial-gradient(at_85%_10%,rgba(99,102,241,0.4)_0,transparent_55%)] bg-[#0B1120]">
+      <div className="flex items-center justify-between"><LogoFull className="h-9" /><span className="rounded-full bg-[#FFC93C]/15 px-2.5 py-1 text-[.58rem] font-bold uppercase tracking-wider text-[#FFC93C]">Plateforme</span></div>
+      <h3 className="mt-3 font-display text-[1.5rem] font-black text-white">NOS SERVICES :</h3>
+      <div className="mt-1">
+        <Svc icon="🏠" label="Immobilier" /><Svc icon="🚗" label="Véhicules" /><Svc icon="💼" label="Emploi" /><Svc icon="📱" label="Téléphones" /><Svc icon="🛋️" label="Meubles & Maison" />
+      </div>
+      <div className="mt-4"><CallBar /></div>
+    </Poster>
+  );
+}
+function PaVendre() {
+  return (
+    <Poster className="aspect-square bg-[#0B1120]">
+      <div className="absolute right-[-15%] top-[-10%] h-[70%] w-[70%] -skew-y-12 bg-gradient-to-br from-[#6366F1] to-[#A855F7] opacity-90" />
+      <div className="relative flex items-center justify-between"><LogoFull className="h-9" /></div>
+      <div className="relative mt-auto">
+        <div className="font-display text-[2.3rem] font-black uppercase leading-[.95] text-white">Besoin<br />de <span className="text-[#FFC93C]">vendre ?</span></div>
+        <p className="mt-3 text-[.86rem] text-white/75">Publiez gratuitement et touchez des milliers d'acheteurs.</p>
+        <div className="mt-3"><CallBar /></div>
+      </div>
+    </Poster>
+  );
+}
+function PaCommission() {
+  return (
+    <Poster className="aspect-square items-center justify-center text-center bg-[radial-gradient(at_50%_30%,rgba(16,185,129,0.3)_0,transparent_60%)] bg-[#0B1120]">
+      <div className="absolute left-5 top-5"><LogoFull className="h-8" /></div>
+      <Seal a="0%" b="Commission" color="#10B981" />
+      <h3 className="mt-4 font-display text-[1.7rem] font-black leading-tight text-white">Gardez <span className="text-[#10B981]">100%</span><br />de vos gains</h3>
+      <p className="mt-2 text-[.84rem] text-white/70">Aucun intermédiaire. Contact direct acheteur ↔ vendeur.</p>
+      <div className="absolute bottom-4 text-[.74rem] font-black text-[#FFC93C]">www.wanteermako.com</div>
+    </Poster>
+  );
+}
+function PaBoutiqueShields() {
+  return (
+    <Poster className="aspect-square bg-[radial-gradient(at_50%_0%,rgba(99,102,241,0.35)_0,transparent_55%)] bg-[#0B1120]">
+      <div className="flex items-center justify-between"><LogoFull className="h-9" /><span className="rounded-full bg-[#FFC93C]/15 px-2.5 py-1 text-[.58rem] font-bold uppercase tracking-wider text-[#FFC93C]">Boutique Pro</span></div>
+      <h3 className="mt-2 font-display text-[1.35rem] font-black text-white">Nos formules d'abonnement</h3>
+      <div className="mt-auto grid grid-cols-3 gap-2">
+        <Shield name="Standard" price="5 000" sub="15 annonces" color="#A5B4FC" />
+        <Shield name="Premium" price="10 000" sub="50 annonces" color="#6366F1" />
+        <Shield name="VIP" price="20 000" sub="120 + Vérifié" color="#FFC93C" />
+      </div>
+      <div className="mt-2 text-center text-[.6rem] text-white/55">FCFA / mois · paiement Mobile Money</div>
+      <div className="mt-3"><CallBar /></div>
+    </Poster>
+  );
+}
+function PaPourquoi() {
+  return (
+    <Poster className="aspect-square bg-[radial-gradient(at_15%_85%,rgba(245,201,60,0.22)_0,transparent_55%)] bg-[#0B1120]">
+      <div className="flex items-start justify-between">
+        <div><LogoFull className="h-9" /><h3 className="mt-3 font-display text-[1.4rem] font-black text-white">POURQUOI<br />WANTEERMAKO ?</h3></div>
+        <Seal a="100%" b="Gratuit" color="#FFC93C" />
+      </div>
+      <ul className="mt-auto space-y-2">
+        <Check>Assistant IA pour vos annonces</Check>
+        <Check>Diffusion auto Telegram & Facebook</Check>
+        <Check>0% de commission</Check>
+        <Check>27 pays d'Afrique de l'Ouest</Check>
+        <Check>Vendeurs vérifiés</Check>
+      </ul>
+      <div className="mt-4 text-[.74rem] font-black text-[#FFC93C]">www.wanteermako.com</div>
+    </Poster>
+  );
+}
+function PaStat() {
+  return (
+    <Poster className="aspect-square items-center justify-center text-center bg-[radial-gradient(at_50%_40%,rgba(99,102,241,0.35)_0,transparent_60%)] bg-[#0B1120]">
+      <div className="absolute left-5 top-5"><LogoFull className="h-8" /></div>
+      <div className="font-display text-[5.5rem] font-black leading-none text-white">27</div>
+      <div className="-mt-2 font-display text-[1.6rem] font-black tracking-widest text-[#FFC93C]">PAYS</div>
+      <p className="mt-3 max-w-[80%] text-[.86rem] text-white/70">Une seule plateforme pour toute l'Afrique de l'Ouest.</p>
+      <div className="mt-4 flex gap-2"><Pill>Sénégal</Pill><Pill>Côte d'Ivoire</Pill><Pill>Mali</Pill></div>
+      <div className="absolute bottom-4 text-[.74rem] font-black text-[#FFC93C]">www.wanteermako.com</div>
+    </Poster>
+  );
+}
+function PaEtapes() {
+  const steps = [["1", "Catégorie"], ["2", "Photos"], ["3", "Détails"], ["4", "En ligne"]];
+  return (
+    <Poster className="aspect-square bg-[radial-gradient(at_80%_20%,rgba(255,42,109,0.28)_0,transparent_55%)] bg-[#0B1120]">
+      <div className="flex items-center justify-between"><LogoFull className="h-9" /><span className="rounded-full bg-[#10B981]/15 px-2.5 py-1 text-[.58rem] font-bold uppercase tracking-wider text-[#10B981]">2 min</span></div>
+      <h3 className="mt-3 font-display text-[1.55rem] font-black text-white">PUBLIEZ EN<br />4 ÉTAPES</h3>
+      <div className="mt-auto grid grid-cols-2 gap-2.5">
+        {steps.map(([n, t]) => (
+          <div key={n} className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#6366F1] to-[#A855F7] font-black text-white">{n}</span>
+            <span className="text-[.84rem] font-bold text-white">{t}</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3"><CallBar /></div>
+    </Poster>
+  );
+}
+function PaImmo() {
+  return (
+    <Poster className="aspect-square bg-[radial-gradient(at_20%_20%,rgba(16,185,129,0.3)_0,transparent_55%)] bg-[#0B1120]">
+      <div className="flex items-center justify-between"><LogoFull className="h-9" /><span className="rounded-full bg-[#10B981]/15 px-2.5 py-1 text-[.58rem] font-bold uppercase tracking-wider text-[#10B981]">Immobilier</span></div>
+      <div className="mt-auto">
+        <div className="text-[2.6rem]">🏠</div>
+        <h3 className="font-display text-[1.7rem] font-black leading-tight text-white">Trouvez votre <span className="text-[#10B981]">maison idéale</span></h3>
+        <div className="mt-3 flex flex-wrap gap-2"><Pill>Location</Pill><Pill>Vente</Pill><Pill>Terrains</Pill><Pill>Villas</Pill></div>
+      </div>
+      <div className="mt-4"><CallBar /></div>
+    </Poster>
+  );
+}
+function PaAuto() {
+  return (
+    <Poster className="aspect-square bg-[radial-gradient(at_80%_25%,rgba(245,201,60,0.25)_0,transparent_55%)] bg-[#0B1120]">
+      <div className="flex items-center justify-between"><LogoFull className="h-9" /><span className="rounded-full bg-[#FFC93C]/15 px-2.5 py-1 text-[.58rem] font-bold uppercase tracking-wider text-[#FFC93C]">Véhicules</span></div>
+      <div className="mt-auto">
+        <div className="text-[2.6rem]">🚗</div>
+        <h3 className="font-display text-[1.6rem] font-black leading-tight text-white">Votre voiture au <span className="text-[#FFC93C]">meilleur prix</span></h3>
+        <div className="mt-3 flex flex-wrap gap-2"><Pill>Occasion</Pill><Pill>Neuf</Pill><Pill>Garages pro</Pill><Pill>Négociable</Pill></div>
+      </div>
+      <div className="mt-4"><CallBar /></div>
+    </Poster>
+  );
+}
+function PaConfiance() {
+  return (
+    <Poster className="aspect-square items-center justify-center text-center bg-[radial-gradient(at_50%_25%,rgba(16,185,129,0.28)_0,transparent_60%)] bg-[#0B1120]">
+      <div className="absolute left-5 top-5"><LogoFull className="h-8" /></div>
+      <Seal a="SÛR" b="Vérifié" color="#10B981" />
+      <h3 className="mt-4 font-display text-[1.7rem] font-black text-white">Achetez en confiance</h3>
+      <div className="mt-3 flex flex-wrap justify-center gap-2"><Pill>✅ Vendeurs vérifiés</Pill><Pill>🔒 Sécurisé</Pill><Pill>💬 Contact direct</Pill></div>
+      <div className="absolute bottom-4 text-[.74rem] font-black text-[#FFC93C]">www.wanteermako.com</div>
+    </Poster>
   );
 }
 
