@@ -19,16 +19,16 @@ function LogoFull({ className = "h-9" }: { className?: string }) {
 // Vraies captures (respecter la casse exacte des fichiers !)
 const SHOTS: { src: string; badge: string; title: string; sub: string; accent: string }[] = [
   { src: "/a1.PNG", badge: "Tableau de bord", title: "Pilotez votre activité", sub: "Annonces, vues et favoris en un coup d'œil.", accent: "#6366F1" },
-  { src: "/A3.PNG", badge: "Statistiques", title: "Des données 100% réelles", sub: "Suivez les performances de chaque annonce.", accent: "#10B981" },
-  { src: "/A4.PNG", badge: "Gestion", title: "Gérez toutes vos annonces", sub: "En ligne, brouillons, expirées — tout au même endroit.", accent: "#6366F1" },
-  { src: "/A5.PNG", badge: "Marketing", title: "Partage réseaux en 1 clic", sub: "WhatsApp, Facebook, Instagram directement.", accent: "#FF2A6D" },
-  { src: "/A6.PNG", badge: "Assistant IA", title: "L'IA rédige pour vous", sub: "Titre, description et caractéristiques automatiques.", accent: "#FFC93C" },
-  { src: "/A8.PNG", badge: "Publication", title: "Publiez en 5 étapes", sub: "Simple, rapide, guidé par catégorie.", accent: "#6366F1" },
-  { src: "/A7.PNG", badge: "Boutique", title: "Votre boutique en ligne", sub: "Une vitrine pro, certifiée et personnalisée.", accent: "#FFC93C" },
-  { src: "/A9.PNG", badge: "Boosts", title: "Boostez votre visibilité", sub: "Standard, Premium, À la Une, VIP.", accent: "#FF2A6D" },
-  { src: "/A11.PNG", badge: "Messagerie", title: "Discutez avec vos clients", sub: "Chat intégré + WhatsApp & appel direct.", accent: "#10B981" },
-  { src: "/A12.PNG", badge: "Vitrine", title: "Des annonces qui brillent", sub: "Mise en avant premium, badge « Vérifié ».", accent: "#FFC93C" },
-  { src: "/a2.PNG", badge: "Top annonces", title: "Vos meilleures ventes", sub: "Classement et vues par annonce.", accent: "#6366F1" },
+  { src: "/a2.PNG", badge: "Statistiques", title: "Des données 100% réelles", sub: "Vues par annonce et top des ventes.", accent: "#10B981" },
+  { src: "/A3.PNG", badge: "Gestion", title: "Gérez toutes vos annonces", sub: "En ligne, brouillons, expirées — au même endroit.", accent: "#6366F1" },
+  { src: "/A4.PNG", badge: "Marketing", title: "Partage réseaux en 1 clic", sub: "WhatsApp, Facebook, Instagram directement.", accent: "#FF2A6D" },
+  { src: "/A5.PNG", badge: "Assistant IA", title: "L'IA rédige votre annonce", sub: "Titre, description et caractéristiques automatiques.", accent: "#FFC93C" },
+  { src: "/A6.PNG", badge: "Publication", title: "Publiez en 4 étapes", sub: "Catégorie, photos, détails, en ligne.", accent: "#6366F1" },
+  { src: "/A7.PNG", badge: "Boosts", title: "Boostez votre visibilité", sub: "Standard, Premium, À la Une, VIP.", accent: "#FF2A6D" },
+  { src: "/A8.PNG", badge: "Boutique Pro", title: "Abonnements professionnels", sub: "Vitrine certifiée dès 5 000 FCFA/mois.", accent: "#FFC93C" },
+  { src: "/A9.PNG", badge: "Messagerie", title: "Discutez avec vos clients", sub: "Chat intégré + WhatsApp & appel direct.", accent: "#10B981" },
+  { src: "/A11.PNG", badge: "À la une", title: "Vos annonces mises en avant", sub: "Badge « Garanti Vérifié », visibilité maximale.", accent: "#FFC93C" },
+  { src: "/A12.PNG", badge: "Fiche produit", title: "Une fiche qui vend", sub: "Galerie premium + Acheter / Discuter WhatsApp.", accent: "#6366F1" },
 ];
 
 export default function AffichesPage() {
@@ -85,27 +85,27 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 /* ───────── Carte avec capture réelle (ultra premium) ───────── */
 function ShotCard({ src, badge, title, sub, accent }: { src: string; badge: string; title: string; sub: string; accent: string }) {
   return (
-    <div className="group relative flex aspect-square flex-col overflow-hidden rounded-[22px] border border-white/10 bg-[#0B1120] p-5 shadow-2xl">
-      <div className="absolute inset-0 opacity-60" style={{ background: `radial-gradient(at 80% 0%, ${accent}33 0, transparent 55%)` }} />
-      <div className="relative flex items-center justify-between">
-        <LogoFull className="h-7" />
-        <span className="rounded-full px-2.5 py-1 text-[.6rem] font-bold uppercase tracking-wider" style={{ background: `${accent}22`, color: accent }}>{badge}</span>
+    <div className="group relative flex flex-col overflow-hidden rounded-[22px] border border-white/10 bg-[#0B1120] p-5 shadow-2xl">
+      <div className="absolute inset-0 opacity-70" style={{ background: `radial-gradient(at 80% 0%, ${accent}3d 0, transparent 60%)` }} />
+      <div className="relative flex items-center justify-between gap-2">
+        <LogoFull className="h-10" />
+        <span className="shrink-0 rounded-full px-3 py-1 text-[.62rem] font-bold uppercase tracking-wider" style={{ background: `${accent}26`, color: accent }}>{badge}</span>
       </div>
 
       {/* mockup navigateur avec la vraie capture */}
-      <div className="relative mt-4 overflow-hidden rounded-xl border border-white/10 bg-[#05080f] shadow-lg">
-        <div className="flex items-center gap-1.5 border-b border-white/10 px-3 py-1.5">
-          <span className="h-2 w-2 rounded-full bg-[#FF5F57]" />
-          <span className="h-2 w-2 rounded-full bg-[#FEBC2E]" />
-          <span className="h-2 w-2 rounded-full bg-[#28C840]" />
-          <span className="ml-2 truncate text-[.58rem] text-white/40">{SITE}</span>
+      <div className="relative mt-4 overflow-hidden rounded-xl border border-white/10 bg-[#05080f] shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+        <div className="flex items-center gap-1.5 border-b border-white/10 bg-white/[0.03] px-3 py-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
+          <span className="ml-2 truncate rounded bg-white/5 px-2 py-0.5 text-[.6rem] text-white/45">{SITE}</span>
         </div>
-        <img src={src} alt={title} className="h-[150px] w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.04]" />
+        <img src={src} alt={title} className="h-[210px] w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.05]" />
       </div>
 
-      <div className="relative mt-auto pt-4">
-        <h3 className="font-display text-[1.25rem] font-extrabold leading-tight text-white">{title}</h3>
-        <p className="mt-1 text-[.8rem] text-white/65">{sub}</p>
+      <div className="relative mt-5">
+        <h3 className="font-display text-[1.35rem] font-extrabold leading-tight text-white">{title}</h3>
+        <p className="mt-1.5 text-[.84rem] text-white/65">{sub}</p>
       </div>
       <Footer />
     </div>
@@ -117,7 +117,7 @@ function AfficheGrandPublic() {
   return (
     <Poster className="aspect-square bg-[radial-gradient(at_20%_15%,rgba(99,102,241,0.35)_0,transparent_45%),radial-gradient(at_85%_80%,rgba(245,201,60,0.22)_0,transparent_45%)] bg-[#0B1120]">
       <div className="flex items-center justify-between">
-        <LogoFull className="h-8" />
+        <LogoFull className="h-10" />
         <span className="rounded-full bg-[#10B981]/15 px-2.5 py-1 text-[.6rem] font-bold uppercase tracking-wider text-[#10B981]">100% gratuit</span>
       </div>
       <div className="mt-auto">
@@ -138,7 +138,7 @@ function AfficheReseaux() {
   return (
     <Poster className="aspect-square bg-[radial-gradient(at_80%_20%,rgba(99,102,241,0.4)_0,transparent_50%)] bg-[#0B1120]">
       <div className="flex items-center justify-between">
-        <LogoFull className="h-8" />
+        <LogoFull className="h-10" />
         <span className="rounded-full bg-[#6366F1]/20 px-2.5 py-1 text-[.6rem] font-bold uppercase tracking-wider text-[#A5B4FC]">Nouveauté</span>
       </div>
       <div className="mt-auto">
@@ -156,7 +156,7 @@ function AfficheBoutiquePro() {
   return (
     <Poster className="aspect-square bg-[radial-gradient(at_15%_85%,rgba(245,201,60,0.25)_0,transparent_50%)] bg-[#0B1120]">
       <div className="flex items-center justify-between">
-        <LogoFull className="h-8" />
+        <LogoFull className="h-10" />
         <span className="rounded-full bg-[#FFC93C]/15 px-2.5 py-1 text-[.6rem] font-bold uppercase tracking-wider text-[#FFC93C]">Pro</span>
       </div>
       <div className="mt-auto">
