@@ -10,12 +10,12 @@ type Item = { id: any; slug: string; title: string; price: string; location: str
  * Chaque slide est cliquable → renvoie sur la fiche de l'annonce.
  */
 export default function FeaturedSlider({ listings }: { listings: Item[] }) {
-  const slides = (listings || []).slice(0, 5);
+  const slides = (listings || []).slice(0, 12);
   const [i, setI] = useState(0);
 
   useEffect(() => {
     if (slides.length <= 1) return;
-    const t = setInterval(() => setI((v) => (v + 1) % slides.length), 4000);
+    const t = setInterval(() => setI((v) => (v + 1) % slides.length), 2500);
     return () => clearInterval(t);
   }, [slides.length]);
 
@@ -23,7 +23,7 @@ export default function FeaturedSlider({ listings }: { listings: Item[] }) {
 
   return (
     <div className="wrap mt-3">
-      <div className="relative h-[148px] sm:h-[200px] md:h-[240px] overflow-hidden rounded-[20px] border border-gray-100 dark:border-white/10 bg-[#0B1120] shadow-lg">
+      <div className="relative h-[172px] sm:h-[210px] md:h-[250px] overflow-hidden rounded-[20px] border border-gray-100 dark:border-white/10 bg-[#0B1120] shadow-lg">
         {slides.map((s, idx) => (
           <Link
             key={String(s.id)}
@@ -40,7 +40,7 @@ export default function FeaturedSlider({ listings }: { listings: Item[] }) {
               <div className="relative font-display text-[1.15rem] font-black text-neon-gold drop-shadow sm:text-[1.9rem]">{s.price}</div>
               <div className="relative text-[.68rem] text-white/70 sm:text-[.88rem]">📍 {s.location}</div>
               <span className="relative mt-1 w-max rounded-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-4 py-2 text-[.72rem] font-bold text-white shadow-lg sm:px-5 sm:py-2.5 sm:text-[.9rem]">Voir l'annonce →</span>
-              <span className="relative mt-1 text-[.55rem] font-semibold uppercase tracking-widest text-white/40 sm:text-[.66rem]">Achetez · Vendez · Trouvez facilement</span>
+              <span className="relative mt-1 hidden text-[.55rem] font-semibold uppercase tracking-widest text-white/40 sm:block sm:text-[.66rem]">Achetez · Vendez · Trouvez facilement</span>
             </div>
             {/* Image produit (droite) — bien affichée, pas en fond */}
             <div className="relative w-[44%] bg-gradient-to-br from-gray-100 to-gray-300 dark:from-[#0b0e16] dark:to-[#161b2b]">

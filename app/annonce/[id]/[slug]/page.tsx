@@ -195,13 +195,18 @@ export default async function AnnoncePage({ params }: Props) {
 
           <section className="mt-4 sm:mt-5 rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-5">
             <h3 className="mb-3 font-display text-[1rem] font-bold dark:text-white">📍 Localisation</h3>
-            <div className="flex h-24 sm:h-36 items-center justify-center rounded-[10px] border-[1.5px] border-dashed border-gray-300 dark:border-dark-border bg-gray-50 dark:bg-dark-900 text-[.82rem] text-gray-500 dark:text-white/50 relative overflow-hidden">
-              <div className="absolute inset-0 opacity-20 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=Dakar&zoom=12&size=600x300&sensor=false')] bg-cover bg-center"></div>
-              <div className="relative z-10 flex flex-col items-center gap-2">
-                <span className="text-2xl">🗺️</span>
-                <span>Zone approximative : {ad.location}</span>
-              </div>
+            <div className="overflow-hidden rounded-[12px] border border-gray-200 dark:border-dark-border">
+              <iframe
+                title="Carte de localisation"
+                src={`https://maps.google.com/maps?q=${encodeURIComponent((ad.location || "Dakar") + ", Afrique de l'Ouest")}&z=12&output=embed`}
+                className="h-44 w-full sm:h-56"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
             </div>
+            <p className="mt-2 flex items-center gap-1.5 text-[.8rem] font-medium text-gray-600 dark:text-white/70">
+              <span className="text-neon-gold">📍</span> Zone : {ad.location}
+            </p>
           </section>
           <div className="mt-5">
             <AdBanner 

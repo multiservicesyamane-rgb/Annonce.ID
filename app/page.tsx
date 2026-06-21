@@ -123,8 +123,8 @@ export default async function HomePage() {
     <>
       <Hero />
 
-      {/* Bandeau 5 affiches "À la Une" cliquables */}
-      <FeaturedSlider listings={uneList.slice(0, 5)} />
+      {/* Bandeau "À la Une" + Premium (déduplication par id), cliquable */}
+      <FeaturedSlider listings={[...uneList, ...premList].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)} />
 
       {/* Bannière AdSense MASQUÉE jusqu'à activation (remettre true le moment venu) */}
       {false && (
@@ -149,15 +149,6 @@ export default async function HomePage() {
         </ScrollReveal>
       )}
 
-      {/* ZONE STRATÉGIQUE PUB 1 : Entre À la Une et Premium */}
-      <ScrollReveal className="wrap py-3" delay={150}>
-        <AdBanner 
-          slot="home-top" 
-          title="Propulsez vos ventes dès aujourd'hui" 
-          subtitle="Placez votre marque ici et touchez 250 000 acheteurs." 
-          variant="night" 
-        />
-      </ScrollReveal>
 
       {/* PREMIUM carousel */}
       {premList.length > 0 && (
@@ -227,6 +218,16 @@ export default async function HomePage() {
         </div>
         
         <HomeRecent initialListings={formattedListings} />
+      </ScrollReveal>
+
+      {/* Bande publicitaire — sous les produits récents */}
+      <ScrollReveal className="wrap py-3" delay={120}>
+        <AdBanner
+          slot="home-top"
+          title="Propulsez vos ventes dès aujourd'hui"
+          subtitle="Placez votre marque ici et touchez 250 000 acheteurs."
+          variant="night"
+        />
       </ScrollReveal>
 
       {/* CATEGORIES */}
