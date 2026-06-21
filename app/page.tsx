@@ -43,6 +43,7 @@ export default async function HomePage() {
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
     views: ad.views ?? 0,
+    created_at: ad.created_at,
   } as any));
 
   // Fetch actual featured listings (À la Une)
@@ -63,6 +64,7 @@ export default async function HomePage() {
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
     views: ad.views ?? 0,
+    created_at: ad.created_at,
   } as any));
 
   // Fetch actual premium listings (Premium)
@@ -83,6 +85,7 @@ export default async function HomePage() {
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
     views: ad.views ?? 0,
+    created_at: ad.created_at,
   } as any));
 
   // Repli : si aucune annonce À la Une / Premium, on affiche les plus récentes

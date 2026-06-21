@@ -38,7 +38,7 @@ export default async function BoutiquePage({ params }: Props) {
   const resolvedId = profile?.id || sellerId;
 
   // Fetch their active listings
-  const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, views').eq('user_id', resolvedId).eq('status', 'active').order('created_at', { ascending: false });
+  const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, views, created_at').eq('user_id', resolvedId).eq('status', 'active').order('created_at', { ascending: false });
 
   // Vraies notes/avis (aucune donnée fictive)
   const { data: reviewRows } = await supabase.from('reviews').select('rating').eq('seller_id', resolvedId);
@@ -65,6 +65,7 @@ export default async function BoutiquePage({ params }: Props) {
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
     views: ad.views ?? 0,
+    created_at: ad.created_at,
   }));
 
   const totalViews = (dbListings || []).reduce((s: number, a: any) => s + (a.views || 0), 0);

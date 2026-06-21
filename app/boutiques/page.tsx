@@ -7,9 +7,8 @@ export const metadata = {
   description: "Découvrez toutes les boutiques et vendeurs professionnels sur Annonce.ID",
 };
 
-// Mise en cache (ISR) : régénérée au max toutes les 5 min → réduit fortement
-// le transfert serveur Vercel (au lieu d'un rendu à chaque visite).
-export const revalidate = 300;
+// Force dynamic rendering to query profiles and listings in real-time from Supabase
+export const dynamic = "force-dynamic";
 
 export default async function BoutiquesPage() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';

@@ -37,7 +37,7 @@ export default async function CategoryPage({ params }: Props) {
   // Fetch real listings from Supabase based on category
   const { data: dbListings } = await supabase
     .from('listings')
-    .select('id, slug, title, price, price_type, location, image, category, views, premium, profiles(role)')
+    .select('id, slug, title, price, price_type, location, image, category, views, created_at, premium, profiles(role)')
     .eq('status', 'active')
     .eq('category_slug', cat.slug)
     .order('created_at', { ascending: false })
@@ -53,6 +53,7 @@ export default async function CategoryPage({ params }: Props) {
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
     views: ad.views ?? 0,
+    created_at: ad.created_at,
     premium: ad.premium || false,
     specs: ad.specs || {},
     seller: {

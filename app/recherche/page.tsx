@@ -39,6 +39,7 @@ export default async function SearchPage({ searchParams }: Props) {
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
     views: ad.views ?? 0,
+    created_at: ad.created_at,
     premium: ad.premium || false,
     specs: ad.specs || {},
     seller: {
