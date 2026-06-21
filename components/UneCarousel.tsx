@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import type { Listing } from "@/lib/types";
 function getRelativeTime(dateString?: string) {
   if (!dateString) return "";
   try {
@@ -86,8 +87,8 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
             href={`/annonce/${ad.id}/${ad.slug}`}
             className="group relative flex flex-col shrink-0 w-[200px] md:w-[280px] bg-gradient-to-br from-[#6366F1] via-[#7C5CFC] to-[#A855F7] rounded-[20px] p-1.5 md:p-2 shadow-[0_10px_25px_rgba(99,102,241,0.2)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_16px_40px_rgba(124,92,252,0.35)]"
           >
-            {/* Image Container */}
-            <div className="relative w-full aspect-square rounded-[14px] overflow-hidden mb-2">
+            {/* Image Container — photo agrandie (4/5) */}
+            <div className="relative w-full aspect-[4/5] rounded-[14px] overflow-hidden mb-2">
               <Image
                 src={ad.image}
                 alt={ad.title}
@@ -106,7 +107,7 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
             {/* Info details */}
             <div className="flex justify-between gap-1 flex-1 px-1">
               <div className="flex flex-col flex-1 min-w-0">
-                <div className="font-bold text-white text-[0.7rem] md:text-[0.85rem] leading-tight line-clamp-2 mb-1 group-hover:underline">
+                <div className="font-bold text-white text-[0.7rem] md:text-[0.82rem] leading-tight line-clamp-1 mb-0.5 group-hover:underline">
                   {ad.title}
                 </div>
                 <div className="font-display font-black text-white text-[0.82rem] md:text-[1.05rem] mb-1.5 drop-shadow-sm">

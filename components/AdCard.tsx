@@ -51,8 +51,8 @@ export default function AdCard({ ad }: { ad: Listing }) {
       href={`/annonce/${ad.id}/${ad.slug}`}
       className={`group flex flex-col overflow-hidden rounded-[20px] transition-all duration-300 hover:-translate-y-1.5 w-full ${cardStyles}`}
     >
-      {/* Image Container */}
-      <div className="relative overflow-hidden w-full aspect-square bg-gray-50 dark:bg-black/40">
+      {/* Image Container — photo agrandie (ratio 4/5) */}
+      <div className="relative overflow-hidden w-full aspect-[4/5] bg-gray-50 dark:bg-black/40">
         <Image
           src={ad.image}
           alt={ad.title}
@@ -86,35 +86,26 @@ export default function AdCard({ ad }: { ad: Listing }) {
         />
       </div>
 
-      {/* Info Content Section */}
-      <div className="flex flex-1 flex-col gap-1 p-2 md:p-3">
-        {/* Category Label */}
-        {ad.category && (
-          <span className="text-[0.52rem] md:text-[0.6rem] uppercase tracking-widest text-gray-400 dark:text-gray-500 font-bold mb-0.5">
-            {ad.category}
-          </span>
-        )}
-
-        {/* Title */}
-        <h3 className={`line-clamp-2 text-[0.72rem] md:text-[0.86rem] font-bold leading-snug transition-colors mb-1 ${titleStyles}`}>
+      {/* Info Content Section — condensée */}
+      <div className="flex flex-1 flex-col gap-0.5 p-2 md:p-2.5">
+        {/* Titre sur 1 ligne */}
+        <h3 className={`line-clamp-1 text-[0.74rem] md:text-[0.84rem] font-bold leading-tight transition-colors ${titleStyles}`}>
           {ad.title}
         </h3>
 
-        {/* Price */}
-        <div className={`font-display text-[0.85rem] md:text-[1.05rem] font-extrabold tracking-tight mt-auto ${priceStyles}`}>
+        {/* Prix */}
+        <div className={`font-display text-[0.88rem] md:text-[1.05rem] font-extrabold tracking-tight ${priceStyles}`}>
           {ad.price}
         </div>
 
-        {/* Location & Meta info */}
-        <div className="mt-1 flex items-center justify-between border-t border-gray-100 dark:border-white/5 pt-2 text-[0.58rem] md:text-[0.66rem] text-gray-500 dark:text-gray-400">
+        {/* Localisation & date (compact) */}
+        <div className="mt-0.5 flex items-center justify-between text-[0.56rem] md:text-[0.64rem] text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1 truncate font-medium">
             <span className={isPremium ? 'text-neon-gold' : isFeatured ? 'text-purple-500' : 'opacity-60'}>📍</span>
             <span className="truncate">{ad.location}</span>
           </span>
           {ad.created_at && (
-            <span className="font-medium shrink-0 opacity-80">
-              {getRelativeTime(ad.created_at)}
-            </span>
+            <span className="font-medium shrink-0 opacity-80">{getRelativeTime(ad.created_at)}</span>
           )}
         </div>
       </div>

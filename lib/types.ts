@@ -19,6 +19,7 @@ export type Listing = {
   specs: Record<string, string>;
   views?: number;
   favorites?: number;
+  created_at?: string;
   seller?: Seller;
 };
 
