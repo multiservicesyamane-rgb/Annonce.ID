@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Downloadable from "@/components/Downloadable";
 
 export const metadata: Metadata = {
   title: "Promos animées — Wanteermako",
@@ -123,13 +124,15 @@ function Scenes() {
   );
 }
 
-function Frame({ label, ratioClass, widthClass }: { label: string; ratioClass: string; widthClass: string }) {
+function Frame({ label, ratioClass, widthClass, filename }: { label: string; ratioClass: string; widthClass: string; filename: string }) {
   return (
     <div className="flex w-full flex-col items-center">
       <div className="mb-3 rounded-full bg-white/10 px-4 py-1.5 text-[.78rem] font-bold uppercase tracking-wider text-white/80">{label}</div>
-      <div className={`relative ${widthClass} ${ratioClass} overflow-hidden rounded-[24px] border border-white/10 bg-[#0B1120] shadow-2xl`}>
-        <Scenes />
-      </div>
+      <Downloadable filename={filename} label="Image">
+        <div className={`relative ${widthClass} ${ratioClass} overflow-hidden rounded-[24px] border border-white/10 bg-[#0B1120] shadow-2xl`}>
+          <Scenes />
+        </div>
+      </Downloadable>
     </div>
   );
 }
@@ -150,8 +153,8 @@ export default function PromoPage() {
         </header>
 
         <div className="flex flex-col items-center gap-12 lg:flex-row lg:items-start lg:justify-center">
-          <Frame label="📱 9:16 — Reels / TikTok / Status" ratioClass="aspect-[9/16]" widthClass="w-[300px] sm:w-[360px]" />
-          <Frame label="🖥️ 16:9 — YouTube / Facebook" ratioClass="aspect-video" widthClass="w-full max-w-[680px]" />
+          <Frame label="📱 9:16 — Reels / TikTok / Status" ratioClass="aspect-[9/16]" widthClass="w-[300px] sm:w-[360px]" filename="wanteermako-promo-9x16" />
+          <Frame label="🖥️ 16:9 — YouTube / Facebook" ratioClass="aspect-video" widthClass="w-full max-w-[680px]" filename="wanteermako-promo-16x9" />
         </div>
       </div>
     </div>

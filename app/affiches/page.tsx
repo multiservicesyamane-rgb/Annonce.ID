@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Downloadable from "@/components/Downloadable";
 
 export const metadata: Metadata = {
   title: "Kit Affiches — Wanteermako",
@@ -51,39 +52,39 @@ export default function AffichesPage() {
         {/* ── Affiches 100% HTML (sans captures) — moitié sombre / clair ── */}
         <SectionTitle>🎨 Affiches HTML — stats & prix nets (moitié sombre / clair)</SectionTitle>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <AfficheStatsSplit />
-          <AfficheBoostsSplit />
-          <AfficheBoutiqueSplit />
-          <AfficheHeroSplit />
-          <AfficheAutoSplit />
-          <AfficheImmoSplit />
+          <Downloadable filename="wanteermako-split-stats"><AfficheStatsSplit /></Downloadable>
+          <Downloadable filename="wanteermako-split-boosts"><AfficheBoostsSplit /></Downloadable>
+          <Downloadable filename="wanteermako-split-boutique"><AfficheBoutiqueSplit /></Downloadable>
+          <Downloadable filename="wanteermako-split-hero"><AfficheHeroSplit /></Downloadable>
+          <Downloadable filename="wanteermako-split-auto"><AfficheAutoSplit /></Downloadable>
+          <Downloadable filename="wanteermako-split-immo"><AfficheImmoSplit /></Downloadable>
         </div>
 
         {/* ── Affiches "preuve réelle" (carré) ── */}
         <SectionTitle>🖥️ Aperçu réel — confiance & transparence</SectionTitle>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {SHOTS.map((s) => <ShotCard key={s.src} {...s} />)}
+          {SHOTS.map((s, i) => <Downloadable key={s.src} filename={`wanteermako-apercu-${i + 1}`}><ShotCard {...s} /></Downloadable>)}
         </div>
 
         {/* ── 11 affiches CLAIRES (fond blanc sublime néon, captures sombres) ── */}
         <SectionTitle>☀️ Affiches claires — fond blanc sublime (néon)</SectionTitle>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {SHOTS_LIGHT.map((s) => <ShotCardLight key={s.src} {...s} />)}
+          {SHOTS_LIGHT.map((s, i) => <Downloadable key={s.src} filename={`wanteermako-clair-${i + 1}`}><ShotCardLight {...s} /></Downloadable>)}
         </div>
 
         {/* ── Affiches message (carré) ── */}
         <SectionTitle>📐 Messages clés (format carré 1:1)</SectionTitle>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <AfficheGrandPublic />
-          <AfficheReseaux />
-          <AfficheBoutiquePro />
+          <Downloadable filename="wanteermako-msg-gratuit"><AfficheGrandPublic /></Downloadable>
+          <Downloadable filename="wanteermako-msg-reseaux"><AfficheReseaux /></Downloadable>
+          <Downloadable filename="wanteermako-msg-boutique"><AfficheBoutiquePro /></Downloadable>
         </div>
 
         {/* ── Affiches A4 portrait ── */}
         <SectionTitle>🖼️ Format portrait (A4) — flyer / impression</SectionTitle>
         <div className="grid gap-6 sm:grid-cols-2">
-          <AffichePortrait />
-          <AffichePortraitB2B />
+          <Downloadable filename="wanteermako-a4-grandpublic"><AffichePortrait /></Downloadable>
+          <Downloadable filename="wanteermako-a4-pro"><AffichePortraitB2B /></Downloadable>
         </div>
       </div>
     </div>
