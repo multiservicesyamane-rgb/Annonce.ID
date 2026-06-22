@@ -33,14 +33,14 @@ export default function FeaturedSlider({ listings }: { listings: Item[] }) {
             className={`absolute inset-0 flex transition-opacity duration-700 ${idx === i ? "opacity-100" : "pointer-events-none opacity-0"}`}
           >
             {/* Panneau texte (gauche) */}
-            <div className="relative flex w-[56%] flex-col justify-center gap-1.5 bg-gradient-to-br from-[#111722] via-[#1a1f3a] to-[#2a1f4a] p-4 sm:gap-2.5 sm:p-8">
+            <div className="relative flex w-[56%] flex-col justify-center gap-1 overflow-hidden bg-gradient-to-br from-[#111722] via-[#1a1f3a] to-[#2a1f4a] p-3 sm:gap-2 sm:p-7">
               <div className="pointer-events-none absolute -left-10 top-0 h-40 w-40 rounded-full bg-[#6366F1]/30 blur-3xl" />
               <span className="relative w-max rounded-full bg-gradient-to-r from-neon-gold to-[#D4891A] px-2.5 py-0.5 text-[.55rem] font-black uppercase tracking-wider text-dark-900 shadow sm:px-3 sm:py-1 sm:text-[.6rem]">✦ À la Une</span>
-              <h2 className="relative font-display text-[1.05rem] font-black leading-tight text-white line-clamp-2 sm:text-[1.9rem]">{s.title}</h2>
-              <div className="relative font-display text-[1.15rem] font-black text-neon-gold drop-shadow sm:text-[1.9rem]">{s.price}</div>
-              <div className="relative text-[.68rem] text-white/70 sm:text-[.88rem]">📍 {s.location}</div>
-              <span className="relative mt-1 w-max rounded-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-4 py-2 text-[.72rem] font-bold text-white shadow-lg sm:px-5 sm:py-2.5 sm:text-[.9rem]">Voir l'annonce →</span>
-              <span className="relative mt-1 hidden text-[.55rem] font-semibold uppercase tracking-widest text-white/40 sm:block sm:text-[.66rem]">Achetez · Vendez · Trouvez facilement</span>
+              <h2 className="relative font-display text-[.92rem] font-black leading-tight text-white line-clamp-2 sm:text-[1.45rem]">{s.title}</h2>
+              <div className="relative font-display text-[1rem] font-black text-neon-gold drop-shadow sm:text-[1.45rem]">{s.price}</div>
+              <div className="relative truncate text-[.66rem] text-white/70 sm:text-[.82rem]">📍 {s.location}</div>
+              <span className="relative mt-0.5 w-max rounded-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-3.5 py-1.5 text-[.7rem] font-bold text-white shadow-lg sm:px-5 sm:py-2 sm:text-[.85rem]">Voir l'annonce →</span>
+              <span className="relative mt-0.5 hidden text-[.55rem] font-semibold uppercase tracking-widest text-white/40 sm:block sm:text-[.64rem]">Achetez · Vendez · Trouvez facilement</span>
             </div>
             {/* Image produit (droite) — bien affichée, pas en fond */}
             <div className="relative w-[44%] bg-gradient-to-br from-gray-100 to-gray-300 dark:from-[#0b0e16] dark:to-[#161b2b]">

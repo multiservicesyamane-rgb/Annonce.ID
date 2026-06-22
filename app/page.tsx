@@ -94,31 +94,23 @@ export default async function HomePage() {
   const uneList = une.length > 0 ? une : formattedListings.slice(0, 10);
   const premList = prem.length > 0 ? prem : formattedListings.slice(0, 8);
 
-  // Fetch boutiques (profils avec avatar)
+  // Boutiques = vendeurs ayant ≥1 annonce active (auto-activation, comme la page /boutiques)
   const { data: allBoutiques } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, bio, role')
-    .not('avatar_url', 'is', null)
-    .limit(30);
+    .select('id, full_name, avatar_url, bio, role, has_boutique')
+    .limit(200);
 
-  // Filtrer pour ne garder que les entreprises / boutiques configurées
-  const boutiques = (allBoutiques || []).filter((b: any) => {
-    // S'il a un rôle pro explicitement
-    if (b.role === 'pro' || b.role === 'business') return true;
-    
-    // S'il a rempli une bio (ce qui indique qu'il a configuré sa boutique via le dashboard)
-    if (b.bio && b.bio.trim() !== '') return true;
-    
-    // S'il a un nom d'entreprise (mots clés courants)
-    const name = (b.full_name || '').toLowerCase();
-    const isProName = name.includes('multiservice') || name.includes('entreprise') || 
-                      name.includes('sarl') || name.includes('suarl') || 
-                      name.includes('boutique') || name.includes('shop') || 
-                      name.includes('store') || name.includes('tech') ||
-                      name.includes('immo') || name.includes('auto');
-                      
-    return isProName;
-  }).slice(0, 8);
+  const { data: boutiqueCounts } = await supabase
+    .from('listings')
+    .select('user_id')
+    .eq('status', 'active');
+
+  const bCountMap: Record<string, number> = {};
+  (boutiqueCounts || []).forEach((l: any) => { bCountMap[l.user_id] = (bCountMap[l.user_id] || 0) + 1; });
+
+  const boutiques = (allBoutiques || [])
+    .filter((b: any) => (bCountMap[b.id] || 0) > 0 && b.has_boutique !== false)
+    .slice(0, 8);
 
   return (
     <>
@@ -282,7 +274,11 @@ export default async function HomePage() {
                 <Link key={b.id} href={`/boutique/${b.id}`} className="flex flex-col items-center gap-2.5 w-[90px] md:w-[110px] shrink-0 snap-start group">
                   <div className={`w-[75px] h-[75px] md:w-[95px] md:h-[95px] flex items-center justify-center transition-transform duration-300 group-hover:scale-105 ${isPro ? 'avatar-ring-premium shadow-[0_0_15px_rgba(245,166,35,0.15)]' : 'avatar-ring-standard'}`}>
                     <div className="w-full h-full rounded-full overflow-hidden border-[3px] border-white dark:border-[#0D1117] bg-white dark:bg-[#161B22]">
-                      <Image src={b.avatar_url} alt={displayName} width={90} height={90} className="w-full h-full object-cover rounded-full" />
+                      {b.avatar_url ? (
+                        <Image src={b.avatar_url} alt={displayName} width={90} height={90} className="w-full h-full object-cover rounded-full" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[1.1rem] font-extrabold text-gray-400">{displayName.slice(0, 2).toUpperCase()}</div>
+                      )}
                     </div>
                   </div>
                   <span className="text-[0.72rem] md:text-[0.8rem] font-bold text-center leading-tight line-clamp-2 text-gray-800 dark:text-white group-hover:text-[#6366F1] dark:group-hover:text-green-400 transition-colors">

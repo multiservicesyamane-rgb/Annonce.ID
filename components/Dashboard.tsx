@@ -529,12 +529,6 @@ export default function Dashboard() {
       <div className="flex-1 min-w-0 bg-gray-50 dark:bg-dark-900 px-3 py-4 sm:px-4 sm:py-6 lg:p-8 overflow-y-auto w-full">
         {panel === "overview" && (
           <div className="animate-fadeUp max-w-[1000px] mx-auto">
-            {/* Assistant IA vendeur + Parrainage */}
-            <div className="mb-4 grid gap-4 lg:grid-cols-2">
-              <SellerAiTips />
-              <ReferralWidget />
-            </div>
-            <div className="mb-4"><BrandSocialStrip /></div>
             {/* Hero profil — Compact (Transport Style) */}
             <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[16px] border border-gray-100 dark:border-dark-border bg-white dark:bg-[#161B22] p-4 sm:p-5 shadow-sm">
               <div className="flex items-center gap-3 sm:gap-4">
@@ -567,6 +561,13 @@ export default function Dashboard() {
               <KpiGrad gradient="bg-g5" icon="❤️" label="Favoris reçus" value={receivedFavsCount} />
               <KpiGrad gradient="bg-g4" icon="🗂️" label="Annonces totales" value={ads.length} />
             </div>
+
+            {/* Outils : Assistant IA + Parrainage + Réseaux (zone secondaire, compacte) */}
+            <div className="mb-4 grid gap-4 lg:grid-cols-2">
+              <SellerAiTips />
+              <ReferralWidget />
+            </div>
+            <div className="mb-6"><BrandSocialStrip /></div>
 
             {ads.length > 0 && (() => {
               const byCat: Record<string, number> = {};
@@ -1706,7 +1707,7 @@ export default function Dashboard() {
           <div className="animate-fadeUp w-full max-w-[1200px] mx-auto flex flex-col lg:flex-row gap-8">
 
             {/* Colonne Gauche : Editeur */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="font-display text-[1.4rem] sm:text-[1.8rem] font-extrabold dark:text-white">Ma Boutique</h2>
@@ -1928,7 +1929,7 @@ export default function Dashboard() {
             </div>
 
             {/* Colonne Droite : Live Preview */}
-            <div className={`fixed inset-0 z-[900] bg-black/80 backdrop-blur-sm flex justify-center items-center p-3 lg:p-0 lg:sticky lg:top-[95px] lg:bg-transparent lg:backdrop-blur-none lg:w-[330px] lg:shrink-0 lg:justify-center lg:items-start lg:h-[calc(100vh-120px)] ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
+            <div className={`fixed inset-0 z-[900] bg-black/80 backdrop-blur-sm flex justify-center items-center p-3 lg:p-0 lg:inset-auto lg:z-auto lg:self-start lg:sticky lg:top-[95px] lg:bg-transparent lg:backdrop-blur-none lg:w-[330px] lg:shrink-0 lg:justify-center lg:items-start lg:h-[calc(100vh-120px)] ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
               {/* Mobile Close Button */}
               {livePreviewOpen && (
                 <button onClick={() => setLivePreviewOpen(false)} className="lg:hidden fixed top-4 right-4 text-white bg-white/15 rounded-full w-10 h-10 flex items-center justify-center text-xl backdrop-blur-md z-[950]">

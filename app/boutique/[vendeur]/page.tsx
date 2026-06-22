@@ -82,7 +82,7 @@ export default async function BoutiquePage({ params }: Props) {
     <div>
       {/* ── En-tête boutique : couverture + logo + contact ── */}
       {/* Bande de couverture */}
-      <div className="relative h-[150px] sm:h-[230px] overflow-hidden bg-gradient-to-br from-green-700 via-green-900 to-dark-900">
+      <div className="relative h-[92px] sm:h-[170px] overflow-hidden bg-gradient-to-br from-green-700 via-green-900 to-dark-900">
         {profile?.cover_url && <Image src={profile.cover_url} alt="Couverture" fill sizes="100vw" className="object-cover" priority />}
         {!profile?.cover_url && (
           <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, #fff 1.5px, transparent 1.5px), radial-gradient(circle at 70% 60%, #fff 1.5px, transparent 1.5px)", backgroundSize: "32px 32px" }} />
@@ -92,56 +92,55 @@ export default async function BoutiquePage({ params }: Props) {
 
       {/* Carte profil (chevauche la couverture) */}
       <div className="wrap">
-        <div className="relative z-10 -mt-10 sm:-mt-14 mb-2 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-6 shadow-lg">
-          <div className="flex flex-col items-center text-center sm:flex-row sm:items-end sm:text-left gap-4">
+        <div className="relative z-10 -mt-8 sm:-mt-12 mb-2 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-3 sm:p-5 shadow-lg">
+          <div className="flex flex-col items-center text-center sm:flex-row sm:items-end sm:text-left gap-2.5 sm:gap-4">
             {/* Logo entreprise — toujours au premier plan, chevauche la couverture */}
-            <div className="relative z-20 -mt-16 sm:-mt-24 h-[104px] w-[104px] sm:h-[120px] sm:w-[120px] rounded-full p-[3px] avatar-ring-premium shrink-0 shadow-2xl">
+            <div className="relative z-20 -mt-12 sm:-mt-20 h-[74px] w-[74px] sm:h-[110px] sm:w-[110px] rounded-full p-[3px] avatar-ring-premium shrink-0 shadow-2xl">
               <img src={avatar} alt={name} className="h-full w-full rounded-full border-2 border-white dark:border-dark-800 object-cover bg-white" />
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-display text-[1.3rem] sm:text-[1.7rem] font-extrabold text-gray-900 dark:text-white leading-tight">{name}</h1>
+                <h1 className="font-display text-[1.1rem] sm:text-[1.6rem] font-extrabold text-gray-900 dark:text-white leading-tight">{name}</h1>
                 {(profile?.role === 'pro' || profile?.role === 'business' || profile?.free_premium) && (
                   <span className="rounded-full bg-gradient-to-r from-gold to-gold-light px-2 py-0.5 text-[.62rem] font-extrabold uppercase tracking-wide text-dark-900">✦ VIP</span>
                 )}
               </div>
-              <p className="text-gray-500 dark:text-white/60 text-[.82rem] sm:text-[.9rem] mt-0.5 line-clamp-2">{bio}</p>
-              <div className="mt-2 flex flex-wrap gap-1.5 text-[.7rem] sm:text-[.78rem]">
+              <p className="text-gray-500 dark:text-white/60 text-[.78rem] sm:text-[.9rem] mt-0.5 line-clamp-1">{bio}</p>
+              <div className="mt-1.5 flex flex-wrap justify-center sm:justify-start gap-1.5 text-[.68rem] sm:text-[.78rem]">
                 {profile?.is_verified ? (
-                  <span className="rounded-full bg-green/10 px-2.5 py-1 font-bold text-green">✅ {role} vérifié</span>
+                  <span className="rounded-full bg-green/10 px-2.5 py-0.5 font-bold text-green">✅ {role} vérifié</span>
                 ) : (
-                  <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2.5 py-1 font-medium text-gray-600 dark:text-white/70">👤 {role}</span>
+                  <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2.5 py-0.5 font-medium text-gray-600 dark:text-white/70">👤 {role}</span>
                 )}
-                <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2.5 py-1 font-medium text-gray-600 dark:text-white/70">🗓️ Depuis {memberSince}</span>
-                <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2.5 py-1 font-medium text-gray-600 dark:text-white/70">📦 {ads.length} annonces</span>
+                <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2.5 py-0.5 font-medium text-gray-600 dark:text-white/70">🗓️ Depuis {memberSince}</span>
               </div>
             </div>
 
             {/* Boutons contact */}
             <div className="flex gap-2 shrink-0">
               {phoneDigits && (
-                <a href={`https://wa.me/${phoneDigits}`} target="_blank" className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-xl bg-[#25D366] px-4 py-2.5 text-[.82rem] font-bold text-white shadow-sm hover:scale-[1.03] transition">💬 WhatsApp</a>
+                <a href={`https://wa.me/${phoneDigits}`} target="_blank" className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-xl bg-[#25D366] px-4 py-2 text-[.8rem] font-bold text-white shadow-sm hover:scale-[1.03] transition">💬 WhatsApp</a>
               )}
               {phoneDigits && (
-                <a href={`tel:${profile?.phone}`} className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-gray-200 dark:border-dark-border bg-white dark:bg-dark-900 px-4 py-2.5 text-[.82rem] font-bold text-gray-800 dark:text-white hover:border-green transition">📞 Appeler</a>
+                <a href={`tel:${profile?.phone}`} className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-gray-200 dark:border-dark-border bg-white dark:bg-dark-900 px-4 py-2 text-[.8rem] font-bold text-gray-800 dark:text-white hover:border-green transition">📞 Appeler</a>
               )}
             </div>
           </div>
 
           {/* Bandeau statistiques */}
-          <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
-            <div className="rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-100 dark:border-dark-border py-2.5 text-center">
-              <div className="font-display text-[1.15rem] sm:text-[1.4rem] font-extrabold text-gray-900 dark:text-white">{ads.length}</div>
-              <div className="text-[.66rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">Annonces</div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-100 dark:border-dark-border py-1.5 text-center">
+              <div className="font-display text-[1.05rem] sm:text-[1.4rem] font-extrabold text-gray-900 dark:text-white">{ads.length}</div>
+              <div className="text-[.62rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">Annonces</div>
             </div>
-            <div className="rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-100 dark:border-dark-border py-2.5 text-center">
-              <div className="font-display text-[1.15rem] sm:text-[1.4rem] font-extrabold text-gray-900 dark:text-white">{formatNumber(totalViews)}</div>
-              <div className="text-[.66rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">Vues</div>
+            <div className="rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-100 dark:border-dark-border py-1.5 text-center">
+              <div className="font-display text-[1.05rem] sm:text-[1.4rem] font-extrabold text-gray-900 dark:text-white">{formatNumber(totalViews)}</div>
+              <div className="text-[.62rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">Vues</div>
             </div>
-            <div className="rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-100 dark:border-dark-border py-2.5 text-center">
-              <div className="font-display text-[1.15rem] sm:text-[1.4rem] font-extrabold text-gold">{reviewCount ? `★ ${avgRating.toFixed(1)}` : "★ —"}</div>
-              <div className="text-[.66rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">{reviewCount ? `${reviewCount} avis` : "Aucun avis"}</div>
+            <div className="rounded-xl bg-gray-50 dark:bg-dark-900 border border-gray-100 dark:border-dark-border py-1.5 text-center">
+              <div className="font-display text-[1.05rem] sm:text-[1.4rem] font-extrabold text-gold">{reviewCount ? `★ ${avgRating.toFixed(1)}` : "★ —"}</div>
+              <div className="text-[.62rem] sm:text-[.72rem] font-semibold uppercase tracking-wide text-gray-500">{reviewCount ? `${reviewCount} avis` : "Aucun avis"}</div>
             </div>
           </div>
 
@@ -159,15 +158,15 @@ export default async function BoutiquePage({ params }: Props) {
         </div>
       </div>
 
-      <div className="wrap py-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold">Annonces de {name}</h2>
-          <Link href="/recherche" className="text-[.82rem] font-semibold text-green hover:underline">Voir tout →</Link>
+      <div className="wrap py-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-display text-[1.1rem] sm:text-[1.4rem] font-extrabold">Annonces de {name}</h2>
+          <Link href="/recherche" className="text-[.8rem] font-semibold text-green hover:underline">Voir tout →</Link>
         </div>
         {categories.length > 0 && (
-          <div className="mb-5 flex flex-wrap gap-2">
+          <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
             {categories.map((c) => (
-              <span key={c} className="rounded-full bg-green/10 px-3 py-1 text-[.74rem] font-semibold text-green">{c}</span>
+              <span key={c} className="shrink-0 whitespace-nowrap rounded-full bg-green/10 px-3 py-1 text-[.72rem] font-semibold text-green">{c}</span>
             ))}
           </div>
         )}

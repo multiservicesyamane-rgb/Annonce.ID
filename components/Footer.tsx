@@ -12,13 +12,22 @@ export default function Footer() {
             La première plateforme de petites annonces premium d'Afrique de l'Ouest. Simple, rapide, de confiance.
           </p>
           <div className="mt-3 flex gap-2">
-            {["💬", "📘", "📷", "🎵"].map((s, i) => (
-              <span
-                key={i}
+            {[
+              { s: "💬", label: "Chaîne WhatsApp", href: "https://whatsapp.com/channel/0029Vb7qR3c6RGJAcYWa8L1I" },
+              { s: "✈️", label: "Telegram", href: "https://t.me/wanteermako" },
+              { s: "📘", label: "Facebook", href: "https://www.facebook.com/wanteermako" },
+            ].map((it) => (
+              <a
+                key={it.label}
+                href={it.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={it.label}
+                aria-label={it.label}
                 className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-white/10 transition hover:bg-gold hover:shadow-glow-gold"
               >
-                {s}
-              </span>
+                {it.s}
+              </a>
             ))}
           </div>
         </div>
