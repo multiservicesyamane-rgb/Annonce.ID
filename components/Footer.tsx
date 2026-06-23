@@ -7,7 +7,9 @@ export default function Footer() {
     <footer className="bg-dark-900 px-4 pb-6 pt-10 text-white/60">
       <div className="mx-auto grid max-w-[1320px] gap-8 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
         <div>
-          <img src="/logo-header.png" alt="Wanteermako" className="h-9 w-auto object-contain" />
+          <span className="inline-flex items-center rounded-lg bg-white px-2.5 py-1.5 shadow-sm">
+            <img src="/logo-full.jpg" alt="Wanteermako" className="h-8 w-auto object-contain" />
+          </span>
           <p className="mt-2.5 max-w-[230px] text-[.8rem] leading-relaxed">
             La première plateforme de petites annonces premium d'Afrique de l'Ouest. Simple, rapide, de confiance.
           </p>

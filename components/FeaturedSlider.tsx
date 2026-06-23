@@ -42,10 +42,10 @@ export default function FeaturedSlider({ listings }: { listings: Item[] }) {
               <span className="relative mt-0.5 w-max rounded-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-3.5 py-1.5 text-[.7rem] font-bold text-white shadow-lg sm:px-5 sm:py-2 sm:text-[.85rem]">Voir l'annonce →</span>
               <span className="relative mt-0.5 hidden text-[.55rem] font-semibold uppercase tracking-widest text-white/40 sm:block sm:text-[.64rem]">Achetez · Vendez · Trouvez facilement</span>
             </div>
-            {/* Image produit (droite) — bien affichée, pas en fond */}
-            <div className="relative w-[44%] bg-gradient-to-br from-gray-100 to-gray-300 dark:from-[#0b0e16] dark:to-[#161b2b]">
+            {/* Image produit (droite) — produit entier visible, centré */}
+            <div className="relative flex w-[44%] items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300 dark:from-[#0b0e16] dark:to-[#161b2b] p-1.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={s.image} alt={s.title} className="h-full w-full object-cover" />
+              <img src={s.image} alt={s.title} className="h-full w-full object-contain" />
             </div>
           </Link>
         ))}

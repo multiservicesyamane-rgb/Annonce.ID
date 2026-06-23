@@ -35,7 +35,9 @@ export default function Header() {
           
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
-            <img src="/logo-header.png" alt="Wanteermako" className="h-[40px] md:h-[50px] w-auto object-contain" />
+            <span className="inline-flex items-center rounded-[10px] bg-white px-1.5 py-1 shadow-sm">
+              <img src="/logo-full.jpg" alt="Wanteermako" className="h-[34px] md:h-[46px] w-auto object-contain" />
+            </span>
           </Link>
 
           {/* Search Bar - Center on PC, Hidden on Mobile */}

@@ -120,8 +120,8 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
       {/* Panneau droit (formulaire) */}
       <div className="flex w-full flex-col justify-center bg-white px-6 py-8 md:w-[460px] md:shrink-0">
         <Link href="/" className="mb-6 flex justify-center">
-          <span className="inline-flex rounded-2xl bg-[#0A0E14] px-5 py-3">
-            <img src="/logo-header.png" alt="Wanteermako" className="h-10 w-auto object-contain" />
+          <span className="inline-flex rounded-2xl bg-white border border-gray-100 px-4 py-2 shadow-sm">
+            <img src="/logo-full.jpg" alt="Wanteermako" className="h-9 w-auto object-contain" />
           </span>
         </Link>
 
