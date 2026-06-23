@@ -132,6 +132,12 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
           {mode === "signup" ? "Inscrivez-vous par email ou avec Google." : "Connectez-vous par email ou avec Google."}
         </p>
 
+        <GoogleButton />
+
+        <div className="my-4 flex items-center gap-3 text-[.78rem] text-gray-400">
+          <div className="h-px flex-1 bg-gray-100" /> ou par email <div className="h-px flex-1 bg-gray-100" />
+        </div>
+
         <form onSubmit={handleEmailAuth} className="flex flex-col gap-3">
           {mode === "signup" && (
             <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nom complet ou boutique" className="rounded-[10px] border-2 border-gray-100 bg-gray-50 px-4 py-3 text-[.92rem] outline-none focus:border-green focus:bg-white transition" />
@@ -142,12 +148,6 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
             {loading ? "⏳ Patientez…" : mode === "signup" ? "Créer mon compte" : "Se connecter"}
           </button>
         </form>
-
-        <div className="my-4 flex items-center gap-3 text-[.78rem] text-gray-400">
-          <div className="h-px flex-1 bg-gray-100" /> ou <div className="h-px flex-1 bg-gray-100" />
-        </div>
-
-        <GoogleButton />
 
         <p className="mt-6 text-center text-[.85rem] text-gray-500">
           {mode === "signup" ? (

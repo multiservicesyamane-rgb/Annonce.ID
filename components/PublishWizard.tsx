@@ -327,7 +327,7 @@ export default function PublishWizard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5">
               <div>
                 <label className="label">Catégorie <span className="text-brand-red">*</span></label>
-                <select className="input" value={catSlug || ""} onChange={(e) => setCatSlug(e.target.value)}>
+                <select className="input" value={catSlug || ""} onChange={(e) => { setCatSlug(e.target.value); setSubCategory(""); }}>
                   <option value="" disabled>Choisir...</option>
                   {CATEGORIES.map((c) => (<option key={c.slug} value={c.slug}>{c.name}</option>))}
                 </select>

@@ -109,7 +109,7 @@ export default async function HomePage() {
   (boutiqueCounts || []).forEach((l: any) => { bCountMap[l.user_id] = (bCountMap[l.user_id] || 0) + 1; });
 
   const boutiques = (allBoutiques || [])
-    .filter((b: any) => (bCountMap[b.id] || 0) > 0 && b.has_boutique !== false)
+    .filter((b: any) => (bCountMap[b.id] || 0) > 0)
     .slice(0, 8);
 
   return (

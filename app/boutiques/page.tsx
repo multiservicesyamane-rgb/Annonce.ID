@@ -32,9 +32,9 @@ export default async function BoutiquesPage() {
     countMap[l.user_id] = (countMap[l.user_id] || 0) + 1;
   });
 
-  // Boutique = vendeur ayant publié AU MOINS 1 produit (sauf s'il l'a masquée)
+  // Boutique = TOUT vendeur ayant au moins 1 annonce active (affichage automatique)
   const boutiques = (allProfiles || []).filter(
-    (p: any) => (countMap[p.id] || 0) > 0 && p.has_boutique !== false,
+    (p: any) => (countMap[p.id] || 0) > 0,
   );
 
   return (
