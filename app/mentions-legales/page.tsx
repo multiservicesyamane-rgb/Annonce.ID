@@ -16,7 +16,7 @@ export default function MentionsLegalesPage() {
         <ul className="list-disc ml-6 mb-4">
           <li><strong>Siège social :</strong> Dakar, Sénégal</li>
           <li><strong>Email :</strong> contact@yamanetech.com</li>
-          <li><strong>Téléphone :</strong> +221 77 000 00 00</li>
+          <li><strong>Téléphone :</strong> +221 77 682 78 51</li>
         </ul>
 
         <h3 className="font-display font-bold text-[1.4rem] mt-8 mb-4 text-gray-900 dark:text-white">2. Hébergement</h3>

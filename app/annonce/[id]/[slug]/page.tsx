@@ -58,7 +58,7 @@ async function fetchAd(idParam: string) {
         id: data.user_id,
         name: data.profiles?.full_name || "Vendeur",
         avatar: data.profiles?.avatar_url || "https://placehold.co/100x100?text=V",
-        phone: data.profiles?.phone || "+221770000000",
+        phone: data.profiles?.phone || "+221776827851",
         rating: "Nouveau",
         sales: 0,
         isPro: data.profiles?.role === "pro",
@@ -331,12 +331,12 @@ export default async function AnnoncePage({ params }: Props) {
           <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
           <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-white"></span>
         </Link>
-        <a href={`tel:${(seller?.phone || "+221770000000").replace(/\s/g, "")}`} className="w-[3.8rem] h-[3.4rem] flex flex-col items-center justify-center rounded-xl border border-green-200 dark:border-green-900/30 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/10 shrink-0 shadow-sm transition hover:bg-green-100">
+        <a href={`tel:${(seller?.phone || "+221776827851").replace(/\s/g, "")}`} className="w-[3.8rem] h-[3.4rem] flex flex-col items-center justify-center rounded-xl border border-green-200 dark:border-green-900/30 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/10 shrink-0 shadow-sm transition hover:bg-green-100">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
         </a>
         <a
           href={(() => {
-            let clean = (seller?.phone || "+221770000000").replace(/[^0-9]/g, "");
+            let clean = (seller?.phone || "+221776827851").replace(/[^0-9]/g, "");
             if (clean.length === 9 && (clean.startsWith("7") || clean.startsWith("3"))) {
               clean = "221" + clean;
             }
