@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     .from("listings")
     .select("id, slug, title, category, price, price_type, location, image")
     .eq("status", "active")
-    .or(`title.ilike.%${q}%,category.ilike.%${q}%`)
+    .or(`title.ilike.%${q}%,category.ilike.%${q}%,category_slug.ilike.%${q}%`)
     .order("created_at", { ascending: false })
     .limit(6);
 

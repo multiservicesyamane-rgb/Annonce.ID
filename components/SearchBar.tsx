@@ -94,6 +94,14 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
       }
     }
     setOpen(false);
+    // Si la recherche correspond à une catégorie → page catégorie (résultats exacts)
+    const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const nq = norm(query);
+    const matchCat = nq.length >= 3 && CATEGORIES.find((c) => {
+      const n = norm(c.name), s = norm(c.slug);
+      return n === nq || s === nq || n.startsWith(nq) || s.startsWith(nq) || nq.startsWith(s) || nq.startsWith(n);
+    });
+    if (matchCat) { router.push(`/categorie/${matchCat.slug}`); return; }
     router.push(`/recherche?q=${encodeURIComponent(query)}`);
   }
 

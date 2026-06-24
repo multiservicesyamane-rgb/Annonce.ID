@@ -19,7 +19,7 @@ export default async function SearchPage({ searchParams }: Props) {
   let query = supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, description, views, created_at, premium, profiles(role)').eq('status', 'active');
 
   if (q) {
-    query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%,location.ilike.%${q}%`);
+    query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%,category_slug.ilike.%${q}%,location.ilike.%${q}%`);
   }
 
   // Note: we don't strictly have countryCode in DB, we use location. 
