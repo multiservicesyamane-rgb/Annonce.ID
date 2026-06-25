@@ -8,7 +8,7 @@ import { formatNumber } from "@/lib/utils";
  */
 export default function PriceSlider({
   min = 0,
-  max = 5000000,
+  max = 1000000000,
   onChange,
 }: {
   min?: number;

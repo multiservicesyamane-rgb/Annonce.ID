@@ -30,7 +30,7 @@ export default function ListingView({
   const [category, setCategory] = useState(searchParams.get("category") || "Toutes");
   const [premiumOnly, setPremiumOnly] = useState(searchParams.get("premium") === "1");
   const [minPrice, setMinPrice] = useState(Number(searchParams.get("min")) || 0);
-  const [maxPrice, setMaxPrice] = useState(Number(searchParams.get("max")) || 5_000_000);
+  const [maxPrice, setMaxPrice] = useState(Number(searchParams.get("max")) || 1_000_000_000);
   const [condition, setCondition] = useState(searchParams.get("condition") || "Tous");
   const [sellerType, setSellerType] = useState(searchParams.get("sellerType") || "Tous");
   const [location, setLocation] = useState(searchParams.get("location") || "Toutes");
@@ -45,7 +45,7 @@ export default function ListingView({
     setCategory(searchParams.get("category") || "Toutes");
     setPremiumOnly(searchParams.get("premium") === "1");
     setMinPrice(Number(searchParams.get("min")) || 0);
-    setMaxPrice(Number(searchParams.get("max")) || 5_000_000);
+    setMaxPrice(Number(searchParams.get("max")) || 1_000_000_000);
     setCondition(searchParams.get("condition") || "Tous");
     setSellerType(searchParams.get("sellerType") || "Tous");
     setLocation(searchParams.get("location") || "Toutes");
@@ -192,7 +192,7 @@ export default function ListingView({
               title="Aucune annonce trouvée" 
               description="Modifiez vos filtres ou effectuez une nouvelle recherche pour trouver ce que vous cherchez." 
               ctaLabel="Effacer les filtres"
-              onCtaClick={() => handleApplyFilters({ premiumOnly: false, priceRange: [0, 5000000] })}
+              onCtaClick={() => handleApplyFilters({ premiumOnly: false, priceRange: [0, 1000000000] })}
             />
           ) : (
             <>

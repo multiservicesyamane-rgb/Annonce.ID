@@ -24,7 +24,7 @@ export default function FilterDrawer({
   const [condition, setCondition] = useState<string>("Tous");
   const [sellerType, setSellerType] = useState<string>("Tous");
   const [location, setLocation] = useState<string>("Toutes");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000000]);
 
   // Prevent scroll when open on mobile
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function FilterDrawer({
     setSellerType(searchParams.get("sellerType") || "Tous");
     setLocation(searchParams.get("location") || "Toutes");
     const min = Number(searchParams.get("min")) || 0;
-    const max = Number(searchParams.get("max")) || 5000000;
+    const max = Number(searchParams.get("max")) || 1000000000;
     setPriceRange([min, max]);
   }, [searchParams, open]);
 

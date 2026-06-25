@@ -96,10 +96,13 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
     setOpen(false);
     // Si la recherche correspond à une catégorie → page catégorie (résultats exacts)
     const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-    const nq = norm(query);
-    const matchCat = nq.length >= 3 && CATEGORIES.find((c) => {
-      const n = norm(c.name), s = norm(c.slug);
-      return n === nq || s === nq || n.startsWith(nq) || s.startsWith(nq) || nq.startsWith(s) || nq.startsWith(n);
+    const stop = new Set(["et", "de", "des", "du", "la", "le", "les", "en", "pour", "autre", "transport", "accessoires", "multimedia", "opportunites"]);
+    const toks = (s: string) => norm(s).split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !stop.has(w));
+    const qToks = toks(query);
+    const matchCat = qToks.length > 0 && CATEGORIES.find((c) => {
+      const slug = norm(c.slug);
+      const cToks = new Set([...toks(c.name), slug]);
+      return qToks.some((w) => cToks.has(w) || slug.startsWith(w) || w.startsWith(slug));
     });
     if (matchCat) { router.push(`/categorie/${matchCat.slug}`); return; }
     router.push(`/recherche?q=${encodeURIComponent(query)}`);
