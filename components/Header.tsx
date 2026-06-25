@@ -28,9 +28,9 @@ export default function Header() {
   }, [supabase]);
 
   return (
-    <header className="header-shell sticky top-0 z-[900] w-full bg-[#0A0E14]/95 dark:bg-[#0A0E14]/95 backdrop-blur-md border-b border-gray-200 dark:border-white/5 transition-colors">
-      <div className="mx-auto max-w-[1320px] px-3 py-1 md:py-1.5">
-        
+    <header className="sticky top-0 z-[900] w-full px-2 pt-2 pb-1 transition-colors">
+      <div className="header-shell mx-auto max-w-[1320px] rounded-2xl border border-white/5 bg-[#0A0E14]/85 backdrop-blur-2xl px-3 py-1.5 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.55)]">
+
         <div className="flex items-center justify-between gap-2 md:gap-4">
           
           {/* Logo */}

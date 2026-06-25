@@ -90,9 +90,28 @@ export default function AdCard({ ad }: { ad: Listing }) {
           {ad.title}
         </h3>
 
-        {/* Prix */}
-        <div className={`font-display text-[0.88rem] md:text-[1.05rem] font-extrabold tracking-tight ${priceStyles}`}>
-          {ad.price}
+        {/* Prix + badge de confiance */}
+        <div className="flex items-center justify-between gap-1">
+          <div className={`font-display text-[0.88rem] md:text-[1.05rem] font-extrabold tracking-tight ${priceStyles}`}>
+            {ad.price}
+          </div>
+          {(() => {
+            const trust = ad.seller?.isVerified
+              ? { t: "Vérifié", cls: "border-green-300/50 bg-green-500/10 text-green-600 dark:text-green-400" }
+              : isPremium
+              ? { t: "Authenticité", cls: "border-amber-300/50 bg-amber-400/10 text-amber-600 dark:text-amber-400" }
+              : isFeatured
+              ? { t: "À la une", cls: "border-purple-300/50 bg-purple-500/10 text-purple-600 dark:text-purple-400" }
+              : ad.seller?.isPro
+              ? { t: "Pro", cls: "border-blue-300/50 bg-blue-500/10 text-blue-600 dark:text-blue-400" }
+              : null;
+            return trust ? (
+              <span className={`shrink-0 inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[0.5rem] md:text-[0.56rem] font-bold uppercase tracking-wide ${trust.cls}`}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                {trust.t}
+              </span>
+            ) : null;
+          })()}
         </div>
 
         {/* Localisation & date (compact) */}

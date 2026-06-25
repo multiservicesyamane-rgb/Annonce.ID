@@ -274,20 +274,25 @@ export default async function AnnoncePage({ params }: Props) {
             <div className="my-2 hidden lg:block border-t border-gray-100 dark:border-dark-border"></div>
 
             {seller && (
-              <div className="flex items-center gap-3 rounded-[16px] bg-gray-50/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 p-3 sm:p-3.5 shadow-sm">
-                <div className="avatar-ring-standard p-[2px] flex items-center justify-center h-[46px] w-[46px] rounded-full shrink-0">
-                  <Image src={seller.avatar} alt={seller.name} width={42} height={42} className="h-full w-full rounded-full border border-white dark:border-[#111722] object-cover" />
+              <div className="relative flex items-center gap-3 overflow-hidden rounded-[18px] border border-gray-100 dark:border-white/10 bg-gradient-to-br from-white to-gray-50 dark:from-white/[0.05] dark:to-transparent p-3 sm:p-3.5 shadow-sm">
+                {(seller.isPro || seller.isVerified) && (
+                  <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-400/10 blur-2xl" />
+                )}
+                <div className="rounded-full p-[2.5px] shrink-0 shadow-md" style={{ background: (seller.isPro || seller.isVerified) ? "conic-gradient(from 210deg,#F7DF8B,#C9991F,#FBE9A8,#B8860B,#F7DF8B)" : "linear-gradient(135deg,#9CA3AF,#D1D5DB)" }}>
+                  <div className="rounded-full bg-white p-[2px] dark:bg-[#111722]">
+                    <Image src={seller.avatar} alt={seller.name} width={48} height={48} className="h-[44px] w-[44px] rounded-full object-cover" />
+                  </div>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[0.88rem] font-bold text-gray-900 dark:text-white truncate">
-                    {seller.name} 
-                    {seller.isPro && <span className="badge b-pro !text-[0.58rem] ml-1">PRO</span>}
-                    {seller.isVerified && <span className="ml-1 rounded bg-green/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-green">✓ Vérifié</span>}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[0.9rem] font-extrabold text-gray-900 dark:text-white truncate">{seller.name}</span>
+                    {seller.isPro && <span className="rounded-md bg-gradient-to-r from-neon-gold to-[#D4891A] px-1.5 py-0.5 text-[0.55rem] font-black uppercase tracking-wide text-dark-900">PRO</span>}
+                    {seller.isVerified && <span className="inline-flex items-center gap-0.5 rounded-md bg-green/10 px-1.5 py-0.5 text-[0.58rem] font-bold text-green"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>Vérifié</span>}
                   </div>
                   <div className="text-[0.72rem] text-gray-500 dark:text-gray-400 mt-0.5">⭐ {seller.rating} · {seller.sales} ventes</div>
                 </div>
-                <Link href={`/boutique/${seller.id}`} className="btn btn-xs sm:btn-sm btn-outline dark:border-white/20 dark:text-white hover:bg-[#6366F1] dark:hover:bg-green dark:hover:border-green text-[0.75rem] px-2.5 font-bold rounded-lg shrink-0">
-                  Boutique
+                <Link href={`/boutique/${seller.id}`} className="shrink-0 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-3.5 py-2 text-[0.75rem] font-bold text-white shadow-md shadow-purple-500/20 transition hover:scale-[1.04]">
+                  Boutique →
                 </Link>
               </div>
             )}
