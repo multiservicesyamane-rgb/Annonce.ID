@@ -52,7 +52,7 @@ export default function AdCard({ ad }: { ad: Listing }) {
       href={`/annonce/${ad.id}/${ad.slug}`}
       className={`group flex flex-col overflow-hidden rounded-[20px] transition-all duration-300 hover:-translate-y-1.5 w-full ${cardStyles}`}
     >
-      {/* Image Container — carré, image pleine (cover) */}
+      {/* Image Container — carré, image pleine (cover), badges minimaux */}
       <div className="relative overflow-hidden w-full aspect-square bg-gray-50 dark:bg-black/40">
         <Image
           src={ad.image}
@@ -63,36 +63,44 @@ export default function AdCard({ ad }: { ad: Listing }) {
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
         />
 
-        {/* Badges Overlay — compacts */}
-        <div className="absolute top-1.5 left-1.5 flex flex-wrap gap-1 pointer-events-none max-w-[80%]">
-          {isPremium && (
-            <span className="bg-gradient-to-r from-neon-gold to-[#D4891A] text-dark-900 text-[0.46rem] md:text-[0.52rem] font-extrabold px-1.5 py-[0.1rem] rounded uppercase tracking-wide shadow">
-              ★ Premium
+        {/* Badge Premium / À la Une — petit pill glassmorphism en haut gauche, ne gêne pas l'image */}
+        {(isPremium || isFeatured) && (
+          <span className={`absolute top-2 left-2 inline-flex items-center gap-0.5 rounded-full px-2 py-[2px] text-[0.5rem] md:text-[0.56rem] font-extrabold uppercase tracking-wide backdrop-blur-md shadow-sm pointer-events-none ${isPremium ? 'bg-neon-gold/80 text-dark-900' : 'bg-purple-600/80 text-white'}`}>
+            {isPremium ? '★' : '✦'}
+          </span>
+        )}
+        
+        {/* Favorite Button — compact, coin haut droit */}
+        <FavButton
+          adId={ad.id}
+          className="absolute right-2 top-2 bg-white/80 dark:bg-dark-900/70 backdrop-blur-md p-1 rounded-full hover:bg-white text-gray-400 hover:text-red-500 transition-all border border-transparent dark:border-white/10 shadow-sm"
+        />
+      </div>
+
+      {/* Info Content Section — catégorie + titre + prix */}
+      <div className="flex flex-1 flex-col gap-0.5 p-2 md:p-2.5">
+        {/* Catégorie tag + badge Premium/Une label — placés ici pour ne pas gêner l'image */}
+        <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+          {ad.category && (
+            <span
+              className="inline-block max-w-[70%] truncate rounded px-1.5 py-[1px] text-[0.44rem] md:text-[0.5rem] font-bold uppercase tracking-wide text-white"
+              style={{ backgroundColor: colorForCategory(ad.category) }}
+            >
+              {ad.category}
             </span>
           )}
-          {isFeatured && (
-            <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[0.46rem] md:text-[0.52rem] font-extrabold px-1.5 py-[0.1rem] rounded uppercase tracking-wide shadow">
-              ✦ À la Une
+          {isPremium && (
+            <span className="text-[0.44rem] md:text-[0.5rem] font-extrabold uppercase tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#D4891A] to-neon-gold">
+              Premium
+            </span>
+          )}
+          {isFeatured && !isPremium && (
+            <span className="text-[0.44rem] md:text-[0.5rem] font-extrabold uppercase tracking-wide text-purple-500 dark:text-purple-400">
+              À la Une
             </span>
           )}
         </div>
-        
-        {/* Favorite Button */}
-        <FavButton
-          adId={ad.id}
-          className="absolute right-2.5 top-2.5 bg-white/95 dark:bg-dark-900/80 backdrop-blur-md p-1.5 rounded-full hover:bg-white text-gray-400 hover:text-red-500 transition-all border border-transparent dark:border-white/10 shadow-sm"
-        />
 
-        {/* Badge catégorie — couleur spécifique (compact) */}
-        {ad.category && (
-          <span className="absolute bottom-1.5 left-1.5 max-w-[75%] truncate rounded px-1.5 py-[0.1rem] text-[0.44rem] md:text-[0.5rem] font-bold uppercase tracking-wide text-white shadow" style={{ backgroundColor: colorForCategory(ad.category) }}>
-            {ad.category}
-          </span>
-        )}
-      </div>
-
-      {/* Info Content Section — condensée */}
-      <div className="flex flex-1 flex-col gap-0.5 p-2 md:p-2.5">
         {/* Titre sur 2 lignes */}
         <h3 className={`line-clamp-2 min-h-[2.1em] text-[0.74rem] md:text-[0.84rem] font-bold leading-snug transition-colors ${titleStyles}`}>
           {ad.title}
