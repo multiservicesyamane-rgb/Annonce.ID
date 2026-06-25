@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import PriceSlider from "./PriceSlider";
 import { CATEGORIES } from "@/lib/constants";
@@ -18,6 +19,8 @@ export default function FilterDrawer({
   onApply: (filters: any) => void;
 }) {
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const [category, setCategory] = useState<string>("Toutes");
   const [premiumOnly, setPremiumOnly] = useState(false);
@@ -48,20 +51,7 @@ export default function FilterDrawer({
     setPriceRange([min, max]);
   }, [searchParams, open]);
 
-  return (
-    <>
-      {/* Overlay mobile */}
-      {open && (
-        <div 
-          className="fixed inset-0 z-[990] bg-black/50 backdrop-blur-sm lg:hidden animate-fadeUp"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Drawer */}
-      <div className={`fixed inset-y-0 right-0 z-[995] w-[300px] bg-white dark:bg-dark-800 shadow-2xl transition-transform duration-300 lg:static lg:z-auto lg:block lg:w-[260px] lg:translate-x-0 lg:shadow-none lg:border-r lg:border-gray-100 dark:lg:border-dark-border ${
-        open ? "translate-x-0" : "translate-x-full"
-      }`}>
+  const panel = (
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border p-4">
@@ -162,7 +152,25 @@ export default function FilterDrawer({
             </button>
           </div>
         </div>
-      </div>
+  );
+
+  return (
+    <>
+      {/* Desktop : sidebar statique (colonne du grid) */}
+      <aside className="hidden lg:block lg:w-[260px] lg:shrink-0 lg:self-start lg:border-r lg:border-gray-100 dark:lg:border-dark-border">
+        {panel}
+      </aside>
+
+      {/* Mobile : tiroir via portail — toujours au-dessus de tout */}
+      {mounted && createPortal(
+        <div>
+          {open && <div className="fixed inset-0 z-[1190] bg-black/50 backdrop-blur-sm" onClick={onClose} />}
+          <div className={`fixed inset-y-0 right-0 z-[1200] flex w-[300px] max-w-[85vw] flex-col bg-white dark:bg-dark-800 shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}>
+            {panel}
+          </div>
+        </div>,
+        document.body,
+      )}
     </>
   );
 }

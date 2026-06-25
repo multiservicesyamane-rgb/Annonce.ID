@@ -94,10 +94,12 @@ export default async function BoutiquePage({ params }: Props) {
 
       {/* Carte profil premium (glass) */}
       <div className="wrap">
-        <div className="relative z-10 -mt-16 sm:-mt-24 mb-3 overflow-hidden rounded-[26px] border border-gray-100 dark:border-white/10 bg-gradient-to-b from-white to-gray-50/70 dark:from-[#171430]/90 dark:to-[#0C0A1A]/90 dark:backdrop-blur-2xl p-5 sm:p-7 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)] dark:shadow-[0_30px_90px_-30px_rgba(124,58,237,0.45)]">
-          {/* halos déco (sombre) */}
-          <div className="pointer-events-none absolute -top-24 left-1/2 hidden h-64 w-64 -translate-x-1/2 rounded-full bg-purple-500/15 blur-3xl dark:block" />
-          <div className="pointer-events-none absolute -right-20 top-10 hidden h-52 w-52 rounded-full bg-amber-400/10 blur-3xl dark:block" />
+        <div className="relative z-10 -mt-16 sm:-mt-24 mb-3 rounded-[26px] border border-gray-100 dark:border-white/10 bg-gradient-to-b from-white to-gray-50/70 dark:from-[#171430]/90 dark:to-[#0C0A1A]/90 dark:backdrop-blur-2xl p-5 sm:p-7 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)] dark:shadow-[0_30px_90px_-30px_rgba(124,58,237,0.45)]">
+          {/* halos déco (sombre) — couche clippée pour ne pas couper l'avatar */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[26px]">
+            <div className="absolute -top-24 left-1/2 hidden h-64 w-64 -translate-x-1/2 rounded-full bg-purple-500/15 blur-3xl dark:block" />
+            <div className="absolute -right-20 top-10 hidden h-52 w-52 rounded-full bg-amber-400/10 blur-3xl dark:block" />
+          </div>
 
           <div className="relative flex flex-col items-center text-center">
             {/* Avatar — anneau or sublime */}
