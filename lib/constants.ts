@@ -367,6 +367,33 @@ export const categoryBySlug = (slug: string) =>
 export const categoryByName = (name: string) =>
   CATEGORIES.find((c) => c.name === name);
 
+// Couleur spécifique par catégorie (badges À la Une, puces, etc.)
+export const CATEGORY_COLORS: Record<string, string> = {
+  vehicules: "#2563EB",        // bleu
+  immobilier: "#16A34A",       // vert
+  electronique: "#7C3AED",     // violet
+  maison: "#EA580C",           // orange
+  mode: "#DB2777",             // rose
+  emploi: "#0891B2",           // cyan
+  services: "#CA8A04",         // doré
+  sport: "#DC2626",            // rouge
+  "equipements-pro": "#475569",// ardoise
+  agriculture: "#15803D",      // vert foncé
+  animaux: "#B45309",          // ambre
+  entreprises: "#9333EA",      // magenta
+};
+
+/** Couleur d'une catégorie à partir d'un slug, d'un nom de catégorie OU d'une sous-catégorie. */
+export function colorForCategory(slugOrName?: string): string {
+  if (!slugOrName) return "#16A34A";
+  const k = slugOrName.toLowerCase().trim();
+  if (CATEGORY_COLORS[k]) return CATEGORY_COLORS[k];
+  const c = CATEGORIES.find(
+    (cat) => cat.slug === k || cat.name.toLowerCase() === k || cat.subs.some((s) => s.toLowerCase() === k),
+  );
+  return (c && CATEGORY_COLORS[c.slug]) || "#16A34A";
+}
+
 // ───────── Villes et Régions (Sénégal) ─────────
 export const SENEGAL_REGIONS = [
   {

@@ -54,8 +54,15 @@ export default function ListingView({
 
   const filtered = useMemo(() => {
     let list = initial.filter((l) => {
-      // Filter by category
-      if (category !== "Toutes" && l.category !== category) return false;
+      // Filtre par catégorie principale : une annonce porte sa SOUS-catégorie,
+      // on vérifie donc qu'elle appartient bien à la catégorie sélectionnée.
+      if (category !== "Toutes") {
+        const selCat = CATEGORIES.find((c) => c.name === category);
+        const ok = selCat
+          ? (l.category === selCat.name || selCat.subs.includes(l.category) || (l as any).category_slug === selCat.slug)
+          : l.category === category;
+        if (!ok) return false;
+      }
       
       if (premiumOnly && !l.premium) return false;
       const num = Number(l.price.replace(/[^0-9]/g, "")) || 0;

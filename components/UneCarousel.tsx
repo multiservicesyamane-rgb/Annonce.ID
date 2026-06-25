@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Listing } from "@/lib/types";
+import { colorForCategory } from "@/lib/constants";
 function getRelativeTime(dateString?: string) {
   if (!dateString) return "";
   try {
@@ -102,6 +103,12 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
               <div className="absolute top-1.5 left-1.5 bg-white/95 dark:bg-dark-900/90 text-[#6D28D9] dark:text-neon-gold text-[8px] md:text-[9px] font-extrabold px-2 py-0.5 rounded-full tracking-wider uppercase shadow-md flex items-center gap-0.5 border border-purple-200 dark:border-white/5">
                 <span>✦</span> À la Une
               </div>
+              {/* Badge catégorie — couleur spécifique */}
+              {ad.category && (
+                <div className="absolute top-1.5 right-1.5 max-w-[60%] truncate text-white text-[8px] md:text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wide shadow-md" style={{ backgroundColor: colorForCategory(ad.category) }}>
+                  {ad.category}
+                </div>
+              )}
             </div>
 
             {/* Info details */}
