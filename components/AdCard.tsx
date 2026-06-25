@@ -63,15 +63,15 @@ export default function AdCard({ ad }: { ad: Listing }) {
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
         />
 
-        {/* Badges Overlay */}
-        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 pointer-events-none">
+        {/* Badges Overlay — compacts */}
+        <div className="absolute top-1.5 left-1.5 flex flex-wrap gap-1 pointer-events-none max-w-[80%]">
           {isPremium && (
-            <span className="bg-gradient-to-r from-neon-gold to-[#D4891A] text-dark-900 text-[0.6rem] md:text-[0.65rem] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-md">
+            <span className="bg-gradient-to-r from-neon-gold to-[#D4891A] text-dark-900 text-[0.46rem] md:text-[0.52rem] font-extrabold px-1.5 py-[0.1rem] rounded uppercase tracking-wide shadow">
               ★ Premium
             </span>
           )}
           {isFeatured && (
-            <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[0.6rem] md:text-[0.65rem] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-md animate-pulse">
+            <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[0.46rem] md:text-[0.52rem] font-extrabold px-1.5 py-[0.1rem] rounded uppercase tracking-wide shadow">
               ✦ À la Une
             </span>
           )}
@@ -83,9 +83,9 @@ export default function AdCard({ ad }: { ad: Listing }) {
           className="absolute right-2.5 top-2.5 bg-white/95 dark:bg-dark-900/80 backdrop-blur-md p-1.5 rounded-full hover:bg-white text-gray-400 hover:text-red-500 transition-all border border-transparent dark:border-white/10 shadow-sm"
         />
 
-        {/* Badge catégorie — couleur spécifique */}
+        {/* Badge catégorie — couleur spécifique (compact) */}
         {ad.category && (
-          <span className="absolute bottom-2 left-2 max-w-[82%] truncate rounded-md px-1.5 py-0.5 text-[0.5rem] md:text-[0.56rem] font-bold uppercase tracking-wide text-white shadow-md" style={{ backgroundColor: colorForCategory(ad.category) }}>
+          <span className="absolute bottom-1.5 left-1.5 max-w-[75%] truncate rounded px-1.5 py-[0.1rem] text-[0.44rem] md:text-[0.5rem] font-bold uppercase tracking-wide text-white shadow" style={{ backgroundColor: colorForCategory(ad.category) }}>
             {ad.category}
           </span>
         )}
@@ -103,23 +103,12 @@ export default function AdCard({ ad }: { ad: Listing }) {
           <div className={`font-display text-[0.88rem] md:text-[1.05rem] font-extrabold tracking-tight ${priceStyles}`}>
             {ad.price}
           </div>
-          {(() => {
-            const trust = ad.seller?.isVerified
-              ? { t: "Vérifié", cls: "border-green-300/50 bg-green-500/10 text-green-600 dark:text-green-400" }
-              : isPremium
-              ? { t: "Authenticité", cls: "border-amber-300/50 bg-amber-400/10 text-amber-600 dark:text-amber-400" }
-              : isFeatured
-              ? { t: "À la une", cls: "border-purple-300/50 bg-purple-500/10 text-purple-600 dark:text-purple-400" }
-              : ad.seller?.isPro
-              ? { t: "Pro", cls: "border-blue-300/50 bg-blue-500/10 text-blue-600 dark:text-blue-400" }
-              : null;
-            return trust ? (
-              <span className={`shrink-0 inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[0.5rem] md:text-[0.56rem] font-bold uppercase tracking-wide ${trust.cls}`}>
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-                {trust.t}
-              </span>
-            ) : null;
-          })()}
+          {(ad.seller?.isVerified || ad.seller?.isPro) && (
+            <span className={`shrink-0 inline-flex items-center gap-0.5 rounded border px-1 py-[0.1rem] text-[0.46rem] md:text-[0.5rem] font-bold ${ad.seller?.isVerified ? "border-green-300/50 bg-green-500/10 text-green-600 dark:text-green-400" : "border-blue-300/50 bg-blue-500/10 text-blue-600 dark:text-blue-400"}`}>
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+              {ad.seller?.isVerified ? "Vérifié" : "Pro"}
+            </span>
+          )}
         </div>
 
         {/* Localisation & date (compact) */}

@@ -38,6 +38,19 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/categorie") ||
     pathname.startsWith("/recherche");
 
+  // Bouton WhatsApp flottant : seulement pages "support" (pas sur les grilles où il gêne)
+  const showWhatsApp =
+    !hideChrome && (
+      pathname === "/" ||
+      pathname.startsWith("/contact") ||
+      pathname.startsWith("/aide") ||
+      pathname.startsWith("/securite") ||
+      pathname.startsWith("/cgu") ||
+      pathname.startsWith("/mentions") ||
+      pathname.startsWith("/a-propos") ||
+      pathname.startsWith("/blog")
+    );
+
   if (isAdmin) {
     return <>{children}</>;
   }
@@ -49,7 +62,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <main className={`min-h-[40vh] ${hideBottomNav ? 'pb-8' : 'pb-20 lg:pb-0'}`}>{children}</main>
       {!noFooter && <Footer />}
       {!hideBottomNav && <BottomNav />}
-      {!(hideChrome || isAnnoncePage) && <WhatsAppFloat />}
+      {showWhatsApp && <WhatsAppFloat />}
     </ToastProvider>
   );
 }
