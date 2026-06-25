@@ -66,13 +66,23 @@ export default function Header() {
               </Link>
             )}
 
-            {/* Account Icon (mobile) */}
-            <Link href={user ? "/dashboard" : "/connexion"} className="md:hidden text-gray-600 dark:text-white hover:text-green transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-            </Link>
+            {/* Compte / Connexion (mobile) — clair pour tous */}
+            {user ? (
+              <Link href="/dashboard" aria-label="Mon compte" className="md:hidden flex h-9 w-9 items-center justify-center rounded-full border border-green-500/40 bg-green-500/15 text-green-600 dark:text-green-400">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </Link>
+            ) : (
+              <Link href="/connexion" className="md:hidden inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-green-500 to-[#F5A623] px-3 py-1.5 text-[.78rem] font-extrabold text-white shadow-md">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                Connexion
+              </Link>
+            )}
 
             {/* Desktop Buttons */}
             <div className="hidden md:flex items-center gap-2">

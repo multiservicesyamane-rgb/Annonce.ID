@@ -26,11 +26,11 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
   };
 
   // Destination après connexion : ?redirect=/... (ex. la fiche produit visée),
-  // sinon le tableau de bord. On n'accepte que des chemins internes (sécurité).
+  // sinon l'ACCUEIL. On n'accepte que des chemins internes (sécurité).
   const getRedirect = () => {
-    if (typeof window === "undefined") return "/dashboard";
+    if (typeof window === "undefined") return "/";
     const r = new URLSearchParams(window.location.search).get("redirect") || "";
-    return r.startsWith("/") && !r.startsWith("//") ? r : "/dashboard";
+    return r.startsWith("/") && !r.startsWith("//") ? r : "/";
   };
 
   async function handleEmailAuth(e: React.FormEvent) {

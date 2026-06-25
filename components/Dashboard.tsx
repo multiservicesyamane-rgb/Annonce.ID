@@ -9,6 +9,7 @@ import AdCard from "./AdCard";
 import SellerAiTips from "./SellerAiTips";
 import ReferralWidget from "./ReferralWidget";
 import BrandSocialStrip from "./BrandSocialStrip";
+import EnableNotifications from "./EnableNotifications";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage";
 import { whatsappLink } from "@/lib/payment";
@@ -567,7 +568,10 @@ export default function Dashboard() {
               <SellerAiTips />
               <ReferralWidget />
             </div>
-            <div className="mb-6"><BrandSocialStrip /></div>
+            <div className="mb-6 grid gap-4 lg:grid-cols-2">
+              <EnableNotifications />
+              <BrandSocialStrip />
+            </div>
 
             {ads.length > 0 && (() => {
               const byCat: Record<string, number> = {};

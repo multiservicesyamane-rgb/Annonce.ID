@@ -103,6 +103,13 @@ export default function ContactActions({ phone, title, adId, sellerId }: { phone
       return;
     }
 
+    // Notifie le vendeur (push + email) — best-effort
+    fetch("/api/notify/message", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ toUserId: sellerId, listingId: adId, listingTitle: title }),
+    }).catch(() => {});
+
     router.push(`/dashboard?panel=messages&contact=${sellerId}&listing=${adId}`);
   };
 
