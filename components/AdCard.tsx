@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Listing } from "@/lib/types";
 import FavButton from "./FavButton";
+import { colorForCategory } from "@/lib/constants";
 
 function getRelativeTime(dateString?: string) {
   if (!dateString) return "";
@@ -77,10 +78,17 @@ export default function AdCard({ ad }: { ad: Listing }) {
         </div>
         
         {/* Favorite Button */}
-        <FavButton 
-          adId={ad.id} 
-          className="absolute right-2.5 top-2.5 bg-white/95 dark:bg-dark-900/80 backdrop-blur-md p-1.5 rounded-full hover:bg-white text-gray-400 hover:text-red-500 transition-all border border-transparent dark:border-white/10 shadow-sm" 
+        <FavButton
+          adId={ad.id}
+          className="absolute right-2.5 top-2.5 bg-white/95 dark:bg-dark-900/80 backdrop-blur-md p-1.5 rounded-full hover:bg-white text-gray-400 hover:text-red-500 transition-all border border-transparent dark:border-white/10 shadow-sm"
         />
+
+        {/* Badge catégorie — couleur spécifique */}
+        {ad.category && (
+          <span className="absolute bottom-2 left-2 max-w-[82%] truncate rounded-md px-1.5 py-0.5 text-[0.5rem] md:text-[0.56rem] font-bold uppercase tracking-wide text-white shadow-md" style={{ backgroundColor: colorForCategory(ad.category) }}>
+            {ad.category}
+          </span>
+        )}
       </div>
 
       {/* Info Content Section — condensée */}

@@ -6,17 +6,22 @@ import { formatNumber } from "@/lib/utils";
 export const metadata = { title: "Recherche" };
 export const dynamic = 'force-dynamic';
 
-type Props = { searchParams: { q?: string; pays?: string } };
+type Props = { searchParams: { q?: string; pays?: string; featured?: string } };
 
 export default async function SearchPage({ searchParams }: Props) {
   const q = searchParams.q ?? "";
   const pays = searchParams.pays ?? "";
+  const featuredOnly = searchParams.featured === "1";
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  let query = supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, description, views, created_at, premium, profiles(role)').eq('status', 'active');
+  let query = supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, description, views, created_at, premium, featured, is_featured, profiles(role)').eq('status', 'active');
+
+  if (featuredOnly) {
+    query = query.or('featured.eq.true,is_featured.eq.true');
+  }
 
   if (q) {
     query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%,category_slug.ilike.%${q}%,location.ilike.%${q}%`);
@@ -41,6 +46,7 @@ export default async function SearchPage({ searchParams }: Props) {
     views: ad.views ?? 0,
     created_at: ad.created_at,
     premium: ad.premium || false,
+    featured: ad.featured || ad.is_featured || false,
     specs: ad.specs || {},
     seller: {
       isPro: ad.profiles?.role === 'pro'
@@ -48,7 +54,9 @@ export default async function SearchPage({ searchParams }: Props) {
   } as any));
 
   const country = COUNTRIES.find((c) => c.code === pays);
-  const title = q
+  const title = featuredOnly
+    ? "✦ Annonces à la Une"
+    : q
     ? `Résultats pour « ${q} »`
     : country
       ? `Annonces — ${country.flag} ${country.name}`

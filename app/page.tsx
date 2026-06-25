@@ -133,7 +133,7 @@ export default async function HomePage() {
             <h2 className="flex items-center gap-2 font-display text-[1rem] md:text-[1.3rem] font-black text-white">
               <span className="text-neon-gold drop-shadow">✦</span> Annonces à la Une
             </h2>
-            <Link href="/recherche" className="shrink-0 rounded-full bg-white/15 px-3.5 py-1.5 text-[.76rem] font-bold text-white backdrop-blur hover:bg-white/25">
+            <Link href="/recherche?featured=1" className="shrink-0 rounded-full bg-white/15 px-3.5 py-1.5 text-[.76rem] font-bold text-white backdrop-blur hover:bg-white/25">
               Voir tout →
             </Link>
           </div>
