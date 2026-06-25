@@ -47,19 +47,13 @@ export async function POST(req: Request) {
   const samples: string[] = [];
 
   for (const r of rows || []) {
+    // On ne touche QUE les annonces dont le slug n'existe plus (orphelines).
+    if (validSlugs.has(r.category_slug)) continue;
     const cat = String(r.category || "").toLowerCase().trim();
-    if (!cat) continue;
-    const correct = subToSlug[cat] || nameToSlug[cat];
-    // On corrige seulement si on connaît le bon slug ET qu'il diffère.
-    // Pour "Autre" / inconnu : on garde le slug actuel s'il est valide.
-    if (correct && correct !== r.category_slug) {
-      await sb.from("listings").update({ category_slug: correct }).eq("id", r.id);
-      fixed++;
-      if (samples.length < 8) samples.push(`${r.category}: ${r.category_slug} → ${correct}`);
-    } else if (!correct && !validSlugs.has(r.category_slug)) {
-      await sb.from("listings").update({ category_slug: "services" }).eq("id", r.id);
-      fixed++;
-    }
+    const correct = subToSlug[cat] || nameToSlug[cat] || "services";
+    await sb.from("listings").update({ category_slug: correct }).eq("id", r.id);
+    fixed++;
+    if (samples.length < 10) samples.push(`${r.category}: ${r.category_slug} → ${correct}`);
   }
 
   return NextResponse.json({ ok: true, fixed, total: (rows || []).length, samples });
