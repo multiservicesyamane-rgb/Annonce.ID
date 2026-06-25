@@ -72,5 +72,5 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Matcher global pour intercepter toutes les requêtes (sauf les fichiers statiques Next.js et les images)
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.json|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|json|ico|txt|xml|woff|woff2)$).*)'],
 }

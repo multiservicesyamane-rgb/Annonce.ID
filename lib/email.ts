@@ -46,6 +46,38 @@ function invoiceHtml(d: InvoiceData): string {
   </div></body></html>`;
 }
 
+function notifHtml(title: string, body: string, ctaUrl?: string, ctaLabel?: string): string {
+  return `<!doctype html><html><body style="margin:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:#1a1f36">
+  <div style="max-width:560px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e8eaed">
+    <div style="background:#6366F1;padding:20px 28px;color:#fff;font-size:20px;font-weight:800">Wanteermako</div>
+    <div style="padding:26px 28px">
+      <h2 style="font-size:17px;margin:0 0 12px;color:#111">${title}</h2>
+      <p style="font-size:14px;line-height:1.6;margin:0 0 20px;color:#374151">${body}</p>
+      ${ctaUrl ? `<a href="${ctaUrl}" style="display:inline-block;background:#6366F1;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px">${ctaLabel || "Voir sur Wanteermako"}</a>` : ""}
+      <p style="font-size:12px;color:#9ca3af;line-height:1.5;margin:24px 0 0">Vous recevez cet email car vous avez un compte Wanteermako.<br/>wanteermako.com</p>
+    </div>
+  </div></body></html>`;
+}
+
+/** Email de notification générique (nouveau message, annonce activée, etc.). */
+export async function sendNotificationEmail(opts: { to: string; subject: string; title: string; body: string; ctaUrl?: string; ctaLabel?: string }): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key || !opts.to) return false;
+  const from = process.env.EMAIL_FROM || "Wanteermako <onboarding@resend.dev>";
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to: opts.to, subject: opts.subject, html: notifHtml(opts.title, opts.body, opts.ctaUrl, opts.ctaLabel) }),
+    });
+    if (!res.ok) { console.error("Resend notif error:", await res.text()); return false; }
+    return true;
+  } catch (e) {
+    console.error("sendNotificationEmail error:", e);
+    return false;
+  }
+}
+
 /** Envoie l'email de facture. Renvoie true si envoyé, false si non configuré/échec. */
 export async function sendInvoiceEmail(d: InvoiceData): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;

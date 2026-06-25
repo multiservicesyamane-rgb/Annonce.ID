@@ -6,6 +6,7 @@ import CategoryStrip from "./CategoryStrip";
 import Footer from "./Footer";
 import BottomNav from "./BottomNav";
 import WhatsAppFloat from "./WhatsAppFloat";
+import PWARegister from "./PWARegister";
 import { ToastProvider } from "./Toast";
 
 /**
@@ -57,6 +58,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastProvider>
+      <PWARegister />
       <Header />
       {showCatStrip && <CategoryStrip />}
       <main className={`min-h-[40vh] ${hideBottomNav ? 'pb-8' : 'pb-20 lg:pb-0'}`}>{children}</main>
