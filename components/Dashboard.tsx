@@ -1029,13 +1029,19 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="label">Numéro de téléphone</label>
-                    <input
-                      className="input"
-                      placeholder="+221 77 000 00 00"
-                      value={profilePhone}
-                      onChange={(e) => setProfilePhone(e.target.value)}
-                    />
+                    <label className="label">Numéro de téléphone (WhatsApp)</label>
+                    <div className="flex items-stretch">
+                      <span className="inline-flex items-center gap-1 rounded-l-lg border border-r-0 border-gray-300 dark:border-dark-border bg-gray-50 dark:bg-dark-900 px-3 text-sm font-bold text-gray-600 dark:text-white/70 select-none">🇸🇳 +221</span>
+                      <input
+                        className="input rounded-l-none"
+                        inputMode="numeric"
+                        maxLength={9}
+                        placeholder="77 000 00 00"
+                        value={profilePhone.replace(/\D/g, "").replace(/^221/, "").slice(0, 9)}
+                        onChange={(e) => { const d = e.target.value.replace(/\D/g, "").slice(0, 9); setProfilePhone(d ? "+221" + d : ""); }}
+                      />
+                    </div>
+                    <p className="mt-1 text-[.72rem] text-gray-400 dark:text-white/40">Écris seulement ton numéro (ex : 77 682 78 51). Le +221 est ajouté automatiquement.</p>
                   </div>
                 </div>
                 <div>

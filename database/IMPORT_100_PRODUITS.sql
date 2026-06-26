@@ -17,7 +17,7 @@ alter table public.listings add column if not exists order_whatsapp text;
 do $$
 declare
   v_owner uuid := (select id from auth.users where email ilike 'multiservicesyamane@gmail.com' limit 1);
-  v_wa text := '221770000000';   -- 👈👈 REMPLACE par TON numéro WhatsApp (ex: 221771234567)
+  v_wa text := '221776827851';   -- Numéro WhatsApp de commande (Wanteermako)
 begin
   if v_owner is null then
     raise exception 'Compte multiservicesyamane introuvable. Connecte-toi une fois sur le site avec ce compte puis relance.';
