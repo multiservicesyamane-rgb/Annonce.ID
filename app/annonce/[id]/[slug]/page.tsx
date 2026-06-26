@@ -52,6 +52,7 @@ async function fetchAd(idParam: string) {
       premium: data.premium,
       externalUrl: data.external_url || null,
       source: data.source || null,
+      orderWhatsapp: data.order_whatsapp || null,
       views: data.views,
       favorites: 0,
       date: new Date(data.created_at).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' }),
@@ -299,7 +300,7 @@ export default async function AnnoncePage({ params }: Props) {
               </div>
             )}
 
-            <ContactActions title={ad.title} adId={ad.id} sellerId={ad.seller.id} phone={seller?.phone} externalUrl={ad.externalUrl} source={ad.source} />
+            <ContactActions title={ad.title} adId={ad.id} sellerId={ad.seller.id} phone={seller?.phone} externalUrl={ad.externalUrl} source={ad.source} orderWhatsapp={ad.orderWhatsapp} />
 
             <div className="rounded-[10px] border border-[#fde68a] bg-[#fffbeb] dark:bg-gold-pale/10 dark:border-gold-pale/20 p-3 text-[.76rem] text-[#92400e] dark:text-gold mt-2">
               <b className="mb-1 block">🛡️ Conseils de sécurité</b>

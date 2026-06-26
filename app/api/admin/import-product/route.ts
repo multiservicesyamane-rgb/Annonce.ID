@@ -70,7 +70,8 @@ export async function POST(req: Request) {
     for (const prod of products) {
       const title = (prod?.title || "").trim();
       const externalUrl = (prod?.external_url || "").trim();
-      if (!title || !externalUrl) { results.push({ title, ok: false, error: "Titre et lien externe requis." }); continue; }
+      const orderWa = (prod?.order_whatsapp || "").trim();
+      if (!title || (!externalUrl && !orderWa)) { results.push({ title, ok: false, error: "Titre + (lien externe OU numéro WhatsApp) requis." }); continue; }
 
       const photos = Array.isArray(prod?.photos) ? prod.photos.filter(Boolean) : (prod?.image ? [prod.image] : []);
       const payload: any = {
@@ -86,6 +87,7 @@ export async function POST(req: Request) {
         image: prod?.image || photos[0] || "https://placehold.co/600x400?text=Produit",
         photos,
         external_url: externalUrl,
+        order_whatsapp: (prod?.order_whatsapp || "").trim() || null,
         source: (prod?.source || "").trim().toLowerCase(),
         status: "active",
         // Visibilité forte (produits vitrine)

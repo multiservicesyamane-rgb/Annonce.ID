@@ -2090,7 +2090,7 @@ const IMPORT_SOURCES = [
   { key: "jumia", label: "Jumia" },
   { key: "autre", label: "Autre site" },
 ];
-const IMPORT_EMPTY = { source: "chariow", title: "", price: "", image: "", category: "", location: "Livraison", external_url: "", description: "", featured: false };
+const IMPORT_EMPTY = { cta: "whatsapp", order_whatsapp: "", source: "aliexpress", title: "", price: "", image: "", category: "", location: "Livraison Sénégal", external_url: "", description: "", featured: false };
 
 function ImportProduits({ T, reload }: { T: (m: string) => void; reload: () => void }) {
   const inp = "w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]";
@@ -2099,8 +2099,11 @@ function ImportProduits({ T, reload }: { T: (m: string) => void; reload: () => v
   const [done, setDone] = useState<any[]>([]);
   const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
 
+  const isWa = f.cta === "whatsapp";
   async function submit() {
-    if (!f.title.trim() || !f.external_url.trim()) { T("⚠️ Titre et lien externe obligatoires"); return; }
+    if (!f.title.trim()) { T("⚠️ Titre obligatoire"); return; }
+    if (isWa && !f.order_whatsapp.trim()) { T("⚠️ Numéro WhatsApp obligatoire"); return; }
+    if (!isWa && !f.external_url.trim()) { T("⚠️ Lien externe obligatoire"); return; }
     setBusy(true);
     try {
       const pass = (typeof window !== "undefined" && sessionStorage.getItem("sa_pass")) || ADMIN_CREDS.pass;
@@ -2108,7 +2111,7 @@ function ImportProduits({ T, reload }: { T: (m: string) => void; reload: () => v
       const res = await fetch("/api/admin/import-product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pass, product: { ...f, category: cat?.name || "Autre", category_slug: f.category || "" } }),
+        body: JSON.stringify({ password: pass, product: { ...f, order_whatsapp: isWa ? f.order_whatsapp : "", category: cat?.name || "Autre", category_slug: f.category || "" } }),
       });
       const d = await res.json();
       if (!res.ok) { T("❌ " + (d.error || "Erreur")); setBusy(false); return; }
@@ -2143,9 +2146,27 @@ function ImportProduits({ T, reload }: { T: (m: string) => void; reload: () => v
             <input value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="Ex : Montre connectée Smart Watch" className={inp} />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Lien de vente (URL externe) *</label>
-            <input value={f.external_url} onChange={(e) => set("external_url", e.target.value)} placeholder="https://chariow.com/... ou https://aliexpress.com/..." className={inp} />
+            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Que fait le bouton « Acheter » ?</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => set("cta", "whatsapp")} className={`rounded-[9px] border px-3 py-2 text-[.78rem] font-bold ${isWa ? "border-[#25D366] bg-[#25D366]/15 text-[#25D366]" : "border-[#30363D] bg-[#0D1117] text-[#8B949E]"}`}>📱 Mon WhatsApp</button>
+              <button type="button" onClick={() => set("cta", "external")} className={`rounded-[9px] border px-3 py-2 text-[.78rem] font-bold ${!isWa ? "border-[#6366F1] bg-[#6366F1]/15 text-[#A5B4FC]" : "border-[#30363D] bg-[#0D1117] text-[#8B949E]"}`}>🔗 Lien externe</button>
+            </div>
+            <p className="mt-1 text-[.68rem] text-[#8B949E]">{isWa ? "Le client te contacte sur WhatsApp pour commander (le lien affilié reste privé)." : "Le client est redirigé directement vers le site de vente."}</p>
           </div>
+
+          {isWa ? (
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Ton numéro WhatsApp de commande *</label>
+              <input value={f.order_whatsapp} onChange={(e) => set("order_whatsapp", e.target.value)} placeholder="Ex : 221770000000 (avec indicatif)" className={inp} />
+              <label className="mt-2 mb-1 block text-[.72rem] font-bold text-[#8B949E]">Lien affilié (privé, optionnel — pour tes notes)</label>
+              <input value={f.external_url} onChange={(e) => set("external_url", e.target.value)} placeholder="https://aliexpress.com/... (non affiché au client)" className={inp} />
+            </div>
+          ) : (
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Lien de vente (URL externe) *</label>
+              <input value={f.external_url} onChange={(e) => set("external_url", e.target.value)} placeholder="https://chariow.com/... ou https://aliexpress.com/..." className={inp} />
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Prix (FCFA)</label>
             <input value={f.price} onChange={(e) => set("price", e.target.value)} placeholder="Ex : 15000" className={inp} />
