@@ -177,9 +177,12 @@ export default function PublishWizard() {
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const files = Array.from(e.target.files);
+      const remaining = Math.max(0, 3 - photos.length);
+      if (remaining === 0) { show("⚠ Maximum 3 photos."); e.target.value = ""; return; }
+      const files = Array.from(e.target.files).slice(0, remaining);
       const urls = files.map(f => URL.createObjectURL(f));
       setCropQueue(prev => [...prev, ...urls]);
+      e.target.value = "";
     }
   };
 
@@ -377,7 +380,7 @@ export default function PublishWizard() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-dark-900"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
               </div>
               <div className="font-bold text-gray-900 dark:text-white text-[.85rem]">Ajoutez vos photos</div>
-              <div className="text-[.7rem] text-gray-500 mt-0.5">JPG, PNG · Max 10 photos</div>
+              <div className="text-[.7rem] text-gray-500 mt-0.5">JPG, PNG · Max 3 photos</div>
             </label>
 
             {photos.length > 0 && (
@@ -533,7 +536,7 @@ export default function PublishWizard() {
           aspectRatio={1}
           onCancel={() => setCropQueue(prev => prev.slice(1))}
           onCropDone={(base64) => {
-            setPhotos(prev => [...prev, base64].slice(0, 10));
+            setPhotos(prev => [...prev, base64].slice(0, 3));
             setCropQueue(prev => prev.slice(1));
           }}
         />

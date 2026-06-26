@@ -99,13 +99,13 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#4338CA]/70 via-transparent to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-300"></div>
               
-              {/* Featured Badge */}
-              <div className="absolute top-1.5 left-1.5 bg-white/95 dark:bg-dark-900/90 text-[#6D28D9] dark:text-neon-gold text-[8px] md:text-[9px] font-extrabold px-2 py-0.5 rounded-full tracking-wider uppercase shadow-md flex items-center gap-0.5 border border-purple-200 dark:border-white/5">
-                <span>✦</span> À la Une
+              {/* Featured Badge — icône seule sur mobile, texte dès md */}
+              <div className="absolute top-1.5 left-1.5 bg-white/95 dark:bg-dark-900/90 text-[#6D28D9] dark:text-neon-gold text-[8px] md:text-[9px] font-extrabold px-1.5 md:px-2 py-0.5 rounded-full tracking-wider uppercase shadow-md flex items-center gap-0.5 border border-purple-200 dark:border-white/5">
+                <span>✦</span><span className="hidden md:inline"> À la Une</span>
               </div>
-              {/* Badge catégorie — couleur spécifique */}
+              {/* Badge catégorie — couleur spécifique (resserré sur mobile pour ne pas chevaucher) */}
               {ad.category && (
-                <div className="absolute top-1.5 right-1.5 max-w-[60%] truncate text-white text-[8px] md:text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wide shadow-md" style={{ backgroundColor: colorForCategory(ad.category) }}>
+                <div className="absolute top-1.5 right-1.5 max-w-[55%] md:max-w-[60%] truncate text-white text-[8px] md:text-[9px] font-extrabold px-1.5 md:px-2 py-0.5 rounded-full uppercase tracking-wide shadow-md" style={{ backgroundColor: colorForCategory(ad.category) }}>
                   {ad.category}
                 </div>
               )}

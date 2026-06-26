@@ -2090,7 +2090,7 @@ const IMPORT_SOURCES = [
   { key: "jumia", label: "Jumia" },
   { key: "autre", label: "Autre site" },
 ];
-const IMPORT_EMPTY = { cta: "whatsapp", order_whatsapp: "", source: "aliexpress", title: "", price: "", image: "", category: "", location: "Livraison Sénégal", external_url: "", description: "", featured: false };
+const IMPORT_EMPTY = { cta: "whatsapp", order_whatsapp: "", source: "aliexpress", title: "", price: "", image: "", category: "", location: "Dakar", external_url: "", description: "", featured: false };
 
 function ImportProduits({ T, reload }: { T: (m: string) => void; reload: () => void }) {
   const inp = "w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]";

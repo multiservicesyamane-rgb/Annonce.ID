@@ -83,7 +83,7 @@ export async function POST(req: Request) {
         price_type: "Prix Fixe",
         category: prod?.category || "Autre",
         category_slug: prod?.category_slug || "",
-        location: (prod?.location || "Livraison").trim(),
+        location: (prod?.location || "Dakar").trim(),
         image: prod?.image || photos[0] || "https://placehold.co/600x400?text=Produit",
         photos,
         external_url: externalUrl,

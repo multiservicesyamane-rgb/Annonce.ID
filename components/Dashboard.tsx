@@ -1745,8 +1745,8 @@ export default function Dashboard() {
 
             {/* Colonne Gauche : Editeur */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-6">
-                <div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6">
+                <div className="min-w-0">
                   <h2 className="font-display text-[1.4rem] sm:text-[1.8rem] font-extrabold dark:text-white">Ma Boutique</h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Personnalisez l'apparence et les informations de votre espace de vente.</p>
                   {user?.id && (
@@ -1756,7 +1756,7 @@ export default function Dashboard() {
                   )}
                   <p className="mt-1.5 text-[.7rem] text-gray-400">Votre boutique est créée automatiquement et visible dès votre 1ʳᵉ annonce publiée.</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
                   <button onClick={() => setLivePreviewOpen(true)} className="lg:hidden flex items-center gap-2 bg-dark-900 text-white dark:bg-white dark:text-black font-bold px-4 py-2 rounded-xl text-sm shadow-sm">
                     👁️ Aperçu
                   </button>
@@ -1966,7 +1966,7 @@ export default function Dashboard() {
             </div>
 
             {/* Colonne Droite : Live Preview */}
-            <div className={`fixed inset-0 z-[900] bg-black/80 backdrop-blur-sm flex justify-center items-center p-3 lg:p-0 lg:inset-auto lg:z-auto lg:self-start lg:sticky lg:top-[95px] lg:bg-transparent lg:backdrop-blur-none lg:w-[330px] lg:shrink-0 lg:justify-center lg:items-start lg:h-[calc(100vh-120px)] ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
+            <div className={`fixed inset-0 z-[900] bg-black/80 backdrop-blur-sm flex justify-center items-center p-3 lg:p-0 lg:inset-auto lg:z-auto lg:self-start lg:sticky lg:top-[95px] lg:bg-transparent lg:backdrop-blur-none lg:w-[330px] lg:shrink-0 lg:justify-center lg:items-center lg:h-[calc(100vh-120px)] ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
               {/* Mobile Close Button */}
               {livePreviewOpen && (
                 <button onClick={() => setLivePreviewOpen(false)} className="lg:hidden fixed top-4 right-4 text-white bg-white/15 rounded-full w-10 h-10 flex items-center justify-center text-xl backdrop-blur-md z-[950]">
