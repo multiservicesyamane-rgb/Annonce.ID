@@ -11,6 +11,7 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://wanteermako.com";
 // Notifie le destinataire d'un nouveau message (push + email). Appelé après l'envoi d'un message.
 export async function POST(req: Request) {
   const supabase = createClient();
+  if (!supabase) return NextResponse.json({ ok: false }, { status: 500 });
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
