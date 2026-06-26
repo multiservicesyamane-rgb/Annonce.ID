@@ -47,6 +47,24 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* ───────── Protections responsive globales (anti-débordement mobile) ───────── */
+/* Aucun média ne dépasse jamais la largeur de l'écran */
+img, video, iframe, canvas, svg, table {
+  max-width: 100%;
+}
+/* Les longs mots / liens / e-mails reviennent à la ligne au lieu de pousser la page */
+body {
+  overflow-wrap: break-word;
+}
+/* Les tableaux deviennent scrollables horizontalement si trop larges */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ───────── LIGHT MODE (default) ───────── */
