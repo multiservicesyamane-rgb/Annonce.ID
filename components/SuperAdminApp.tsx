@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { BOOSTS, SUBSCRIPTION_PLANS } from "@/lib/constants";
+import { BOOSTS, SUBSCRIPTION_PLANS, CATEGORIES } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
 
 /* ───────── Données mock (plan stratégique B2B) ───────── */
@@ -18,6 +18,7 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
   { id: "ambassadeurs", icon: "🤝", label: "Ambassadeurs" },
   { id: "offres", icon: "💎", label: "Offres commerciales" },
   { id: "moderation", icon: "🛡️", label: "Modération", section: "Plateforme", badge: 8 },
+  { id: "import", icon: "🛒", label: "Import Produits" },
   { id: "users", icon: "👥", label: "Utilisateurs" },
   { id: "encaissement", icon: "💵", label: "Encaissement (espèces)" },
   { id: "finance", icon: "💰", label: "Finances" },
@@ -317,6 +318,7 @@ export default function SuperAdminApp() {
             {page === "ambassadeurs" && <Ambassadeurs T={T} ambassadors={ambassadors} />}
             {page === "offres" && <Offres T={T} />}
             {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
+            {page === "import" && <ImportProduits T={T} reload={loadAllData} />}
             {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
             {page === "encaissement" && <Encaissement profiles={profiles} allListings={allListings} T={T} reload={loadAllData} />}
             {page === "finance" && <Finance purchases={purchases} counts={counts} />}
@@ -2075,6 +2077,113 @@ function Moderation({ items, moderate }: { items: any[]; moderate: (id: string, 
           </div>
         ))}
       </Card>
+    </>
+  );
+}
+
+// ───────── Import de produits externes (Chariow / AliExpress / ...) ─────────
+const IMPORT_SOURCES = [
+  { key: "chariow", label: "Chariow" },
+  { key: "aliexpress", label: "AliExpress" },
+  { key: "amazon", label: "Amazon" },
+  { key: "alibaba", label: "Alibaba" },
+  { key: "jumia", label: "Jumia" },
+  { key: "autre", label: "Autre site" },
+];
+const IMPORT_EMPTY = { source: "chariow", title: "", price: "", image: "", category: "", location: "Livraison", external_url: "", description: "", featured: false };
+
+function ImportProduits({ T, reload }: { T: (m: string) => void; reload: () => void }) {
+  const inp = "w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]";
+  const [f, setF] = useState<any>({ ...IMPORT_EMPTY });
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<any[]>([]);
+  const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
+
+  async function submit() {
+    if (!f.title.trim() || !f.external_url.trim()) { T("⚠️ Titre et lien externe obligatoires"); return; }
+    setBusy(true);
+    try {
+      const pass = (typeof window !== "undefined" && sessionStorage.getItem("sa_pass")) || ADMIN_CREDS.pass;
+      const cat = CATEGORIES.find((c) => c.slug === f.category);
+      const res = await fetch("/api/admin/import-product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pass, product: { ...f, category: cat?.name || "Autre", category_slug: f.category || "" } }),
+      });
+      const d = await res.json();
+      if (!res.ok) { T("❌ " + (d.error || "Erreur")); setBusy(false); return; }
+      const r = d.results?.[0] || { title: f.title, ok: true };
+      setDone((p) => [r, ...p]);
+      if (r.ok) { T("✅ Produit importé !"); setF({ ...IMPORT_EMPTY, source: f.source }); reload(); }
+      else T("❌ " + (r.error || "Erreur"));
+    } catch (e: any) { T("❌ " + (e?.message || "Erreur réseau")); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <>
+      <PageHead title="🛒 Import Produits externes" sub="Chariow, AliExpress… Le bouton « Acheter » renverra directement vers le site de vente." />
+      <Card>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Site de vente</label>
+            <select value={f.source} onChange={(e) => set("source", e.target.value)} className={inp}>
+              {IMPORT_SOURCES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Catégorie</label>
+            <select value={f.category} onChange={(e) => set("category", e.target.value)} className={inp}>
+              <option value="">— Choisir —</option>
+              {CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>{c.icon} {c.name}</option>)}
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Titre du produit *</label>
+            <input value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="Ex : Montre connectée Smart Watch" className={inp} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Lien de vente (URL externe) *</label>
+            <input value={f.external_url} onChange={(e) => set("external_url", e.target.value)} placeholder="https://chariow.com/... ou https://aliexpress.com/..." className={inp} />
+          </div>
+          <div>
+            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Prix (FCFA)</label>
+            <input value={f.price} onChange={(e) => set("price", e.target.value)} placeholder="Ex : 15000" className={inp} />
+          </div>
+          <div>
+            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Lieu / Livraison</label>
+            <input value={f.location} onChange={(e) => set("location", e.target.value)} placeholder="Ex : Livraison Dakar" className={inp} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Image (URL de la photo)</label>
+            <input value={f.image} onChange={(e) => set("image", e.target.value)} placeholder="https://...jpg" className={inp} />
+            {f.image && <img src={f.image} alt="" className="mt-2 h-20 w-20 rounded-[9px] object-cover border border-[#30363D]" />}
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Description (optionnel)</label>
+            <textarea value={f.description} onChange={(e) => set("description", e.target.value)} rows={2} placeholder="Détails du produit..." className={inp} />
+          </div>
+        </div>
+        <label className="mt-3 flex items-center gap-2 text-[.82rem] text-[#E6EDF3]">
+          <input type="checkbox" checked={f.featured} onChange={(e) => set("featured", e.target.checked)} className="h-4 w-4 accent-[#6366F1]" />
+          🔥 Mettre « À la Une » (affiché sur l'accueil)
+        </label>
+        <button onClick={submit} disabled={busy} className={`${btnP} mt-4 w-full py-2.5`}>{busy ? "⏳ Import en cours…" : "+ Importer le produit"}</button>
+      </Card>
+
+      {done.length > 0 && (
+        <Card>
+          <div className="mb-2 text-[.85rem] font-bold text-[#E6EDF3]">Produits importés ({done.filter((r) => r.ok).length})</div>
+          {done.map((r, i) => (
+            <div key={i} className="flex items-center justify-between border-b border-[#21262D] py-1.5 text-[.8rem] last:border-0">
+              <span className="truncate text-[#E6EDF3]">{r.ok ? "✅" : "❌"} {r.title}</span>
+              {r.ok && r.slug
+                ? <a href={`/annonce/${r.id}/${r.slug}`} target="_blank" rel="noopener noreferrer" className="ml-2 shrink-0 font-bold text-[#43E97B]">Voir →</a>
+                : <span className="ml-2 shrink-0 text-[.7rem] text-[#F85149]">{r.error}</span>}
+            </div>
+          ))}
+        </Card>
+      )}
     </>
   );
 }
