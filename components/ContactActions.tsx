@@ -7,7 +7,7 @@ import FavButton from "./FavButton";
 
 /** Boutons de contact direct (WhatsApp / Appel / Message) + partage/favori.
  *  PAS de panier — mise en relation directe (contrainte du brief). */
-export default function ContactActions({ phone, title, adId, sellerId }: { phone?: string; title: string; adId?: string; sellerId?: string }) {
+export default function ContactActions({ phone, title, adId, sellerId, externalUrl, source }: { phone?: string; title: string; adId?: string; sellerId?: string; externalUrl?: string | null; source?: string | null }) {
   const [toast, setToast] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const router = useRouter();
@@ -112,6 +112,65 @@ export default function ContactActions({ phone, title, adId, sellerId }: { phone
 
     router.push(`/dashboard?panel=messages&contact=${sellerId}&listing=${adId}`);
   };
+
+  // Nom propre du site externe (pour le libellé du bouton)
+  const sourceLabel = (() => {
+    const s = (source || "").toLowerCase();
+    if (s.includes("chariow")) return "Chariow";
+    if (s.includes("aliexpress") || s.includes("ali")) return "AliExpress";
+    if (s.includes("amazon")) return "Amazon";
+    if (s.includes("alibaba")) return "Alibaba";
+    if (s.includes("jumia")) return "Jumia";
+    if (source && source.trim()) return source.trim();
+    return "le site officiel";
+  })();
+
+  // Produit externe : le bouton renvoie directement vers le site de vente.
+  if (externalUrl && externalUrl.trim()) {
+    return (
+      <>
+        <div className="flex flex-col gap-3">
+          <a
+            href={externalUrl}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="btn btn-gold w-full py-3.5 text-[1.05rem] font-bold flex items-center justify-center gap-2"
+          >
+            🛒 Acheter sur {sourceLabel}
+          </a>
+          <p className="text-center text-[.72rem] text-gray-500 dark:text-white/50">
+            Vous serez redirigé en toute sécurité vers {sourceLabel} pour finaliser votre commande.
+          </p>
+        </div>
+
+        <div className="flex gap-1.5 mt-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof navigator !== "undefined" && navigator.share) {
+                navigator.share({ title, url: window.location.href }).catch(() => {});
+              } else {
+                navigator.clipboard?.writeText(window.location.href);
+              }
+              show("🔗 Lien copié");
+            }}
+            className="flex-1 rounded-lg border-[1.5px] border-gray-100 bg-white py-2 text-[.74rem] font-semibold text-gray-700 transition hover:border-gold hover:text-green flex items-center justify-center gap-1.5"
+          >
+            🔗 Partager
+          </button>
+          <div className="flex-1 flex items-center justify-center rounded-lg border-[1.5px] border-gray-100 bg-white py-2 text-[.74rem] font-semibold text-gray-700 transition hover:border-gold hover:text-red-500">
+            <FavButton adId={adId} /> <span className="ml-1">Favoris</span>
+          </div>
+        </div>
+
+        {toast && (
+          <div className="fixed bottom-20 left-1/2 z-[9999] -translate-x-1/2 whitespace-nowrap rounded-[10px] border border-neon-gold bg-dark-900 px-5 py-2.5 text-[.88rem] font-medium text-white shadow-lg">
+            {toast}
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <>

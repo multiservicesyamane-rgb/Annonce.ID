@@ -74,6 +74,7 @@ export default function Dashboard() {
   const [ads, setAds] = useState<any[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
   const [boostCredits, setBoostCredits] = useState<any[]>([]);
+  const [hideBonus, setHideBonus] = useState(true);
   const [usingCredit, setUsingCredit] = useState<string | null>(null);
   const [creditTarget, setCreditTarget] = useState<Record<string, string>>({});
   const [planPrices, setPlanPrices] = useState<Record<string, number>>({});
@@ -144,6 +145,17 @@ export default function Dashboard() {
   const handlePanelChange = (id: string) => {
     setPanel(id as Panel);
     setIsMobileMenuOpen(false);
+  };
+
+  // Bannière "cadeau de lancement" : visible tant que l'utilisateur ne l'a pas fermée
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem("wmk_bonus_dismissed") !== "1") {
+      setHideBonus(false);
+    }
+  }, []);
+  const dismissBonus = () => {
+    setHideBonus(true);
+    try { localStorage.setItem("wmk_bonus_dismissed", "1"); } catch {}
   };
 
   useEffect(() => {
@@ -555,6 +567,21 @@ export default function Dashboard() {
               </div>
               <Link href="/publier" className="btn btn-green h-10 px-5 w-full sm:w-auto text-[.85rem] shrink-0 font-bold">+ Publier</Link>
             </div>
+
+            {/* Bannière cadeau de lancement — compacte & fermable */}
+            {!hideBonus && (
+              <div className="mb-4 sm:mb-6 flex items-center gap-3 rounded-[14px] bg-gradient-to-r from-[#16A34A] to-[#0891B2] px-3.5 py-2.5 sm:px-4 sm:py-3 text-white shadow-sm">
+                <span className="text-[1.4rem] sm:text-[1.6rem] shrink-0">🎁</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[.8rem] sm:text-[.9rem] font-extrabold leading-tight">Cadeau de lancement : 7 boosts offerts !</div>
+                  <div className="text-[.68rem] sm:text-[.75rem] text-white/85 leading-tight mt-0.5 truncate">5 Standard + 1 Premium + 1 À la Une — déjà dans ton compte</div>
+                </div>
+                <button onClick={() => handlePanelChange("credits")} className="shrink-0 rounded-full bg-white/95 px-3 py-1.5 text-[.7rem] sm:text-[.78rem] font-bold text-green hover:bg-white transition whitespace-nowrap">Voir mes crédits</button>
+                <button onClick={dismissBonus} aria-label="Fermer" className="shrink-0 rounded-full p-1 text-white/70 hover:text-white hover:bg-white/15 transition">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+            )}
 
             <div className="mb-4 sm:mb-6 grid grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-4">
               <KpiGrad gradient="bg-g1" icon="📦" label="Annonces actives" value={ads.filter(a => a.status === 'active' || !a.status).length} />
