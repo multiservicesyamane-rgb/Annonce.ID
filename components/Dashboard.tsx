@@ -910,29 +910,32 @@ export default function Dashboard() {
 
                 {/* PAGINATION ADS */}
                 {filteredAds.length > itemsPerPage && (
-                  <div className="mt-6 flex justify-center items-center gap-1">
+                  <div className="mt-6 flex flex-wrap justify-center items-center gap-1.5">
                     <button
                       disabled={adPage === 1}
                       onClick={() => setAdPage(p => Math.max(1, p - 1))}
                       className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
                     >
-                      ‹ Précédent
+                      ‹
                     </button>
-                    {Array.from({ length: Math.ceil(filteredAds.length / itemsPerPage) }, (_, idx) => idx + 1).map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => setAdPage(p)}
-                        className={`h-8 w-8 rounded-lg text-[0.8rem] font-bold transition ${p === adPage ? "bg-green text-white" : "border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"}`}
-                      >
-                        {p}
-                      </button>
-                    ))}
+                    {(() => {
+                      const total = Math.ceil(filteredAds.length / itemsPerPage);
+                      const cur = adPage;
+                      const items: (number | string)[] = [];
+                      for (let p = 1; p <= total; p++) {
+                        if (p === 1 || p === total || (p >= cur - 1 && p <= cur + 1)) items.push(p);
+                        else if (items[items.length - 1] !== "…") items.push("…");
+                      }
+                      return items.map((p, i) => p === "…"
+                        ? <span key={`e${i}`} className="px-1 text-gray-400 text-[0.8rem]">…</span>
+                        : <button key={p} onClick={() => setAdPage(p as number)} className={`h-8 min-w-8 px-2 rounded-lg text-[0.8rem] font-bold transition ${p === cur ? "bg-green text-white" : "border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"}`}>{p}</button>);
+                    })()}
                     <button
                       disabled={adPage === Math.ceil(filteredAds.length / itemsPerPage)}
                       onClick={() => setAdPage(p => Math.min(Math.ceil(filteredAds.length / itemsPerPage), p + 1))}
                       className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
                     >
-                      Suivant ›
+                      ›
                     </button>
                   </div>
                 )}
@@ -1915,18 +1918,29 @@ export default function Dashboard() {
               {/* Draggable Products List */}
               <div className="space-y-3">
                 {ads.length > 0 ? ads.slice((showroomPage - 1) * 5, showroomPage * 5).map((prod, idx) => (
-                  <div key={prod.id || idx} className="flex items-center gap-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border rounded-xl p-3 shadow-sm cursor-move hover:border-green transition">
-                    <div className="text-gray-300 flex flex-col gap-1 px-1">
-                      <div className="w-1 h-1 bg-current rounded-full"></div>
-                      <div className="w-1 h-1 bg-current rounded-full"></div>
-                      <div className="w-1 h-1 bg-current rounded-full"></div>
-                    </div>
-                    <img src={prod.image || "https://placehold.co/150x150?text=Sans+Image"} alt={prod.title} className="w-14 h-14 rounded-lg object-cover" />
+                  <div key={prod.id || idx} className="flex items-center gap-3 sm:gap-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border rounded-xl p-3 shadow-sm hover:border-green transition">
+                    <img src={prod.image || "https://placehold.co/150x150?text=Sans+Image"} alt={prod.title} className="w-14 h-14 rounded-lg object-cover shrink-0" />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-bold text-sm text-gray-900 dark:text-white uppercase truncate">{prod.title}</h4>
                       <div className="text-sm font-semibold text-green mt-0.5">{prod.price}</div>
+                      <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[0.6rem] font-bold uppercase ${prod.status === 'inactive' ? 'bg-gray-100 text-gray-500 dark:bg-dark-700 dark:text-gray-300' : prod.status === 'sold' ? 'bg-red-50 text-brand-red' : 'bg-green/10 text-green'}`}>
+                        {prod.status === 'inactive' ? '⏸️ Inactif' : prod.status === 'sold' ? '📦 Vendu' : '✓ Actif'}
+                      </span>
                     </div>
-                    <button className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white">⋮</button>
+                    <div className="relative shrink-0">
+                      <button onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === prod.id ? null : prod.id); }} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-dark-900 rounded-full">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                      </button>
+                      {openMenuId === prod.id && (
+                        <div className="absolute right-0 top-10 w-44 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-border py-2 z-50">
+                          <Link href={`/publier?edit=${prod.id}`} className="block px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">✏️ Modifier</Link>
+                          <Link href={`/annonce/${prod.id}/${prod.slug}`} target="_blank" className="block px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">👁️ Voir</Link>
+                          <button onClick={() => toggleActive(prod.id)} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">{prod.status === 'inactive' ? '▶️ Activer' : '⏸️ Désactiver'}</button>
+                          <div className="my-1 border-t border-gray-100 dark:border-dark-border"></div>
+                          <button onClick={() => { setAdToDelete(prod.id); setOpenMenuId(null); }} className="block w-full text-left px-4 py-2 text-[.85rem] text-brand-red font-bold hover:bg-red-50 dark:hover:bg-red-900/10">🗑️ Supprimer</button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )) : (
                   <div className="text-center p-6 bg-gray-50 dark:bg-dark-900 rounded-xl text-gray-500 text-sm">
@@ -1937,29 +1951,32 @@ export default function Dashboard() {
 
               {/* PAGINATION SHOWROOM PRODUCTS */}
               {ads.length > 5 && (
-                <div className="mt-4 flex justify-center items-center gap-1">
+                <div className="mt-4 flex flex-wrap justify-center items-center gap-1.5">
                   <button
                     disabled={showroomPage === 1}
                     onClick={() => setShowroomPage(p => Math.max(1, p - 1))}
                     className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
                   >
-                    ‹ Précédent
+                    ‹
                   </button>
-                  {Array.from({ length: Math.ceil(ads.length / 5) }, (_, idx) => idx + 1).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setShowroomPage(p)}
-                      className={`h-8 w-8 rounded-lg text-[0.8rem] font-bold transition ${p === showroomPage ? "bg-green text-white" : "border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"}`}
-                    >
-                      {p}
-                    </button>
-                  ))}
+                  {(() => {
+                    const total = Math.ceil(ads.length / 5);
+                    const cur = showroomPage;
+                    const items: (number | string)[] = [];
+                    for (let p = 1; p <= total; p++) {
+                      if (p === 1 || p === total || (p >= cur - 1 && p <= cur + 1)) items.push(p);
+                      else if (items[items.length - 1] !== "…") items.push("…");
+                    }
+                    return items.map((p, i) => p === "…"
+                      ? <span key={`e${i}`} className="px-1 text-gray-400 text-[0.8rem]">…</span>
+                      : <button key={p} onClick={() => setShowroomPage(p as number)} className={`h-8 min-w-8 px-2 rounded-lg text-[0.8rem] font-bold transition ${p === cur ? "bg-green text-white" : "border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"}`}>{p}</button>);
+                  })()}
                   <button
                     disabled={showroomPage === Math.ceil(ads.length / 5)}
                     onClick={() => setShowroomPage(p => Math.min(Math.ceil(ads.length / 5), p + 1))}
                     className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-dark-border text-[0.8rem] font-bold disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-white"
                   >
-                    Suivant ›
+                    ›
                   </button>
                 </div>
               )}
