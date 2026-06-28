@@ -2712,6 +2712,11 @@ function AdsAdmin({ allListings, T, reload }: { allListings: any[]; T: (m: strin
     reload();
   }
 
+  async function toggleFeatured(id: string, value: boolean) {
+    try { await adminApi("setFeatured", { listingId: id, value }); T(value ? "🔥 Mise à la Une" : "Retirée de la Une"); reload(); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+  }
+
   const totalViews = allListings.reduce((s: number, a: any) => s + (a.views || 0), 0);
   return (
     <>
@@ -2741,6 +2746,9 @@ function AdsAdmin({ allListings, T, reload }: { allListings: any[]; T: (m: strin
                   </div>
                   <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${a.status === "active" ? "bg-emerald-500/15 text-emerald-300" : a.status === "pending" ? "bg-amber-500/15 text-amber-300" : a.status === "sold" ? "bg-blue-500/15 text-blue-300" : a.status === "rejected" ? "bg-red-500/15 text-red-300" : "bg-white/10 text-gray-400"}`}>{a.status || "—"}</span>
                   <div className="flex gap-1.5 shrink-0">
+                    {(a.featured || a.is_featured)
+                      ? <button onClick={() => toggleFeatured(a.id, false)} className="rounded-[7px] bg-amber-500/25 px-2 py-1 text-[.68rem] font-bold text-amber-200 hover:bg-amber-500/35">🔥 Retirer Une</button>
+                      : <button onClick={() => toggleFeatured(a.id, true)} className="rounded-[7px] bg-amber-500/10 px-2 py-1 text-[.68rem] font-bold text-amber-300 hover:bg-amber-500/25">🔥 À la Une</button>}
                     {a.status !== "active" && <button onClick={() => changeStatus(a.id, "active")} className="rounded-[7px] bg-emerald-500/15 px-2 py-1 text-[.68rem] font-bold text-emerald-300 hover:bg-emerald-500/25">✓ Activer</button>}
                     {a.status !== "rejected" && <button onClick={() => changeStatus(a.id, "rejected")} className="rounded-[7px] bg-red-500/15 px-2 py-1 text-[.68rem] font-bold text-red-300 hover:bg-red-500/25">✕ Rejeter</button>}
                     {a.status !== "inactive" && a.status !== "rejected" && <button onClick={() => changeStatus(a.id, "inactive")} className="rounded-[7px] bg-white/5 px-2 py-1 text-[.68rem] font-bold text-gray-400 hover:text-white">⏸ Désactiver</button>}

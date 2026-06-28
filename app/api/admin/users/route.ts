@@ -143,6 +143,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, added: qty });
     }
 
+    // Mettre / retirer une annonce "À la Une" (n'importe quelle annonce — admin)
+    if (action === "setFeatured") {
+      const { listingId, value } = body;
+      if (!listingId) return NextResponse.json({ error: "Annonce requise." }, { status: 400 });
+      const lp: any = { featured: !!value, is_featured: !!value };
+      if (value) lp.premium = true; // une annonce à la une est aussi mise en avant
+      for (let i = 0; i < 8; i++) {
+        const { error } = await sb.from("listings").update(lp).eq("id", listingId);
+        if (!error) break;
+        const m = error.message || "";
+        const match = m.match(/'([^']+)' column/) || m.match(/column "([^"]+)"/) || m.match(/Could not find the '([^']+)'/);
+        if (match && match[1] in lp) { delete lp[match[1]]; continue; }
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true });
+    }
+
     // Retirer / supprimer un crédit boost précis
     if (action === "removeCredit") {
       const { creditId } = body;
