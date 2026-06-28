@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { BOOSTS, SUBSCRIPTION_PLANS, CATEGORIES } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
+import { FB_GROUPS } from "@/lib/social-groups";
 
 /* ───────── Données mock (plan stratégique B2B) ───────── */
 const GRADS = ["bg-g1", "bg-g2", "bg-g3", "bg-g4", "bg-g5", "bg-g6", "bg-g7", "bg-g8"];
@@ -325,7 +326,7 @@ export default function SuperAdminApp() {
             {page === "ads" && <AdsAdmin allListings={allListings} T={T} reload={loadAllData} />}
             {page === "ia" && <IA T={T} />}
             {page === "points" && <Points profiles={profiles} />}
-            {page === "diffusion" && <Diffusion allListings={allListings} />}
+            {page === "diffusion" && <Diffusion allListings={allListings} T={T} />}
             {page === "rapports" && <Rapports T={T} allListings={allListings} profiles={profiles} purchases={purchases} />}
             {page === "settings" && <Settings T={T} />}
           </>)}
@@ -2254,6 +2255,11 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
   const [created, setCreated] = useState<{ login: string; password: string } | null>(null);
   const [userPage, setUserPage] = useState(1);
   const itemsPerPage = 10;
+  const [creditUser, setCreditUser] = useState<any | null>(null);
+  const [userCredits, setUserCredits] = useState<any[]>([]);
+  const [creditBusy, setCreditBusy] = useState(false);
+  const [grantKey, setGrantKey] = useState("basic");
+  const [grantQty, setGrantQty] = useState("1");
 
   useEffect(() => {
     setUserPage(1);
@@ -2308,6 +2314,27 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
   async function del(userId: string) {
     if (!confirm("Supprimer définitivement ce compte ?")) return;
     try { await adminApi("delete", { userId }); T("🗑️ Compte supprimé"); refreshList(); reload(); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+  }
+  async function openCredits(u: any) {
+    setCreditUser(u); setUserCredits([]);
+    try { const d = await adminApi("listCredits", { userId: u.id }); setUserCredits(d.credits || []); }
+    catch (e: any) { T(`❌ ${e.message}`); }
+  }
+  async function grantCredit() {
+    if (!creditUser) return;
+    setCreditBusy(true);
+    const days: Record<string, number> = { basic: 7, premium: 14, alaune: 30, vip: 60 };
+    const names: Record<string, string> = { basic: "🚀 Standard", premium: "⭐ Premium", alaune: "🔥 À la Une", vip: "👑 VIP" };
+    try {
+      await adminApi("grantCredit", { userId: creditUser.id, boost_key: grantKey, boost_name: names[grantKey], duration_days: days[grantKey] || 30, quantity: grantQty });
+      T("✅ Crédits ajoutés");
+      const d = await adminApi("listCredits", { userId: creditUser.id }); setUserCredits(d.credits || []);
+    } catch (e: any) { T(`❌ ${e.message}`); }
+    finally { setCreditBusy(false); }
+  }
+  async function removeCredit(id: string) {
+    try { await adminApi("removeCredit", { creditId: id }); T("🗑️ Crédit retiré"); setUserCredits((c) => c.filter((x) => x.id !== id)); }
     catch (e: any) { T(`❌ ${e.message}`); }
   }
 
@@ -2375,6 +2402,7 @@ return (
                   </select>
                   <button onClick={() => setVip(u.id, !u.free_premium)} className={`rounded-[7px] px-2.5 py-1 text-[.7rem] font-bold ${u.free_premium ? "bg-amber-500/20 text-amber-300" : "bg-white/5 text-[#FFC93C] hover:bg-amber-500/15"}`}>{u.free_premium ? "🎁 Retirer" : "🎁 VIP"}</button>
                   <button onClick={() => setVerified(u.id, !u.is_verified)} className={`rounded-[7px] px-2.5 py-1 text-[.7rem] font-bold ${u.is_verified ? "bg-emerald-500/20 text-emerald-300" : "bg-white/5 text-emerald-400 hover:bg-emerald-500/15"}`}>{u.is_verified ? "✓ Annuler" : "✓ Vérifier"}</button>
+                  <button onClick={() => openCredits(u)} className="rounded-[7px] bg-violet-500/15 px-2.5 py-1 text-[.7rem] font-bold text-violet-300 hover:bg-violet-500/25">💳 Crédits</button>
                   {serverUsers && <button onClick={() => del(u.id)} className="rounded-[7px] bg-red-500/10 px-2.5 py-1 text-[.7rem] font-bold text-red-300 hover:bg-red-500/20">🗑️</button>}
                 </div>
               </div>
@@ -2410,6 +2438,50 @@ return (
         </>
       )}
     </Card>
+
+    {/* MODAL — gestion des crédits d'un utilisateur */}
+    {creditUser && (
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4" onClick={() => setCreditUser(null)}>
+        <div className="w-full max-w-md rounded-2xl border border-[#30363D] bg-[#0D1117] p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-[.95rem] font-bold text-white">💳 Crédits — {creditUser.full_name || creditUser.email || "user"}</h3>
+            <button onClick={() => setCreditUser(null)} className="text-gray-400 hover:text-white">✕</button>
+          </div>
+
+          {/* Ajouter des crédits */}
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#21262D] bg-[#161B22] p-2.5">
+            <select value={grantKey} onChange={(e) => setGrantKey(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1.5 text-[.78rem] text-white outline-none">
+              <option value="basic">🚀 Standard</option>
+              <option value="premium">⭐ Premium</option>
+              <option value="alaune">🔥 À la Une</option>
+              <option value="vip">👑 VIP</option>
+            </select>
+            <input type="number" min={1} max={50} value={grantQty} onChange={(e) => setGrantQty(e.target.value)} className="w-16 rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1.5 text-[.78rem] text-white outline-none" />
+            <button disabled={creditBusy} onClick={grantCredit} className="rounded-[8px] bg-emerald-500/20 px-3 py-1.5 text-[.78rem] font-bold text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50">{creditBusy ? "…" : "+ Ajouter"}</button>
+          </div>
+
+          {/* Liste des crédits */}
+          <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
+            {userCredits.length === 0 ? (
+              <p className="py-6 text-center text-[.82rem] text-gray-500">Aucun crédit pour ce compte.</p>
+            ) : userCredits.map((c) => (
+              <div key={c.id} className="flex items-center justify-between gap-2 rounded-lg border border-[#21262D] bg-[#161B22] px-3 py-2">
+                <div className="min-w-0">
+                  <div className="text-[.8rem] font-bold text-white truncate">{c.boost_name || c.boost_key}</div>
+                  <div className="flex items-center gap-1.5 text-[.66rem]">
+                    <span className={`rounded px-1.5 py-0.5 font-bold ${c.status === "available" ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-gray-400"}`}>{c.status === "available" ? "disponible" : "utilisé"}</span>
+                    <span className="text-gray-500">{c.source === "gift" ? "🎁 offert" : c.source === "admin" ? "👑 admin" : "💵 acheté"} · {c.duration_days}j</span>
+                  </div>
+                </div>
+                {c.status === "available"
+                  ? <button onClick={() => removeCredit(c.id)} className="shrink-0 rounded-[7px] bg-red-500/10 px-2.5 py-1 text-[.7rem] font-bold text-red-300 hover:bg-red-500/20">🗑️ Retirer</button>
+                  : <span className="shrink-0 text-[.66rem] text-gray-500">verrouillé</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
   </>
 );
 }
@@ -2789,15 +2861,66 @@ function Points({ profiles }: { profiles: any[] }) {
   );
 }
 
-function Diffusion({ allListings }: { allListings: any[] }) {
+function Diffusion({ allListings, T }: { allListings: any[]; T: (m: string) => void }) {
   const [picked, setPicked] = useState("");
+  const [groupFilter, setGroupFilter] = useState("");
+  const [doneGroups, setDoneGroups] = useState<Record<string, boolean>>({});
   const ad = allListings.find((a) => a.id === picked);
   const siteUrl = (typeof window !== "undefined" ? window.location.origin : "https://wanteermako.com");
-  const shareText = ad ? `🔥 ${ad.title} — ${ad.price ? `${ad.price} FCFA` : ""}\n${siteUrl}/annonce/${ad.id}/${ad.slug || ""}\nSur Wanteermako 👉 ${siteUrl}` : "";
+  const adUrl = ad ? `${siteUrl}/annonce/${ad.id}/${ad.slug || ""}` : "";
+  const shareText = ad ? `🔥 ${ad.title}\n${ad.price ? `💰 Prix : ${Number(ad.price).toLocaleString("fr-FR")} FCFA\n` : ""}${ad.location ? `📍 ${ad.location}\n` : ""}\n👉 ${adUrl}\n\nSur Wanteermako — achetez, vendez et trouvez vite.\n#Wanteermako #BonsPlans` : "";
   const packs = [["➕ Plus", "Site + Facebook", "+ 10 000 FCFA/mois"], ["🚀 Premium", "Site + FB + WhatsApp", "+ 30 000 FCFA/mois"], ["👑 Elite", "Site + FB + WA + Sponsorisé", "+ 75 000 FCFA/mois"]];
+  const doneCount = Object.values(doneGroups).filter(Boolean).length;
+  const filteredGroups = FB_GROUPS.filter((g, i) => {
+    if (!groupFilter.trim()) return true;
+    const q = groupFilter.toLowerCase().trim();
+    return g.url.toLowerCase().includes(q) || `groupe ${i + 1}`.includes(q);
+  });
+
+  useEffect(() => {
+    if (!picked || typeof window === "undefined") {
+      setDoneGroups({});
+      return;
+    }
+    try {
+      setDoneGroups(JSON.parse(localStorage.getItem(`wmk_fb_groups_${picked}`) || "{}"));
+    } catch {
+      setDoneGroups({});
+    }
+  }, [picked]);
+
+  function groupName(url: string, index: number) {
+    const raw = (url.split("/groups/")[1] || "").replace(/\/+$/, "");
+    if (!raw) return `Groupe ${index + 1}`;
+    return /^\d+$/.test(raw) ? `Groupe ${index + 1} · ${raw.slice(0, 6)}...` : raw;
+  }
+
+  function saveDone(next: Record<string, boolean>) {
+    setDoneGroups(next);
+    if (picked && typeof window !== "undefined") {
+      localStorage.setItem(`wmk_fb_groups_${picked}`, JSON.stringify(next));
+    }
+  }
+
+  async function copyText() {
+    if (!shareText) return;
+    await navigator.clipboard?.writeText(shareText);
+    T("📋 Texte de diffusion copié");
+  }
+
+  async function openGroup(url: string) {
+    await copyText();
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function toggleDone(url: string) {
+    const next = { ...doneGroups, [url]: !doneGroups[url] };
+    saveDone(next);
+  }
+
   return (
     <>
-      <PageHead title="📡 Diffusion multi-canaux" sub="Partage rapide des annonces · automatisation Facebook à venir" />
+      <PageHead title="📡 Diffusion multi-canaux" sub="Partage rapide des annonces · groupes Facebook assistés depuis l'admin" />
       <div className="grid gap-3 lg:grid-cols-2">
         <Card title="Partager une annonce">
           <select value={picked} onChange={(e) => setPicked(e.target.value)} className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none">
@@ -2809,15 +2932,58 @@ function Diffusion({ allListings }: { allListings: any[] }) {
               <textarea readOnly value={shareText} rows={4} className="mb-2 w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] p-2.5 text-[.78rem] text-[#C9D1D9] outline-none" />
               <div className="flex flex-wrap gap-2">
                 <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener noreferrer" className="rounded-[8px] bg-[#25D366] px-3 py-1.5 text-[.78rem] font-bold text-white">💬 WhatsApp</a>
-                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${siteUrl}/annonce/${ad.id}/${ad.slug || ""}`)}`} target="_blank" rel="noopener noreferrer" className="rounded-[8px] bg-[#1877F2] px-3 py-1.5 text-[.78rem] font-bold text-white">📘 Facebook</a>
-                <button onClick={() => navigator.clipboard?.writeText(shareText)} className="rounded-[8px] border border-[#30363D] px-3 py-1.5 text-[.78rem] font-bold text-[#A5B4FC]">📋 Copier</button>
+                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(adUrl)}`} target="_blank" rel="noopener noreferrer" className="rounded-[8px] bg-[#1877F2] px-3 py-1.5 text-[.78rem] font-bold text-white">📘 Facebook page/profil</a>
+                <button onClick={copyText} className="rounded-[8px] border border-[#30363D] px-3 py-1.5 text-[.78rem] font-bold text-[#A5B4FC]">📋 Copier texte</button>
               </div>
             </>
           )}
         </Card>
         <Card title="Packs de diffusion (option payante)">
-          <div className="mb-2 rounded-[9px] border border-[#6366F1]/30 bg-[#6366F1]/10 p-2.5 text-[.76rem] text-[#A5B4FC]">ℹ️ La publication <b>automatique</b> sur pages Facebook/groupes WhatsApp est en cours de mise en place. Le partage manuel ci-contre fonctionne dès maintenant.</div>
+          <div className="mb-2 rounded-[9px] border border-[#6366F1]/30 bg-[#6366F1]/10 p-2.5 text-[.76rem] text-[#A5B4FC]">ℹ️ Les groupes Facebook se font en diffusion assistée : l'admin copie le texte, ouvre le groupe, colle et publie. C'est plus sûr pour éviter les blocages Meta.</div>
           {packs.map(([n, c, p]) => <div key={n} className="mb-2 flex flex-wrap items-center justify-between gap-1 rounded-[9px] bg-[#0D1117] p-2.5"><div><div className="text-[.82rem] font-bold text-[#E6EDF3]">{n}</div><div className="text-[.71rem] text-[#8B949E]">{c}</div></div><span className="text-[.78rem] font-extrabold text-[#FFC93C]">{p}</span></div>)}
+        </Card>
+      </div>
+      <div className="mt-3">
+        <Card title={`Groupes Facebook (${doneCount}/${FB_GROUPS.length} faits)`} sub="Clique sur Ouvrir, colle le texte dans le groupe, puis marque comme publié.">
+          {!ad ? (
+            <div className="py-8 text-center text-[.82rem] text-[#8B949E]">Choisis d'abord une annonce pour préparer le texte de diffusion.</div>
+          ) : (
+            <>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <input
+                  value={groupFilter}
+                  onChange={(e) => setGroupFilter(e.target.value)}
+                  placeholder="Filtrer les groupes..."
+                  className="min-w-[220px] flex-1 rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none"
+                />
+                <button onClick={copyText} className="rounded-[8px] bg-[#1877F2] px-3 py-2 text-[.78rem] font-bold text-white">📋 Copier le texte</button>
+                <button onClick={() => saveDone({})} className="rounded-[8px] border border-[#30363D] px-3 py-2 text-[.78rem] font-bold text-[#8B949E]">Réinitialiser</button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredGroups.map((g, index) => {
+                  const originalIndex = FB_GROUPS.findIndex((x) => x.url === g.url);
+                  const done = !!doneGroups[g.url];
+                  return (
+                    <div key={g.url} className={`rounded-[10px] border p-2.5 ${done ? "border-emerald-500/30 bg-emerald-500/10" : "border-[#30363D] bg-[#0D1117]"}`}>
+                      <div className="mb-2 min-w-0">
+                        <div className="truncate text-[.8rem] font-bold text-[#E6EDF3]">{groupName(g.url, originalIndex >= 0 ? originalIndex : index)}</div>
+                        <div className="truncate text-[.65rem] text-[#8B949E]">{g.url}</div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button onClick={() => openGroup(g.url)} className="rounded-[7px] bg-[#1877F2] px-2.5 py-1 text-[.7rem] font-bold text-white">Ouvrir</button>
+                        <button onClick={() => toggleDone(g.url)} className={`rounded-[7px] px-2.5 py-1 text-[.7rem] font-bold ${done ? "bg-emerald-500/20 text-emerald-300" : "border border-[#30363D] text-[#A5B4FC]"}`}>
+                          {done ? "✓ Publié" : "Marquer fait"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-[.7rem] text-[#8B949E]">
+                Conseil : varie légèrement le texte après quelques groupes et respecte les règles de chaque communauté pour garder une bonne portée.
+              </p>
+            </>
+          )}
         </Card>
       </div>
     </>

@@ -116,6 +116,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    // Lister les crédits boost d'un utilisateur
+    if (action === "listCredits") {
+      const { userId } = body;
+      if (!userId) return NextResponse.json({ error: "Utilisateur requis." }, { status: 400 });
+      const { data, error } = await sb.from("boost_credits").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+      if (error) return NextResponse.json({ credits: [] });
+      return NextResponse.json({ credits: data || [] });
+    }
+
+    // Ajouter des crédits boost à un utilisateur (offert par l'admin)
+    if (action === "grantCredit") {
+      const { userId, boost_key, boost_name, duration_days, quantity } = body;
+      if (!userId || !boost_key) return NextResponse.json({ error: "Utilisateur et type de boost requis." }, { status: 400 });
+      const qty = Math.max(1, Math.min(50, Number(quantity) || 1));
+      const rows = Array.from({ length: qty }, () => ({
+        user_id: userId,
+        boost_key,
+        boost_name: boost_name || boost_key,
+        duration_days: Number(duration_days) || 30,
+        status: "available",
+        source: "admin",
+      }));
+      const { error } = await sb.from("boost_credits").insert(rows);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true, added: qty });
+    }
+
+    // Retirer / supprimer un crédit boost précis
+    if (action === "removeCredit") {
+      const { creditId } = body;
+      if (!creditId) return NextResponse.json({ error: "Crédit requis." }, { status: 400 });
+      const { error } = await sb.from("boost_credits").delete().eq("id", creditId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true });
+    }
+
     // Encaissement manuel (espèces) : activer un boost d'annonce OU un abonnement
     // de compte, enregistrer la transaction et appliquer les avantages.
     if (action === "activatePlan") {
