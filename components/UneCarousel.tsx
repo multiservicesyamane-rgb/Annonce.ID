@@ -124,7 +124,7 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
                   <span>📍</span> <span className="truncate">{ad.location}</span>
                 </span>
                 {ad.created_at && (
-                  <span className="shrink-0 text-white/60">
+                  <span suppressHydrationWarning className="shrink-0 text-white/60">
                     {getRelativeTime(ad.created_at)}
                   </span>
                 )}

@@ -126,7 +126,7 @@ export default function AdCard({ ad }: { ad: Listing }) {
             <span className="truncate">{ad.location}</span>
           </span>
           {ad.created_at && (
-            <span className="font-medium shrink-0 opacity-80">{getRelativeTime(ad.created_at)}</span>
+            <span suppressHydrationWarning className="font-medium shrink-0 opacity-80">{getRelativeTime(ad.created_at)}</span>
           )}
         </div>
       </div>

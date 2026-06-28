@@ -284,12 +284,18 @@ export default function Dashboard() {
     const ad = ads.find(a => a.id === id);
     if (!ad) return;
     const newStatus = ad.status === 'sold' ? 'active' : 'sold';
+    const previousAds = ads;
 
     // Optimistic UI update
     setAds(ads.map(a => a.id === id ? { ...a, status: newStatus } : a));
 
     // DB Update
-    await supabase.from('listings').update({ status: newStatus }).eq('id', id);
+    const { error } = await supabase.from('listings').update({ status: newStatus }).eq('id', id);
+    if (error) {
+      setAds(previousAds);
+      show("❌ Action impossible : " + error.message);
+      return;
+    }
     show(newStatus === 'sold' ? "✅ Annonce marquée comme vendue !" : "✅ Annonce remise en vente !");
     setOpenMenuId(null);
   }
@@ -298,24 +304,37 @@ export default function Dashboard() {
     const ad = ads.find(a => a.id === id);
     if (!ad) return;
     const newStatus = ad.status === 'inactive' ? 'active' : 'inactive';
+    const previousAds = ads;
 
     // Optimistic UI update
     setAds(ads.map(a => a.id === id ? { ...a, status: newStatus } : a));
 
     // DB Update
-    await supabase.from('listings').update({ status: newStatus }).eq('id', id);
+    const { error } = await supabase.from('listings').update({ status: newStatus }).eq('id', id);
+    if (error) {
+      setAds(previousAds);
+      show("❌ Action impossible : " + error.message);
+      return;
+    }
     show(newStatus === 'active' ? "✅ Annonce activée !" : "⏸️ Annonce désactivée.");
     setOpenMenuId(null);
   }
 
   async function handleDeleteAd() {
     if (!adToDelete) return;
+    const previousAds = ads;
 
     // Optimistic UI
     setAds(ads.filter(a => a.id !== adToDelete));
 
     // DB Update
-    await supabase.from('listings').delete().eq('id', adToDelete);
+    const { error } = await supabase.from('listings').delete().eq('id', adToDelete);
+    if (error) {
+      setAds(previousAds);
+      show("❌ Suppression impossible : " + error.message);
+      setAdToDelete(null);
+      return;
+    }
 
     show("🗑️ Annonce supprimée avec succès !");
     setAdToDelete(null);
@@ -394,6 +413,19 @@ export default function Dashboard() {
     return matchTab && matchSearch;
   });
   const activeAds = ads.filter((ad) => ad.status === 'active' || !ad.status);
+  const statusLabel = (status?: string) =>
+    status === 'inactive' ? 'Inactif' :
+    status === 'sold' ? 'Vendu' :
+    status === 'pending' ? 'En attente' :
+    status === 'rejected' ? 'Rejetée' :
+    status === 'draft' ? 'Brouillon' :
+    'Actif';
+  const statusPill = (status?: string) =>
+    status === 'inactive' ? 'bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-gray-300' :
+    status === 'sold' ? 'bg-red-50 text-brand-red dark:bg-red-900/20 dark:text-red-300' :
+    status === 'pending' ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300' :
+    status === 'rejected' ? 'bg-red-50 text-brand-red dark:bg-red-900/20 dark:text-red-300' :
+    'bg-green/10 text-green';
 
   const getNextMondays = () => {
     const dates = [];
@@ -556,7 +588,7 @@ export default function Dashboard() {
                     {loadingProfile ? "Chargement du profil..." : `Bonjour, ${displayName} 👋`}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[.75rem] text-gray-500 dark:text-[#8B949E]">
-                    <span className="capitalize">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    <span suppressHydrationWarning className="capitalize">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
                     {profile?.is_verified && (
                       <>
                         <span className="hidden sm:inline">•</span>
@@ -1919,28 +1951,61 @@ export default function Dashboard() {
               {/* Draggable Products List */}
               <div className="space-y-3">
                 {ads.length > 0 ? ads.slice((showroomPage - 1) * 5, showroomPage * 5).map((prod, idx) => (
-                  <div key={prod.id || idx} className="flex items-center gap-3 sm:gap-4 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border rounded-xl p-3 shadow-sm hover:border-green transition">
-                    <img src={prod.image || "https://placehold.co/150x150?text=Sans+Image"} alt={prod.title} className="w-14 h-14 rounded-lg object-cover shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-sm text-gray-900 dark:text-white uppercase truncate">{prod.title}</h4>
-                      <div className="text-sm font-semibold text-green mt-0.5">{prod.price}</div>
-                      <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[0.6rem] font-bold uppercase ${prod.status === 'inactive' ? 'bg-gray-100 text-gray-500 dark:bg-dark-700 dark:text-gray-300' : prod.status === 'sold' ? 'bg-red-50 text-brand-red' : 'bg-green/10 text-green'}`}>
-                        {prod.status === 'inactive' ? '⏸️ Inactif' : prod.status === 'sold' ? '📦 Vendu' : '✓ Actif'}
-                      </span>
-                    </div>
-                    <div className="relative shrink-0">
-                      <button onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === prod.id ? null : prod.id); }} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-dark-900 rounded-full">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
-                      </button>
-                      {openMenuId === prod.id && (
-                        <div className="absolute right-0 top-10 w-44 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-border py-2 z-50">
-                          <Link href={`/publier?edit=${prod.id}`} className="block px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">✏️ Modifier</Link>
-                          <Link href={`/annonce/${prod.id}/${prod.slug}`} target="_blank" className="block px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">👁️ Voir</Link>
-                          <button onClick={() => toggleActive(prod.id)} className="block w-full text-left px-4 py-2 text-[.85rem] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-700">{prod.status === 'inactive' ? '▶️ Activer' : '⏸️ Désactiver'}</button>
-                          <div className="my-1 border-t border-gray-100 dark:border-dark-border"></div>
-                          <button onClick={() => { setAdToDelete(prod.id); setOpenMenuId(null); }} className="block w-full text-left px-4 py-2 text-[.85rem] text-brand-red font-bold hover:bg-red-50 dark:hover:bg-red-900/10">🗑️ Supprimer</button>
+                  <div key={prod.id || idx} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm transition hover:border-green dark:border-dark-border dark:bg-dark-800">
+                    <div className="flex gap-3 sm:gap-4">
+                      <Link href={`/annonce/${prod.id}/${prod.slug}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-dark-900 sm:h-24 sm:w-24">
+                        <img src={prod.image || "https://placehold.co/150x150?text=Sans+Image"} alt={prod.title} className="h-full w-full object-cover" />
+                        {prod.status === 'sold' && (
+                          <span className="absolute inset-x-1 bottom-1 rounded bg-brand-red px-1 py-0.5 text-center text-[.55rem] font-black uppercase text-white">Vendu</span>
+                        )}
+                      </Link>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <Link href={`/annonce/${prod.id}/${prod.slug}`} className="line-clamp-2 text-[.9rem] font-extrabold leading-tight text-gray-900 hover:text-green dark:text-white">
+                              {prod.title}
+                            </Link>
+                            <div className="mt-1 text-[.9rem] font-black text-green">{prod.price}</div>
+                          </div>
+                          <span className={`shrink-0 rounded-full px-2 py-1 text-[.6rem] font-black uppercase ${statusPill(prod.status)}`}>
+                            {statusLabel(prod.status)}
+                          </span>
                         </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[.68rem] font-medium text-gray-500 dark:text-white/50">
+                          <span className="truncate">{prod.category || "Autre"}</span>
+                          <span>{prod.views || 0} vues</span>
+                          <span>{prod.location || "Sénégal"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                      <Link href={`/publier?edit=${prod.id}`} className="rounded-lg bg-gray-100 px-3 py-2 text-center text-[.74rem] font-extrabold text-gray-800 transition hover:bg-gray-200 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700">
+                        Modifier
+                      </Link>
+                      <Link href={`/annonce/${prod.id}/${prod.slug}`} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-gray-100 px-3 py-2 text-center text-[.74rem] font-extrabold text-gray-800 transition hover:bg-gray-200 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700">
+                        Voir
+                      </Link>
+                      <Link href={`/paiement?annonce_id=${prod.id}`} className="rounded-lg bg-gold px-3 py-2 text-center text-[.74rem] font-extrabold text-dark-900 transition hover:brightness-95">
+                        Booster
+                      </Link>
+                      {prod.status === 'sold' ? (
+                        <button onClick={() => toggleSold(prod.id)} className="rounded-lg bg-green/10 px-3 py-2 text-[.74rem] font-extrabold text-green transition hover:bg-green/20">
+                          Remettre
+                        </button>
+                      ) : (
+                        <button onClick={() => toggleActive(prod.id)} className="rounded-lg bg-gray-100 px-3 py-2 text-[.74rem] font-extrabold text-gray-700 transition hover:bg-gray-200 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700">
+                          {prod.status === 'inactive' ? 'Activer' : 'Désactiver'}
+                        </button>
                       )}
+                      {prod.status !== 'sold' && (
+                        <button onClick={() => toggleSold(prod.id)} className="rounded-lg bg-blue-50 px-3 py-2 text-[.74rem] font-extrabold text-blue-700 transition hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300">
+                          Vendu
+                        </button>
+                      )}
+                      <button onClick={() => { setAdToDelete(prod.id); setOpenMenuId(null); }} className="rounded-lg bg-red-50 px-3 py-2 text-[.74rem] font-extrabold text-brand-red transition hover:bg-red-100 dark:bg-red-900/20">
+                        Supprimer
+                      </button>
                     </div>
                   </div>
                 )) : (
@@ -1984,22 +2049,26 @@ export default function Dashboard() {
             </div>
 
             {/* Colonne Droite : Live Preview */}
-            <div className={`fixed inset-0 z-[900] bg-black/80 backdrop-blur-sm flex justify-center items-center p-3 lg:p-0 lg:inset-auto lg:z-auto lg:self-start lg:sticky lg:top-[95px] lg:bg-transparent lg:backdrop-blur-none lg:w-[330px] lg:shrink-0 lg:justify-center lg:items-center lg:h-[calc(100vh-120px)] ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
+            <div className={`fixed inset-0 z-[900] bg-black/80 backdrop-blur-sm flex justify-center items-center p-2 sm:p-3 lg:p-0 lg:inset-auto lg:z-auto lg:self-start lg:sticky lg:top-[95px] lg:bg-transparent lg:backdrop-blur-none lg:w-[360px] lg:shrink-0 lg:justify-center lg:items-center lg:h-[calc(100vh-120px)] ${livePreviewOpen ? "flex" : "hidden"} lg:!flex`}>
               {/* Mobile Close Button */}
               {livePreviewOpen && (
-                <button onClick={() => setLivePreviewOpen(false)} className="lg:hidden fixed top-4 right-4 text-white bg-white/15 rounded-full w-10 h-10 flex items-center justify-center text-xl backdrop-blur-md z-[950]">
+                <button onClick={() => setLivePreviewOpen(false)} className="lg:hidden fixed top-3 right-3 text-white bg-white/15 rounded-full w-10 h-10 flex items-center justify-center text-xl backdrop-blur-md z-[950]">
                   ✕
                 </button>
               )}
               {/* Phone Mockup Frame (iPhone Pro Max) — cadre fixe, contenu scrollable à l'intérieur */}
-              <div className="relative w-full max-w-[330px] h-[82vh] max-h-[680px] lg:h-[560px] bg-[#0A0E14] rounded-[2.5rem] border-[8px] border-gray-900 dark:border-black shadow-2xl overflow-hidden flex flex-col mx-auto">
+              <div className="relative w-full max-w-[360px] h-[90dvh] max-h-[720px] lg:h-[600px] bg-[#0A0E14] rounded-[2rem] sm:rounded-[2.5rem] border-[6px] sm:border-[8px] border-gray-900 dark:border-black shadow-2xl overflow-hidden flex flex-col mx-auto">
                 {/* Dynamic Island / notch */}
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-full z-[60]" />
                 {/* Mockup Content (The Store Page) */}
-                <div className="flex-1 overflow-y-auto bg-[#0A0E14] scrollbar-hide flex flex-col pt-9">
+                <div className="flex-1 overflow-y-auto bg-[#0A0E14] scrollbar-hide flex flex-col pt-8">
                   {/* Banner & Profile Section */}
-                  <div className="relative bg-gradient-to-b from-[#1c2333] to-[#0A0E14] pb-4 shrink-0">
-                    <div className="pt-4 px-4">
+                  <div className="relative overflow-hidden bg-gradient-to-b from-[#1c2333] to-[#0A0E14] pb-4 shrink-0">
+                    {showroomCover && (
+                      <img src={showroomCover} alt="Couverture boutique" className="absolute inset-x-0 top-0 h-28 w-full object-cover opacity-80" />
+                    )}
+                    <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/10 via-black/35 to-[#0A0E14]" />
+                    <div className="relative pt-14 px-4">
                       {/* Avatar */}
                       <div className="w-16 h-16 rounded-full bg-[#E65100] border-[2px] border-[#FFB300] flex items-center justify-center overflow-hidden shadow-lg mb-2">
                         {avatarUrl ? (
@@ -2039,22 +2108,22 @@ export default function Dashboard() {
                   </div>
 
                   {/* Listings Section */}
-                  <div className="p-4 bg-[#0A0E14] flex-1">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 sm:p-4 bg-[#0A0E14] flex-1">
+                    <div className="flex items-center justify-between mb-3">
                       <h3 className="text-white font-display font-bold text-[.9rem] leading-snug max-w-[200px]">
                         Annonces de {showroomName || displayName || "Ma Boutique"}
                       </h3>
-                      <span className="text-[#5C6BC0] text-xs font-bold whitespace-nowrap">Voir tout →</span>
+                      <span className="text-[#5C6BC0] text-xs font-bold whitespace-nowrap">Aperçu</span>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3 pb-[80px]">
-                      {activeAds.length > 0 ? activeAds.map((prod, idx) => (
+                    <div className="grid grid-cols-2 gap-2.5 pb-[82px]">
+                      {activeAds.length > 0 ? activeAds.slice(0, 8).map((prod, idx) => (
                         <div key={prod.id || idx} className="bg-[#161B22] rounded-xl overflow-hidden border border-white/5 relative">
                           <div className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full z-10 backdrop-blur-sm">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                           </div>
                           <img src={prod.image || "https://placehold.co/400x400?text=Sans+Image"} alt={prod.title} className="w-full aspect-square object-cover" />
-                          <div className="p-2.5">
+                          <div className="p-2">
                             <h4 className="font-bold text-[.75rem] text-white leading-tight line-clamp-2">{prod.title}</h4>
                             <div className="text-[.75rem] font-black text-[#5C6BC0] mt-1">{prod.price}</div>
                             <div className="text-[.6rem] text-gray-500 mt-1 truncate">📍 {prod.location || "Dakar"}</div>
@@ -2069,7 +2138,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Fake WhatsApp Button */}
-                  <div className="absolute bottom-[30px] right-4 z-50">
+                  <div className="absolute bottom-4 right-4 z-50">
                     <div className="w-[50px] h-[50px] bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-[0_0_20px_rgba(37,211,102,0.4)]">
                       <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
                     </div>
