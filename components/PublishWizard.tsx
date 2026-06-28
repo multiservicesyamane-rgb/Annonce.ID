@@ -271,6 +271,11 @@ export default function PublishWizard() {
 
     if (error) { console.error("Supabase Error:", error); show(`⚠ ${error.message}`); setIsPublishing(false); return; }
 
+    // Dès sa 1ère annonce, le vendeur devient visible dans les Boutiques (auto)
+    if (!editModeId) {
+      supabase.from('profiles').update({ has_boutique: true }).eq('id', user.id).then(() => {}, () => {});
+    }
+
     if (!editModeId && (boost === 0 || isKonnecta)) {
       if (!isKonnecta) await supabase.from('profiles').update({ free_ads_remaining: freeAdsRemaining - 1 }).eq('id', user.id);
       if (isKonnecta && boost > 0) {
