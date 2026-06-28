@@ -274,6 +274,16 @@ export default function PublishWizard() {
     // Dès sa 1ère annonce, le vendeur devient visible dans les Boutiques (auto)
     if (!editModeId) {
       supabase.from('profiles').update({ has_boutique: true }).eq('id', user.id).then(() => {}, () => {});
+      // Garantir 1 produit "À la Une" par compte : si le vendeur n'a encore
+      // aucune annonce en vedette, on met celle-ci à la une automatiquement.
+      if (data?.id) {
+        supabase.from('listings').select('id').eq('user_id', user.id).or('featured.eq.true,is_featured.eq.true').limit(1)
+          .then(({ data: feat }) => {
+            if (!feat || feat.length === 0) {
+              supabase.from('listings').update({ featured: true, is_featured: true }).eq('id', data.id).then(() => {}, () => {});
+            }
+          });
+      }
     }
 
     if (!editModeId && (boost === 0 || isKonnecta)) {
