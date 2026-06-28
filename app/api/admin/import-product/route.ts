@@ -5,6 +5,7 @@ import { OWNER_EMAILS } from "@/lib/owners";
 export const dynamic = "force-dynamic";
 
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || "YamaneTech@2025";
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 function admin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -46,12 +47,33 @@ export async function POST(req: Request) {
     const sb = admin();
     if (!sb) return NextResponse.json({ error: "Service indisponible (clé service role manquante)." }, { status: 500 });
 
-    // Résoudre le compte propriétaire (par email) → user_id
+    // Résoudre le compte propriétaire explicite, puis le compte par défaut.
+    const requestedOwnerId = String(body?.owner_id || body?.ownerId || body?.product?.owner_id || "").trim();
     const ownerEmail = (body?.owner_email || OWNER_EMAILS[0] || "").toLowerCase().trim();
     let ownerId: string | null = null;
-    const { data: prof } = await sb.from("profiles").select("id,email").ilike("email", ownerEmail).maybeSingle();
-    ownerId = prof?.id || null;
-    if (!ownerId) {
+
+    if (requestedOwnerId) {
+      if (!UUID_RE.test(requestedOwnerId)) {
+        return NextResponse.json({ error: "ID propriétaire invalide." }, { status: 400 });
+      }
+      const { data: profById } = await sb.from("profiles").select("id").eq("id", requestedOwnerId).maybeSingle();
+      ownerId = profById?.id || null;
+      if (!ownerId) {
+        try {
+          const { data: authUser } = await (sb as any).auth.admin.getUserById(requestedOwnerId);
+          ownerId = authUser?.user?.id || null;
+        } catch { /* ignore */ }
+      }
+      if (!ownerId) {
+        return NextResponse.json({ error: "Compte propriétaire introuvable." }, { status: 400 });
+      }
+    }
+
+    if (!ownerId && ownerEmail) {
+      const { data: prof } = await sb.from("profiles").select("id").ilike("email", ownerEmail).maybeSingle();
+      ownerId = prof?.id || null;
+    }
+    if (!ownerId && ownerEmail) {
       // Repli : chercher dans auth.users
       try {
         const { data: list } = await (sb as any).auth.admin.listUsers();
@@ -60,7 +82,7 @@ export async function POST(req: Request) {
       } catch { /* ignore */ }
     }
     if (!ownerId) {
-      return NextResponse.json({ error: `Aucun compte trouvé pour ${ownerEmail}. Connecte-toi une fois avec ce compte sur le site, puis réessaie.` }, { status: 400 });
+      return NextResponse.json({ error: `Aucun compte trouvé pour ${ownerEmail || "le propriétaire demandé"}. Connecte-toi une fois avec ce compte sur le site, puis réessaie.` }, { status: 400 });
     }
 
     const products: any[] = Array.isArray(body?.products) ? body.products : (body?.product ? [body.product] : []);

@@ -34,7 +34,7 @@ export default async function BoutiquesPage() {
 
   // Boutique = TOUT vendeur ayant au moins 1 annonce active (affichage automatique)
   const boutiques = (allProfiles || []).filter(
-    (p: any) => (countMap[p.id] || 0) > 0,
+    (p: any) => p.has_boutique !== false && (countMap[p.id] || 0) > 0,
   );
 
   return (

@@ -318,7 +318,7 @@ export default function SuperAdminApp() {
             {page === "ambassadeurs" && <Ambassadeurs T={T} ambassadors={ambassadors} />}
             {page === "offres" && <Offres T={T} />}
             {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
-            {page === "import" && <ImportProduits T={T} reload={loadAllData} />}
+            {page === "import" && <ImportProduits T={T} reload={loadAllData} profiles={profiles} />}
             {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
             {page === "encaissement" && <Encaissement profiles={profiles} allListings={allListings} T={T} reload={loadAllData} />}
             {page === "finance" && <Finance purchases={purchases} counts={counts} />}
@@ -2092,12 +2092,28 @@ const IMPORT_SOURCES = [
 ];
 const IMPORT_EMPTY = { cta: "whatsapp", order_whatsapp: "", source: "aliexpress", title: "", price: "", image: "", category: "", location: "Dakar", external_url: "", description: "", featured: false };
 
-function ImportProduits({ T, reload }: { T: (m: string) => void; reload: () => void }) {
+function ImportProduits({ T, reload, profiles }: { T: (m: string) => void; reload: () => void; profiles: any[] }) {
   const inp = "w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.83rem] text-white outline-none focus:border-[#6366F1]";
   const [f, setF] = useState<any>({ ...IMPORT_EMPTY });
+  const [ownerId, setOwnerId] = useState("");
+  const [ownerOptions, setOwnerOptions] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<any[]>([]);
   const set = (k: string, v: any) => setF((p: any) => ({ ...p, [k]: v }));
+  const owners = (ownerOptions.length ? ownerOptions : profiles || []).filter((u: any) => u?.id);
+  const ownerLabel = (u: any) => {
+    const name = u.full_name || u.email || u.phone || u.id;
+    const email = u.email && u.email !== name ? ` · ${u.email}` : "";
+    return `${name}${email}`;
+  };
+
+  useEffect(() => {
+    let alive = true;
+    adminApi("list")
+      .then((d) => { if (alive) setOwnerOptions(d.users || []); })
+      .catch(() => { if (alive) setOwnerOptions([]); });
+    return () => { alive = false; };
+  }, []);
 
   const isWa = f.cta === "whatsapp";
   async function submit() {
@@ -2111,7 +2127,11 @@ function ImportProduits({ T, reload }: { T: (m: string) => void; reload: () => v
       const res = await fetch("/api/admin/import-product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pass, product: { ...f, order_whatsapp: isWa ? f.order_whatsapp : "", category: cat?.name || "Autre", category_slug: f.category || "" } }),
+        body: JSON.stringify({
+          password: pass,
+          owner_id: ownerId || undefined,
+          product: { ...f, order_whatsapp: isWa ? f.order_whatsapp : "", category: cat?.name || "Autre", category_slug: f.category || "" },
+        }),
       });
       const d = await res.json();
       if (!res.ok) { T("❌ " + (d.error || "Erreur")); setBusy(false); return; }
@@ -2128,6 +2148,14 @@ function ImportProduits({ T, reload }: { T: (m: string) => void; reload: () => v
       <PageHead title="🛒 Import Produits externes" sub="Chariow, AliExpress… Le bouton « Acheter » renverra directement vers le site de vente." />
       <Card>
         <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Boutique propriétaire</label>
+            <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className={inp}>
+              <option value="">Compte propriétaire par défaut</option>
+              {owners.map((u: any) => <option key={u.id} value={u.id}>{ownerLabel(u)}</option>)}
+            </select>
+            <p className="mt-1 text-[.68rem] text-[#8B949E]">Choisis la boutique qui doit afficher ce produit dans « Ma Boutique ».</p>
+          </div>
           <div>
             <label className="mb-1 block text-[.72rem] font-bold text-[#8B949E]">Site de vente</label>
             <select value={f.source} onChange={(e) => set("source", e.target.value)} className={inp}>

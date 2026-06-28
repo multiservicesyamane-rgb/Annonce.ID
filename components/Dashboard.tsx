@@ -393,6 +393,7 @@ export default function Dashboard() {
 
     return matchTab && matchSearch;
   });
+  const activeAds = ads.filter((ad) => ad.status === 'active' || !ad.status);
 
   const getNextMondays = () => {
     const dates = [];
@@ -2031,7 +2032,7 @@ export default function Dashboard() {
                           </div>
                         )}
                         <div className="bg-white/10 border border-white/10 rounded-full px-2 py-1 flex items-center gap-1 text-[.6rem] text-white font-medium">
-                          <span>📦</span> {ads.length} annonces
+                          <span>📦</span> {activeAds.length} annonces actives
                         </div>
                       </div>
                     </div>
@@ -2047,7 +2048,7 @@ export default function Dashboard() {
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3 pb-[80px]">
-                      {ads.length > 0 ? ads.map((prod, idx) => (
+                      {activeAds.length > 0 ? activeAds.map((prod, idx) => (
                         <div key={prod.id || idx} className="bg-[#161B22] rounded-xl overflow-hidden border border-white/5 relative">
                           <div className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full z-10 backdrop-blur-sm">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
