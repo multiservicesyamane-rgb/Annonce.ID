@@ -34,6 +34,7 @@ export default function PublishWizard() {
   const [cropQueue, setCropQueue] = useState<string[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [credits, setCredits] = useState<any[]>([]);
   const [userEmail, setUserEmail] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
   const [aiLoading, setAiLoading] = useState("");
@@ -48,6 +49,11 @@ export default function PublishWizard() {
           if (data) setUserProfile(data);
           setLoadingProfile(false);
         });
+        // Crédits boost offerts/achetés disponibles
+        fetch("/api/credits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "list" }) })
+          .then((r) => r.json())
+          .then((d) => setCredits((d.credits || []).filter((c: any) => c.status === "available")))
+          .catch(() => {});
       } else {
         setLoadingProfile(false);
       }
@@ -275,9 +281,28 @@ export default function PublishWizard() {
 
     localStorage.removeItem("annonceid_draft");
 
+    // BOOST GRATUIT VIA CRÉDIT : si le vendeur possède un crédit (offert ou acheté)
+    // correspondant au boost choisi, on l'applique → annonce active SANS paiement.
+    let usedCredit = false;
+    if (!editModeId && boost > 0 && !isVipFree && !isKonnecta && data?.id) {
+      const wantKey = BOOSTS[boost].key;
+      const credit = credits.find((c: any) => c.boost_key === wantKey && c.status === "available");
+      if (credit) {
+        try {
+          const res = await fetch("/api/credits", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "use", creditId: credit.id, listingId: data.id }),
+          });
+          const d = await res.json();
+          usedCredit = res.ok && !d?.error;
+        } catch { /* échec → on bascule sur le paiement */ }
+      }
+    }
+
     // Publication instantanée sur les réseaux (Telegram/Facebook…) si l'annonce
     // est active dès maintenant. Idempotent côté serveur ; "fire-and-forget".
-    const isActiveNow = !editModeId && (boost === 0 || isVipFree || isKonnecta);
+    const isActiveNow = !editModeId && (boost === 0 || isVipFree || isKonnecta || usedCredit);
     if (isActiveNow && data?.id) {
       fetch("/api/campaign/publish-listing", {
         method: "POST",
@@ -287,7 +312,7 @@ export default function PublishWizard() {
     }
 
     if (editModeId) { show("✅ Annonce mise à jour !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}`), 1200); }
-    else if (boost === 0 || isKonnecta) { show("✅ Annonce publiée !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}?published=1`), 1200); }
+    else if (boost === 0 || isKonnecta || usedCredit) { show(usedCredit ? "✅ Publiée avec votre boost offert !" : "✅ Annonce publiée !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}?published=1`), 1200); }
     else { router.push(`/paiement?annonce_id=${data.id}`); }
   }
 
@@ -482,7 +507,11 @@ export default function PublishWizard() {
                   <div className="flex-1 min-w-0 pr-4">
                     <div className="flex justify-between items-start gap-2">
                       <span className="font-bold text-[.9rem] dark:text-white leading-tight">{b.name}</span>
-                      <span className={`font-bold text-[.85rem] shrink-0 ${i === 0 ? "text-gray-500" : "text-green"}`}>{i === 0 ? "Gratuit" : `${b.price} F`}</span>
+                      {i > 0 && credits.filter((c: any) => c.boost_key === b.key && c.status === "available").length > 0 ? (
+                        <span className="font-extrabold text-[.78rem] shrink-0 text-green">🎁 Offert ({credits.filter((c: any) => c.boost_key === b.key && c.status === "available").length})</span>
+                      ) : (
+                        <span className={`font-bold text-[.85rem] shrink-0 ${i === 0 ? "text-gray-500" : "text-green"}`}>{i === 0 ? "Gratuit" : `${b.price} F`}</span>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {b.features.map(f => (
@@ -517,7 +546,11 @@ export default function PublishWizard() {
           ) : (
             <button onClick={handlePublish} disabled={isPublishing}
               className={`btn px-6 shadow-lg text-[.85rem] ${boost > 0 ? "btn-gold" : "btn-green"} ${isPublishing ? "opacity-50 cursor-not-allowed" : ""}`}>
-              {isPublishing ? "En cours..." : (boost > 0 ? `Payer & Publier` : "Publier")}
+              {isPublishing
+                ? "En cours..."
+                : boost > 0
+                  ? (credits.find((c: any) => c.boost_key === BOOSTS[boost].key && c.status === "available") ? "🎁 Publier (boost offert)" : "Payer & Publier")
+                  : "Publier"}
             </button>
           )}
         </div>
