@@ -222,7 +222,8 @@ export default function PublishWizard() {
     if (loadingProfile) return show("⏳ Chargement...");
     // Comptes propriétaires + VIP gratuit : Premium + À la Une offerts, sans limite ni paiement
     const isVipFree = isOwner(userEmail) || !!userProfile?.free_premium;
-    if (!isVipFree && boost === 0 && freeAdsRemaining <= 0) return show("⚠ Plus d'annonces gratuites.");
+    // Les annonces BASIQUES (gratuites) sont ILLIMITÉES (cf. pack de bienvenue).
+    // Les 7 boosts offerts (5 Standard + 1 Premium + 1 À la Une) servent à la mise en avant.
     setIsPublishing(true);
     show("Création en cours...");
     const { data: { user } } = await supabase.auth.getUser();
@@ -287,7 +288,7 @@ export default function PublishWizard() {
     }
 
     if (!editModeId && (boost === 0 || isKonnecta)) {
-      if (!isKonnecta) await supabase.from('profiles').update({ free_ads_remaining: freeAdsRemaining - 1 }).eq('id', user.id);
+      // (Annonces gratuites illimitées : on ne décrémente plus de quota)
       if (isKonnecta && boost > 0) {
         const boostKey = BOOSTS[boost].key;
         await supabase.from('listings').update({ status: 'active', premium: boostKey === 'premium' || boostKey === 'vip' }).eq('id', data.id);
@@ -537,9 +538,9 @@ export default function PublishWizard() {
                 </label>
               ))}
               {boost === 0 && (
-                <div className="bg-gray-50 dark:bg-dark-900 rounded-lg p-2.5 text-[.8rem] text-gray-600 dark:text-gray-400 flex items-center justify-between">
-                  <span>Annonces gratuites :</span>
-                  <span className="font-bold text-gray-900 dark:text-white text-lg">{freeAdsRemaining}</span>
+                <div className="bg-green-50 dark:bg-green-900/15 border border-green-200 dark:border-green-500/20 rounded-lg p-2.5 text-[.8rem] text-green-700 dark:text-green-400 flex items-center justify-between">
+                  <span>✅ Annonces gratuites :</span>
+                  <span className="font-extrabold text-lg">Illimité</span>
                 </div>
               )}
             </div>

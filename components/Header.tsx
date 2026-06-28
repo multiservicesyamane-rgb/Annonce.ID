@@ -35,8 +35,8 @@ export default function Header() {
           
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
-            <span className="inline-flex items-center rounded-[10px] bg-white px-1.5 py-1 shadow-sm">
-              <img src="/logo-full.jpg" alt="Wanteermako" className="h-[34px] md:h-[46px] w-auto object-contain" />
+            <span className="inline-flex items-center rounded-[12px] bg-white px-2 py-1 shadow-md ring-1 ring-black/5">
+              <img src="/logo-full.jpg" alt="Wanteermako" className="h-[44px] md:h-[58px] w-auto object-contain" />
             </span>
           </Link>
 
