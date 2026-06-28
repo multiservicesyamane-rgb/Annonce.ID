@@ -537,12 +537,16 @@ export default function PublishWizard() {
                   </div>
                 </label>
               ))}
-              {boost === 0 && (
-                <div className="bg-green-50 dark:bg-green-900/15 border border-green-200 dark:border-green-500/20 rounded-lg p-2.5 text-[.8rem] text-green-700 dark:text-green-400 flex items-center justify-between">
-                  <span>✅ Annonces gratuites :</span>
-                  <span className="font-extrabold text-lg">Illimité</span>
-                </div>
-              )}
+              {(() => {
+                const nb = (k: string) => credits.filter((c: any) => c.boost_key === k && c.status === "available").length;
+                const total = nb("basic") + nb("premium") + nb("alaune") + nb("vip");
+                return (
+                  <div className="rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/15 p-2.5 text-[.8rem] text-amber-800 dark:text-amber-300">
+                    🎁 <b>{total} boost{total > 1 ? "s" : ""} offert{total > 1 ? "s" : ""}</b> : {nb("basic")} Standard · {nb("premium")} Premium · {nb("alaune")} À la Une
+                    <span className="mt-0.5 block text-[.7rem] opacity-80">Choisissez un boost ci-dessus pour l'utiliser gratuitement (sans payer).</span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
