@@ -97,7 +97,7 @@ function Kpi({ grad, icon, label, value, trend, suffix }: { grad: string; icon: 
 
 function Card({ title, sub, children, action }: { title?: string; sub?: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="rounded-[18px] border border-[#21262D] bg-[#161B22] p-3 sm:p-4 overflow-hidden">
+    <div className="min-w-0 overflow-hidden rounded-[18px] border border-[#21262D] bg-[#161B22] p-3 sm:p-4">
       {(title || action) && (
         <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
           <div>{title && <h3 className="text-[.93rem] font-extrabold text-white">{title}</h3>}{sub && <div className="text-[.72rem] text-[#8B949E] mt-0.5">{sub}</div>}</div>
@@ -262,7 +262,7 @@ export default function SuperAdminApp() {
 
   /* ───────── APP ───────── */
   return (
-    <div className="flex min-h-screen bg-[#0D1117] text-white">
+    <div className="flex min-h-screen w-full overflow-x-hidden bg-[#0D1117] text-white">
       {/* Sidebar */}
       <aside className={`fixed top-0 bottom-0 z-[200] w-[240px] flex flex-col border-r border-[#21262D] bg-[#161B22] transition-transform ${sbOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
         <div className="flex items-center gap-2.5 border-b border-[#21262D] px-4 py-4">
@@ -306,7 +306,7 @@ export default function SuperAdminApp() {
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-[1500px] p-3 sm:p-5">
+        <div className="mx-auto w-full min-w-0 max-w-[1500px] overflow-x-hidden p-3 sm:p-5">
           {dataLoading && page !== "overview" ? (
             <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6366F1] border-t-transparent" /></div>
           ) : (<>
@@ -386,22 +386,28 @@ function Overview({ counts, allListings, profiles, purchases, T, loading }: { co
         <Kpi grad="bg-g6" icon="💬" label="Messages" value={counts.messages} />
         <Kpi grad="bg-g2" icon="💰" label="Revenus (FCFA)" value={totalRevenue} />
       </div>
-      <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Card title="Répartition par catégorie" sub={`${Object.keys(byCat).length} catégories`}>
-          {catEntries.length === 0 ? <div className="py-4 text-center text-[.82rem] text-[#8B949E]">Aucune annonce</div> : catEntries.map(([n, c], i) => (
-            <div key={n} className="mb-2.5">
-              <div className="mb-1 flex justify-between text-[.8rem] text-[#C9D1D9]"><span>{n}</span><span className="font-extrabold">{c} annonces</span></div>
-              <div className="h-[7px] overflow-hidden rounded bg-[#21262D]"><div className="h-full rounded" style={{ width: `${(c / counts.total) * 100}%`, background: catColors[i % 6] }} /></div>
-            </div>
-          ))}
+          {catEntries.length === 0 ? <div className="py-4 text-center text-[.82rem] text-[#8B949E]">Aucune annonce</div> : catEntries.map(([n, c], i) => {
+            const pct = counts.total ? Math.min(100, Math.max(0, (c / counts.total) * 100)) : 0;
+            return (
+              <div key={n} className="mb-2.5 min-w-0">
+                <div className="mb-1 flex min-w-0 items-center justify-between gap-2 text-[.8rem] text-[#C9D1D9]"><span className="min-w-0 truncate">{n}</span><span className="shrink-0 font-extrabold">{c} annonces</span></div>
+                <div className="h-[7px] min-w-0 overflow-hidden rounded bg-[#21262D]"><div className="h-full max-w-full rounded" style={{ width: `${pct}%`, background: catColors[i % 6] }} /></div>
+              </div>
+            );
+          })}
         </Card>
         <Card title="Statuts des annonces">
-          {statusData.map(([n, c, v]) => (
-            <div key={n as string} className="mb-2 flex items-center gap-2.5">
-              <div className="w-[80px] text-[.76rem] font-semibold text-[#8B949E]">{n}</div>
-              <div className="relative h-6 flex-1 overflow-hidden rounded-md bg-[#0D1117]"><div className="h-full rounded-md" style={{ width: `${counts.total ? ((v as number) / counts.total * 100) : 0}%`, background: c as string }} /><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[.7rem] font-extrabold text-white">{v as number}</span></div>
-            </div>
-          ))}
+          {statusData.map(([n, c, v]) => {
+            const pct = counts.total ? Math.min(100, Math.max(0, ((v as number) / counts.total) * 100)) : 0;
+            return (
+              <div key={n as string} className="mb-2 flex min-w-0 items-center gap-2.5">
+                <div className="w-[72px] shrink-0 truncate text-[.76rem] font-semibold text-[#8B949E] sm:w-[80px]">{n}</div>
+                <div className="relative h-6 min-w-0 flex-1 overflow-hidden rounded-md bg-[#0D1117]"><div className="h-full max-w-full rounded-md" style={{ width: `${pct}%`, background: c as string }} /><span className="absolute left-2 top-1/2 -translate-y-1/2 text-[.7rem] font-extrabold text-white">{v as number}</span></div>
+              </div>
+            );
+          })}
         </Card>
       </div>
       <div className="mt-3"><Card title="Dernières annonces publiées" sub={`${allListings.length} annonces chargées`}>
@@ -924,7 +930,7 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
               {/* KPIs */}
               <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3">
                 {KPIS.map((k) => {
-                  const pct = Math.min(100, Math.round((k.value / k.target) * 100));
+                  const pct = k.target ? Math.min(100, Math.max(0, Math.round((k.value / k.target) * 100))) : 0;
                   return (
                     <div key={k.label} className={`relative overflow-hidden rounded-[14px] p-3.5 text-white ${k.grad}`}>
                       <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-white/10" />
@@ -1248,10 +1254,10 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
 
               {/* Graphs Section */}
               {sortedReps.length > 0 ? (
-                <div className="grid gap-3 sm:grid-cols-2 mb-4">
+                <div className="grid min-w-0 gap-3 sm:grid-cols-2 mb-4">
                   <Card title="📈 Nouveaux Abonnés par Semaine">
-                    <div className="flex items-center justify-center p-3 bg-[#0D1117] rounded-lg">
-                      <svg width="100%" height="200" viewBox="0 0 500 200" preserveAspectRatio="none">
+                    <div className="flex min-w-0 items-center justify-center overflow-hidden rounded-lg bg-[#0D1117] p-2 sm:p-3">
+                      <svg className="block h-[180px] w-full max-w-full sm:h-[200px]" viewBox="0 0 500 200" preserveAspectRatio="none">
                         {[0, 0.25, 0.5, 0.75, 1].map((p, idx) => (
                           <line key={idx} x1="40" y1={String(170 - p * 140)} x2="480" y2={String(170 - p * 140)} stroke="#30363D" strokeWidth="0.5" strokeDasharray="4 4" />
                         ))}
@@ -1287,8 +1293,8 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
                   </Card>
 
                   <Card title="💰 Revenus Générés via Boosts (FCFA)">
-                    <div className="flex items-center justify-center p-3 bg-[#0D1117] rounded-lg">
-                      <svg width="100%" height="200" viewBox="0 0 500 200" preserveAspectRatio="none">
+                    <div className="flex min-w-0 items-center justify-center overflow-hidden rounded-lg bg-[#0D1117] p-2 sm:p-3">
+                      <svg className="block h-[180px] w-full max-w-full sm:h-[200px]" viewBox="0 0 500 200" preserveAspectRatio="none">
                         {[0, 0.25, 0.5, 0.75, 1].map((p, idx) => (
                           <line key={idx} x1="50" y1={String(170 - p * 140)} x2="480" y2={String(170 - p * 140)} stroke="#30363D" strokeWidth="0.5" strokeDasharray="4 4" />
                         ))}
@@ -1320,7 +1326,7 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
               )}
 
               {/* Top 5 Posts */}
-              <div className="grid gap-3 sm:grid-cols-2 mb-4">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2 mb-4">
                 <Card title="🔥 Top 5 Publications par Reach">
                   {topPosts.length === 0 ? (
                     <div className="py-4 text-center text-[.78rem] text-[#8B949E]">Aucune publication disponible.</div>

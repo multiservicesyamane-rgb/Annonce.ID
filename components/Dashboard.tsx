@@ -574,7 +574,7 @@ export default function Dashboard() {
       {/* Content */}
       <div className="flex-1 min-w-0 bg-gray-50 dark:bg-dark-900 px-3 py-4 sm:px-4 sm:py-6 lg:p-8 overflow-y-auto w-full">
         {panel === "overview" && (
-          <div className="animate-fadeUp max-w-[1000px] mx-auto">
+          <div className="animate-fadeUp w-full min-w-0 max-w-[1000px] mx-auto">
             {/* Hero profil — Compact (Transport Style) */}
             <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[16px] border border-gray-100 dark:border-dark-border bg-white dark:bg-[#161B22] p-4 sm:p-5 shadow-sm">
               <div className="flex items-center gap-3 sm:gap-4">
@@ -643,9 +643,9 @@ export default function Dashboard() {
                   <h3 className="mb-3 font-display text-[1rem] font-bold dark:text-white">Mes catégories</h3>
                   <div className="flex flex-col gap-2.5">
                     {entries.map(([c, n], i) => (
-                      <div key={c} className="flex items-center gap-2 text-[.8rem]">
-                        <span className="w-28 truncate text-gray-600 dark:text-white/70">{c}</span>
-                        <div className="h-2 flex-1 overflow-hidden rounded bg-gray-100 dark:bg-dark-700"><div className={`h-full rounded ${cols[i % 6]}`} style={{ width: `${n / ads.length * 100}%` }} /></div>
+                      <div key={c} className="flex min-w-0 items-center gap-2 text-[.8rem]">
+                        <span className="w-24 shrink-0 truncate text-gray-600 dark:text-white/70 sm:w-28">{c}</span>
+                        <div className="h-2 min-w-0 flex-1 overflow-hidden rounded bg-gray-100 dark:bg-dark-700"><div className={`h-full max-w-full rounded ${cols[i % 6]}`} style={{ width: `${Math.min(100, Math.max(0, (n / ads.length) * 100))}%` }} /></div>
                         <span className="w-6 text-right font-bold dark:text-white">{n}</span>
                       </div>
                     ))}
@@ -739,18 +739,19 @@ export default function Dashboard() {
             {ads.length === 0 ? (
               <EmptyState title="Pas encore de données" description="Publiez des annonces pour voir vos statistiques apparaître ici." ctaLabel="Publier une annonce" ctaHref="/publier" emoji="📈" />
             ) : (
-              <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+              <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
                 {/* Vues par annonce (barres) */}
-                <div className="rounded-[18px] border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5">
+                <div className="min-w-0 overflow-hidden rounded-[18px] border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-5">
                   <h3 className="mb-4 font-display text-[1rem] font-bold dark:text-white">Vues par annonce</h3>
-                  <div className="flex items-end gap-2 h-[180px]">
+                  <div className="flex h-[180px] min-w-0 items-end gap-1.5 overflow-hidden px-0.5 sm:gap-2">
                     {[...ads].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 8).map((a, i) => {
                       const max = Math.max(...ads.map(x => x.views || 0), 1);
                       const grads = ['bg-g1', 'bg-g3', 'bg-g4', 'bg-g5'];
+                      const height = Math.max(4, Math.min(140, ((a.views || 0) / max) * 140));
                       return (
-                        <div key={a.id} className="flex-1 flex flex-col items-center gap-1 group">
+                        <div key={a.id} className="group flex min-w-0 flex-1 flex-col items-center gap-1">
                           <div className="text-[.6rem] font-bold text-gray-400">{a.views || 0}</div>
-                          <div className={`w-full max-w-[34px] rounded-t-md ${grads[i % 4]} transition-all`} style={{ height: `${Math.max(4, (a.views || 0) / max * 140)}px` }} title={a.title}></div>
+                          <div className={`w-full max-w-[26px] rounded-t-md ${grads[i % 4]} transition-all sm:max-w-[34px]`} style={{ height: `${height}px` }} title={a.title}></div>
                           <div className="text-[.55rem] text-gray-400 truncate w-full text-center">{(a.title || '').slice(0, 6)}</div>
                         </div>
                       );
@@ -759,13 +760,13 @@ export default function Dashboard() {
                 </div>
 
                 {/* Top annonces */}
-                <div className="rounded-[18px] border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5">
+                <div className="min-w-0 overflow-hidden rounded-[18px] border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-4 sm:p-5">
                   <h3 className="mb-4 font-display text-[1rem] font-bold dark:text-white">Top annonces</h3>
                   <div className="flex flex-col gap-2">
                     {[...ads].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5).map((a, i) => (
-                      <Link key={a.id} href={`/annonce/${a.id}/${a.slug}`} className="flex items-center gap-2 py-1.5 border-b border-gray-100 dark:border-dark-border last:border-0 hover:opacity-80">
+                      <Link key={a.id} href={`/annonce/${a.id}/${a.slug}`} className="flex min-w-0 items-center gap-2 py-1.5 border-b border-gray-100 dark:border-dark-border last:border-0 hover:opacity-80">
                         <span className="w-5 font-extrabold text-green">{i + 1}</span>
-                        <span className="flex-1 truncate text-[.82rem] font-semibold dark:text-white">{a.title}</span>
+                        <span className="min-w-0 flex-1 truncate text-[.82rem] font-semibold dark:text-white">{a.title}</span>
                         <span className="text-[.78rem] font-bold text-green">{(a.views || 0).toLocaleString('fr-FR')}</span>
                       </Link>
                     ))}
@@ -795,7 +796,7 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-[180px]">
                       {[5, 4, 3, 2, 1].map(n => {
                         const c = reviews.filter(r => Math.round(r.rating) === n).length;
-                        const pct = reviews.length ? c / reviews.length * 100 : 0;
+                        const pct = reviews.length ? Math.min(100, Math.max(0, (c / reviews.length) * 100)) : 0;
                         return (
                           <div key={n} className="flex items-center gap-2 mb-1 text-[.78rem]">
                             <span className="w-3 font-bold dark:text-white">{n}</span>
