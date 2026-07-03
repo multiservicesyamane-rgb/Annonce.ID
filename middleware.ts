@@ -23,7 +23,10 @@ export async function middleware(request: NextRequest) {
     !!categoryFromSubdomain && (originalPathname === '/' || !!subRouteQuery)
 
   if (categoryFromSubdomain && shouldRewriteCategorySubdomain) {
-    rewriteUrl.pathname = `/categorie/${categoryFromSubdomain.slug}`
+    rewriteUrl.pathname =
+      originalPathname === '/'
+        ? `/categorie/${categoryFromSubdomain.slug}/accueil`
+        : `/categorie/${categoryFromSubdomain.slug}`
 
     if (subRouteQuery) {
       Object.entries(subRouteQuery).forEach(([key, value]) => {

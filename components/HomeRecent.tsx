@@ -34,8 +34,14 @@ function formatListing(ad: any): Listing {
   } as any;
 }
 
-export default function HomeRecent({ initialListings }: { initialListings: Listing[] }) {
+type HomeRecentProps = {
+  initialListings: Listing[];
+  categorySlug?: string;
+};
+
+export default function HomeRecent({ initialListings, categorySlug }: HomeRecentProps) {
   const supabase = useMemo(() => createClient(), []);
+  const scopedCategorySlug = categorySlug?.trim() || "";
   const [filter, setFilter] = useState("all");
   const [listings, setListings] = useState<Listing[]>(initialListings);
   const [offset, setOffset] = useState(initialListings.length);
@@ -53,14 +59,16 @@ export default function HomeRecent({ initialListings }: { initialListings: Listi
       .order("created_at", { ascending: false })
       .range(nextOffset, nextOffset + PAGE_SIZE - 1);
 
-    if (nextFilter !== "all") {
+    if (scopedCategorySlug) {
+      query = query.eq("category_slug", scopedCategorySlug);
+    } else if (nextFilter !== "all") {
       query = query.eq("category_slug", nextFilter);
     }
 
     const { data, error } = await query;
     if (error) throw error;
     return (data || []).map(formatListing);
-  }, [supabase]);
+  }, [scopedCategorySlug, supabase]);
 
   const loadMore = useCallback(async () => {
     if (loadingRef.current || !hasMore) return;
@@ -95,7 +103,7 @@ export default function HomeRecent({ initialListings }: { initialListings: Listi
       setError("");
 
       try {
-        if (filter === "all") {
+        if (scopedCategorySlug || filter === "all") {
           if (cancelled) return;
           setListings(initialListings);
           setOffset(initialListings.length);
@@ -120,7 +128,7 @@ export default function HomeRecent({ initialListings }: { initialListings: Listi
 
     reset();
     return () => { cancelled = true; };
-  }, [fetchPage, filter, initialListings]);
+  }, [fetchPage, filter, initialListings, scopedCategorySlug]);
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -139,22 +147,24 @@ export default function HomeRecent({ initialListings }: { initialListings: Listi
 
   return (
     <>
-      <div className="mb-4 flex overflow-x-auto snap-x no-scrollbar gap-1.5 pb-1">
-        {FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter(f.value)}
-            className={`shrink-0 snap-start whitespace-nowrap rounded-full border px-3 py-1 text-[.65rem] md:px-4 md:py-1.5 md:text-[.75rem] font-bold transition-all duration-300 ${
-              filter === f.value
-                ? "border-gold bg-gold text-[#0A0E14] shadow-[0_0_15px_rgba(212,175,55,0.4)]"
-                : "border-gray-200 bg-white text-gray-600 dark:border-white/5 dark:bg-white/5 dark:text-gray-400 hover:border-gold/50 dark:hover:text-white"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      {!scopedCategorySlug && (
+        <div className="mb-4 flex overflow-x-auto snap-x no-scrollbar gap-1.5 pb-1">
+          {FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setFilter(f.value)}
+              className={`shrink-0 snap-start whitespace-nowrap rounded-full border px-3 py-1 text-[.65rem] md:px-4 md:py-1.5 md:text-[.75rem] font-bold transition-all duration-300 ${
+                filter === f.value
+                  ? "border-gold bg-gold text-[#0A0E14] shadow-[0_0_15px_rgba(212,175,55,0.4)]"
+                  : "border-gray-200 bg-white text-gray-600 dark:border-white/5 dark:bg-white/5 dark:text-gray-400 hover:border-gold/50 dark:hover:text-white"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {listings.length === 0 && !loading ? (
         <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500 dark:border-dark-border dark:bg-dark-800">

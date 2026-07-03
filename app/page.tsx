@@ -7,7 +7,7 @@ import AdSensePlaceholder from "@/components/AdSensePlaceholder";
 import AdCard from "@/components/AdCard";
 import HomeRecent from "@/components/HomeRecent";
 import { CATEGORIES } from "@/lib/constants";
-import { formatNumber } from "@/lib/utils";
+import { getFeaturedListings, getPremiumListings, getRecentListings } from "@/lib/homeSections";
 import { createClient } from "@supabase/supabase-js";
 
 import UneCarousel from "@/components/UneCarousel";
@@ -27,71 +27,11 @@ export default async function HomePage() {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Fetch recent active listings — only lightweight columns (NOT photos/description which are huge base64)
-  const { data: recentListings } = await supabase
-    .from('listings')
-    .select('id, slug, title, price, price_type, location, image, category, category_slug, views, created_at, premium, is_premium, featured, is_featured')
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-    .limit(20);
-
-  // Transform to match Listing interface
-  const formattedListings = (recentListings || []).map((ad: any) => ({
-    id: ad.id,
-    slug: ad.slug,
-    title: ad.title,
-    price: ad.price_type === "Sur devis" ? "Sur devis" : (ad.price && ad.price !== "0" ? `${formatNumber(ad.price)} FCFA` : "Gratuit"),
-    location: ad.location || "Sénégal",
-    image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
-    category: ad.category || "Autre",
-    categorySlug: ad.category_slug || "",
-    views: ad.views ?? 0,
-    created_at: ad.created_at,
-    premium: !!(ad.premium || ad.is_premium),
-    featured: !!(ad.featured || ad.is_featured),
-  } as any));
-
-  // Fetch actual featured listings (À la Une)
-  const { data: dbFeatured } = await supabase
-    .from('listings')
-    .select('id, slug, title, price, price_type, location, image, category, views, created_at')
-    .eq('status', 'active')
-    .or('featured.eq.true,is_featured.eq.true')
-    .order('created_at', { ascending: false })
-    .limit(10);
-
-  const une = (dbFeatured || []).map((ad: any) => ({
-    id: ad.id,
-    slug: ad.slug,
-    title: ad.title,
-    price: ad.price_type === "Sur devis" ? "Sur devis" : (ad.price && ad.price !== "0" ? `${formatNumber(ad.price)} FCFA` : "Gratuit"),
-    location: ad.location || "Sénégal",
-    image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
-    category: ad.category || "Autre",
-    views: ad.views ?? 0,
-    created_at: ad.created_at,
-  } as any));
-
-  // Fetch actual premium listings (Premium)
-  const { data: dbPremium } = await supabase
-    .from('listings')
-    .select('id, slug, title, price, price_type, location, image, category, views, created_at')
-    .eq('status', 'active')
-    .or('premium.eq.true,is_premium.eq.true')
-    .order('created_at', { ascending: false })
-    .limit(8);
-
-  const prem = (dbPremium || []).map((ad: any) => ({
-    id: ad.id,
-    slug: ad.slug,
-    title: ad.title,
-    price: ad.price_type === "Sur devis" ? "Sur devis" : (ad.price && ad.price !== "0" ? `${formatNumber(ad.price)} FCFA` : "Gratuit"),
-    location: ad.location || "Sénégal",
-    image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
-    category: ad.category || "Autre",
-    views: ad.views ?? 0,
-    created_at: ad.created_at,
-  } as any));
+  const [formattedListings, une, prem] = await Promise.all([
+    getRecentListings(),
+    getFeaturedListings(),
+    getPremiumListings(),
+  ]);
 
   // Repli : si aucune annonce À la Une / Premium, on affiche les plus récentes
   const uneList = une.length > 0 ? une : formattedListings.slice(0, 10);
