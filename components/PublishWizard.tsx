@@ -301,7 +301,7 @@ export default function PublishWizard() {
     const payload: Record<string, any> = {
       user_id: user.id,
       title: title || "Annonce sans titre",
-      slug: (title || "annonce").toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now(),
+      slug: `${slugify(title || "annonce") || "annonce"}-${Date.now()}`,
       description: desc || "Pas de description",
       price: price || "0",
       price_type: priceType,
