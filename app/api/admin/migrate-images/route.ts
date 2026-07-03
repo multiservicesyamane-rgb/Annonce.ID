@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const BUCKET = "images";
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || "YamaneTech@2025";
+const ADMIN_PASS = process.env.ADMIN_PASSWORD || "";
 
 function admin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -33,6 +33,7 @@ async function up(sb: any, dataUri: string, folder: string): Promise<string> {
 // À relancer jusqu'à remaining = 0. Protégé par le mot de passe admin.
 export async function POST(req: Request) {
   const { pass } = await req.json().catch(() => ({}));
+  if (!ADMIN_PASS) return NextResponse.json({ error: "ADMIN_PASSWORD manquant cote serveur." }, { status: 500 });
   if (pass !== ADMIN_PASS) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   const sb = admin();
   if (!sb) return NextResponse.json({ error: "service role manquante" }, { status: 500 });

@@ -11,7 +11,7 @@ import { COUNTRIES } from "@/lib/constants";
  * EN PRODUCTION : hash bcrypt en base, vraie 2FA TOTP, rôle 'admin', audit log,
  * et NE JAMAIS committer ces identifiants. Voir README + lib/supabase.
  */
-const DEMO = { email: "multiservicesyamane@gmail.com", pass: "YamaneTech@2025", twofa: "1234", emails: ["multiservicesyamane@gmail.com", "multiserviceyamane@gmail.com"] };
+const DEMO = { email: "multiservicesyamane@gmail.com", pass: "", twofa: "", emails: ["multiservicesyamane@gmail.com", "multiserviceyamane@gmail.com"] };
 
 type Panel = "overview" | "moderation" | "users" | "listings" | "ads" | "finance" | "countries" | "categories" | "reports" | "logs" | "settings";
 const NAV: { id: Panel; label: string; badge?: number }[] = [
@@ -101,6 +101,8 @@ export default function AdminApp() {
   };
 
   function login() {
+    show("Ancien panneau admin desactive. Utilise /yamanetech/super-admin.");
+    return;
     if (DEMO.emails.includes(email.toLowerCase().trim()) && pass === DEMO.pass && (twofa === DEMO.twofa || twofa === "")) {
       setAuthed(true);
       show("✓ Bienvenue, Administrateur");
@@ -119,8 +121,8 @@ export default function AdminApp() {
           <div className="mb-4 rounded-[10px] border border-dashed border-neon-gold bg-dark-700 p-3 text-[.74rem] leading-relaxed text-neon-gold">
             👉 <b>Identifiants démo :</b>
             <br />Email : {DEMO.email}
-            <br />Mot de passe : {DEMO.pass}
-            <br />Code 2FA : {DEMO.twofa}
+            <br />Ancien panneau desactive.
+            <br />Utilise /yamanetech/super-admin.
           </div>
           <input value={email} onChange={(e) => setEmail(e.target.value)} className="admin-input" placeholder="Email administrateur" />
           <input value={pass} onChange={(e) => setPass(e.target.value)} type="password" className="admin-input" placeholder="Mot de passe" />

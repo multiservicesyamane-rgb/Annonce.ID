@@ -72,7 +72,7 @@ const AMBASSADEURS = [
   { n: "Binta Koné", l: "🥉 Bronze", lc: "text-[#CD7F32]", v: 1, c: 7500, g: "bg-g7" },
 ];
 
-const ADMIN_CREDS = { email: "multiservicesyamane@gmail.com", pass: "YamaneTech@2025", emails: ["multiservicesyamane@gmail.com", "multiserviceyamane@gmail.com"] };
+const ADMIN_CREDS = { email: "multiservicesyamane@gmail.com", pass: "", emails: ["multiservicesyamane@gmail.com", "multiserviceyamane@gmail.com"] };
 
 /* ───────── Composants UI ───────── */
 function Kpi({ grad, icon, label, value, trend, suffix }: { grad: string; icon: string; label: string; value: number; trend?: string; suffix?: string }) {
@@ -136,9 +136,6 @@ export default function SuperAdminApp() {
   useEffect(() => {
     if (typeof window !== "undefined" && sessionStorage.getItem("sa_authed") === "1") {
       setAuthed(true);
-      if (!sessionStorage.getItem("sa_pass")) {
-        sessionStorage.setItem("sa_pass", ADMIN_CREDS.pass);
-      }
     }
   }, []);
 
@@ -146,6 +143,25 @@ export default function SuperAdminApp() {
   const loadAllData = async () => {
     if (!authed) return;
     setDataLoading(true);
+    try {
+      const data = await adminApi("dashboard");
+      setCounts(data.counts || { total: 0, pending: 0, active: 0, users: 0, favorites: 0, messages: 0, reports: 0 });
+      setPendingListings(data.pendingListings || []);
+      setAllListings(data.allListings || []);
+      setProfiles(data.profiles || []);
+      setPurchases(data.purchases || []);
+      setReports(data.reports || []);
+      setProspects(data.prospects || []);
+      setAmbassadors(data.ambassadors || []);
+      setEmployees(data.employees || []);
+      setCampaigns(data.campaigns || []);
+    } catch (e) {
+      console.error("SuperAdmin secure load error:", e);
+      T("Acces admin refuse ou configuration serveur manquante.");
+    }
+    setDataLoading(false);
+    return;
+    /*
     const sb = createClient();
     try {
       const [t, p, a, u, fav, msg, rep] = await Promise.all([
@@ -193,19 +209,33 @@ export default function SuperAdminApp() {
       setEmployees(emp.data || []);
       setCampaigns(camp.data || []);
     } catch (e) { console.error("SuperAdmin load error:", e); }
+    */
     setDataLoading(false);
   };
 
   // Ajout réel d'un prospect dans la table
   async function addProspect(p: Record<string, any>) {
+    return addRow("prospects", p, "Prospect ajoute");
+    /*
     const sb = createClient();
     const { error } = await sb.from("prospects").insert(p);
     if (error) { T(`⚠ ${error.message.includes("row-level") ? "Accès refusé (RLS) — voir SQL admin" : error.message}`); return false; }
     T("✅ Prospect ajouté");
     loadAllData();
     return true;
+    */
   }
   async function addRow(table: string, payload: Record<string, any>, okMsg: string) {
+    try {
+      await adminApi("b2bInsert", { table, payload });
+      T(okMsg);
+      loadAllData();
+      return true;
+    } catch (error: any) {
+      T(`Erreur admin: ${error?.message || "enregistrement impossible"}`);
+      return false;
+    }
+    /*
     const sb = createClient();
     let p: Record<string, any> = { ...payload };
     for (let i = 0; i < 10; i++) {
@@ -220,13 +250,34 @@ export default function SuperAdminApp() {
     }
     T("⚠ Impossible d'enregistrer (schéma incompatible)");
     return false;
+    */
   }
   const addCampaign = (p: Record<string, any>) => addRow("campaigns", p, "✅ Campagne créée");
   const addEmployee = (p: Record<string, any>) => addRow("employees", p, "✅ Employé ajouté");
 
   useEffect(() => { loadAllData(); }, [authed]);
 
-  function doLogin() {
+  async function doLogin() {
+    if (!ADMIN_CREDS.emails.includes(email.toLowerCase().trim()) || !pass || (code !== "1234" && code !== "")) {
+      T("Identifiants incorrects");
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pass, action: "ping" }),
+      });
+      if (!res.ok) throw new Error("Non autorise");
+      sessionStorage.setItem("sa_authed", "1");
+      sessionStorage.setItem("sa_pass", pass);
+      setAuthed(true);
+      T("Bienvenue, Super Administrateur");
+      return;
+    } catch {
+      T("Identifiants incorrects");
+      return;
+    }
     if (ADMIN_CREDS.emails.includes(email.toLowerCase().trim()) && pass === ADMIN_CREDS.pass && (code === "1234" || code === "")) {
       sessionStorage.setItem("sa_authed", "1"); sessionStorage.setItem("sa_pass", pass); setAuthed(true); T("✅ Bienvenue, Super Administrateur");
     } else T("❌ Identifiants incorrects");
@@ -234,6 +285,16 @@ export default function SuperAdminApp() {
   function doLogout() { sessionStorage.removeItem("sa_authed"); sessionStorage.removeItem("sa_pass"); setAuthed(false); }
 
   async function moderate(id: string, status: string) {
+    try {
+      await adminApi("setListingStatus", { listingId: id, status });
+    } catch {
+      T("Action bloquee (droits admin requis cote serveur)");
+      return;
+    }
+    setPendingListings((p) => p.filter((x) => x.id !== id));
+    setCounts((c) => ({ ...c, pending: Math.max(0, c.pending - 1), active: status === "active" ? c.active + 1 : c.active }));
+    T(status === "active" ? "Annonce approuvee" : "Annonce rejetee");
+    return;
     const sb = createClient();
     const { error } = await sb.from("listings").update({ status }).eq("id", id);
     if (error) { T("⚠ Action bloquée (droits admin requis côté base)"); return; }
@@ -2129,7 +2190,8 @@ function ImportProduits({ T, reload, profiles }: { T: (m: string) => void; reloa
     if (!isWa && !f.external_url.trim()) { T("⚠️ Lien externe obligatoire"); return; }
     setBusy(true);
     try {
-      const pass = (typeof window !== "undefined" && sessionStorage.getItem("sa_pass")) || ADMIN_CREDS.pass;
+      const pass = (typeof window !== "undefined" && sessionStorage.getItem("sa_pass")) || "";
+      if (!pass) throw new Error("Session admin expiree.");
       const cat = CATEGORIES.find((c) => c.slug === f.category);
       const res = await fetch("/api/admin/import-product", {
         method: "POST",
@@ -2245,7 +2307,8 @@ function ImportProduits({ T, reload, profiles }: { T: (m: string) => void; reloa
 }
 
 async function adminApi(action: string, payload: Record<string, any> = {}) {
-  const pass = (typeof window !== "undefined" && sessionStorage.getItem("sa_pass")) || ADMIN_CREDS.pass;
+  const pass = typeof window !== "undefined" ? sessionStorage.getItem("sa_pass") : "";
+  if (!pass) throw new Error("Session admin expiree.");
   const res = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pass, action, ...payload }) });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error || "Erreur serveur");

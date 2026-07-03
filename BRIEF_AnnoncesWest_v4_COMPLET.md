@@ -730,7 +730,7 @@ Route `/paiement`. **PAS de panier produit** — uniquement le paiement des boos
 ```
 URL        : /yamanetech
 Email      : admin@yamanetech.com
-Mot de passe : YamaneTech@2025
+Mot de passe : variable serveur ADMIN_PASSWORD
 Code 2FA (démo) : 1234
 ```
 > **En production :** changer ces identifiants, stocker le hash bcrypt en base, activer une vraie 2FA (TOTP), restreindre par rôle (`role = 'admin'`), logger tous les accès admin. **Ne jamais committer ces identifiants dans un dépôt public.**

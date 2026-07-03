@@ -4,7 +4,7 @@ import { OWNER_EMAILS } from "@/lib/owners";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || "YamaneTech@2025";
+const ADMIN_PASS = process.env.ADMIN_PASSWORD || "";
 const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 function admin() {
@@ -40,6 +40,9 @@ function slugify(s: string) {
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
+    if (!ADMIN_PASS) {
+      return NextResponse.json({ error: "ADMIN_PASSWORD manquant cote serveur." }, { status: 500 });
+    }
     if (body?.password !== ADMIN_PASS) {
       return NextResponse.json({ error: "Mot de passe admin incorrect." }, { status: 401 });
     }

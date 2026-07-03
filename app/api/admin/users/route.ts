@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 
 // Back-office serveur : utilise la clé SERVICE ROLE (bypass RLS) pour gérer
 // réellement la plateforme. Protégé par le mot de passe Super Admin.
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || "YamaneTech@2025";
+const ADMIN_PASS = process.env.ADMIN_PASSWORD || "";
+
+const B2B_TABLES = new Set(["prospects", "campaigns", "employees"]);
 
 function admin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -33,6 +35,9 @@ async function adaptiveWrite(run: (p: any) => PromiseLike<{ error: any }>, paylo
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
+  if (!ADMIN_PASS) {
+    return NextResponse.json({ error: "ADMIN_PASSWORD manquant cote serveur." }, { status: 500 });
+  }
   if (body?.pass !== ADMIN_PASS) {
     return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
   }
@@ -44,6 +49,91 @@ export async function POST(req: Request) {
   const action = body?.action;
 
   try {
+    if (action === "ping") {
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === "dashboard") {
+      const [
+        total,
+        pending,
+        active,
+        favorites,
+        messages,
+        reportsCount,
+        pendingListings,
+        allListings,
+        profiles,
+        reports,
+        prospects,
+        ambassadors,
+        employees,
+        campaigns,
+        purchases,
+      ] = await Promise.all([
+        sb.from("listings").select("id", { count: "exact", head: true }),
+        sb.from("listings").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        sb.from("listings").select("id", { count: "exact", head: true }).eq("status", "active"),
+        sb.from("favorites").select("id", { count: "exact", head: true }),
+        sb.from("messages").select("id", { count: "exact", head: true }),
+        sb.from("reports").select("id", { count: "exact", head: true }),
+        sb.from("listings").select("id, title, category, image, status, created_at, user_id").eq("status", "pending").order("created_at", { ascending: false }).limit(50),
+        sb.from("listings").select("id, title, slug, category, image, status, views, price, location, created_at, user_id").order("created_at", { ascending: false }).limit(100),
+        sb.from("profiles").select("*").order("created_at", { ascending: false }).limit(200),
+        sb.from("reports").select("*").order("created_at", { ascending: false }).limit(30),
+        sb.from("prospects").select("*").order("created_at", { ascending: false }).limit(100),
+        sb.from("ambassadors").select("*").order("commission_total", { ascending: false }).limit(100),
+        sb.from("employees").select("*").order("created_at", { ascending: false }).limit(100),
+        sb.from("campaigns").select("*").order("created_at", { ascending: false }).limit(100),
+        sb.from("purchases").select("*").order("created_at", { ascending: false }).limit(500),
+      ]);
+
+      return NextResponse.json({
+        counts: {
+          total: total.count || 0,
+          pending: pending.count || 0,
+          active: active.count || 0,
+          users: profiles.data?.length || 0,
+          favorites: favorites.count || 0,
+          messages: messages.count || 0,
+          reports: reportsCount.count || 0,
+        },
+        pendingListings: pendingListings.data || [],
+        allListings: allListings.data || [],
+        profiles: profiles.data || [],
+        purchases: purchases.data || [],
+        reports: reports.data || [],
+        prospects: prospects.data || [],
+        ambassadors: ambassadors.data || [],
+        employees: employees.data || [],
+        campaigns: campaigns.data || [],
+      });
+    }
+
+    if (action === "b2bInsert") {
+      const table = String(body?.table || "");
+      if (!B2B_TABLES.has(table)) {
+        return NextResponse.json({ error: "Table non autorisee." }, { status: 400 });
+      }
+      const payload = body?.payload;
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        return NextResponse.json({ error: "Donnees invalides." }, { status: 400 });
+      }
+      const { error } = await sb.from(table).insert(payload);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === "setListingStatus") {
+      const { listingId, status } = body;
+      const allowed = new Set(["active", "pending", "inactive", "rejected", "sold", "draft", "expired", "suspended"]);
+      if (!listingId || !allowed.has(String(status))) {
+        return NextResponse.json({ error: "Annonce ou statut invalide." }, { status: 400 });
+      }
+      const { error } = await sb.from("listings").update({ status }).eq("id", listingId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true });
+    }
     // Lister tous les utilisateurs (auth + profil) — bypass RLS
     if (action === "list") {
       const { data: list, error } = await sb.auth.admin.listUsers({ page: 1, perPage: 200 });

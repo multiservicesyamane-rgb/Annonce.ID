@@ -39,7 +39,7 @@ Ouvre **http://localhost:3000** (ou **3001** si le 3000 est occupé).
 | Accès | Identifiants |
 |-------|--------------|
 | OTP connexion | code **`1234`** |
-| Admin `/yamanetech` | `admin@yamanetech.com` / `YamaneTech@2025` / 2FA `1234` |
+| Admin `/yamanetech/super-admin` | Definir `ADMIN_PASSWORD` dans les variables d'environnement serveur |
 
 ---
 

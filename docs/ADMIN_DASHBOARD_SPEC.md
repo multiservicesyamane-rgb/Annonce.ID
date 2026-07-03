@@ -39,7 +39,7 @@
 | Créateur | YamaneTech |
 | Route | `/yamanetech` |
 | Email admin | `admin@yamanetech.com` |
-| Mot de passe | `YamaneTech@2025` |
+| Mot de passe | Variable serveur `ADMIN_PASSWORD` |
 | Code 2FA démo | `1234` |
 | Type | SPA — navigation sans rechargement |
 
