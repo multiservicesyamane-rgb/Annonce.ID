@@ -3,7 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CATEGORIES, COUNTRIES, BOOSTS, SENEGAL_REGIONS } from "@/lib/constants";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, slugify } from "@/lib/utils";
+import {
+  createDuplicateKey,
+  findDuplicateListing,
+  validateListingDraft,
+  type DuplicateMatch,
+} from "@/lib/listingQuality";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImages } from "@/lib/storage";
 import { isOwner } from "@/lib/owners";
@@ -39,6 +45,7 @@ export default function PublishWizard() {
   const [userEmail, setUserEmail] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
   const [aiLoading, setAiLoading] = useState("");
+  const [duplicateWarning, setDuplicateWarning] = useState<DuplicateMatch | null>(null);
 
   const supabase = createClient();
 
@@ -111,10 +118,21 @@ export default function PublishWizard() {
     return () => clearTimeout(t);
   }, [catSlug, subCategory, title, desc, price, priceType, photos, region, commune, customCommune, specs]);
 
+  useEffect(() => {
+    setDuplicateWarning(null);
+  }, [title, price, contactPhone]);
+
   const cat = CATEGORIES.find((c) => c.slug === catSlug);
   // Champs = champs de la catégorie + champs spécifiques à la sous-catégorie choisie
   const activeFields = cat ? [...cat.fields, ...((cat.subFields && subCategory && cat.subFields[subCategory]) || [])] : [];
   const show = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
+
+  const getDraftQuality = () =>
+    validateListingDraft({
+      title,
+      description: desc,
+      photos,
+    });
 
   // Aide IA (gratuit via modèles intégrés, ou Gemini si la clé est active)
   async function aiHelp(kind: "listing_title" | "listing_description") {
@@ -209,9 +227,9 @@ export default function PublishWizard() {
       if (photos.length === 0) return show("⚠ Ajoutez au moins une photo.");
     }
     if (step === 3) {
-      if (!title || title.trim().length < 10) return show("⚠ Titre: min 10 caractères.");
+      const quality = getDraftQuality();
+      if (!quality.valid) return show(`⚠ ${quality.errors[0]}`);
       if (priceType !== "Sur devis" && !price) return show("⚠ Indiquez un prix.");
-      if (!desc || desc.trim().length < 30) return show("⚠ Description: min 30 caractères.");
       if (activeFields.length > 0) {
         for (const field of activeFields) {
           if (field.label.includes("*")) {
@@ -225,8 +243,35 @@ export default function PublishWizard() {
     setStep(s => s + 1);
   };
 
+  async function findDuplicateForUser(userId: string, phone: string, duplicateKey: string) {
+    const { data, error } = await supabase
+      .from("listings")
+      .select("id, title, price, phone, status, created_at")
+      .eq("user_id", userId)
+      .in("status", ["active", "pending"])
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) return null;
+
+    const candidates = (data || []).filter((item: any) => String(item.id) !== String(editModeId || ""));
+    return findDuplicateListing(
+      {
+        title,
+        price,
+        phone,
+        duplicateKey,
+      },
+      candidates,
+    );
+  }
+
   async function handlePublish() {
     if (loadingProfile) return show("⏳ Chargement...");
+    const quality = getDraftQuality();
+    if (!quality.valid) return show(`⚠ ${quality.errors[0]}`);
+    if (priceType !== "Sur devis" && !price) return show("⚠ Indiquez un prix.");
+
     // Comptes propriétaires + VIP gratuit : Premium + À la Une offerts, sans limite ni paiement
     const isVipFree = isOwner(userEmail) || !!userProfile?.free_premium;
     // Les annonces BASIQUES (gratuites) sont ILLIMITÉES (cf. pack de bienvenue).
@@ -235,6 +280,20 @@ export default function PublishWizard() {
     show("Création en cours...");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { show("⚠ Connectez-vous !"); setIsPublishing(false); return; }
+
+    const sellerPhone = contactPhone ? `+221${contactPhone}` : "";
+    const duplicateKey = createDuplicateKey({ title, price, phone: sellerPhone });
+
+    if (!editModeId && !duplicateWarning) {
+      show("Vérification des doublons...");
+      const duplicate = await findDuplicateForUser(user.id, sellerPhone, duplicateKey);
+      if (duplicate) {
+        setDuplicateWarning(duplicate);
+        show("⚠ Annonce similaire détectée. Vérifiez avant de publier.");
+        setIsPublishing(false);
+        return;
+      }
+    }
 
     show("📤 Envoi des photos...");
     const uploadedPhotos = await uploadImages(photos, "listings");
@@ -253,6 +312,7 @@ export default function PublishWizard() {
       region, commune, custom_commune: customCommune,
       image: uploadedPhotos.length > 0 ? uploadedPhotos[0] : "https://placehold.co/600x400?text=Sans+Image",
       photos: uploadedPhotos, specs,
+      duplicate_key: duplicateKey,
       // VIP gratuit → Premium + À la Une + active immédiatement, sans paiement
       premium: isVipFree || undefined,
       featured: isVipFree || undefined,
@@ -297,6 +357,7 @@ export default function PublishWizard() {
     }
 
     localStorage.removeItem("annonceid_draft");
+    setDuplicateWarning(null);
 
     // BOOST GRATUIT VIA CRÉDIT : si le vendeur possède un crédit (offert ou acheté)
     // correspondant au boost choisi, on l'applique → annonce active SANS paiement.
@@ -536,6 +597,16 @@ export default function PublishWizard() {
           <div className="animate-fadeUp space-y-3">
             <h2 className="font-display text-[1rem] md:text-[1.15rem] font-bold text-gray-900 dark:text-white">Visibilité</h2>
             <div className="space-y-2">
+              {duplicateWarning && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-[.82rem] text-amber-900 dark:border-amber-500/30 dark:bg-amber-900/20 dark:text-amber-200">
+                  <div className="font-extrabold">Annonce similaire détectée</div>
+                  <p className="mt-1">
+                    Une annonce très proche existe déjà : <b>{duplicateWarning.title}</b>.
+                    Vous pouvez modifier votre annonce ou cliquer sur <b>Publier quand même</b> si c'est bien une annonce distincte.
+                  </p>
+                </div>
+              )}
+
               {BOOSTS.map((b, i) => (
                 <label key={i} className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all relative overflow-hidden ${boost === i ? "border-gold bg-gold/5" : "border-gray-100 dark:border-dark-border hover:border-gold/30"}`}>
                   {b.popular && <div className="absolute -right-8 top-2 bg-gold text-dark-900 text-[.5rem] font-bold py-0.5 px-8 rotate-45">TOP</div>}
@@ -588,6 +659,8 @@ export default function PublishWizard() {
               className={`btn px-6 shadow-lg text-[.85rem] ${boost > 0 ? "btn-gold" : "btn-green"} ${isPublishing ? "opacity-50 cursor-not-allowed" : ""}`}>
               {isPublishing
                 ? "En cours..."
+                : duplicateWarning
+                  ? "Publier quand même"
                 : boost > 0
                   ? (credits.find((c: any) => c.boost_key === BOOSTS[boost].key && c.status === "available") ? "🎁 Publier (boost offert)" : "Payer & Publier")
                   : "Publier"}

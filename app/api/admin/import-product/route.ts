@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { OWNER_EMAILS } from "@/lib/owners";
+import { slugify } from "@/lib/utils";
+import {
+  createDuplicateKey,
+  findDuplicateListing,
+  prepareImportedListingText,
+  validateListingDraft,
+} from "@/lib/listingQuality";
 
 export const dynamic = "force-dynamic";
 
@@ -26,15 +33,6 @@ async function adaptiveInsert(sb: any, payload: any) {
     return { error };
   }
   return { error: { message: "Trop de colonnes manquantes." } };
-}
-
-function slugify(s: string) {
-  return (s || "produit")
-    .toLowerCase()
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .slice(0, 60) || "produit";
 }
 
 export async function POST(req: Request) {
@@ -99,11 +97,43 @@ export async function POST(req: Request) {
       if (!title || (!externalUrl && !orderWa)) { results.push({ title, ok: false, error: "Titre + (lien externe OU numéro WhatsApp) requis." }); continue; }
 
       const photos = Array.isArray(prod?.photos) ? prod.photos.filter(Boolean) : (prod?.image ? [prod.image] : []);
+      const preparedText = prepareImportedListingText({
+        title,
+        description: prod?.description,
+        source: prod?.source,
+      });
+      const quality = validateListingDraft({
+        title: preparedText.title,
+        description: preparedText.description,
+        photos,
+      });
+      const duplicateKey = createDuplicateKey({
+        title: preparedText.title,
+        price: prod?.price,
+        phone: orderWa,
+      });
+      const { data: duplicateCandidates } = await sb
+        .from("listings")
+        .select("id, title, price, phone, status, created_at")
+        .eq("user_id", ownerId)
+        .in("status", ["active", "pending"])
+        .order("created_at", { ascending: false })
+        .limit(100);
+      const duplicate = findDuplicateListing(
+        { title: preparedText.title, price: prod?.price, phone: orderWa, duplicateKey },
+        duplicateCandidates || [],
+      );
+      const moderationReasons = [
+        preparedText.moderationReason,
+        quality.valid ? undefined : quality.errors.join(" "),
+        duplicate ? `Doublon probable de l'annonce ${duplicate.id}: ${duplicate.title}` : undefined,
+      ].filter(Boolean);
+      const needsModeration = preparedText.needsModeration || !quality.valid || !!duplicate;
       const payload: any = {
         user_id: ownerId,
-        title,
-        slug: `${slugify(title)}-${Math.random().toString(36).slice(2, 7)}`,
-        description: (prod?.description || "").trim() || `${title} — disponible chez ${prod?.source || "notre partenaire"}. Cliquez sur « Acheter » pour commander.`,
+        title: preparedText.title,
+        slug: `${slugify(preparedText.title).slice(0, 60)}-${Math.random().toString(36).slice(2, 7)}`,
+        description: preparedText.description,
         price: String(prod?.price ?? "").replace(/[^0-9]/g, "") || "0",
         price_type: "Prix Fixe",
         category: prod?.category || "Autre",
@@ -114,14 +144,24 @@ export async function POST(req: Request) {
         external_url: externalUrl,
         order_whatsapp: (prod?.order_whatsapp || "").trim() || null,
         source: (prod?.source || "").trim().toLowerCase(),
-        status: "active",
+        source_language: preparedText.sourceLanguage,
+        moderation_reason: moderationReasons.join(" "),
+        duplicate_key: duplicateKey,
+        status: needsModeration ? "pending" : "active",
         // Visibilité forte (produits vitrine)
-        premium: true, is_premium: true, featured: !!prod?.featured, is_featured: !!prod?.featured, boost_key: prod?.featured ? "alaune" : "premium",
+        premium: !needsModeration, is_premium: !needsModeration, featured: !needsModeration && !!prod?.featured, is_featured: !needsModeration && !!prod?.featured, boost_key: needsModeration ? null : (prod?.featured ? "alaune" : "premium"),
       };
 
       const { data, error } = await adaptiveInsert(sb, payload);
       if (error) results.push({ title, ok: false, error: error.message || "Erreur insertion" });
-      else results.push({ title, ok: true, id: data?.id, slug: data?.slug });
+      else results.push({
+        title: preparedText.title,
+        ok: true,
+        id: data?.id,
+        slug: data?.slug,
+        status: payload.status,
+        moderation_reason: payload.moderation_reason || undefined,
+      });
     }
 
     const okCount = results.filter((r) => r.ok).length;

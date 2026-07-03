@@ -2137,7 +2137,15 @@ function Moderation({ items, moderate }: { items: any[]; moderate: (id: string, 
         {items.length === 0 ? <div className="py-10 text-center text-[.85rem] text-[#8B949E]">✅ Aucune annonce en attente.</div> : items.map((m) => (
           <div key={m.id} className="mb-2 flex flex-wrap items-center gap-3 rounded-[9px] border border-[#21262D] bg-[#0D1117] p-3">
             <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-[#21262D]">{m.image && <img src={m.image} alt="" className="h-full w-full object-cover" />}</div>
-            <div className="min-w-[120px] flex-1"><div className="text-[.84rem] font-bold text-[#E6EDF3]">{m.title}</div><div className="text-[.73rem] text-[#8B949E]">{m.category || "—"}</div></div>
+            <div className="min-w-[120px] flex-1">
+              <div className="text-[.84rem] font-bold text-[#E6EDF3]">{m.title}</div>
+              <div className="text-[.73rem] text-[#8B949E]">{m.category || "—"}</div>
+              {m.moderation_reason && (
+                <div className="mt-1 rounded-md border border-[#FFC93C]/20 bg-[#FFC93C]/10 px-2 py-1 text-[.68rem] font-semibold text-[#FFC93C]">
+                  {m.moderation_reason}
+                </div>
+              )}
+            </div>
             <div className="flex shrink-0 gap-1.5">
               <button onClick={() => moderate(m.id, "active")} className="rounded-[7px] bg-g1 px-2.5 py-1.5 text-[.74rem] font-bold text-white">✓ Approuver</button>
               <button onClick={() => moderate(m.id, "rejected")} className="rounded-[7px] border border-[#F85149]/20 bg-[#F85149]/10 px-2.5 py-1.5 text-[.74rem] font-bold text-[#F85149]">✕ Rejeter</button>
@@ -2206,7 +2214,7 @@ function ImportProduits({ T, reload, profiles }: { T: (m: string) => void; reloa
       if (!res.ok) { T("❌ " + (d.error || "Erreur")); setBusy(false); return; }
       const r = d.results?.[0] || { title: f.title, ok: true };
       setDone((p) => [r, ...p]);
-      if (r.ok) { T("✅ Produit importé !"); setF({ ...IMPORT_EMPTY, source: f.source }); reload(); }
+      if (r.ok) { T(r.status === "pending" ? "⏳ Produit envoyé en modération" : "✅ Produit importé !"); setF({ ...IMPORT_EMPTY, source: f.source }); reload(); }
       else T("❌ " + (r.error || "Erreur"));
     } catch (e: any) { T("❌ " + (e?.message || "Erreur réseau")); }
     finally { setBusy(false); }
@@ -2294,7 +2302,10 @@ function ImportProduits({ T, reload, profiles }: { T: (m: string) => void; reloa
           <div className="mb-2 text-[.85rem] font-bold text-[#E6EDF3]">Produits importés ({done.filter((r) => r.ok).length})</div>
           {done.map((r, i) => (
             <div key={i} className="flex items-center justify-between border-b border-[#21262D] py-1.5 text-[.8rem] last:border-0">
-              <span className="truncate text-[#E6EDF3]">{r.ok ? "✅" : "❌"} {r.title}</span>
+              <span className="min-w-0 flex-1 truncate text-[#E6EDF3]">
+                {r.ok ? (r.status === "pending" ? "⏳" : "✅") : "❌"} {r.title}
+                {r.moderation_reason && <span className="ml-2 text-[#FFC93C]">Modération</span>}
+              </span>
               {r.ok && r.slug
                 ? <a href={`/annonce/${r.id}/${r.slug}`} target="_blank" rel="noopener noreferrer" className="ml-2 shrink-0 font-bold text-[#43E97B]">Voir →</a>
                 : <span className="ml-2 shrink-0 text-[.7rem] text-[#F85149]">{r.error}</span>}
