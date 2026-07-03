@@ -11,7 +11,7 @@ import ReportListing from "@/components/ReportListing";
 import SharePublishedBanner from "@/components/SharePublishedBanner";
 import RecordView from "@/components/RecordView";
 import { createClient } from "@supabase/supabase-js";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, limitEmojis } from "@/lib/utils";
 import { categoryBySlug } from "@/lib/constants";
 import { getRootUrl, getSubdomainUrl } from "@/lib/categories";
 
@@ -31,7 +31,7 @@ async function fetchAd(idParam: string) {
     if (isNaN(Number(idParam))) return null;
   }
 
-  const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url, phone, role)').eq('id', idParam).single();
+  const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url, phone, role, created_at)').eq('id', idParam).single();
   if (data) {
     // Statut "vérifié" du vendeur — requête séparée et sécurisée (la colonne peut ne pas exister)
     let sellerVerified = false;
@@ -39,6 +39,17 @@ async function fetchAd(idParam: string) {
       const { data: sv } = await supabase.from('profiles').select('is_verified').eq('id', data.user_id).maybeSingle();
       sellerVerified = !!sv?.is_verified;
     } catch { /* colonne absente → false */ }
+
+    // Nombre d'annonces ACTIVES du vendeur (chiffre vérifiable, remplace les faux « 0 ventes »)
+    let sellerActiveCount = 0;
+    try {
+      const { count } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', data.user_id)
+        .eq('status', 'active');
+      sellerActiveCount = count || 0;
+    } catch { /* ignore */ }
     return {
       id: data.id,
       title: data.title,
@@ -64,8 +75,8 @@ async function fetchAd(idParam: string) {
         name: data.profiles?.full_name || "Vendeur",
         avatar: data.profiles?.avatar_url || "https://placehold.co/100x100?text=V",
         phone: data.phone || data.profiles?.phone || "+221776827851",
-        rating: "Nouveau",
-        sales: 0,
+        memberSince: data.profiles?.created_at ? new Date(data.profiles.created_at).getFullYear() : null,
+        activeListings: sellerActiveCount,
         isPro: data.profiles?.role === "pro",
         isVerified: sellerVerified
       }
@@ -120,19 +131,42 @@ export default async function AnnoncePage({ params }: Props) {
   const seller = ad.seller;
   const adCategory = categoryBySlug(ad.categorySlug);
 
-  // Schema.org Product/Offer pour le SEO riche
+  // Schema.org pour le SEO riche : Product + Offer (avec vendeur) + fil d'Ariane.
+  const base = process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com";
+  const canonicalUrl = `${base}/annonce/${ad.id}/${ad.slug}`;
+  const priceValue = ad.price.replace(/[^0-9]/g, ""); // "" si "Sur devis" / "Gratuit"
+  const categoryUrl = adCategory ? getSubdomainUrl(adCategory) : base;
+
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Product",
-    name: ad.title,
-    description: ad.description,
-    image: images,
-    offers: {
-      "@type": "Offer",
-      price: ad.price.replace(/[^0-9]/g, ""),
-      priceCurrency: "XOF",
-      availability: "https://schema.org/InStock",
-    },
+    "@graph": [
+      {
+        "@type": "Product",
+        name: ad.title,
+        description: ad.description,
+        image: images,
+        category: ad.category,
+        offers: {
+          "@type": "Offer",
+          url: canonicalUrl,
+          priceCurrency: "XOF",
+          ...(priceValue ? { price: priceValue } : {}),
+          availability: "https://schema.org/InStock",
+          seller: {
+            "@type": seller?.isPro ? "Organization" : "Person",
+            name: seller?.name || "Vendeur",
+          },
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Accueil", item: base },
+          { "@type": "ListItem", position: 2, name: ad.category, item: categoryUrl },
+          { "@type": "ListItem", position: 3, name: ad.title },
+        ],
+      },
+    ],
   };
 
   return (
@@ -165,7 +199,7 @@ export default async function AnnoncePage({ params }: Props) {
               <span className="text-[.65rem] font-bold uppercase tracking-wider text-dark-900 bg-neon-gold px-2.5 py-0.5 rounded-sm shadow-[0_0_10px_rgba(245,166,35,0.3)]">{ad.category}</span>
               <span className="text-[.75rem] text-gray-500 font-medium">📍 {ad.location}</span>
             </div>
-            <h1 className="font-display text-[1.25rem] font-bold leading-tight dark:text-white mb-4 text-gray-900">{ad.title}</h1>
+            <h1 className="font-display text-[1.25rem] font-bold leading-tight dark:text-white mb-4 text-gray-900">{limitEmojis(ad.title)}</h1>
             
             {/* Price Banner style premium */}
             <div className="rounded-[16px] overflow-hidden border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-black/40 shadow-sm mb-4 relative">
@@ -182,7 +216,11 @@ export default async function AnnoncePage({ params }: Props) {
             </div>
             
             <div className="flex items-center justify-between text-[.75rem] text-gray-500 mb-2">
-              <div className="flex items-center gap-1 text-neon-gold font-bold">⭐⭐⭐⭐⭐ <span className="text-gray-400 font-normal ml-1">(Vendeur fiable)</span></div>
+              <div className="flex items-center gap-1.5 text-gray-500 font-medium">
+                {seller?.memberSince && <span>👤 Membre depuis {seller.memberSince}</span>}
+                {seller?.memberSince && <span className="text-gray-300">·</span>}
+                <span>{seller?.activeListings ?? 0} annonce{(seller?.activeListings ?? 0) > 1 ? "s" : ""} active{(seller?.activeListings ?? 0) > 1 ? "s" : ""}</span>
+              </div>
               <ShareButton title={ad.title} />
             </div>
             
@@ -252,7 +290,7 @@ export default async function AnnoncePage({ params }: Props) {
               <div className="flex items-start justify-between gap-4 mb-2">
                 <div>
                   <div className="text-[.68rem] font-bold uppercase tracking-widest text-gray-400 mb-1">{ad.category}</div>
-                  <h1 className="font-display text-[1.4rem] font-bold leading-tight dark:text-white">{ad.title}</h1>
+                  <h1 className="font-display text-[1.4rem] font-bold leading-tight dark:text-white">{limitEmojis(ad.title)}</h1>
                 </div>
                 <div className="shrink-0">
                   <ShareButton title={ad.title} />
@@ -299,7 +337,9 @@ export default async function AnnoncePage({ params }: Props) {
                     {seller.isPro && <span className="rounded-md bg-gradient-to-r from-neon-gold to-[#D4891A] px-1.5 py-0.5 text-[0.55rem] font-black uppercase tracking-wide text-dark-900">PRO</span>}
                     {seller.isVerified && <span className="inline-flex items-center gap-0.5 rounded-md bg-green/10 px-1.5 py-0.5 text-[0.58rem] font-bold text-green"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>Vérifié</span>}
                   </div>
-                  <div className="text-[0.72rem] text-gray-500 dark:text-gray-400 mt-0.5">⭐ {seller.rating} · {seller.sales} ventes</div>
+                  <div className="text-[0.72rem] text-gray-500 dark:text-gray-400 mt-0.5">
+                    {seller.memberSince ? `Membre depuis ${seller.memberSince}` : "Nouveau vendeur"} · {seller.activeListings ?? 0} annonce{(seller.activeListings ?? 0) > 1 ? "s" : ""} active{(seller.activeListings ?? 0) > 1 ? "s" : ""}
+                  </div>
                 </div>
                 <Link href={`/boutique/${seller.id}`} className="shrink-0 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-3.5 py-2 text-[0.75rem] font-bold text-white shadow-md shadow-purple-500/20 transition hover:scale-[1.04]">
                   Boutique →

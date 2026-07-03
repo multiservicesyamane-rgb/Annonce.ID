@@ -9,14 +9,14 @@ import { createClient } from "@/lib/supabase/client";
  */
 export default function AdBanner({
   slot,
-  title,
-  subtitle,
   label = "Sponsorisé",
   variant = "dark",
   href = "/dashboard?panel=campaigns",
 }: {
   slot: string;
-  title: string;
+  /** @deprecated ignoré : le repli affiche désormais de l'auto-promo */
+  title?: string;
+  /** @deprecated ignoré : le repli affiche désormais de l'auto-promo */
   subtitle?: string;
   label?: string;
   variant?: "dark" | "green" | "night";
@@ -30,6 +30,17 @@ export default function AdBanner({
         : "bg-gradient-to-r from-gray-900 via-gray-800 to-black";
 
   const className = `group relative block w-full overflow-hidden rounded-[16px] text-white shadow-xl transition-all hover:shadow-2xl ${bg}`;
+
+  // Auto-promotion affichée à la place d'un bloc pub VIDE (aucun annonceur actif).
+  // On ne montre jamais « Votre publicité ici » aux visiteurs.
+  const PROMOS = [
+    { title: "Vendez gratuitement sur Wanteermako", subtitle: "Publication gratuite · 0% commission · contact WhatsApp direct.", cta: "Publier une annonce", href: "/publier" },
+    { title: "Découvrez nos boutiques Pro", subtitle: "Des vendeurs vérifiés et leurs catalogues, au même endroit.", cta: "Voir les boutiques", href: "/boutiques" },
+    { title: "Boostez votre annonce", subtitle: "Passez en Premium / À la Une et gagnez en visibilité.", cta: "Découvrir les options", href: "/publier" },
+  ];
+  // Choix déterministe selon le slot (stable entre serveur et client).
+  const promoIndex = slot.split("").reduce((n, c) => n + c.charCodeAt(0), 0) % PROMOS.length;
+  const promo = PROMOS[promoIndex];
 
   const [activeCampaign, setActiveCampaign] = useState<any>(null);
   const supabase = createClient();
@@ -63,25 +74,23 @@ export default function AdBanner({
       </div>
       <div className="pointer-events-none absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
 
-      {/* Ad Tag */}
+      {/* Étiquette auto-promo (pas « Sponsorisé » : aucun annonceur payant ici) */}
       <span className="absolute left-0 top-0 rounded-br-lg bg-black/40 px-3 py-1 text-[.65rem] font-bold uppercase tracking-widest text-white/80 backdrop-blur-md">
-        {label}
+        Wanteermako
       </span>
 
       <div className="relative z-10 max-w-[70%] mt-3 sm:mt-0">
         <div className="font-display text-[1.4rem] font-extrabold tracking-tight sm:text-[1.6rem] leading-tight">
-          {title}
+          {promo.title}
         </div>
-        {subtitle && (
-          <div className="mt-1.5 text-[.85rem] font-medium text-white/80">
-            {subtitle}
-          </div>
-        )}
+        <div className="mt-1.5 text-[.85rem] font-medium text-white/80">
+          {promo.subtitle}
+        </div>
       </div>
 
       <div className="relative z-10 mt-5 sm:mt-0 shrink-0">
         <button className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[.85rem] font-bold text-gray-900 shadow-[0_4px_14px_0_rgba(255,255,255,0.39)] transition-all group-hover:scale-105 group-hover:bg-gray-50 group-hover:shadow-[0_6px_20px_rgba(255,255,255,0.23)]">
-          Découvrir <span className="text-[1.1rem]">→</span>
+          {promo.cta} <span className="text-[1.1rem]">→</span>
         </button>
       </div>
     </div>
@@ -118,7 +127,7 @@ export default function AdBanner({
   }
 
   return (
-    <Link href={href} className={className} aria-label={`Emplacement publicitaire ${slot}`}>
+    <Link href={promo.href} className={className} aria-label={promo.title}>
       <Inner />
     </Link>
   );

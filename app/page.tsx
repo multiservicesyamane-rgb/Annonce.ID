@@ -8,6 +8,7 @@ import AdCard from "@/components/AdCard";
 import HomeRecent from "@/components/HomeRecent";
 import { CATEGORIES } from "@/lib/constants";
 import { getFeaturedListings, getPremiumListings, getRecentListings } from "@/lib/homeSections";
+import { formatNumber } from "@/lib/utils";
 import { createClient } from "@supabase/supabase-js";
 
 import UneCarousel from "@/components/UneCarousel";
@@ -55,12 +56,52 @@ export default async function HomePage() {
     .filter((b: any) => (bCountMap[b.id] || 0) > 0)
     .slice(0, 8);
 
+  // Compteurs RÉELS pour le bandeau de confiance (aucune ligne transférée : head+count).
+  // Remplace les anciennes stats invérifiables (« 27 pays / 250 000 annonces »).
+  const activeCountRes = await supabase
+    .from('listings')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active');
+  const activeListingsCount = activeCountRes.count || 0;
+
+  // Vendeurs vérifiés — tolérant si la colonne is_verified n'existe pas encore.
+  let verifiedSellersCount = 0;
+  try {
+    const vr = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_verified', true);
+    verifiedSellersCount = vr.count || 0;
+  } catch { /* colonne absente → 0 */ }
+
+  const stats = [
+    { value: activeListingsCount, label: 'Annonces actives', suffix: '' },
+    { value: verifiedSellersCount, label: 'Vendeurs vérifiés', suffix: '' },
+    { value: CATEGORIES.length, label: 'Catégories', suffix: '' },
+  ];
+
   return (
     <>
       <Hero />
 
       {/* Bandeau "À la Une" + Premium (déduplication par id), cliquable */}
       <FeaturedSlider listings={[...uneList, ...premList].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)} />
+
+      {/* Bandeau de confiance — CHIFFRES RÉELS tirés de la base (pas de stats gonflées) */}
+      <section className="wrap pt-3 pb-1">
+        <div className="grid grid-cols-3 gap-2 md:gap-4 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 px-3 py-4 md:px-6 md:py-5 shadow-sm">
+          {stats.map((s) => (
+            <div key={s.label} className="text-center">
+              <div className="font-display text-[1.3rem] md:text-[2rem] font-black text-green dark:text-green-400 leading-none">
+                {formatNumber(s.value)}{s.suffix}
+              </div>
+              <div className="mt-1 text-[.62rem] md:text-[.8rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {s.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Bannière AdSense MASQUÉE jusqu'à activation (remettre true le moment venu) */}
       {false && (
@@ -161,7 +202,7 @@ export default async function HomePage() {
         <AdBanner
           slot="home-top"
           title="Propulsez vos ventes dès aujourd'hui"
-          subtitle="Placez votre marque ici et touchez 250 000 acheteurs."
+          subtitle="Boostez votre annonce et gagnez en visibilité auprès des acheteurs du Sénégal."
           variant="night"
         />
       </ScrollReveal>

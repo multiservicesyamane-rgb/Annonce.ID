@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: "%s · Wanteermako",
   },
   description:
-    "Achetez, vendez, louez en Afrique de l'Ouest. 27 pays, 250 000+ annonces. Contact direct WhatsApp, sans intermédiaire.",
+    "Achetez, vendez, louez au Sénégal. Publication gratuite, 0% commission, contact direct WhatsApp sans intermédiaire.",
   keywords: ["petites annonces", "Afrique de l'Ouest", "Dakar", "Abidjan", "immobilier", "voitures", "occasion"],
   openGraph: {
     type: "website",
@@ -50,10 +50,41 @@ export const viewport = {
   ],
 };
 
+// Données structurées site-wide : identité de l'entreprise + moteur de recherche.
+const siteJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${appUrl}/#organization`,
+      name: "Wanteermako",
+      url: appUrl,
+      logo: `${appUrl}/logo-full.jpg`,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${appUrl}/#website`,
+      url: appUrl,
+      name: "Wanteermako",
+      inLanguage: "fr",
+      publisher: { "@id": `${appUrl}/#organization` },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: { "@type": "EntryPoint", urlTemplate: `${appUrl}/recherche?q={search_term_string}` },
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
+        />
         {/* Anti-flash : applique le thème AVANT le rendu */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){

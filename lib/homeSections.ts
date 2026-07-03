@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, limitEmojis } from "@/lib/utils";
 import type { Listing } from "@/lib/types";
 
 const RECENT_SELECT =
@@ -26,7 +26,7 @@ function formatRecentListing(ad: any): Listing {
   return {
     id: ad.id,
     slug: ad.slug,
-    title: ad.title,
+    title: limitEmojis(ad.title),
     price: formatPrice(ad),
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
@@ -43,7 +43,7 @@ function formatHighlightListing(ad: any): Listing {
   return {
     id: ad.id,
     slug: ad.slug,
-    title: ad.title,
+    title: limitEmojis(ad.title),
     price: formatPrice(ad),
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",

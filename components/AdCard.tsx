@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Listing } from "@/lib/types";
 import FavButton from "./FavButton";
 import { colorForCategory } from "@/lib/constants";
+import { limitEmojis } from "@/lib/utils";
 
 function getRelativeTime(dateString?: string) {
   if (!dateString) return "";
@@ -103,7 +104,7 @@ export default function AdCard({ ad }: { ad: Listing }) {
 
         {/* Titre sur 2 lignes */}
         <h3 className={`line-clamp-2 min-h-[2.1em] text-[0.74rem] md:text-[0.84rem] font-bold leading-snug transition-colors ${titleStyles}`}>
-          {ad.title}
+          {limitEmojis(ad.title)}
         </h3>
 
         {/* Prix + badge de confiance */}
