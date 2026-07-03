@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     }
 
     const supabase = createClient(supabaseUrl, serviceKey);
-    const [userId, listingId] = String(session.client_reference || "").split("|");
+    const [userId, listingId, boostKey] = String(session.client_reference || "").split("|");
     const amount = parseInt(session.amount || "0", 10);
 
     if (userId || listingId) {
@@ -58,7 +58,16 @@ export async function POST(req: Request) {
         type: listingId ? "boost" : "credits",
       });
       if (listingId) {
-        await supabase.from("listings").update({ status: "active", premium: true }).eq("id", listingId);
+        const premium = boostKey === "premium" || boostKey === "vip" || !boostKey;
+        const featured = boostKey === "alaune" || boostKey === "vip";
+        await supabase.from("listings").update({
+          status: "active",
+          premium,
+          featured,
+          is_premium: premium,
+          is_featured: featured,
+          boost_key: boostKey || null,
+        }).eq("id", listingId);
       }
     }
 

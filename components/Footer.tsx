@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { COUNTRIES } from "@/lib/constants";
+import { COUNTRIES, categoryBySlug } from "@/lib/constants";
+import { getSubdomainUrl } from "@/lib/categories";
 
 /** Footer sombre + SÉLECTEUR 27 PAYS en bas (exigence du brief). */
 export default function Footer() {
@@ -35,10 +36,10 @@ export default function Footer() {
         </div>
 
         <FooterCol title="Catégories">
-          <FooterLink href="/categorie/immobilier">Immobilier</FooterLink>
-          <FooterLink href="/categorie/vehicules">Véhicules</FooterLink>
-          <FooterLink href="/categorie/electronique">Électronique</FooterLink>
-          <FooterLink href="/categorie/emploi">Emploi</FooterLink>
+          <FooterCategoryLink slug="immobilier">Immobilier</FooterCategoryLink>
+          <FooterCategoryLink slug="vehicules">Véhicules</FooterCategoryLink>
+          <FooterCategoryLink slug="electronique">Électronique</FooterCategoryLink>
+          <FooterCategoryLink slug="emploi">Emploi</FooterCategoryLink>
         </FooterCol>
 
         <FooterCol title="Aide & Actualités">
@@ -83,4 +84,11 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
       </Link>
     </li>
   );
+}
+
+function FooterCategoryLink({ slug, children }: { slug: string; children: React.ReactNode }) {
+  const category = categoryBySlug(slug);
+  if (!category) return null;
+
+  return <FooterLink href={getSubdomainUrl(category)}>{children}</FooterLink>;
 }

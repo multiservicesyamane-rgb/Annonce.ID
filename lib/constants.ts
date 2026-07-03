@@ -57,6 +57,7 @@ export type DynField = {
 
 export type Category = {
   slug: string;
+  subdomainSlug: string;
   name: string;
   icon: string;
   count: string;
@@ -69,6 +70,7 @@ export type Category = {
 export const CATEGORIES: Category[] = [
   {
     slug: "vehicules",
+    subdomainSlug: "vehicules",
     name: "Véhicules & Transport",
     icon: "🚗",
     count: "32 100",
@@ -111,6 +113,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "immobilier",
+    subdomainSlug: "immobilier",
     name: "Immobilier",
     icon: "🏠",
     count: "45 230",
@@ -159,6 +162,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "electronique",
+    subdomainSlug: "electronique",
     name: "Téléphones & Multimédia",
     icon: "📱",
     count: "58 400",
@@ -197,6 +201,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "maison",
+    subdomainSlug: "maison",
     name: "Maison & Électroménager",
     icon: "🛋️",
     count: "19 800",
@@ -235,6 +240,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "mode",
+    subdomainSlug: "mode",
     name: "Mode, Beauté & Accessoires",
     icon: "👗",
     count: "28 900",
@@ -267,6 +273,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "emploi",
+    subdomainSlug: "emploi",
     name: "Emploi & Recrutement",
     icon: "💼",
     count: "12 050",
@@ -283,10 +290,11 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "services",
+    subdomainSlug: "services",
     name: "Services Professionnels",
     icon: "🔧",
     count: "15 600",
-    subs: ["Développement Web", "Design Graphique", "Marketing Digital", "Livraison", "Déménagement", "Réparation Téléphone", "Réparation Électroménager", "Plomberie", "Électricité", "Menuiserie", "Climatisation", "Photographie", "Vidéographie", "Cuisine & Traiteur", "Couture", "Sécurité", "Autre"],
+    subs: ["Informatique & Web", "Développement Web", "Design Graphique", "Marketing Digital", "Livraison", "Déménagement", "Réparation Téléphone", "Réparation Électroménager", "Plomberie", "Électricité", "Menuiserie", "Climatisation", "Photographie", "Vidéographie", "Cuisine & Traiteur", "Couture", "Sécurité", "Autre"],
     fields: [
       { label: "Type de service", type: "text", placeholder: "Ex : Création de site web" },
       { label: "Prestataire", type: "select", options: ["Particulier", "Professionnel", "Entreprise"] },
@@ -298,6 +306,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "sport",
+    subdomainSlug: "sports",
     name: "Sports, Loisirs & Culture",
     icon: "⚽",
     count: "9 500",
@@ -310,6 +319,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "equipements-pro",
+    subdomainSlug: "equipements",
     name: "Équipements Professionnels",
     icon: "🏭",
     count: "8 900",
@@ -323,6 +333,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "agriculture",
+    subdomainSlug: "agriculture",
     name: "Agriculture & Élevage",
     icon: "🌿",
     count: "7 300",
@@ -336,6 +347,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "animaux",
+    subdomainSlug: "animaux",
     name: "Animaux & Accessoires",
     icon: "🐐",
     count: "6 400",
@@ -349,6 +361,7 @@ export const CATEGORIES: Category[] = [
   },
   {
     slug: "entreprises",
+    subdomainSlug: "entreprises",
     name: "Entreprises & Opportunités",
     icon: "🤝",
     count: "3 500",

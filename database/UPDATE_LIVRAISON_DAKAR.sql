@@ -4,7 +4,7 @@
 -- ============================================================
 
 update public.listings
-set location = 'Dakar'
+set location = 'Partout'
 where source = 'aliexpress';
 
 -- Vérifier : select title, location, price from public.listings where source='aliexpress';

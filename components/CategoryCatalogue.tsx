@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CATEGORIES } from "@/lib/constants";
+import { getSubdomainUrl } from "@/lib/categories";
 
 // Catalogue des catégories — UNE seule ligne horizontale (scroll), grandes tuiles.
 export default function CategoryCatalogue() {
@@ -17,7 +18,7 @@ export default function CategoryCatalogue() {
         {CATEGORIES.map((c) => (
           <Link
             key={c.slug}
-            href={`/categorie/${c.slug}`}
+            href={getSubdomainUrl(c)}
             className="group flex w-[78px] shrink-0 flex-col items-center gap-1.5 rounded-[14px] border border-gray-100 dark:border-white/10 bg-white dark:bg-[#111722]/80 p-2 text-center shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#6366F1]/50 hover:shadow-md sm:w-[90px]"
           >
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366F1]/12 via-[#A855F7]/10 to-[#FFC93C]/10 text-[1.4rem] transition-transform group-hover:scale-110 sm:h-12 sm:w-12 sm:text-[1.6rem]">

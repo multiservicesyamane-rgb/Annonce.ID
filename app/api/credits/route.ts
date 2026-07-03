@@ -39,22 +39,30 @@ export async function POST(req: Request) {
       const { creditId, listingId } = body;
       if (!creditId || !listingId) return NextResponse.json({ error: "Crédit et annonce requis." }, { status: 400 });
 
-      // Le crédit appartient-il à l'utilisateur et est-il disponible ?
-      const { data: credit, error: cErr } = await sb.from("boost_credits").select("*").eq("id", creditId).eq("user_id", user.id).eq("status", "available").single();
-      if (cErr || !credit) return NextResponse.json({ error: "Crédit introuvable ou déjà utilisé." }, { status: 400 });
-
       // L'annonce appartient-elle à l'utilisateur ?
       const { data: listing, error: lErr } = await sb.from("listings").select("id,user_id").eq("id", listingId).single();
       if (lErr || !listing || listing.user_id !== user.id) {
         return NextResponse.json({ error: "Cette annonce ne vous appartient pas." }, { status: 403 });
       }
 
+      const claimedAt = new Date();
+      const { data: credit, error: cErr } = await sb
+        .from("boost_credits")
+        .update({ status: "used", listing_id: listingId, used_at: claimedAt.toISOString() })
+        .eq("id", creditId)
+        .eq("user_id", user.id)
+        .eq("status", "available")
+        .select("*")
+        .single();
+      if (cErr || !credit) return NextResponse.json({ error: "Crédit introuvable ou déjà utilisé." }, { status: 400 });
+
       const days = credit.duration_days || 30;
       const expires = new Date(Date.now() + days * 86400000).toISOString();
+      const premium = credit.boost_key === "premium" || credit.boost_key === "vip";
       const featured = credit.boost_key === "alaune" || credit.boost_key === "vip";
 
       // Appliquer le boost à l'annonce (écriture adaptative simplifiée)
-      let lp: any = { status: "active", premium: true, featured, is_premium: true, is_featured: featured, boost_key: credit.boost_key, premium_until: expires, boost_expires_at: expires };
+      let lp: any = { status: "active", premium, featured, is_premium: premium, is_featured: featured, boost_key: credit.boost_key, premium_until: expires, boost_expires_at: expires };
       for (let i = 0; i < 10; i++) {
         const { error } = await sb.from("listings").update(lp).eq("id", listingId);
         if (!error) break;
@@ -64,8 +72,7 @@ export async function POST(req: Request) {
         throw error;
       }
 
-      // Marquer le crédit comme utilisé
-      await sb.from("boost_credits").update({ status: "used", listing_id: listingId, used_at: new Date().toISOString(), expires_at: expires }).eq("id", creditId);
+      await sb.from("boost_credits").update({ expires_at: expires }).eq("id", creditId);
 
       return NextResponse.json({ ok: true, expires });
     }

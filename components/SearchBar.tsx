@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LISTINGS, TRENDING } from "@/lib/data";
 import { CATEGORIES } from "@/lib/constants";
+import { getSubdomainUrl } from "@/lib/categories";
 
 /**
  * Barre de recherche moderne (section 7) : autocomplétion live (debounce 250ms),
@@ -104,7 +105,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
       const cToks = new Set([...toks(c.name), slug]);
       return qToks.some((w) => cToks.has(w) || slug.startsWith(w) || w.startsWith(slug));
     });
-    if (matchCat) { router.push(`/categorie/${matchCat.slug}`); return; }
+    if (matchCat) { window.location.assign(getSubdomainUrl(matchCat)); return; }
     router.push(`/recherche?q=${encodeURIComponent(query)}`);
   }
 
@@ -173,7 +174,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
               className="w-full text-left px-3 py-2 text-[.85rem] font-medium text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center gap-2"
               onClick={() => {
                 setFilterOpen(false);
-                router.push(`/categorie/${c.slug}`);
+                window.location.assign(getSubdomainUrl(c));
               }}
             >
               <span className="text-[1.1rem]">{c.icon}</span> {c.name}

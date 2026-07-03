@@ -36,15 +36,7 @@ export default async function BoutiquePage({ params }: Props) {
   }
 
   const resolvedId = profile?.id || sellerId;
-
-  if (profile?.has_boutique === false) {
-    return (
-      <div className="wrap py-16 text-center">
-        <h1 className="font-display text-[1.4rem] font-extrabold text-gray-900 dark:text-white">Boutique non disponible</h1>
-        <p className="mt-2 text-gray-500">Ce vendeur a masqué sa boutique publique pour le moment.</p>
-      </div>
-    );
-  }
+  // (La boutique est visible dès qu'il y a des annonces actives — pas de blocage par flag)
 
   // Fetch their active listings
   const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, views, created_at').eq('user_id', resolvedId).eq('status', 'active').order('created_at', { ascending: false });

@@ -28,6 +28,7 @@ export default function PublishWizard() {
   const [commune, setCommune] = useState("Plateau");
   const [customCommune, setCustomCommune] = useState("");
   const [subCategory, setSubCategory] = useState("");
+  const [contactPhone, setContactPhone] = useState(""); // numéro local (9 chiffres), préfixe +221 ajouté auto
   const [priceType, setPriceType] = useState("Prix Fixe");
   const [specs, setSpecs] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<string | null>(null);
@@ -46,7 +47,12 @@ export default function PublishWizard() {
       if (user) {
         setUserEmail(user.email || "");
         supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
-          if (data) setUserProfile(data);
+          if (data) {
+            setUserProfile(data);
+            // Préremplit le numéro (9 derniers chiffres) s'il existe déjà sur le profil
+            const digits = String(data.phone || "").replace(/\D/g, "");
+            if (digits) setContactPhone(digits.slice(-9));
+          }
           setLoadingProfile(false);
         });
         // Crédits boost offerts/achetés disponibles
@@ -197,6 +203,7 @@ export default function PublishWizard() {
       if (!catSlug) return show("⚠ Choisissez une catégorie.");
       if (cat?.subs && cat.subs.length > 0 && (!subCategory || subCategory === "Choisir…")) return show("⚠ Choisissez une sous-catégorie.");
       if (commune === "Autre" && !customCommune.trim()) return show("⚠ Précisez votre lieu.");
+      if (contactPhone.length !== 9) return show("📞 Entrez votre numéro (9 chiffres après +221) pour recevoir les acheteurs.");
     }
     if (step === 2) {
       if (photos.length === 0) return show("⚠ Ajoutez au moins une photo.");
@@ -241,6 +248,7 @@ export default function PublishWizard() {
       price_type: priceType,
       category: subCategory || cat?.name || "Autre",
       category_slug: catSlug || "autre",
+      phone: contactPhone ? `+221${contactPhone}` : undefined,
       location: commune === "Autre" ? (customCommune ? `${region} - ${customCommune}` : region) : `${region} - ${commune}`,
       region, commune, custom_commune: customCommune,
       image: uploadedPhotos.length > 0 ? uploadedPhotos[0] : "https://placehold.co/600x400?text=Sans+Image",
@@ -273,18 +281,11 @@ export default function PublishWizard() {
     if (error) { console.error("Supabase Error:", error); show(`⚠ ${error.message}`); setIsPublishing(false); return; }
 
     // Dès sa 1ère annonce, le vendeur devient visible dans les Boutiques (auto)
+    // + on enregistre son numéro sur le profil (pour qu'il reçoive les acheteurs)
     if (!editModeId) {
-      supabase.from('profiles').update({ has_boutique: true }).eq('id', user.id).then(() => {}, () => {});
-      // Garantir 1 produit "À la Une" par compte : si le vendeur n'a encore
-      // aucune annonce en vedette, on met celle-ci à la une automatiquement.
-      if (data?.id) {
-        supabase.from('listings').select('id').eq('user_id', user.id).or('featured.eq.true,is_featured.eq.true').limit(1)
-          .then(({ data: feat }) => {
-            if (!feat || feat.length === 0) {
-              supabase.from('listings').update({ featured: true, is_featured: true }).eq('id', data.id).then(() => {}, () => {});
-            }
-          });
-      }
+      const profUpdate: Record<string, any> = { has_boutique: true };
+      if (contactPhone) profUpdate.phone = `+221${contactPhone}`;
+      supabase.from('profiles').update(profUpdate).eq('id', user.id).then(() => {}, () => {});
     }
 
     if (!editModeId && (boost === 0 || isKonnecta)) {
@@ -407,6 +408,25 @@ export default function PublishWizard() {
                   <input className="input" placeholder="Ex: Village de Ndiaganiao..." value={customCommune} onChange={(e) => setCustomCommune(e.target.value)} maxLength={50} />
                 </div>
               )}
+
+              {/* Téléphone du vendeur (obligatoire) — c'est CE numéro qui reçoit appels & WhatsApp */}
+              <div className="col-span-full">
+                <label className="label">📞 Votre numéro (WhatsApp / Appel) <span className="text-brand-red">*</span></label>
+                <div className="flex items-stretch gap-2">
+                  <span className="flex items-center rounded-[10px] border-2 border-gray-100 dark:border-dark-border bg-gray-100 dark:bg-dark-900 px-3 text-[.92rem] font-bold text-gray-700 dark:text-white shrink-0">🇸🇳 +221</span>
+                  <input
+                    className="input flex-1"
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="77 123 45 67"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                  />
+                </div>
+                <p className="mt-1 text-[.72rem] text-gray-500 dark:text-gray-400">
+                  ⚠️ Indispensable : c'est votre numéro qui recevra les appels et messages des acheteurs (9 chiffres après +221).
+                </p>
+              </div>
             </div>
           </div>
         )}

@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const supabase = createClient(supabaseUrl, serviceKey);
     let meta: any = {};
     try { meta = JSON.parse(check.data.metadata || "{}"); } catch { /* ignore */ }
-    const { userId, listingId } = meta;
+    const { userId, listingId, boostKey } = meta;
     const amount = parseInt(check.data.amount || "0", 10);
 
     if (userId || listingId) {
@@ -49,7 +49,16 @@ export async function POST(req: Request) {
         type: listingId ? "boost" : "credits",
       });
       if (listingId) {
-        await supabase.from("listings").update({ status: "active", premium: true }).eq("id", listingId);
+        const premium = boostKey === "premium" || boostKey === "vip" || !boostKey;
+        const featured = boostKey === "alaune" || boostKey === "vip";
+        await supabase.from("listings").update({
+          status: "active",
+          premium,
+          featured,
+          is_premium: premium,
+          is_featured: featured,
+          boost_key: boostKey || null,
+        }).eq("id", listingId);
         // Publication instantanée sur les réseaux (idempotent).
         try { await publishOneListing(supabase, listingId); } catch (e) { console.warn("publishOneListing:", e); }
       }

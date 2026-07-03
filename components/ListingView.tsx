@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AdCard from "./AdCard";
 import AdBanner from "./AdBanner";
@@ -39,6 +39,7 @@ export default function ListingView({
   
   // Pagination
   const [visibleCount, setVisibleCount] = useState(12);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // Sync internal state with URL search params when they change
   useEffect(() => {
@@ -92,6 +93,24 @@ export default function ListingView({
   }, [initial, category, premiumOnly, minPrice, maxPrice, condition, sellerType, location, sort]);
 
   const visibleListings = filtered.slice(0, visibleCount);
+  const canShowMore = visibleCount < filtered.length;
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !canShowMore) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount((count) => Math.min(count + 12, filtered.length));
+        }
+      },
+      { rootMargin: "460px 0px" },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [canShowMore, filtered.length]);
 
   function handleApplyFilters(filters: any) {
     setCategory(filters.category || "Toutes");
@@ -209,10 +228,10 @@ export default function ListingView({
                 ))}
               </div>
               
-              {visibleCount < filtered.length && (
-                <div className="mt-8 flex justify-center">
+              {canShowMore && (
+                <div ref={loadMoreRef} className="mt-8 flex justify-center">
                   <button 
-                    onClick={() => setVisibleCount(v => v + 12)}
+                    onClick={() => setVisibleCount(v => Math.min(v + 12, filtered.length))}
                     className="btn btn-outline"
                   >
                     Charger plus d'annonces

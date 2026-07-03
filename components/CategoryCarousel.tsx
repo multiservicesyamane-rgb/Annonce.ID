@@ -2,13 +2,22 @@
 
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
-import { CATEGORIES } from "@/lib/constants";
+import { CATEGORIES, type Category } from "@/lib/constants";
+import { getRootUrl, getSubdomainUrl } from "@/lib/categories";
 
 export default function CategoryCarousel() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Create a "Toutes" category for the beginning
-  const allCategory = { slug: "tous", name: "Toutes", icon: "🌍", count: "100 000+" };
+  const allCategory: Category = {
+    slug: "tous",
+    subdomainSlug: "",
+    name: "Toutes",
+    icon: "🌍",
+    count: "100 000+",
+    subs: [],
+    fields: [],
+  };
   
   // Duplicate categories to ensure smooth infinite scrolling - REMOVED to keep "Toutes" visible
   const displayCats = [allCategory, ...CATEGORIES];
@@ -21,10 +30,11 @@ export default function CategoryCarousel() {
     >
       {displayCats.map((c, i) => {
         const isGold = i % 2 === 0;
+        const href = c.slug === "tous" ? `${getRootUrl()}/recherche` : getSubdomainUrl(c);
         return (
           <Link
             key={`${c.slug}-${i}`}
-            href={c.slug === "tous" ? "/recherche" : `/categorie/${c.slug}`}
+            href={href}
             className="shrink-0 w-[80px] md:w-[95px] flex flex-col items-center justify-center text-center transition-all duration-300 relative group"
           >
             {/* The 3D Platform container */}

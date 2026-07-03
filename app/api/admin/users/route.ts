@@ -148,7 +148,6 @@ export async function POST(req: Request) {
       const { listingId, value } = body;
       if (!listingId) return NextResponse.json({ error: "Annonce requise." }, { status: 400 });
       const lp: any = { featured: !!value, is_featured: !!value };
-      if (value) lp.premium = true; // une annonce à la une est aussi mise en avant
       for (let i = 0; i < 8; i++) {
         const { error } = await sb.from("listings").update(lp).eq("id", listingId);
         if (!error) break;
@@ -212,6 +211,7 @@ export async function POST(req: Request) {
       }
 
       if (kind === "boost") {
+        const premium = planKey === "premium" || planKey === "vip";
         const featured = planKey === "alaune" || planKey === "vip";
         // Sans annonce (ou vente explicite en crédit) → on crée des bons de boost
         // réutilisables plus tard par le client sur ses annonces.
@@ -239,9 +239,9 @@ export async function POST(req: Request) {
           (p) => sb.from("listings").update(p).eq("id", listingId),
           {
             status: "active",
-            premium: true,
+            premium,
             featured,
-            is_premium: true,
+            is_premium: premium,
             is_featured: featured,
             boost_key: planKey || null,
             premium_until: expires,

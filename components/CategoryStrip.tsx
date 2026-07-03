@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CATEGORIES } from "@/lib/constants";
+import { getSubdomainUrl } from "@/lib/categories";
 
 /** Bande horizontale de catégories sous le header. */
 export default function CategoryStrip({ active }: { active?: string }) {
@@ -9,7 +10,7 @@ export default function CategoryStrip({ active }: { active?: string }) {
         {CATEGORIES.map((c) => (
           <Link
             key={c.slug}
-            href={`/categorie/${c.slug}`}
+            href={getSubdomainUrl(c)}
             className={`inline-flex shrink-0 items-center gap-1 rounded-[20px] border-[1.5px] px-2.5 md:px-3.5 py-1 md:py-1.5 text-[.72rem] md:text-[.8rem] font-medium transition ${
               active === c.slug
                 ? "border-gold bg-gold-pale text-green"

@@ -12,6 +12,8 @@ import SharePublishedBanner from "@/components/SharePublishedBanner";
 import RecordView from "@/components/RecordView";
 import { createClient } from "@supabase/supabase-js";
 import { formatNumber } from "@/lib/utils";
+import { categoryBySlug } from "@/lib/constants";
+import { getRootUrl, getSubdomainUrl } from "@/lib/categories";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -61,7 +63,7 @@ async function fetchAd(idParam: string) {
         id: data.user_id,
         name: data.profiles?.full_name || "Vendeur",
         avatar: data.profiles?.avatar_url || "https://placehold.co/100x100?text=V",
-        phone: data.profiles?.phone || "+221776827851",
+        phone: data.phone || data.profiles?.phone || "+221776827851",
         rating: "Nouveau",
         sales: 0,
         isPro: data.profiles?.role === "pro",
@@ -116,6 +118,7 @@ export default async function AnnoncePage({ params }: Props) {
   const images = ad.photos && ad.photos.length > 0 ? ad.photos : [ad.image];
   const similar = await fetchSimilar(ad.category, ad.id);
   const seller = ad.seller;
+  const adCategory = categoryBySlug(ad.categorySlug);
 
   // Schema.org Product/Offer pour le SEO riche
   const jsonLd = {
@@ -139,8 +142,12 @@ export default async function AnnoncePage({ params }: Props) {
 
       {/* Breadcrumb */}
       <nav className="py-3.5 text-[.78rem] text-gray-500">
-        <Link href="/" className="text-green hover:text-gold-dark">Accueil</Link> ›{" "}
-        <Link href={`/categorie/${ad.categorySlug}`} className="text-green hover:text-gold-dark">{ad.category}</Link> ›{" "}
+        <Link href={getRootUrl()} className="text-green hover:text-gold-dark">Accueil</Link> ›{" "}
+        {adCategory ? (
+          <Link href={getSubdomainUrl(adCategory)} className="text-green hover:text-gold-dark">{ad.category}</Link>
+        ) : (
+          <span className="text-green">{ad.category}</span>
+        )} ›{" "}
         <b className="text-gray-700">{ad.title}</b>
       </nav>
 
