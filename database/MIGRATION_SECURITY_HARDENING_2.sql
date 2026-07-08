@@ -63,6 +63,44 @@ begin
 end $$;
 
 -- ------------------------------------------------------------
+-- 3b) listings : la policy heritee "viewable by everyone" exposait
+--     TOUTES les annonces (y compris non publiees). On la remplace
+--     par lecture publique des actives + lecture proprietaire.
+-- ------------------------------------------------------------
+do $$
+begin
+  if to_regclass('public.listings') is not null then
+    drop policy if exists "Public listings are viewable by everyone" on public.listings;
+    drop policy if exists "Public listings are viewable by everyone." on public.listings;
+    drop policy if exists "public_select_active_listings" on public.listings;
+    drop policy if exists "owner_select_all_listings" on public.listings;
+
+    create policy "public_select_active_listings" on public.listings
+      for select using (status = 'active');
+
+    create policy "owner_select_all_listings" on public.listings
+      for select using (auth.uid() = user_id);
+  end if;
+end $$;
+
+-- ------------------------------------------------------------
+-- 3c) profiles : une seule policy de lecture publique (les doublons
+--     herites sont supprimes). Lecture publique voulue : le site
+--     affiche les vendeurs.
+-- ------------------------------------------------------------
+do $$
+begin
+  if to_regclass('public.profiles') is not null then
+    drop policy if exists "Public profiles are viewable by everyone" on public.profiles;
+    drop policy if exists "Public profiles are viewable by everyone." on public.profiles;
+    drop policy if exists "profiles_select_public" on public.profiles;
+
+    create policy "profiles_select_public" on public.profiles
+      for select using (true);
+  end if;
+end $$;
+
+-- ------------------------------------------------------------
 -- 4) purchases : suppression des policies heritees qui laissaient
 --    le client inserer ses propres achats (fraude possible).
 --    La lecture "purchases_select_own" du volet 1 reste en place.
@@ -99,6 +137,7 @@ begin
         add column user_id uuid default auth.uid();
     end if;
 
+    drop policy if exists "Public Access" on public.campagnes_pub;
     drop policy if exists "Public campaigns are viewable by everyone" on public.campagnes_pub;
     drop policy if exists "Users can create campaigns" on public.campagnes_pub;
     drop policy if exists "Users can update own campaigns" on public.campagnes_pub;
@@ -231,20 +270,20 @@ revoke execute on function public.grant_welcome_credits(uuid) from public, anon,
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
 
 -- ------------------------------------------------------------
--- 10) Controles finaux.
+-- 10) Controle final (un seul tableau) :
+--     - lignes "SANS RLS"     : il ne doit y en avoir AUCUNE ;
+--     - lignes "PUBLIC(true)" : seules les lectures publiques voulues
+--       (profiles, listing_images, categories, countries, reviews).
 -- ------------------------------------------------------------
--- a) Tables public encore sans RLS (doit etre vide) :
-select c.relname as table_sans_rls
+select 'SANS RLS' as type, c.relname as detail, '' as cmd
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
   and c.relkind = 'r'
   and c.relrowsecurity = false
-order by c.relname;
-
--- b) Policies restantes en "using (true)" (a verifier : lecture publique voulue uniquement) :
-select tablename, policyname, cmd
+union all
+select 'PUBLIC(true)', tablename || ' — ' || policyname, cmd::text
 from pg_policies
 where schemaname = 'public'
   and qual = 'true'
-order by tablename, policyname;
+order by 1, 2;
