@@ -12,6 +12,7 @@ import SharePublishedBanner from "@/components/SharePublishedBanner";
 import RecordView from "@/components/RecordView";
 import { createClient } from "@supabase/supabase-js";
 import { formatNumber, limitEmojis } from "@/lib/utils";
+import { detectLanguage } from "@/lib/listingQuality";
 import { categoryBySlug } from "@/lib/constants";
 import { getRootUrl, getSubdomainUrl } from "@/lib/categories";
 
@@ -40,16 +41,6 @@ async function fetchAd(idParam: string) {
       sellerVerified = !!sv?.is_verified;
     } catch { /* colonne absente → false */ }
 
-    // Nombre d'annonces ACTIVES du vendeur (chiffre vérifiable, remplace les faux « 0 ventes »)
-    let sellerActiveCount = 0;
-    try {
-      const { count } = await supabase
-        .from('listings')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', data.user_id)
-        .eq('status', 'active');
-      sellerActiveCount = count || 0;
-    } catch { /* ignore */ }
     return {
       id: data.id,
       title: data.title,
@@ -76,7 +67,6 @@ async function fetchAd(idParam: string) {
         avatar: data.profiles?.avatar_url || "https://placehold.co/100x100?text=V",
         phone: data.phone || data.profiles?.phone || "+221776827851",
         memberSince: data.profiles?.created_at ? new Date(data.profiles.created_at).getFullYear() : null,
-        activeListings: sellerActiveCount,
         isPro: data.profiles?.role === "pro",
         isVerified: sellerVerified
       }
@@ -110,9 +100,13 @@ type Props = { params: { id: string; slug: string } };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const ad = await fetchAd(params.id);
   if (!ad) return { title: "Annonce introuvable" };
+  // Annonces encore en anglais (imports non traduits) → noindex : on évite de
+  // faire indexer du contenu à faible valeur / dupliqué par Google (AdSense).
+  const isEnglish = detectLanguage(`${ad.title} ${ad.description}`) === "en";
   return {
     title: ad.title,
     description: ad.description.slice(0, 160),
+    robots: isEnglish ? { index: false, follow: true } : undefined,
     openGraph: {
       title: ad.title,
       description: ad.description.slice(0, 160),
@@ -218,8 +212,6 @@ export default async function AnnoncePage({ params }: Props) {
             <div className="flex items-center justify-between text-[.75rem] text-gray-500 mb-2">
               <div className="flex items-center gap-1.5 text-gray-500 font-medium">
                 {seller?.memberSince && <span>👤 Membre depuis {seller.memberSince}</span>}
-                {seller?.memberSince && <span className="text-gray-300">·</span>}
-                <span>{seller?.activeListings ?? 0} annonce{(seller?.activeListings ?? 0) > 1 ? "s" : ""} active{(seller?.activeListings ?? 0) > 1 ? "s" : ""}</span>
               </div>
               <ShareButton title={ad.title} />
             </div>
@@ -338,7 +330,7 @@ export default async function AnnoncePage({ params }: Props) {
                     {seller.isVerified && <span className="inline-flex items-center gap-0.5 rounded-md bg-green/10 px-1.5 py-0.5 text-[0.58rem] font-bold text-green"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>Vérifié</span>}
                   </div>
                   <div className="text-[0.72rem] text-gray-500 dark:text-gray-400 mt-0.5">
-                    {seller.memberSince ? `Membre depuis ${seller.memberSince}` : "Nouveau vendeur"} · {seller.activeListings ?? 0} annonce{(seller.activeListings ?? 0) > 1 ? "s" : ""} active{(seller.activeListings ?? 0) > 1 ? "s" : ""}
+                    {seller.memberSince ? `Membre depuis ${seller.memberSince}` : "Vendeur Wanteermako"}
                   </div>
                 </div>
                 <Link href={`/boutique/${seller.id}`} className="shrink-0 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-3.5 py-2 text-[0.75rem] font-bold text-white shadow-md shadow-purple-500/20 transition hover:scale-[1.04]">
@@ -366,14 +358,16 @@ export default async function AnnoncePage({ params }: Props) {
       <ReportListing listingId={ad.id} />
 
       {/* SIMILAIRES */}
-      <section className="py-9">
-        <h2 className="mb-5 font-display text-[1.25rem] font-bold text-gray-900">Annonces similaires</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {similar.map((s) => (
-            <AdCard key={s.id} ad={s as any} />
-          ))}
-        </div>
-      </section>
+      {similar.length >= 3 && (
+        <section className="py-9">
+          <h2 className="mb-5 font-display text-[1.25rem] font-bold text-gray-900">Annonces similaires</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {similar.map((s) => (
+              <AdCard key={s.id} ad={s as any} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* AD A6 */}
       <div className="pb-20 lg:pb-8">

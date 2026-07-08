@@ -12,7 +12,7 @@ import BrandSocialStrip from "./BrandSocialStrip";
 import EnableNotifications from "./EnableNotifications";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage";
-import { whatsappLink } from "@/lib/payment";
+import { PAYMENT_PROVIDER, whatsappLink } from "@/lib/payment";
 import { BOOSTS } from "@/lib/constants";
 import { fetchPrices, effectivePrice } from "@/lib/prices";
 import { formatNumber } from "@/lib/utils";
@@ -43,6 +43,20 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
 ];
 
 const CHART = [120, 95, 210, 180, 340, 290, 400, 380, 320, 450, 510, 480, 390, 560];
+
+function getConfiguredPaymentProvider() {
+  return PAYMENT_PROVIDER === "wave" || PAYMENT_PROVIDER === "cinetpay" || PAYMENT_PROVIDER === "chariow"
+    ? PAYMENT_PROVIDER
+    : PAYMENT_PROVIDER === "all"
+      ? "chariow"
+      : "cinetpay";
+}
+
+function getPaymentProviderLabel(provider: string) {
+  if (provider === "wave") return "Wave";
+  if (provider === "cinetpay") return "CinetPay";
+  return "Chariow";
+}
 
 export default function Dashboard() {
   const searchParams = useSearchParams();
@@ -606,8 +620,8 @@ export default function Dashboard() {
               <div className="mb-4 sm:mb-6 flex items-center gap-3 rounded-[14px] bg-gradient-to-r from-[#16A34A] to-[#0891B2] px-3.5 py-2.5 sm:px-4 sm:py-3 text-white shadow-sm">
                 <span className="text-[1.4rem] sm:text-[1.6rem] shrink-0">🎁</span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[.8rem] sm:text-[.9rem] font-extrabold leading-tight">Cadeau de lancement : 7 boosts offerts !</div>
-                  <div className="text-[.68rem] sm:text-[.75rem] text-white/85 leading-tight mt-0.5 truncate">5 Standard + 1 Premium + 1 À la Une — déjà dans ton compte</div>
+                  <div className="text-[.8rem] sm:text-[.9rem] font-extrabold leading-tight">Cadeau de lancement : 2 boosts offerts !</div>
+                  <div className="text-[.68rem] sm:text-[.75rem] text-white/85 leading-tight mt-0.5 truncate">1 Premium + 1 À la Une — déjà dans ton compte</div>
                 </div>
                 <button onClick={() => handlePanelChange("credits")} className="shrink-0 rounded-full bg-white/95 px-3 py-1.5 text-[.7rem] sm:text-[.78rem] font-bold text-green hover:bg-white transition whitespace-nowrap">Voir mes crédits</button>
                 <button onClick={dismissBonus} aria-label="Fermer" className="shrink-0 rounded-full p-1 text-white/70 hover:text-white hover:bg-white/15 transition">
@@ -1595,9 +1609,11 @@ export default function Dashboard() {
                                 return;
                               }
 
-                              show("Redirection vers PayTech...");
+                              const provider = getConfiguredPaymentProvider();
+                              const providerLabel = getPaymentProviderLabel(provider);
+                              show(`Redirection vers ${providerLabel}...`);
                               try {
-                                const res = await fetch("/api/cinetpay", {
+                                const res = await fetch(`/api/${provider}`, {
                                   method: "POST",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({
@@ -1613,12 +1629,12 @@ export default function Dashboard() {
                                   show(`❌ ${data.error || "Erreur lors de l'initialisation du paiement."}`);
                                 }
                               } catch (error) {
-                                show("Erreur de connexion avec PayTech.");
+                                show(`Erreur de connexion avec ${providerLabel}.`);
                               }
                             }}
                             className="btn btn-green w-full md:w-auto px-8 py-4 text-lg shadow-lg hover:shadow-xl transition-all"
                           >
-                            Payer avec PayTech
+                            Payer avec {getPaymentProviderLabel(getConfiguredPaymentProvider())}
                           </button>
                         </div>
 

@@ -13,6 +13,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { uploadImages } from "@/lib/storage";
 import { isOwner } from "@/lib/owners";
+import { PAYMENT_REQUIRED } from "@/lib/payment";
 import Link from "next/link";
 import ImageCropperModal from "./ImageCropperModal";
 
@@ -203,7 +204,7 @@ export default function PublishWizard() {
   }
 
   const isKonnecta = isOwner(userEmail);
-  const freeAdsRemaining = isKonnecta ? 999 : (userProfile?.free_ads_remaining ?? 3);
+  const freeAdsRemaining = isKonnecta ? 999 : Math.max(0, Math.min(2, Number(userProfile?.free_ads_remaining ?? 2)));
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -274,8 +275,10 @@ export default function PublishWizard() {
 
     // Comptes propriétaires + VIP gratuit : Premium + À la Une offerts, sans limite ni paiement
     const isVipFree = isOwner(userEmail) || !!userProfile?.free_premium;
-    // Les annonces BASIQUES (gratuites) sont ILLIMITÉES (cf. pack de bienvenue).
-    // Les 7 boosts offerts (5 Standard + 1 Premium + 1 À la Une) servent à la mise en avant.
+    if (!editModeId && boost === 0 && !isVipFree && !isKonnecta && freeAdsRemaining <= 0) {
+      return show("⚠ Vous avez déjà utilisé vos 2 annonces gratuites. Choisissez Premium, À la Une ou VIP.");
+    }
+
     setIsPublishing(true);
     show("Création en cours...");
     const { data: { user } } = await supabase.auth.getUser();
@@ -298,6 +301,11 @@ export default function PublishWizard() {
     show("📤 Envoi des photos...");
     const uploadedPhotos = await uploadImages(photos, "listings");
 
+    const selectedBoostKey = BOOSTS[boost]?.key || "gratuit";
+    const paymentBypassed = !PAYMENT_REQUIRED && boost > 0 && !isVipFree && !isKonnecta;
+    const premiumBoost = selectedBoostKey === "premium" || selectedBoostKey === "vip";
+    const featuredBoost = selectedBoostKey === "alaune" || selectedBoostKey === "vip";
+
     const payload: Record<string, any> = {
       user_id: user.id,
       title: title || "Annonce sans titre",
@@ -313,10 +321,13 @@ export default function PublishWizard() {
       image: uploadedPhotos.length > 0 ? uploadedPhotos[0] : "https://placehold.co/600x400?text=Sans+Image",
       photos: uploadedPhotos, specs,
       duplicate_key: duplicateKey,
-      // VIP gratuit → Premium + À la Une + active immédiatement, sans paiement
-      premium: isVipFree || undefined,
-      featured: isVipFree || undefined,
-      status: (boost === 0 || isVipFree) ? "active" : "pending"
+      // VIP gratuit ou paiement temporairement non obligatoire.
+      premium: (isVipFree || paymentBypassed) ? (isVipFree || premiumBoost) : undefined,
+      featured: (isVipFree || paymentBypassed) ? (isVipFree || featuredBoost) : undefined,
+      is_premium: (isVipFree || paymentBypassed) ? (isVipFree || premiumBoost) : undefined,
+      is_featured: (isVipFree || paymentBypassed) ? (isVipFree || featuredBoost) : undefined,
+      boost_key: boost > 0 ? selectedBoostKey : undefined,
+      status: (boost === 0 || isVipFree || paymentBypassed) ? "active" : "pending"
     };
 
     async function saveAdaptive(isUpdate: boolean) {
@@ -348,8 +359,12 @@ export default function PublishWizard() {
       supabase.from('profiles').update(profUpdate).eq('id', user.id).then(() => {}, () => {});
     }
 
+    if (!editModeId && boost === 0 && !isVipFree && !isKonnecta) {
+      const nextFreeAds = Math.max(0, freeAdsRemaining - 1);
+      supabase.from('profiles').update({ free_ads_remaining: nextFreeAds }).eq('id', user.id).then(() => {}, () => {});
+    }
+
     if (!editModeId && (boost === 0 || isKonnecta)) {
-      // (Annonces gratuites illimitées : on ne décrémente plus de quota)
       if (isKonnecta && boost > 0) {
         const boostKey = BOOSTS[boost].key;
         await supabase.from('listings').update({ status: 'active', premium: boostKey === 'premium' || boostKey === 'vip' }).eq('id', data.id);
@@ -362,7 +377,7 @@ export default function PublishWizard() {
     // BOOST GRATUIT VIA CRÉDIT : si le vendeur possède un crédit (offert ou acheté)
     // correspondant au boost choisi, on l'applique → annonce active SANS paiement.
     let usedCredit = false;
-    if (!editModeId && boost > 0 && !isVipFree && !isKonnecta && data?.id) {
+    if (!editModeId && PAYMENT_REQUIRED && boost > 0 && !isVipFree && !isKonnecta && data?.id) {
       const wantKey = BOOSTS[boost].key;
       const credit = credits.find((c: any) => c.boost_key === wantKey && c.status === "available");
       if (credit) {
@@ -380,7 +395,7 @@ export default function PublishWizard() {
 
     // Publication instantanée sur les réseaux (Telegram/Facebook…) si l'annonce
     // est active dès maintenant. Idempotent côté serveur ; "fire-and-forget".
-    const isActiveNow = !editModeId && (boost === 0 || isVipFree || isKonnecta || usedCredit);
+    const isActiveNow = !editModeId && (boost === 0 || isVipFree || isKonnecta || usedCredit || paymentBypassed);
     if (isActiveNow && data?.id) {
       fetch("/api/campaign/publish-listing", {
         method: "POST",
@@ -390,7 +405,7 @@ export default function PublishWizard() {
     }
 
     if (editModeId) { show("✅ Annonce mise à jour !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}`), 1200); }
-    else if (boost === 0 || isKonnecta || usedCredit) { show(usedCredit ? "✅ Publiée avec votre boost offert !" : "✅ Annonce publiée !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}?published=1`), 1200); }
+    else if (boost === 0 || isKonnecta || usedCredit || paymentBypassed) { show(usedCredit ? "✅ Publiée avec votre boost offert !" : paymentBypassed ? "✅ Annonce publiée sans paiement." : "✅ Annonce publiée !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}?published=1`), 1200); }
     else { router.push(`/paiement?annonce_id=${data.id}`); }
   }
 
@@ -596,6 +611,16 @@ export default function PublishWizard() {
         {step === 4 && (
           <div className="animate-fadeUp space-y-3">
             <h2 className="font-display text-[1rem] md:text-[1.15rem] font-bold text-gray-900 dark:text-white">Visibilité</h2>
+            {!isKonnecta && (
+              <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-[.78rem] font-semibold text-green-800 dark:border-green-500/20 dark:bg-green-900/15 dark:text-green-300">
+                Il vous reste {freeAdsRemaining} annonce{freeAdsRemaining > 1 ? "s" : ""} gratuite{freeAdsRemaining > 1 ? "s" : ""} sur 2.
+              </p>
+            )}
+            {!PAYMENT_REQUIRED && (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[.78rem] font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-900/15 dark:text-amber-300">
+                Paiement Chariow pas encore obligatoire : les options de visibilité peuvent être publiées sans paiement.
+              </p>
+            )}
             <div className="space-y-2">
               {duplicateWarning && (
                 <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-[.82rem] text-amber-900 dark:border-amber-500/30 dark:bg-amber-900/20 dark:text-amber-200">
@@ -630,10 +655,11 @@ export default function PublishWizard() {
               ))}
               {(() => {
                 const nb = (k: string) => credits.filter((c: any) => c.boost_key === k && c.status === "available").length;
-                const total = nb("basic") + nb("premium") + nb("alaune") + nb("vip");
+                const total = nb("premium") + nb("alaune") + nb("vip");
+                if (total === 0) return null;
                 return (
                   <div className="rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/15 p-2.5 text-[.8rem] text-amber-800 dark:text-amber-300">
-                    🎁 <b>{total} boost{total > 1 ? "s" : ""} offert{total > 1 ? "s" : ""}</b> : {nb("basic")} Standard · {nb("premium")} Premium · {nb("alaune")} À la Une
+                    🎁 <b>{total} boost{total > 1 ? "s" : ""} offert{total > 1 ? "s" : ""}</b> : {nb("premium")} Premium · {nb("alaune")} À la Une · {nb("vip")} VIP
                     <span className="mt-0.5 block text-[.7rem] opacity-80">Choisissez un boost ci-dessus pour l'utiliser gratuitement (sans payer).</span>
                   </div>
                 );
@@ -662,7 +688,7 @@ export default function PublishWizard() {
                 : duplicateWarning
                   ? "Publier quand même"
                 : boost > 0
-                  ? (credits.find((c: any) => c.boost_key === BOOSTS[boost].key && c.status === "available") ? "🎁 Publier (boost offert)" : "Payer & Publier")
+                  ? (credits.find((c: any) => c.boost_key === BOOSTS[boost].key && c.status === "available") ? "🎁 Publier (boost offert)" : PAYMENT_REQUIRED ? "Payer & Publier" : "Publier sans payer")
                   : "Publier"}
             </button>
           )}

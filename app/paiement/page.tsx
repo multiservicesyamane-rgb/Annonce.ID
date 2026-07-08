@@ -4,12 +4,136 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import PaymentFlow from "@/components/PaymentFlow";
 import ManualPayment from "@/components/ManualPayment";
-import { ONLINE_PAYMENT_ENABLED } from "@/lib/payment";
+import { ONLINE_PAYMENT_ENABLED, PAYMENT_REQUIRED } from "@/lib/payment";
 import { fetchPrices, effectivePrice, type PriceMap } from "@/lib/prices";
 import { BOOSTS, SUBSCRIPTION_PLANS } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 import { Suspense } from "react";
+
+async function adaptiveUpdate(table: string, id: string, payload: Record<string, any>) {
+  const supabase = createClient();
+  const p = { ...payload };
+  for (let i = 0; i < 8; i++) {
+    const res = await supabase.from(table).update(p).eq("id", id);
+    if (!res.error) return res;
+    const message = res.error.message || "";
+    const match = message.match(/Could not find the '([^']+)' column/) || message.match(/column "?([a-z_]+)"? of relation/i);
+    if (match?.[1] && match[1] in p) {
+      delete p[match[1]];
+      continue;
+    }
+    return res;
+  }
+  return { error: { message: "Schéma incompatible" } } as any;
+}
+
+function Row({ k, v, muted }: { k: string; v: string; muted?: boolean }) {
+  return (
+    <div className="flex justify-between py-1.5 text-[.9rem]">
+      <span className={muted ? "text-gray-500" : "font-medium text-gray-700 dark:text-gray-300"}>{k}</span>
+      <span className="text-right font-bold text-gray-900 dark:text-white">{v}</span>
+    </div>
+  );
+}
+
+function FreeActivationFlow({
+  itemName,
+  price,
+  duration,
+  listingId,
+  boostKey,
+  subKey,
+  category,
+}: {
+  itemName: string;
+  price: number;
+  duration: string;
+  listingId?: string;
+  boostKey?: string;
+  subKey?: string;
+  category?: string;
+}) {
+  const [processing, setProcessing] = useState(false);
+
+  async function activate() {
+    setProcessing(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      window.location.href = "/connexion";
+      return;
+    }
+
+    if (listingId && boostKey) {
+      const premium = boostKey === "premium" || boostKey === "vip";
+      const featured = boostKey === "alaune" || boostKey === "vip";
+      const { error } = await adaptiveUpdate("listings", listingId, {
+        status: "active",
+        premium,
+        featured,
+        is_premium: premium,
+        is_featured: featured,
+        boost_key: boostKey,
+      });
+      if (error) {
+        alert(error.message || "Impossible d'activer l'annonce.");
+        setProcessing(false);
+        return;
+      }
+      window.location.href = "/dashboard?panel=ads";
+      return;
+    }
+
+    if (subKey) {
+      const { error } = await adaptiveUpdate("profiles", user.id, {
+        role: "pro",
+        is_pro: true,
+        subscription_plan: subKey,
+        subscription_category: category || "general",
+        free_ads_remaining: subKey === "standard" ? 5 : subKey === "premium" ? 15 : 50,
+      });
+      if (error) {
+        alert(error.message || "Impossible d'activer le plan.");
+        setProcessing(false);
+        return;
+      }
+      window.location.href = "/dashboard?panel=showroom";
+      return;
+    }
+
+    alert("Choisissez une annonce à booster depuis votre dashboard.");
+    setProcessing(false);
+  }
+
+  return (
+    <div className="mx-auto max-w-[500px] px-4">
+      <div className="rounded-[16px] border-2 border-amber-100 bg-white p-8 text-center shadow-xl dark:border-amber-500/20 dark:bg-[#111722]/80">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-[2rem]">⚡</div>
+        <h2 className="mb-2 font-display text-[1.4rem] font-extrabold text-gray-800 dark:text-white">Paiement non obligatoire</h2>
+        <p className="mb-6 text-[.9rem] text-gray-500 dark:text-gray-400">
+          Chariow est configuré, mais le paiement n'est pas encore en vigueur. Vous pouvez activer cette option sans payer.
+        </p>
+        <div className="mb-6 rounded-[12px] border border-gray-100 bg-gray-50 p-5 text-left dark:border-white/5 dark:bg-white/5">
+          <Row k="Option" v={itemName} />
+          <Row k="Durée" v={duration} muted />
+          <div className="mt-4 flex justify-between border-t border-gray-200 pt-4 text-[1.05rem] font-extrabold dark:border-white/10 dark:text-white">
+            <span>Prix normal</span>
+            <span className="text-green">{formatNumber(price)} FCFA</span>
+          </div>
+        </div>
+        <button
+          onClick={activate}
+          disabled={processing}
+          className="btn btn-green btn-block h-[54px] text-[1rem] font-bold disabled:opacity-70"
+        >
+          {processing ? "Activation..." : "Activer sans payer"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function PaiementContent() {
   const searchParams = useSearchParams();
@@ -76,7 +200,17 @@ function PaiementContent() {
           >
             ← Retour aux formules
           </button>
-          {ONLINE_PAYMENT_ENABLED ? (
+          {!PAYMENT_REQUIRED ? (
+            <FreeActivationFlow
+              itemName={checkoutInfo.itemName}
+              price={checkoutInfo.price}
+              duration={checkoutInfo.duration}
+              listingId={initialAnnonceId}
+              boostKey={checkoutInfo.boostKey}
+              subKey={checkoutInfo.subKey}
+              category={checkoutInfo.category}
+            />
+          ) : ONLINE_PAYMENT_ENABLED ? (
             <PaymentFlow
               itemName={checkoutInfo.itemName}
               price={checkoutInfo.price}
@@ -267,4 +401,3 @@ export default function PaiementPage() {
     </Suspense>
   );
 }
-

@@ -6,9 +6,7 @@ import AdBanner from "@/components/AdBanner";
 import AdSensePlaceholder from "@/components/AdSensePlaceholder";
 import AdCard from "@/components/AdCard";
 import HomeRecent from "@/components/HomeRecent";
-import { CATEGORIES } from "@/lib/constants";
 import { getFeaturedListings, getPremiumListings, getRecentListings } from "@/lib/homeSections";
-import { formatNumber } from "@/lib/utils";
 import { createClient } from "@supabase/supabase-js";
 
 import UneCarousel from "@/components/UneCarousel";
@@ -52,33 +50,11 @@ export default async function HomePage() {
   const bCountMap: Record<string, number> = {};
   (boutiqueCounts || []).forEach((l: any) => { bCountMap[l.user_id] = (bCountMap[l.user_id] || 0) + 1; });
 
-  const boutiques = (allBoutiques || [])
-    .filter((b: any) => (bCountMap[b.id] || 0) > 0)
-    .slice(0, 8);
-
-  // Compteurs RÉELS pour le bandeau de confiance (aucune ligne transférée : head+count).
-  // Remplace les anciennes stats invérifiables (« 27 pays / 250 000 annonces »).
-  const activeCountRes = await supabase
-    .from('listings')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'active');
-  const activeListingsCount = activeCountRes.count || 0;
-
-  // Vendeurs vérifiés — tolérant si la colonne is_verified n'existe pas encore.
-  let verifiedSellersCount = 0;
-  try {
-    const vr = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_verified', true);
-    verifiedSellersCount = vr.count || 0;
-  } catch { /* colonne absente → 0 */ }
-
-  const stats = [
-    { value: activeListingsCount, label: 'Annonces actives', suffix: '' },
-    { value: verifiedSellersCount, label: 'Vendeurs vérifiés', suffix: '' },
-    { value: CATEGORIES.length, label: 'Catégories', suffix: '' },
-  ];
+  const activeSellers = (allBoutiques || [])
+    .filter((b: any) => (bCountMap[b.id] || 0) > 0);
+  const boutiques = activeSellers.slice(0, 8);
+  // Avatars pour la preuve sociale (petits ronds), sans aucun chiffre.
+  const sellerAvatars = activeSellers.slice(0, 12);
 
   return (
     <>
@@ -87,21 +63,34 @@ export default async function HomePage() {
       {/* Bandeau "À la Une" + Premium (déduplication par id), cliquable */}
       <FeaturedSlider listings={[...uneList, ...premList].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)} />
 
-      {/* Bandeau de confiance — CHIFFRES RÉELS tirés de la base (pas de stats gonflées) */}
-      <section className="wrap pt-3 pb-1">
-        <div className="grid grid-cols-3 gap-2 md:gap-4 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 px-3 py-4 md:px-6 md:py-5 shadow-sm">
-          {stats.map((s) => (
-            <div key={s.label} className="text-center">
-              <div className="font-display text-[1.3rem] md:text-[2rem] font-black text-green dark:text-green-400 leading-none">
-                {formatNumber(s.value)}{s.suffix}
-              </div>
-              <div className="mt-1 text-[.62rem] md:text-[.8rem] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                {s.label}
-              </div>
+      {/* Preuve sociale : petits ronds (photos vendeurs), SANS aucun chiffre.
+          On réintroduira des compteurs quand la plateforme aura du volume. */}
+      {sellerAvatars.length > 0 && (
+        <section className="wrap pt-3 pb-1">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 px-4 py-3 md:py-4 shadow-sm">
+            <div className="flex -space-x-2.5">
+              {sellerAvatars.map((s: any, i: number) => (
+                <div
+                  key={s.id}
+                  className="h-8 w-8 md:h-10 md:w-10 rounded-full border-2 border-white dark:border-dark-800 overflow-hidden bg-gray-100 dark:bg-dark-700 shadow-sm"
+                  style={{ zIndex: sellerAvatars.length - i }}
+                >
+                  {s.avatar_url ? (
+                    <img src={s.avatar_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[.6rem] md:text-[.72rem] font-bold text-gray-500 dark:text-gray-300">
+                      {(s.full_name || 'V').slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+            <span className="text-[.72rem] md:text-[.9rem] font-semibold text-gray-600 dark:text-gray-300">
+              Des vendeurs de confiance sur Wanteermako
+            </span>
+          </div>
+        </section>
+      )}
 
       {/* Bannière AdSense MASQUÉE jusqu'à activation (remettre true le moment venu) */}
       {false && (

@@ -2338,7 +2338,7 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
   const [creditUser, setCreditUser] = useState<any | null>(null);
   const [userCredits, setUserCredits] = useState<any[]>([]);
   const [creditBusy, setCreditBusy] = useState(false);
-  const [grantKey, setGrantKey] = useState("basic");
+  const [grantKey, setGrantKey] = useState("premium");
   const [grantQty, setGrantQty] = useState("1");
 
   useEffect(() => {
@@ -2404,8 +2404,8 @@ function Users({ profiles, T, reload }: { profiles: any[]; T: (m: string) => voi
   async function grantCredit() {
     if (!creditUser) return;
     setCreditBusy(true);
-    const days: Record<string, number> = { basic: 7, premium: 14, alaune: 30, vip: 60 };
-    const names: Record<string, string> = { basic: "🚀 Standard", premium: "⭐ Premium", alaune: "🔥 À la Une", vip: "👑 VIP" };
+    const days: Record<string, number> = { premium: 14, alaune: 30, vip: 60 };
+    const names: Record<string, string> = { premium: "⭐ Premium", alaune: "🔥 À la Une", vip: "👑 VIP" };
     try {
       await adminApi("grantCredit", { userId: creditUser.id, boost_key: grantKey, boost_name: names[grantKey], duration_days: days[grantKey] || 30, quantity: grantQty });
       T("✅ Crédits ajoutés");
@@ -2531,7 +2531,6 @@ return (
           {/* Ajouter des crédits */}
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#21262D] bg-[#161B22] p-2.5">
             <select value={grantKey} onChange={(e) => setGrantKey(e.target.value)} className="rounded-[8px] border border-[#30363D] bg-[#0D1117] px-2 py-1.5 text-[.78rem] text-white outline-none">
-              <option value="basic">🚀 Standard</option>
               <option value="premium">⭐ Premium</option>
               <option value="alaune">🔥 À la Une</option>
               <option value="vip">👑 VIP</option>

@@ -4,9 +4,34 @@
 //
 // ⚠️ Mets ici TES vrais numéros.
 
-// Active/désactive les boutons de paiement EN LIGNE (Wave API / CinetPay).
-// false = on n'affiche que le paiement manuel (recommandé pour l'instant).
-export const ONLINE_PAYMENT_ENABLED = false;
+// Active/desactive les boutons de paiement EN LIGNE.
+// Par defaut, on garde le paiement manuel. Pour Chariow :
+// NEXT_PUBLIC_ONLINE_PAYMENT_ENABLED=true
+// NEXT_PUBLIC_PAYMENT_PROVIDER=chariow
+const paymentProvider = (process.env.NEXT_PUBLIC_PAYMENT_PROVIDER || "manual").toLowerCase();
+const explicitOnline = process.env.NEXT_PUBLIC_ONLINE_PAYMENT_ENABLED === "true";
+const explicitChariow = process.env.NEXT_PUBLIC_CHARIOW_PAYMENT_ENABLED === "true";
+const explicitWave = process.env.NEXT_PUBLIC_WAVE_PAYMENT_ENABLED === "true";
+const explicitCinetPay = process.env.NEXT_PUBLIC_CINETPAY_PAYMENT_ENABLED === "true";
+export const PAYMENT_REQUIRED = process.env.NEXT_PUBLIC_PAYMENT_REQUIRED === "true";
+
+export const PAYMENT_PROVIDER = paymentProvider;
+export const ONLINE_PAYMENT_ENABLED =
+  PAYMENT_REQUIRED &&
+  (
+    explicitOnline ||
+    explicitChariow ||
+    explicitWave ||
+    explicitCinetPay ||
+    paymentProvider !== "manual"
+  );
+
+export const CHARIOW_PAYMENT_ENABLED =
+  explicitChariow || paymentProvider === "chariow" || paymentProvider === "all";
+export const WAVE_ONLINE_PAYMENT_ENABLED =
+  explicitWave || paymentProvider === "wave" || paymentProvider === "all";
+export const CINETPAY_ONLINE_PAYMENT_ENABLED =
+  explicitCinetPay || paymentProvider === "cinetpay" || paymentProvider === "all";
 
 // Numéro Wave où le client dépose
 export const WAVE_NUMBER = "77 682 78 51";

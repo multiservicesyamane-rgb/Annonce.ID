@@ -43,7 +43,7 @@
 ### 🎯 Boosts (propulser une annonce)
 - 🆓 **Basique (Gratuit)** : 1 photo, position standard.
 - 🚀 **Standard — 1 500 FCFA / 7 jours** : 3 photos, badge Standard.
-- ⭐ **Premium — 3 500 FCFA / 14 jours** : 5 photos, visibilité prioritaire, badge Premium.
+- ⭐ **Premium — 3 500 FCFA / 7 jours** : 5 photos, visibilité prioritaire, badge Premium.
 - 🔥 **À la Une — 7 500 FCFA / 30 jours** : haut de la page d'accueil, 8 photos, badge À la Une.
 - 👑 **VIP — 15 000 FCFA / 60 jours** : tête d'affiche Accueil & Recherche, photos illimitées, visibilité maximale.
 

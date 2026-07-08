@@ -73,8 +73,8 @@ export async function POST(req: Request) {
             updateData.is_premium = true;
             updateData.featured = true;
             updateData.is_featured = true;
-          } else if (boostKey === "basic") {
-            // basic boost - standard active position
+          } else if (boostKey === "gratuit") {
+            // publication gratuite - position standard
           } else {
             // fallback to premium
             updateData.premium = true;

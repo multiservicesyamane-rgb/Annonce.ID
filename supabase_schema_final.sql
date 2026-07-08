@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     phone VARCHAR(50),
     bio TEXT,
     social_links JSONB DEFAULT '{}'::jsonb,
-    free_ads_remaining INTEGER DEFAULT 3,
+    free_ads_remaining INTEGER DEFAULT 2,
     subscription_plan VARCHAR(50) DEFAULT 'starter',
     subscription_category VARCHAR(50) DEFAULT 'general',
     credits INTEGER DEFAULT 0,

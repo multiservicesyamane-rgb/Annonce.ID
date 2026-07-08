@@ -23,7 +23,9 @@ alter table public.profiles add column if not exists subscription_category text;
 alter table public.profiles add column if not exists plan_key text;
 alter table public.profiles add column if not exists subscription_expires_at timestamptz;
 alter table public.profiles add column if not exists plan_expires_at timestamptz;
-alter table public.profiles add column if not exists free_ads_remaining integer;
+alter table public.profiles add column if not exists free_ads_remaining integer default 2;
+alter table public.profiles alter column free_ads_remaining set default 2;
+update public.profiles set free_ads_remaining = 2 where free_ads_remaining is null or free_ads_remaining > 2;
 
 -- listings
 alter table public.listings add column if not exists price_type text;

@@ -39,12 +39,7 @@ export default async function BoutiquePage({ params }: Props) {
   // (La boutique est visible dès qu'il y a des annonces actives — pas de blocage par flag)
 
   // Fetch their active listings
-  const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, views, created_at').eq('user_id', resolvedId).eq('status', 'active').order('created_at', { ascending: false });
-
-  // Vraies notes/avis (aucune donnée fictive)
-  const { data: reviewRows } = await supabase.from('reviews').select('rating').eq('seller_id', resolvedId);
-  const reviewCount = reviewRows?.length || 0;
-  const avgRating = reviewCount ? (reviewRows!.reduce((s: number, r: any) => s + (r.rating || 0), 0) / reviewCount) : 0;
+  const { data: dbListings } = await supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, created_at').eq('user_id', resolvedId).eq('status', 'active').order('created_at', { ascending: false });
 
   let name = profile?.full_name || "Boutique Pro";
   if (name.includes('@')) {
@@ -66,11 +61,9 @@ export default async function BoutiquePage({ params }: Props) {
     location: ad.location || "Sénégal",
     image: ad.image || "https://placehold.co/600x400?text=Sans+Image",
     category: ad.category || "Autre",
-    views: ad.views ?? 0,
     created_at: ad.created_at,
   }));
 
-  const totalViews = (dbListings || []).reduce((s: number, a: any) => s + (a.views || 0), 0);
   const categories = Array.from(new Set(ads.map((a: any) => a.category))).slice(0, 8);
   const social = socialLinks as Record<string, string>;
   const socialIcons: { key: string; label: string; icon: string; prefix?: string }[] = [
@@ -143,20 +136,6 @@ export default async function BoutiquePage({ params }: Props) {
                 </a>
               </div>
             )}
-          </div>
-
-          {/* Stats — tuiles dorées premium */}
-          <div className="relative mt-5 grid grid-cols-3 gap-2.5 sm:gap-3">
-            {[
-              { v: String(ads.length), l: "Annonces" },
-              { v: formatNumber(totalViews), l: "Vues" },
-              { v: reviewCount ? `★ ${avgRating.toFixed(1)}` : "★ —", l: reviewCount ? `${reviewCount} avis` : "Aucun avis" },
-            ].map((s, i) => (
-              <div key={i} className="rounded-2xl border border-amber-200/60 dark:border-amber-400/20 bg-gradient-to-b from-amber-50 to-white dark:from-amber-400/[0.07] dark:to-transparent py-3 text-center shadow-sm">
-                <div className="font-display text-[1.25rem] sm:text-[1.6rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-[#C9991F] to-[#9A7B1A] dark:from-[#FBE9A8] dark:to-[#C9991F]">{s.v}</div>
-                <div className="mt-0.5 text-[.6rem] sm:text-[.7rem] font-bold uppercase tracking-wider text-gray-500 dark:text-white/45">{s.l}</div>
-              </div>
-            ))}
           </div>
 
           {/* Liens sociaux */}

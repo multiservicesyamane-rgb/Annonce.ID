@@ -309,7 +309,7 @@ export async function POST(req: Request) {
           const qty = Math.max(1, Math.min(50, Number(quantity) || 1));
           const rows = Array.from({ length: qty }, () => ({
             user_id: userId,
-            boost_key: planKey || "basic",
+            boost_key: planKey || "premium",
             boost_name: planName || planKey || "Boost",
             duration_days: days,
             status: "available",

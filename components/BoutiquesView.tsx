@@ -9,7 +9,6 @@ type Shop = {
   avatar: string;
   cover: string | null;
   bio: string;
-  adCount: number;
   isPro: boolean;
   phone: string;
   memberSince: string;
@@ -67,7 +66,6 @@ export default function BoutiquesView({ boutiques }: { boutiques: Shop[] }) {
                   <img src={s.avatar} alt={s.name} className="h-full w-full rounded-full border border-white dark:border-dark-800 object-cover bg-white" />
                 </div>
                 <h3 className="mt-1.5 line-clamp-1 text-center font-display text-[.85rem] font-bold text-gray-900 dark:text-white group-hover:text-green">{s.name}</h3>
-                <div className="mt-1 text-[.68rem] text-gray-500">📦 <b className="text-gray-700 dark:text-white">{s.adCount}</b> annonce{s.adCount > 1 ? "s" : ""}</div>
                 <span className="mt-2 w-full rounded-lg bg-gray-50 dark:bg-white/5 py-1.5 text-center text-[.7rem] font-bold text-green group-hover:bg-green group-hover:text-white transition-all">Voir la boutique →</span>
               </div>
             </Link>
@@ -90,7 +88,6 @@ export default function BoutiquesView({ boutiques }: { boutiques: Shop[] }) {
                 </div>
                 <p className="truncate text-[.75rem] text-gray-500 dark:text-gray-400">{s.bio}</p>
               </div>
-              <div className="shrink-0 text-right text-[.72rem] text-gray-500">📦 {s.adCount}</div>
               <span className="shrink-0 rounded-lg bg-gray-50 dark:bg-white/5 px-3 py-1.5 text-[.74rem] font-bold text-green group-hover:bg-green group-hover:text-white transition">Voir →</span>
             </Link>
           ))}
@@ -114,10 +111,11 @@ export default function BoutiquesView({ boutiques }: { boutiques: Shop[] }) {
                 <div className="min-w-0 flex-1 pt-2">
                   <h3 className="truncate font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white group-hover:text-green">{s.name}</h3>
                   <p className="line-clamp-2 text-[.78rem] text-gray-500 dark:text-gray-400 mt-0.5">{s.bio}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[.72rem] text-gray-500">
-                    <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2 py-0.5">📦 {s.adCount} annonces</span>
-                    {s.memberSince && <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2 py-0.5">🗓️ {s.memberSince}</span>}
-                  </div>
+                  {s.memberSince && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[.72rem] text-gray-500">
+                      <span className="rounded-full bg-gray-100 dark:bg-dark-700 px-2 py-0.5">🗓️ {s.memberSince}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="mt-auto flex gap-2 px-4 pb-4">

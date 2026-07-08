@@ -16,7 +16,7 @@ Design ultra-premium (néon + gradients sur fond sombre pour le hero, fond clair
 - ➕ **Wizard de publication** : 5 étapes, **champs dynamiques par catégorie**
 - 🔐 **Auth téléphone + OTP** : code **démo `1234`** affiché à l'écran (prod : Africa's Talking)
 - 📊 **Dashboard vendeur** : 9 sections (vue d'ensemble, annonces, messages, favoris, stats, paiements, profil, sécurité)
-- 💳 **Paiement mobile money** : Orange Money, Wave, MTN, Moov + carte (CinetPay)
+- 💳 **Paiement mobile money** : Chariow, Orange Money, Wave, MTN, Moov + carte (CinetPay)
 - 🛡️ **Admin `/yamanetech`** : 9+ panneaux (modération, utilisateurs, pubs, finances, pays, signalements, réglages)
 - 🌍 **27 pays** : sélecteur **en bas de page** (footer)
 - 📢 **10 zones publicitaires** annonceurs (A1–A10), gérables en admin
@@ -71,11 +71,19 @@ Tant que les variables Supabase sont absentes, l'app reste en mode démo.
 - Renseigne `AFRICASTALKING_API_KEY` et `AFRICASTALKING_USERNAME`
 - La logique est dans `app/api/otp/route.ts` (TODO marqués). Sans clé → code démo `1234`.
 
-### 3. Paiement — CinetPay
+### 3. Paiement — Chariow / CinetPay
 
+- Pour Chariow ([doc API](https://chariow.dev)) : crée dans ta boutique Chariow un produit **publié** par offre
+  (type **Licence** pour autoriser les achats répétés), au même prix que le site.
+- Renseigne `CHARIOW_API_KEY` (Chariow → Paramètres → API), `CHARIOW_PRODUCTS` (correspondance
+  offre → ID produit, voir `.env.example`) et `CHARIOW_WEBHOOK_TOKEN`, puis active :
+  `NEXT_PUBLIC_ONLINE_PAYMENT_ENABLED=true`, `NEXT_PUBLIC_PAYMENT_PROVIDER=chariow` et `NEXT_PUBLIC_PAYMENT_REQUIRED=true`.
+- Le Pulse (webhook) à configurer chez Chariow (Automation → Pulses) est :
+  `https://ton-domaine.com/api/chariow/webhook?token=<CHARIOW_WEBHOOK_TOKEN>`.
+  Chaque vente est re-vérifiée auprès de l'API Chariow avant activation.
 - Compte sur [cinetpay.com](https://cinetpay.com) (couvre tout le mobile money Afrique de l'Ouest)
 - Renseigne `CINETPAY_API_KEY` et `CINETPAY_SITE_ID`
-- Branche l'appel API + webhook signé dans `components/PaymentFlow.tsx` / une route `app/api/payment`.
+- Le flow de paiement est centralise dans `components/PaymentFlow.tsx` et les routes `app/api/*`.
 
 ### 4. Images — Supabase Storage ou Cloudinary
 

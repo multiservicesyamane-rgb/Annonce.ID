@@ -45,7 +45,7 @@ export default function PrivacyPolicyPage() {
 
         <h3 className="font-display font-bold text-[1.4rem] mt-8 mb-4 text-gray-900 dark:text-white">4. Vos droits</h3>
         <p>
-          Conformément à la législation en vigueur, vous disposez d'un droit d'accès, de rectification, de suppression et d'opposition concernant vos données personnelles. Vous pouvez exercer ce droit à tout moment en supprimant votre compte depuis votre tableau de bord ou en nous contactant à <strong>privacy@annonce.id</strong>.
+          Conformément à la législation en vigueur, vous disposez d'un droit d'accès, de rectification, de suppression et d'opposition concernant vos données personnelles. Vous pouvez exercer ce droit à tout moment en supprimant votre compte depuis votre tableau de bord ou en nous contactant à <strong>privacy@wanteermako.com</strong>.
         </p>
       </div>
     </div>

@@ -6,7 +6,7 @@
 create table if not exists public.boost_credits (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null,
-  boost_key text not null,            -- basic / premium / alaune / vip
+  boost_key text not null,            -- premium / alaune / vip
   boost_name text,                    -- libellé lisible
   duration_days int not null default 30,
   status text not null default 'available',  -- available | used

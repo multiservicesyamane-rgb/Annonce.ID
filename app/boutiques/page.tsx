@@ -48,9 +48,6 @@ export default async function BoutiquesPage() {
         <p className="text-gray-500 dark:text-gray-400 text-[.95rem] max-w-xl mx-auto">
           Découvrez les vendeurs professionnels et boutiques partenaires sur Annonce.ID
         </p>
-        <div className="mt-3 inline-flex items-center gap-2 bg-green/10 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-[.82rem] font-bold">
-          📦 {boutiques.length} boutique{boutiques.length > 1 ? 's' : ''} active{boutiques.length > 1 ? 's' : ''}
-        </div>
       </div>
 
       {boutiques.length === 0 ? (
@@ -70,7 +67,6 @@ export default async function BoutiquesPage() {
             avatar: shop.avatar_url || "https://placehold.co/100x100?text=B",
             cover: shop.cover_url || null,
             bio: shop.bio || "Vendeur sur Annonce.ID",
-            adCount: countMap[shop.id] || 0,
             isPro: shop.role === "pro" || shop.role === "business" || !!shop.free_premium,
             phone: shop.phone || "",
             memberSince: shop.created_at ? new Date(shop.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" }) : "",

@@ -398,7 +398,7 @@ function AfficheBoostsSplit() {
       </>}
       light={<>
         <PriceRow name="🚀 Standard" sub="7 jours · 3 photos" price="1 500" color="#6366F1" />
-        <PriceRow name="⭐ Premium" sub="14 jours · 5 photos" price="3 500" color="#6366F1" />
+        <PriceRow name="⭐ Premium" sub="7 jours · 5 photos" price="3 500" color="#6366F1" />
         <PriceRow name="🔥 À la Une" sub="30 jours · accueil" price="7 500" color="#FF2A6D" />
         <PriceRow name="👑 VIP" sub="60 jours · illimité" price="15 000" color="#D4891A" />
         <FooterLight />

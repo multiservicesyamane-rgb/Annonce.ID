@@ -2,17 +2,15 @@
 --  Wanteermako — Pack de bienvenue (offre de lancement)
 --  À exécuter dans Supabase → SQL Editor.
 --
---  Offre à CHAQUE compte 7 boosts gratuits :
---     • 5 × Standard   (basic)   — 7 jours chacun
---     • 1 × Premium    (premium) — 14 jours
+--  Offre à CHAQUE compte 2 boosts gratuits :
+--     • 1 × Premium    (premium) — 7 jours
 --     • 1 × À la Une   (alaune)  — 30 jours
 --
 --  Les crédits arrivent dans le dashboard (« Mes crédits ») et
 --  s'appliquent sur n'importe quelle annonce du vendeur.
 --  Source = 'gift' pour les distinguer des achats.
 --
---  ⚠️ Les annonces BASIQUES (gratuites) restent illimitées : ce pack
---     offre la POSSIBILITÉ de mettre des annonces en avant gratuitement.
+--  Les annonces gratuites sont limitées à 2 par compte.
 -- ============================================================
 
 -- ──────────────────────────────────────────────────────────
@@ -30,14 +28,9 @@ begin
     return;
   end if;
 
-  -- 5 × Standard (basic)
-  insert into public.boost_credits (user_id, boost_key, boost_name, duration_days, source)
-  select p_user_id, 'basic', '🚀 Standard (offert)', 7, 'gift'
-  from generate_series(1, 5);
-
   -- 1 × Premium
   insert into public.boost_credits (user_id, boost_key, boost_name, duration_days, source)
-  values (p_user_id, 'premium', '⭐ Premium (offert)', 14, 'gift');
+  values (p_user_id, 'premium', '⭐ Premium (offert)', 7, 'gift');
 
   -- 1 × À la Une
   insert into public.boost_credits (user_id, boost_key, boost_name, duration_days, source)
