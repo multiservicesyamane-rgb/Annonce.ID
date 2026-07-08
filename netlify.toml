@@ -7,6 +7,12 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # Le scanner de secrets Netlify bloque le build s'il retrouve des valeurs
+  # de variables dans les fichiers generes. Les NEXT_PUBLIC_* sont integrees
+  # au bundle client par Next.js (c'est voulu), et les autres listees ici ne
+  # sont pas des identifiants sensibles (email affiche, nom de canal, nom de
+  # modele). Les vrais secrets (SERVICE_ROLE, cles API...) restent scannes.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_PAYMENT_PROVIDER,NEXT_PUBLIC_ONLINE_PAYMENT_ENABLED,NEXT_PUBLIC_PAYMENT_REQUIRED,NEXT_PUBLIC_LOCAL_PORT,NEXT_PUBLIC_ROOT_DOMAIN,NEXT_PUBLIC_APP_URL,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_VAPID_PUBLIC_KEY,NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,SUPER_ADMIN_EMAIL,TELEGRAM_CHANNEL_ID,GEMINI_MODEL"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
