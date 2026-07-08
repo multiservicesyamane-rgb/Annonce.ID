@@ -87,6 +87,18 @@ end $$;
 do $$
 begin
   if to_regclass('public.campagnes_pub') is not null then
+    -- La table historique a pu etre creee sans user_id : on l'ajoute,
+    -- avec auth.uid() par defaut pour que les inserts du Dashboard
+    -- (qui n'envoient pas user_id) restent valides.
+    if not exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = 'campagnes_pub'
+        and column_name = 'user_id'
+    ) then
+      alter table public.campagnes_pub
+        add column user_id uuid default auth.uid();
+    end if;
+
     drop policy if exists "Public campaigns are viewable by everyone" on public.campagnes_pub;
     drop policy if exists "Users can create campaigns" on public.campagnes_pub;
     drop policy if exists "Users can update own campaigns" on public.campagnes_pub;
