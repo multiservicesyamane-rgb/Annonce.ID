@@ -69,83 +69,125 @@ export default function PaymentFlow({
   }
 
   return (
-    <div className="mx-auto max-w-[500px] px-4">
-      <div className="rounded-[16px] border-2 border-gray-100 bg-white dark:bg-[#111722]/80 dark:backdrop-blur-xl dark:border-white/10 p-8 text-center shadow-xl">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gold/10 text-[2rem]">
-          💳
-        </div>
-        <h2 className="mb-2 font-display text-[1.4rem] font-extrabold text-gray-800 dark:text-white">Finaliser la commande</h2>
-        <p className="mb-8 text-[.9rem] text-gray-500 dark:text-gray-400">
-          Vous êtes sur le point de souscrire à : <br />
-          <b className="text-gold-dark dark:text-gold text-[1rem]">{itemName}</b>
-        </p>
-
-        <div className="mb-8 rounded-[12px] bg-gray-50 dark:bg-white/5 p-5 text-left border border-gray-100 dark:border-white/5">
-          <Row k="Description" v={itemName} />
-          <Row k="Durée" v={duration} muted />
-          <div className="mt-4 flex justify-between border-t border-gray-200 dark:border-white/10 pt-4 text-[1.1rem] font-extrabold dark:text-white">
-            <span>Total à payer</span>
-            <span className="text-green">{formatNumber(total)} FCFA</span>
+    <div className="mx-auto max-w-[540px] px-3 sm:px-4">
+      <div className="overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-[0_20px_60px_-20px_rgba(124,92,252,0.45)] dark:border-white/10 dark:bg-[#111722]/90 dark:backdrop-blur-xl animate-fadeUp">
+        {/* En-tête dégradé */}
+        <div className="relative bg-gradient-to-br from-[#6366F1] via-[#7C5CFC] to-[#A855F7] px-5 py-7 text-center text-white sm:px-8 sm:py-8">
+          <div
+            className="absolute inset-0 opacity-10"
+            style={{ backgroundImage: "radial-gradient(circle at 15% 20%, #fff 1.5px, transparent 1.5px)", backgroundSize: "26px 26px" }}
+          />
+          <div className="relative">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-[1.7rem] backdrop-blur-sm ring-1 ring-white/25 sm:h-16 sm:w-16 sm:text-[2rem]">
+              💳
+            </div>
+            <h2 className="font-display text-[1.25rem] font-extrabold sm:text-[1.45rem]">Finaliser la commande</h2>
+            <p className="mt-1 text-[.85rem] text-white/80">Paiement sécurisé · Activation automatique</p>
           </div>
         </div>
 
-        {CHARIOW_PAYMENT_ENABLED && (
-          <button
-            onClick={() => pay("chariow")}
-            disabled={!!processing}
-            className="btn btn-block h-[56px] text-[1.05rem] font-bold text-white bg-gray-950 hover:bg-gray-800 shadow-lg shadow-gray-950/20 disabled:opacity-70 transition-all hover:scale-[1.02]"
-          >
-            {processing === "chariow" ? "⏳ Ouverture du paiement sécurisé…" : `💳 Payer ${formatNumber(total)} FCFA — Wave · Orange Money · Carte`}
-          </button>
-        )}
-
-        {CHARIOW_PAYMENT_ENABLED && secondaryProvidersEnabled && (
-          <div className="my-4 flex items-center gap-3 text-[.75rem] text-gray-400">
-            <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
-            ou autre moyen
-            <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+        {/* Corps */}
+        <div className="p-5 sm:p-7">
+          {/* Récapitulatif */}
+          <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 sm:p-5 dark:border-white/5 dark:bg-white/5">
+            <Row k="Formule" v={itemName} />
+            <Row k="Durée" v={duration} muted />
+            <div className="mt-3 flex items-center justify-between border-t border-dashed border-gray-200 pt-3 dark:border-white/10">
+              <span className="text-[.95rem] font-extrabold text-gray-800 dark:text-white">Total à payer</span>
+              <span className="font-display text-[1.45rem] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#6366F1] to-[#A855F7] sm:text-[1.6rem]">
+                {formatNumber(total)} <span className="text-[.85rem]">FCFA</span>
+              </span>
+            </div>
           </div>
-        )}
 
-        {WAVE_ONLINE_PAYMENT_ENABLED && (
-          <button
-            onClick={() => pay("wave")}
-            disabled={!!processing}
-            className="btn btn-block h-[56px] text-[1.1rem] font-bold text-white bg-[#1DC8FF] hover:bg-[#08b4ec] shadow-lg shadow-[#1DC8FF]/30 disabled:opacity-70 transition-all hover:scale-[1.02]"
-          >
-            {processing === "wave" ? "⏳ Ouverture de Wave…" : `🌊 PAYER ${formatNumber(total)} FCFA avec Wave`}
-          </button>
-        )}
+          {/* Moyens de paiement acceptés */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+            {["🌊 Wave", "🟠 Orange Money", "🟡 MTN", "🔵 Moov", "💳 Carte"].map((m) => (
+              <span
+                key={m}
+                className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[.68rem] font-bold text-gray-600 sm:text-[.72rem] dark:border-white/10 dark:bg-white/5 dark:text-gray-300"
+              >
+                {m}
+              </span>
+            ))}
+          </div>
 
-        {CINETPAY_ONLINE_PAYMENT_ENABLED && (
-          <button
-            onClick={() => pay("cinetpay")}
-            disabled={!!processing}
-            className={`${WAVE_ONLINE_PAYMENT_ENABLED ? "mt-3" : ""} btn btn-green btn-block h-[52px] text-[1rem] font-bold shadow-lg shadow-green/30 disabled:opacity-70 transition-all hover:scale-[1.02]`}
-          >
-            {processing === "cinetpay" ? "⏳ Ouverture du paiement…" : `💳 Orange Money · MTN · Moov · Carte`}
-          </button>
-        )}
+          {/* Bouton principal */}
+          <div className="mt-5 space-y-3">
+            {CHARIOW_PAYMENT_ENABLED && (
+              <button
+                onClick={() => pay("chariow")}
+                disabled={!!processing}
+                className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-[#6366F1] via-[#7C5CFC] to-[#A855F7] px-4 py-4 text-[1rem] font-extrabold text-white shadow-lg shadow-[#7C5CFC]/30 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-[#7C5CFC]/40 disabled:opacity-70 disabled:hover:scale-100 sm:py-[18px] sm:text-[1.05rem]"
+              >
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                {processing === "chariow" ? "⏳ Ouverture du paiement sécurisé…" : `Payer ${formatNumber(total)} FCFA maintenant`}
+              </button>
+            )}
 
-        {!hasProvider && (
-          <p className="rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-[.85rem] font-semibold text-amber-800">
-            Aucun prestataire en ligne n'est active. Configurez NEXT_PUBLIC_PAYMENT_PROVIDER pour continuer.
-          </p>
-        )}
+            {CHARIOW_PAYMENT_ENABLED && secondaryProvidersEnabled && (
+              <div className="flex items-center gap-3 text-[.72rem] font-semibold uppercase tracking-wider text-gray-400">
+                <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+                ou
+                <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+              </div>
+            )}
 
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[.75rem] text-gray-400">
-          <span>🔒 Paiement 100% sécurisé · Wave · Orange Money · MTN · Moov · Carte</span>
+            {WAVE_ONLINE_PAYMENT_ENABLED && (
+              <button
+                onClick={() => pay("wave")}
+                disabled={!!processing}
+                className="w-full rounded-2xl bg-[#1DC8FF] px-4 py-4 text-[1rem] font-extrabold text-white shadow-lg shadow-[#1DC8FF]/30 transition-all hover:scale-[1.02] hover:bg-[#08b4ec] disabled:opacity-70 disabled:hover:scale-100"
+              >
+                {processing === "wave" ? "⏳ Ouverture de Wave…" : `🌊 Payer ${formatNumber(total)} FCFA avec Wave`}
+              </button>
+            )}
+
+            {CINETPAY_ONLINE_PAYMENT_ENABLED && (
+              <button
+                onClick={() => pay("cinetpay")}
+                disabled={!!processing}
+                className="w-full rounded-2xl bg-green px-4 py-3.5 text-[.95rem] font-extrabold text-white shadow-lg shadow-green/30 transition-all hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100"
+              >
+                {processing === "cinetpay" ? "⏳ Ouverture du paiement…" : `💳 Orange Money · MTN · Moov · Carte`}
+              </button>
+            )}
+
+            {!hasProvider && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[.85rem] font-semibold text-amber-800">
+                Aucun prestataire en ligne n'est activé. Configurez NEXT_PUBLIC_PAYMENT_PROVIDER pour continuer.
+              </p>
+            )}
+          </div>
+
+          {/* Réassurance */}
+          <div className="mt-5 grid grid-cols-3 gap-2 border-t border-gray-100 pt-4 text-center dark:border-white/5">
+            {[
+              { icon: "🔒", label: "Paiement crypté" },
+              { icon: "⚡", label: "Activation auto" },
+              { icon: "🧾", label: "Reçu par email" },
+            ].map((t) => (
+              <div key={t.label} className="flex flex-col items-center gap-1">
+                <span className="text-[1.05rem]">{t.icon}</span>
+                <span className="text-[.65rem] font-semibold text-gray-400 sm:text-[.7rem]">{t.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+
+      <p className="mt-4 text-center text-[.72rem] text-gray-400">
+        🔒 Transaction 100% sécurisée — aucune donnée bancaire n'est stockée sur Wanteermako.
+      </p>
     </div>
   );
 }
 
 function Row({ k, v, muted }: { k: string; v: string; muted?: boolean }) {
   return (
-    <div className="flex justify-between py-1.5 text-[.9rem]">
-      <span className={muted ? "text-gray-500" : "font-medium text-gray-700 dark:text-gray-300"}>{k}</span>
-      <span className="font-bold text-gray-900 dark:text-white text-right">{v}</span>
+    <div className="flex justify-between gap-3 py-1.5 text-[.88rem]">
+      <span className={muted ? "text-gray-400 dark:text-gray-500" : "font-medium text-gray-600 dark:text-gray-300"}>{k}</span>
+      <span className="text-right font-bold text-gray-900 dark:text-white">{v}</span>
     </div>
   );
 }
