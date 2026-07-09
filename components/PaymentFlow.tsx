@@ -95,7 +95,7 @@ export default function PaymentFlow({
             disabled={!!processing}
             className="btn btn-block h-[56px] text-[1.05rem] font-bold text-white bg-gray-950 hover:bg-gray-800 shadow-lg shadow-gray-950/20 disabled:opacity-70 transition-all hover:scale-[1.02]"
           >
-            {processing === "chariow" ? "⏳ Ouverture de Chariow…" : `Payer ${formatNumber(total)} FCFA avec Chariow`}
+            {processing === "chariow" ? "⏳ Ouverture du paiement sécurisé…" : `💳 Payer ${formatNumber(total)} FCFA — Wave · Orange Money · Carte`}
           </button>
         )}
 
@@ -134,7 +134,7 @@ export default function PaymentFlow({
         )}
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[.75rem] text-gray-400">
-          <span>🔒 Paiement 100% sécurisé · Chariow · Wave · Orange Money · MTN · Moov · Carte</span>
+          <span>🔒 Paiement 100% sécurisé · Wave · Orange Money · MTN · Moov · Carte</span>
         </div>
       </div>
     </div>

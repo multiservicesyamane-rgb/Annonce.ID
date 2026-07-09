@@ -622,7 +622,7 @@ export default function PublishWizard() {
             )}
             {!PAYMENT_REQUIRED && (
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[.78rem] font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-900/15 dark:text-amber-300">
-                Paiement Chariow pas encore obligatoire : les options de visibilité peuvent être publiées sans paiement.
+                Paiement pas encore obligatoire : les options de visibilité peuvent être publiées sans paiement.
               </p>
             )}
             <div className="space-y-2">

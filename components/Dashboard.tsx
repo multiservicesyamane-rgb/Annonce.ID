@@ -55,7 +55,7 @@ function getConfiguredPaymentProvider() {
 function getPaymentProviderLabel(provider: string) {
   if (provider === "wave") return "Wave";
   if (provider === "cinetpay") return "CinetPay";
-  return "Chariow";
+  return "Paiement en ligne";
 }
 
 export default function Dashboard() {

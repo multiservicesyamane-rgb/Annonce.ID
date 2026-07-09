@@ -113,7 +113,7 @@ function FreeActivationFlow({
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-[2rem]">⚡</div>
         <h2 className="mb-2 font-display text-[1.4rem] font-extrabold text-gray-800 dark:text-white">Paiement non obligatoire</h2>
         <p className="mb-6 text-[.9rem] text-gray-500 dark:text-gray-400">
-          Chariow est configuré, mais le paiement n'est pas encore en vigueur. Vous pouvez activer cette option sans payer.
+          Le paiement en ligne est configuré, mais il n'est pas encore en vigueur. Vous pouvez activer cette option sans payer.
         </p>
         <div className="mb-6 rounded-[12px] border border-gray-100 bg-gray-50 p-5 text-left dark:border-white/5 dark:bg-white/5">
           <Row k="Option" v={itemName} />

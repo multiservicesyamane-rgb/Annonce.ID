@@ -217,7 +217,7 @@ export async function POST(req: Request) {
             customerName: name,
             itemName: verified.product?.name || (listingId ? "Boost annonce" : subKey ? "Abonnement" : "Credits"),
             amount,
-            method: "Chariow",
+            method: "Paiement en ligne (Wave / Orange Money / Carte)",
             ref: saleId,
           });
         }
