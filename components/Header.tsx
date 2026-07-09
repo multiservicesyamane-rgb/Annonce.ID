@@ -10,8 +10,22 @@ import { createClient } from "@/lib/supabase/client";
 export default function Header() {
   const [user, setUser] = useState<any>(null);
   const [unread, setUnread] = useState(0);
+  // Sur un sous-domaine de categorie (vehicules.wanteermako.com...), le logo
+  // doit ramener a l'accueil PRINCIPAL, pas a l'accueil du sous-domaine.
+  const [homeHref, setHomeHref] = useState("/");
   const pathname = usePathname();
   const supabase = createClient();
+
+  useEffect(() => {
+    const root = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "wanteermako.com")
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .replace(/\/.*$/, "");
+    const host = window.location.hostname.replace(/^www\./, "");
+    if (host !== root && host.endsWith(`.${root}`)) {
+      setHomeHref(`https://${root}`);
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -34,7 +48,7 @@ export default function Header() {
         <div className="flex items-center justify-between gap-2 md:gap-4">
           
           {/* Logo */}
-          <Link href="/" className="flex items-center shrink-0">
+          <Link href={homeHref} className="flex items-center shrink-0">
             <span className="inline-flex items-center rounded-[12px] bg-white px-2 py-1 shadow-md ring-1 ring-black/5">
               <img src="/logo-full.jpg" alt="Wanteermako" className="h-[44px] md:h-[58px] w-auto object-contain" />
             </span>

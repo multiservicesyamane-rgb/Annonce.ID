@@ -34,8 +34,8 @@ export default function BottomNav() {
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
       ), 
-      label: "Déposer", 
-      primary: true 
+      label: "Vendre",
+      primary: true
     },
     { 
       href: "/dashboard", 
@@ -66,7 +66,7 @@ export default function BottomNav() {
         if (it.primary) {
           return (
             <Link key={it.href} href={it.href} className="relative flex flex-1 flex-col items-center justify-start group">
-              <div className="absolute -top-8 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-[#F5A623] to-[#FFD166] text-dark-900 shadow-[0_4px_15px_rgba(245,166,35,0.4)] transition-transform group-hover:scale-105 border-[3px] border-white dark:border-[#0A0E14]">
+              <div className="absolute -top-8 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-green-500 via-[#F5A623] to-[#FFD166] text-white shadow-[0_6px_20px_rgba(245,166,35,0.55)] transition-transform group-hover:scale-110 border-[3px] border-white dark:border-[#0A0E14] ring-2 ring-[#F5A623]/30">
                 {it.icon}
               </div>
               <span className="mt-8 text-[.6rem] font-bold text-[#F5A623] dark:text-[#F5A623]">
