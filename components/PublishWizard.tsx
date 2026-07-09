@@ -672,30 +672,33 @@ export default function PublishWizard() {
           </div>
         )}
 
-        {/* NAVIGATION BUTTONS - always visible */}
-        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/10 flex items-center justify-between gap-3">
-          {step > 1 ? (
-            <button onClick={() => setStep(s => s - 1)} className="btn bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 rounded-xl text-[.8rem]">
-              ← Retour
-            </button>
-          ) : <div></div>}
+        {/* NAVIGATION BUTTONS - barre flottante toujours visible (au-dessus
+            de la barre mobile du bas), plus besoin de defiler pour continuer */}
+        <div className="sticky bottom-[72px] lg:bottom-3 z-[850] mt-4">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/95 dark:bg-[#0D1420]/95 backdrop-blur-xl px-3 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
+            {step > 1 ? (
+              <button onClick={() => setStep(s => s - 1)} className="btn bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 rounded-xl px-4 py-3 text-[.82rem] font-bold shrink-0">
+                ← Retour
+              </button>
+            ) : <div></div>}
 
-          {step < 4 ? (
-            <button onClick={handleNext} className="btn bg-gradient-to-r from-green-500 to-neon-gold text-white font-bold px-6 rounded-xl shadow-md hover:scale-105 transition-transform text-[.85rem]">
-              Suivant →
-            </button>
-          ) : (
-            <button onClick={handlePublish} disabled={isPublishing}
-              className={`btn px-6 shadow-lg text-[.85rem] ${boost > 0 ? "btn-gold" : "btn-green"} ${isPublishing ? "opacity-50 cursor-not-allowed" : ""}`}>
-              {isPublishing
-                ? "En cours..."
-                : duplicateWarning
-                  ? "Publier quand même"
-                : boost > 0
-                  ? (credits.find((c: any) => c.boost_key === BOOSTS[boost].key && c.status === "available") ? "🎁 Publier (boost offert)" : PAYMENT_REQUIRED ? "Payer & Publier" : "Publier sans payer")
-                  : "Publier"}
-            </button>
-          )}
+            {step < 4 ? (
+              <button onClick={handleNext} className="btn flex-1 sm:flex-none bg-gradient-to-r from-green-500 to-neon-gold text-white font-extrabold px-8 py-3 rounded-xl shadow-md hover:scale-105 transition-transform text-[.9rem]">
+                Suivant →
+              </button>
+            ) : (
+              <button onClick={handlePublish} disabled={isPublishing}
+                className={`btn flex-1 sm:flex-none px-6 py-3 shadow-lg text-[.9rem] font-extrabold ${boost > 0 ? "btn-gold" : "btn-green"} ${isPublishing ? "opacity-50 cursor-not-allowed" : ""}`}>
+                {isPublishing
+                  ? "En cours..."
+                  : duplicateWarning
+                    ? "Publier quand même"
+                  : boost > 0
+                    ? (credits.find((c: any) => c.boost_key === BOOSTS[boost].key && c.status === "available") ? "🎁 Publier (boost offert)" : PAYMENT_REQUIRED ? "Payer & Publier" : "Publier sans payer")
+                    : "Publier"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
