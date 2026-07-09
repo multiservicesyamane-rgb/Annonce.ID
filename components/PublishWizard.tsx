@@ -206,10 +206,14 @@ export default function PublishWizard() {
   const isKonnecta = isOwner(userEmail);
   const freeAdsRemaining = isKonnecta ? 999 : Math.max(0, Math.min(2, Number(userProfile?.free_ads_remaining ?? 2)));
 
+  // Photos autorisées selon le boost sélectionné ; admin sans limite pratique.
+  const PHOTO_LIMITS: Record<string, number> = { gratuit: 3, premium: 5, alaune: 8, vip: 12 };
+  const maxPhotos = isKonnecta ? 12 : (PHOTO_LIMITS[BOOSTS[boost]?.key || "gratuit"] ?? 3);
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const remaining = Math.max(0, 3 - photos.length);
-      if (remaining === 0) { show("⚠ Maximum 3 photos."); e.target.value = ""; return; }
+      const remaining = Math.max(0, maxPhotos - photos.length);
+      if (remaining === 0) { show(`⚠ Maximum ${maxPhotos} photos avec cette offre. Choisissez un boost supérieur pour en ajouter plus.`); e.target.value = ""; return; }
       const files = Array.from(e.target.files).slice(0, remaining);
       const urls = files.map(f => URL.createObjectURL(f));
       setCropQueue(prev => [...prev, ...urls]);
@@ -517,7 +521,7 @@ export default function PublishWizard() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-dark-900"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
               </div>
               <div className="font-bold text-gray-900 dark:text-white text-[.85rem]">Ajoutez vos photos</div>
-              <div className="text-[.7rem] text-gray-500 mt-0.5">JPG, PNG · Max 3 photos</div>
+              <div className="text-[.7rem] text-gray-500 mt-0.5">JPG, PNG · Max {maxPhotos} photos{maxPhotos <= 3 ? " (plus de photos avec un boost)" : ""}</div>
             </label>
 
             {photos.length > 0 && (
@@ -708,7 +712,7 @@ export default function PublishWizard() {
           aspectRatio={1}
           onCancel={() => setCropQueue(prev => prev.slice(1))}
           onCropDone={(base64) => {
-            setPhotos(prev => [...prev, base64].slice(0, 3));
+            setPhotos(prev => [...prev, base64].slice(0, maxPhotos));
             setCropQueue(prev => prev.slice(1));
           }}
         />
