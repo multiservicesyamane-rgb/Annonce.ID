@@ -77,7 +77,7 @@ export const CATEGORIES: Category[] = [
     subs: ["Voitures", "Motos & Scooters", "Camions", "Utilitaires", "Bus & Minibus", "Pièces & Accessoires", "Pneus & Jantes", "Bateaux", "Engins agricoles", "Engins de chantier", "Autre"],
     fields: [
       { label: "Marque", type: "text", placeholder: "Ex : Toyota" },
-      { label: "Année", type: "select", options: ["2025", "2024", "2023", "2022", "2021", "2020", "Avant 2020"] },
+      { label: "Année", type: "select", options: ["2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "Avant 2010"] },
       { label: "État", type: "select", options: ["Neuf", "Très bon état", "Bon état", "Occasion", "Pour pièces"] },
     ],
     subFields: {
