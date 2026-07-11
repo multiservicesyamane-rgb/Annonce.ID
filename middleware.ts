@@ -69,37 +69,16 @@ export async function middleware(request: NextRequest) {
 
   const pathname = shouldRewriteCategorySubdomain ? rewriteUrl.pathname : originalPathname;
 
-  // SECURITE: 3.2 Liste Blanche (Whitelist routing) au lieu de Liste Noire
-  // On définit explicitement ce qui est public, TOUT LE RESTE est bloqué par défaut.
-  const isPublicRoute = 
-    pathname === '/' ||
-    pathname === '/connexion' ||
-    pathname === '/yamanetech' || // La page de login admin
-    pathname.startsWith('/yamanetech/super-admin') || // Super Admin (auth propre)
-    pathname.startsWith('/mentions-legales') ||
-    pathname.startsWith('/politique-confidentialite') ||
-    pathname.startsWith('/comment-ca-marche') ||
-    pathname.startsWith('/contact') ||
-    pathname.startsWith('/publicite') ||
-    pathname.startsWith('/assurance') ||
-    pathname.startsWith('/inscription') ||
-    pathname.startsWith('/auth/callback') ||
-    pathname.startsWith('/recherche') ||
-    pathname.startsWith('/categorie') ||
-    pathname.startsWith('/blog') ||
-    pathname.startsWith('/annonces') ||
-    pathname.startsWith('/annonce') ||
-    pathname.startsWith('/boutique') ||
-    pathname.startsWith('/aide') ||
-    pathname.startsWith('/securite') ||
-    pathname.startsWith('/cgu') ||
-    pathname.startsWith('/affiches') ||
-    pathname.startsWith('/promo') ||
-    // Liens courts d'annonces : /<slug> (slug terminant par l'horodatage, ex. -1781448052581)
-    SHORT_LISTING_PATH_REGEX.test(pathname) ||
-    pathname.startsWith('/api'); // Les APIs ont leurs propres vérifications d'auth
+  // SECURITE: seules les pages RÉELLEMENT privées exigent une session.
+  // Tout le reste (pages publiques OU URL inconnue) passe : une URL inconnue
+  // doit afficher un vrai 404, pas rediriger vers /connexion (SEO + UX).
+  const isPrivateRoute =
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/profil') ||
+    pathname.startsWith('/favoris') ||
+    pathname.startsWith('/publier');
 
-  if (!isPublicRoute && !user) {
+  if (isPrivateRoute && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/connexion'
     return NextResponse.redirect(url)

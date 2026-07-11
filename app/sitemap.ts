@@ -4,7 +4,10 @@ import { CATEGORIES } from "@/lib/constants";
 import { ARTICLES } from "@/lib/blogData";
 import { detectLanguage } from "@/lib/listingQuality";
 
-const base = process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com";
+// Domaine canonique = apex (le www redirige 301 vers l'apex).
+const base = (process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com")
+  .replace(/\/+$/, "")
+  .replace(/^https?:\/\/www\./, "https://");
 
 // Le sitemap doit lister le contenu RÉEL et indexable (pas les données de démo),
 // sinon Google crawle des URLs en 404 → « site à faible valeur / pas prêt ».
