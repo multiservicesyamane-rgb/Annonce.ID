@@ -13,7 +13,6 @@
  * - Nécessite dans .env.local : NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
  */
 import { readFileSync } from "node:fs";
-import { createClient } from "@supabase/supabase-js";
 
 // --- Charge .env.local (simple, sans dépendance) ---
 function loadEnv() {
@@ -66,14 +65,18 @@ async function main() {
     console.error("NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquants dans .env.local");
     process.exit(1);
   }
-  const sb = createClient(url, key, { auth: { persistSession: false } });
+  // Accès direct à l'API REST Supabase (évite la dépendance WebSocket de
+  // supabase-js, absente sous Node < 22).
+  const rest = url.replace(/\/+$/, "") + "/rest/v1/prospects";
+  const headers = { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
 
   const rows = parseCsv(readFileSync(file, "utf8"));
   const header = rows.shift().map((h) => h.trim().toLowerCase());
   const idx = (name) => header.indexOf(name);
 
   // Numéros déjà en base → évite les doublons
-  const { data: existing } = await sb.from("prospects").select("phone");
+  const existRes = await fetch(`${rest}?select=phone`, { headers });
+  const existing = existRes.ok ? await existRes.json() : [];
   const seen = new Set((existing || []).map((p) => normalizePhone(p.phone)).filter(Boolean));
 
   const toInsert = [];
@@ -119,22 +122,24 @@ async function main() {
       for (const c of dropCols) delete r[c];
       return r;
     });
-    let { error } = await sb.from("prospects").insert(batch);
+    let res = await fetch(rest, { method: "POST", headers: { ...headers, Prefer: "return=minimal" }, body: JSON.stringify(batch) });
     // Retente en retirant une colonne inconnue signalée par PostgREST
-    while (error) {
-      const m = (error.message || "").match(/'([a-z_]+)' column|column "([a-z_]+)"/);
-      const col = m && (m[1] || m[2]);
+    while (!res.ok) {
+      const msg = await res.text();
+      const m = msg.match(/'([a-z_]+)' column|column "?([a-z_]+)"?|Could not find the '([a-z_]+)'/);
+      const col = m && (m[1] || m[2] || m[3]);
       if (col && !dropCols.includes(col)) {
         dropCols.push(col);
         batch = batch.map((row) => { const r = { ...row }; for (const c of dropCols) delete r[c]; return r; });
-        ({ error } = await sb.from("prospects").insert(batch));
+        res = await fetch(rest, { method: "POST", headers: { ...headers, Prefer: "return=minimal" }, body: JSON.stringify(batch) });
       } else {
-        console.error("Erreur insert:", error.message);
+        console.error("Erreur insert:", msg.slice(0, 300));
         process.exit(1);
       }
     }
     inserted += batch.length;
   }
+  if (dropCols.length) console.log(`ℹ️  Colonnes absentes ignorées (infos gardées dans notes): ${dropCols.join(", ")}. Exécute MIGRATION_PROSPECTS_IMAGE.sql pour les activer.`);
   console.log(`✅ ${inserted} prospects importés. (sans téléphone: ${skippedNoPhone}, doublons ignorés: ${skippedDup})`);
 }
 

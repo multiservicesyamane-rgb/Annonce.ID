@@ -50,10 +50,17 @@ const SITES = [
     key: "coinafrique",
     source: "CoinAfrique",
     listUrls: [
+      "https://sn.coinafrique.com/",
       "https://sn.coinafrique.com/categorie/voitures",
       "https://sn.coinafrique.com/categorie/telephones-et-tablettes",
-      "https://sn.coinafrique.com/categorie/immobilier",
-      "https://sn.coinafrique.com/",
+      "https://sn.coinafrique.com/categorie/appartements",
+      "https://sn.coinafrique.com/categorie/villas",
+      "https://sn.coinafrique.com/categorie/motos",
+      "https://sn.coinafrique.com/categorie/ordinateurs",
+      "https://sn.coinafrique.com/categorie/mode-homme",
+      "https://sn.coinafrique.com/categorie/mode-enfant",
+      "https://sn.coinafrique.com/categorie/electromenager",
+      "https://sn.coinafrique.com/categorie/meubles-et-decoration",
     ],
     adMatch: "/annonce/",
     base: "https://sn.coinafrique.com",
@@ -109,10 +116,12 @@ function listPageFunction(context) {
 function detailPageFunction(context) {
   return (async function () {
     const $ = context.jQuery;
-    await new Promise(function (r) { setTimeout(r, 2500); });
     const source = context.customData.source;
     const url = context.request.url;
 
+    // attente courte : les infos (tel:/og:image) sont presentes rapidement
+    // (remplace l'attente de 2.5s qui faisait exploser le temps sur 100 pages)
+    await new Promise(function (r) { setTimeout(r, 800); });
     const title = ($("h1").first().text() || "").trim();
 
     // Téléphone : lien tel: ou wa.me présent dans la page
@@ -154,15 +163,33 @@ function detailPageFunction(context) {
   })();
 }
 
-async function runActor(input) {
-  const res = await fetch(
-    `https://api.apify.com/v2/acts/apify~web-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}&timeout=290`,
+// Lance l'acteur en mode ASYNCHRONE (pas de limite 290s), attend la fin,
+// puis récupère les items du dataset. Un seul démarrage pour tout le lot.
+async function runActor(input, runTimeoutSecs = 900) {
+  const start = await fetch(
+    `https://api.apify.com/v2/acts/apify~web-scraper/runs?token=${APIFY_TOKEN}&timeout=${runTimeoutSecs}`,
     { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) },
   );
-  if (!res.ok) {
-    throw new Error(`Apify ${res.status} — ${(await res.text()).slice(0, 200)}`);
+  if (!start.ok) throw new Error(`Apify start ${start.status} — ${(await start.text()).slice(0, 200)}`);
+  const run = (await start.json()).data;
+  const runId = run.id;
+  const datasetId = run.defaultDatasetId;
+
+  // Poll jusqu'à état terminal
+  const TERMINAL = ["SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"];
+  let status = run.status;
+  const t0 = Date.now();
+  while (!TERMINAL.includes(status)) {
+    await new Promise((r) => setTimeout(r, 5000));
+    const st = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`);
+    if (st.ok) status = (await st.json()).data.status;
+    if (Date.now() - t0 > (runTimeoutSecs + 60) * 1000) break;
   }
-  return res.json();
+
+  // Récupère les items même si TIMED-OUT (les pages déjà traitées sont sauvées)
+  const items = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${APIFY_TOKEN}&clean=true`);
+  if (!items.ok) throw new Error(`Apify dataset ${items.status}`);
+  return items.json();
 }
 
 async function scrapeSite(site) {
@@ -182,19 +209,21 @@ async function scrapeSite(site) {
   console.log(`  liste : ${adUrls.length} annonces trouvées`);
   if (!adUrls.length) return [];
 
-  // Phase B : extraction des annonces
+  // Phase B : un seul lancement asynchrone pour toutes les annonces.
+  console.log(`  extraction des ${adUrls.length} annonces… (peut prendre quelques minutes)`);
   const detailItems = await runActor({
     startUrls: adUrls.map((url) => ({ url })),
     maxPagesPerCrawl: adUrls.length + 2,
-    maxConcurrency: 5,
+    maxConcurrency: 10,
+    pageLoadTimeoutSecs: 30,
     proxyConfiguration: { useApifyProxy: true },
     injectJQuery: true,
     customData: { source: site.source },
     pageFunction: detailPageFunction.toString(),
-  });
+  }, 1200);
   const rows = detailItems.filter((it) => it && it.name && !it["#error"]);
   const withPhone = rows.filter((r) => r.phone).length;
-  console.log(`  détails : ${rows.length} fiches (${withPhone} avec téléphone)`);
+  console.log(`  ✓ ${site.source} : ${rows.length} fiches (${withPhone} avec téléphone)`);
   return rows;
 }
 
