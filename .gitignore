@@ -30,3 +30,6 @@ next-env.d.ts
 
 # vercel
 .vercel
+
+scripts/prospects.csv
+scripts/scrape.log
