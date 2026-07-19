@@ -109,7 +109,7 @@ function cityOf(place) {
 }
 
 function toCsv(rows) {
-  const cols = ["name", "sector", "city", "phone", "whatsapp", "email", "image", "notes", "source", "url"];
+  const cols = ["name", "sector", "city", "phone", "whatsapp", "email", "website", "image", "notes", "source", "url"];
   const esc = (v) => {
     const s = String(v ?? "");
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
@@ -148,6 +148,7 @@ async function main() {
       phone,
       whatsapp: phone,
       email: "",
+      website: p.website || "",
       image: p.imageUrl || "",
       notes: [
         p.totalScore ? `Note Google: ${p.totalScore}/5 (${p.reviewsCount || 0} avis)` : "",
