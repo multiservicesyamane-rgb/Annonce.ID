@@ -5,6 +5,7 @@ import { sendInvoiceEmail } from "@/lib/email";
 import { configuredPlatforms } from "@/lib/social";
 import { publishPendingAnnonces, publishDueScheduled, publishOneListing } from "@/lib/campaign-engine";
 import { qualifyProspects } from "@/lib/prospects";
+import { sendProspectEmail, optOutProspect, emailsSentToday, dailyCap } from "@/lib/prospect-email";
 
 export const dynamic = "force-dynamic";
 // Laisse le temps aux appels Gemini (qualification prospects, campagne).
@@ -133,6 +134,21 @@ export async function POST(req: Request) {
     if (action === "qualifyProspects") {
       const result = await qualifyProspects(sb, Number(body?.limit) || 6);
       return NextResponse.json(result);
+    }
+
+    if (action === "sendProspectEmail") {
+      const result = await sendProspectEmail(sb, String(body?.id || ""));
+      return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+    }
+
+    if (action === "optOutProspect") {
+      const result = await optOutProspect(sb, String(body?.id || ""));
+      return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+    }
+
+    if (action === "prospectEmailStats") {
+      const sentToday = await emailsSentToday(sb);
+      return NextResponse.json({ sentToday, cap: dailyCap() });
     }
 
     if (action === "b2bInsert") {

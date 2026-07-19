@@ -234,6 +234,30 @@ export default function SuperAdminApp() {
     }
   }
 
+  // Envoi de l'email de prospection à un prospect (plafond 15/jour côté serveur).
+  async function sendProspectEmailUi(id: string) {
+    try {
+      const d = await adminApi("sendProspectEmail", { id });
+      T(`✉️ Email envoyé (${d.sentToday}/${d.cap} aujourd'hui)`);
+      loadAllData();
+      return true;
+    } catch (e: any) {
+      T(`⚠ ${e?.message || "Envoi impossible"}`);
+      return false;
+    }
+  }
+
+  // Marque un prospect comme désinscrit (réponse STOP).
+  async function optOutProspectUi(id: string) {
+    try {
+      await adminApi("optOutProspect", { id });
+      T("🚫 Prospect désinscrit (STOP)");
+      loadAllData();
+    } catch (e: any) {
+      T(`⚠ ${e?.message || "Erreur"}`);
+    }
+  }
+
   // Ajout réel d'un prospect dans la table
   async function addProspect(p: Record<string, any>) {
     return addRow("prospects", p, "Prospect ajoute");
@@ -401,7 +425,7 @@ export default function SuperAdminApp() {
             <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6366F1] border-t-transparent" /></div>
           ) : (<>
             {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} />}
-            {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} qualify={qualifyProspectsUi} />}
+            {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} qualify={qualifyProspectsUi} sendEmail={sendProspectEmailUi} optOut={optOutProspectUi} />}
             {page === "marketing" && <Marketing T={T} />}
             {page === "campagne_ia" && <CampagneIA T={T} allListings={allListings} />}
             {page === "campagnes" && <Campagnes campaigns={campaigns} addCampaign={addCampaign} T={T} />}
@@ -514,11 +538,18 @@ function Overview({ counts, allListings, profiles, purchases, T, loading }: { co
   );
 }
 
-function CRM({ T, prospects, addProspect, qualify }: { T: (m: string) => void; prospects: any[]; addProspect: (p: Record<string, any>) => Promise<boolean>; qualify: () => Promise<void> }) {
+function CRM({ T, prospects, addProspect, qualify, sendEmail, optOut }: { T: (m: string) => void; prospects: any[]; addProspect: (p: Record<string, any>) => Promise<boolean>; qualify: () => Promise<void>; sendEmail: (id: string) => Promise<boolean>; optOut: (id: string) => Promise<void> }) {
   const [form, setForm] = useState(false);
   const [f, setF] = useState<Record<string, string>>({ status: "new", pack: "Basic" });
+  const [sending, setSending] = useState<string | null>(null);
   const stages: [string, string, string][] = [["🆕", "Nouveaux", "new"], ["📤", "Contactés", "ct"], ["🤝", "Intéressés", "int"], ["📅", "Rendez-vous", "rdv"], ["✅", "Clients", "cli"], ["❌", "Refusés", "ref"]];
   const countBy = (st: string) => prospects.filter((p) => p.status === st).length;
+
+  // Compteur d'envois du jour (calculé depuis les prospects chargés).
+  const CAP = 15;
+  const isToday = (iso?: string) => !!iso && new Date(iso).toDateString() === new Date().toDateString();
+  const sentToday = prospects.filter((p) => isToday(p.email_sent_at)).length;
+  const withEmail = prospects.filter((p) => p.email && !p.email_opt_out).length;
 
   async function submit() {
     if (!f.name?.trim()) { T("⚠ Nom requis"); return; }
@@ -528,7 +559,10 @@ function CRM({ T, prospects, addProspect, qualify }: { T: (m: string) => void; p
 
   return (
     <>
-      <PageHead title="🎯 CRM — Prospects" sub={`${prospects.length} prospect(s) · ${countBy("cli")} client(s)`}>
+      <PageHead title="🎯 CRM — Prospects" sub={`${prospects.length} prospect(s) · ${countBy("cli")} client(s) · ${withEmail} avec email`}>
+        <span className={`rounded-[9px] border px-3 py-2 text-[.78rem] font-bold ${sentToday >= CAP ? "border-[#F85149]/40 bg-[#F85149]/10 text-[#F85149]" : "border-[#30363D] bg-[#0D1117] text-[#8B949E]"}`} title="Emails de prospection envoyés aujourd'hui (plafond quotidien)">
+          ✉️ {sentToday}/{CAP} aujourd'hui
+        </span>
         <button className={btnP} onClick={() => qualify()}>🤖 Qualifier IA</button>
         <button className={btnP} onClick={() => setForm((v) => !v)}>{form ? "✕ Fermer" : "+ Nouveau prospect"}</button>
       </PageHead>
@@ -566,17 +600,31 @@ function CRM({ T, prospects, addProspect, qualify }: { T: (m: string) => void; p
         ) : [...prospects].sort((a, b) => (b.score ?? -1) - (a.score ?? -1)).map((p) => {
           const waNumber = (p.whatsapp || p.phone || "").replace(/\D/g, "");
           const waLink = waNumber ? `https://wa.me/${waNumber}${p.accroche_whatsapp ? `?text=${encodeURIComponent(p.accroche_whatsapp)}` : ""}` : "";
+          const emailSent = isToday(p.email_sent_at) || !!p.email_sent_at;
+          const canSend = p.email && !p.email_opt_out && !p.email_sent_at && sentToday < CAP;
           return (
-          <div key={p.id} className="mb-2 flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-2.5">
+          <div key={p.id} className={`mb-2 flex flex-wrap items-center gap-3 rounded-[12px] border p-2.5 ${p.email_opt_out ? "border-[#F85149]/30 bg-[#F85149]/5 opacity-70" : "border-[#21262D] bg-[#0D1117]"}`}>
             <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-g1 text-[1rem] font-bold text-white">{(p.name || "?").slice(0, 1).toUpperCase()}</div>
-            <div className="min-w-[140px] flex-1"><div className="text-[.84rem] font-bold text-[#E6EDF3]">{p.name}</div><div className="text-[.72rem] text-[#8B949E]">{p.sector || "—"} · {p.city || "—"}{p.pack ? <> · Pack: <b className="text-[#FFC93C]">{p.pack}</b></> : null}</div></div>
+            <div className="min-w-[140px] flex-1"><div className="text-[.84rem] font-bold text-[#E6EDF3]">{p.name}</div><div className="text-[.72rem] text-[#8B949E]">{p.sector || "—"} · {p.city || "—"}{p.email ? <> · <span className="text-[#A5B4FC]">{p.email}</span></> : null}</div></div>
             {typeof p.score === "number" && (
               <span title="Score IA de pertinence (0-100)" className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${p.score >= 70 ? "bg-[#2EA043]/20 text-[#3FB950]" : p.score >= 40 ? "bg-[#D29922]/20 text-[#E3B341]" : "bg-white/10 text-gray-300"}`}>⭐ {p.score}</span>
             )}
-            <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${ST_PILL[p.status] || "bg-white/10 text-gray-300"}`}>{ST_LABELS[p.status] || p.status}</span>
+            {p.email_opt_out
+              ? <span className="rounded-md bg-[#F85149]/20 px-2 py-0.5 text-[.68rem] font-bold text-[#F85149]">🚫 STOP</span>
+              : <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${ST_PILL[p.status] || "bg-white/10 text-gray-300"}`}>{ST_LABELS[p.status] || p.status}</span>}
             <div className="flex gap-1.5">
-              {p.email && <a href={`mailto:${p.email}`} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem] hover:bg-[#6366F1]/20">📧</a>}
+              {p.email && !p.email_opt_out && (
+                emailSent
+                  ? <span title="Email de prospection déjà envoyé" className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-[#2EA043]/15 text-[.78rem]">✅</span>
+                  : <button
+                      disabled={!canSend || sending === p.id}
+                      onClick={async () => { setSending(p.id); await sendEmail(p.id); setSending(null); }}
+                      title={sentToday >= CAP ? "Plafond du jour atteint (15)" : "Envoyer l'email de prospection"}
+                      className={`flex h-7 w-7 items-center justify-center rounded-[7px] text-[.78rem] ${canSend ? "bg-white/5 hover:bg-[#6366F1]/30" : "cursor-not-allowed bg-white/5 opacity-40"}`}
+                    >{sending === p.id ? "…" : "📧"}</button>
+              )}
               {waLink && <a href={waLink} target="_blank" title={p.accroche_whatsapp ? "WhatsApp avec message IA pré-rempli" : "WhatsApp"} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem] hover:bg-[#25D366]/20">💬</a>}
+              {!p.email_opt_out && <button onClick={() => optOut(p.id)} title="Marquer STOP (désinscrire)" className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem] hover:bg-[#F85149]/20">🚫</button>}
             </div>
           </div>
           );
