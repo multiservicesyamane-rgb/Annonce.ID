@@ -13,7 +13,7 @@ Audit du code et de la base de production effectué. À lire avant d'appliquer l
 3. **Schéma réel confirmé** : `listings.id` = **uuid** ; statuts réels observés = `active`, `pending`, `sold`, `inactive` (pas de `expired` ni `draft`) ; `expires_at` en place (30 jours, cf. `MIGRATION_EXPIRATION_ANNONCES.sql`).
 4. **Emails : le code utilise Resend** (`lib/email.ts`), pas Brevo. Des clés Brevo existent dans `.env.local` mais aucun code ne les utilise — choisir UN fournisseur avant la phase fidélisation, sans faire tourner les deux.
 5. **Déploiement : Vercel** (`vercel.json` + crons). Toute variante du plan basée sur Netlify Scheduled Functions est hors sujet tant que l'hébergement n'a pas changé.
-6. **Prospects (section 2)** : la table existe (`database/MIGRATION_B2B.sql`), les scripts Apify aussi (`scripts/scrape-prospects.mjs`). Il manque les colonnes `score` et `accroche_whatsapp` (migration additive à créer) et la qualification Gemini à l'import.
+6. **Prospects (section 2)** : la table existe (`database/MIGRATION_B2B.sql`), la qualification IA aussi (`lib/prospects.ts` + bouton « Qualifier IA » du CRM, colonnes ajoutées par `MIGRATION_PROSPECTS_QUALIFICATION.sql`). Deux sources de scraping : `scripts/scrape-acteurs.mjs` (**recommandé** — professionnels sur Google Maps : boutiques, agences, concessionnaires) et `scripts/scrape-prospects.mjs` (annonces des sites concurrents — à éviter, CGU restrictives et prospects de moindre qualité).
 7. **Tarifs réels** (`lib/constants.ts`, modifiables via `app_settings`) : Premium 3 500 F / 7 j, À la Une 7 500 F / 30 j, VIP 15 000 F / 60 j. Ne jamais coder ces montants en dur dans les emails ou les posts.
 
 ---

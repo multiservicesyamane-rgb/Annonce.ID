@@ -33,3 +33,8 @@ next-env.d.ts
 
 scripts/prospects.csv
 scripts/scrape.log
+.env.production
+.env.development
+.env.test
+scripts/acteurs.csv
+scripts/fetch.log
