@@ -39,3 +39,5 @@ scripts/scrape.log
 scripts/acteurs.csv
 scripts/fetch.log
 scripts/prospects-manuels.csv
+scripts/*.xlsx
+scripts/prospects-*.csv
