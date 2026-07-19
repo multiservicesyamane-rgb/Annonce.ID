@@ -8,7 +8,8 @@
  * Colonnes attendues (en-tête CSV, ordre libre) :
  *   name, sector, city, phone, whatsapp, email, notes, source
  *
- * - Dédoublonnage par téléphone (ignore les lignes dont le numéro existe déjà).
+ * - Dédoublonnage par téléphone, ou par email pour les lignes sans téléphone
+ *   (prospects "email seul" acceptés — ex : listes d'entreprises).
  * - status = 'new' pour tous les nouveaux prospects.
  * - Nécessite dans .env.local : NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
  */
@@ -74,40 +75,46 @@ async function main() {
   const header = rows.shift().map((h) => h.trim().toLowerCase());
   const idx = (name) => header.indexOf(name);
 
-  // Numéros déjà en base → évite les doublons
-  const existRes = await fetch(`${rest}?select=phone`, { headers });
+  // Contacts déjà en base → évite les doublons (téléphone, et email en repli)
+  const existRes = await fetch(`${rest}?select=phone,email`, { headers });
   const existing = existRes.ok ? await existRes.json() : [];
   const seen = new Set((existing || []).map((p) => normalizePhone(p.phone)).filter(Boolean));
+  const seenEmails = new Set((existing || []).map((p) => (p.email || "").trim().toLowerCase()).filter(Boolean));
 
   const toInsert = [];
-  let skippedNoPhone = 0, skippedDup = 0;
+  let skippedNoContact = 0, skippedDup = 0;
   for (const r of rows) {
-    const phone = normalizePhone(r[idx("phone")] || r[idx("whatsapp")] || "");
-    if (!phone) { skippedNoPhone++; continue; }
-    if (seen.has(phone)) { skippedDup++; continue; }
-    seen.add(phone);
+    const get = (col) => { const i = idx(col); return i > -1 ? (r[i] || "").trim() : ""; };
+    const phone = normalizePhone(get("phone") || get("whatsapp"));
+    const email = get("email").toLowerCase();
+    if (!phone && !email) { skippedNoContact++; continue; }
+    if (phone && seen.has(phone)) { skippedDup++; continue; }
+    if (!phone && seenEmails.has(email)) { skippedDup++; continue; }
+    if (phone) seen.add(phone);
+    if (email) seenEmails.add(email);
     toInsert.push({
-      name: (r[idx("name")] || "Vendeur").trim().slice(0, 200),
-      sector: (r[idx("sector")] || "").trim() || null,
-      city: (r[idx("city")] || "").trim() || null,
-      phone,
-      whatsapp: normalizePhone(r[idx("whatsapp")] || phone) || null,
-      email: (r[idx("email")] || "").trim() || null,
-      image_url: (r[idx("image")] || "").trim() || null,
-      source_url: (r[idx("url")] || "").trim() || null,
-      // notes = source + image + lien (repli si les colonnes dédiées manquent)
+      name: (get("name") || "Vendeur").slice(0, 200),
+      sector: get("sector") || null,
+      city: get("city") || null,
+      phone: phone || null,
+      whatsapp: phone ? (normalizePhone(get("whatsapp")) || phone) : null,
+      email: email || null,
+      image_url: get("image") || null,
+      source_url: get("url") || get("website") || null,
+      // notes = source + site + image + lien (repli si les colonnes dédiées manquent)
       notes: [
-        (r[idx("notes")] || "").trim(),
-        (r[idx("source")] || "").trim() ? `Source: ${r[idx("source")].trim()}` : "",
-        (r[idx("image")] || "").trim() ? `Photo: ${r[idx("image")].trim()}` : "",
-        (r[idx("url")] || "").trim() ? `Annonce: ${r[idx("url")].trim()}` : "",
+        get("notes"),
+        get("source") ? `Source: ${get("source")}` : "",
+        get("website") ? `Site: ${get("website")}` : "",
+        get("image") ? `Photo: ${get("image")}` : "",
+        get("url") ? `Annonce: ${get("url")}` : "",
       ].filter(Boolean).join(" · ") || null,
       status: "new",
     });
   }
 
   if (!toInsert.length) {
-    console.log(`Rien à importer. (sans téléphone: ${skippedNoPhone}, doublons: ${skippedDup})`);
+    console.log(`Rien à importer. (sans contact: ${skippedNoContact}, doublons: ${skippedDup})`);
     return;
   }
 
@@ -140,7 +147,7 @@ async function main() {
     inserted += batch.length;
   }
   if (dropCols.length) console.log(`ℹ️  Colonnes absentes ignorées (infos gardées dans notes): ${dropCols.join(", ")}. Exécute MIGRATION_PROSPECTS_IMAGE.sql pour les activer.`);
-  console.log(`✅ ${inserted} prospects importés. (sans téléphone: ${skippedNoPhone}, doublons ignorés: ${skippedDup})`);
+  console.log(`✅ ${inserted} prospects importés. (sans contact: ${skippedNoContact}, doublons ignorés: ${skippedDup})`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

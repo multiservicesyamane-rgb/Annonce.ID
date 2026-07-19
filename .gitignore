@@ -38,3 +38,4 @@ scripts/scrape.log
 .env.test
 scripts/acteurs.csv
 scripts/fetch.log
+scripts/prospects-manuels.csv
