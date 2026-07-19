@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { campaignAdmin } from "@/lib/campaign";
 import { configuredPlatforms } from "@/lib/social";
-import { publishPendingAnnonces, publishDueScheduled } from "@/lib/campaign-engine";
+import { publishPendingAnnonces, publishDueScheduled, retryFailedPosts } from "@/lib/campaign-engine";
 
 export const dynamic = "force-dynamic";
 // Laisse le temps à l'IA + aux réseaux de répondre (Vercel : jusqu'à 60s en Pro).
@@ -12,7 +12,7 @@ export const maxDuration = 60;
 function authorized(req: Request): boolean {
   const cron = process.env.CRON_SECRET;
   const camp = process.env.CAMPAIGN_WEBHOOK_SECRET;
-  if (!cron && !camp) return true;
+  if (!cron && !camp) return process.env.NODE_ENV !== "production";
   const auth = req.headers.get("authorization") || "";
   if (cron && auth === `Bearer ${cron}`) return true;
   if (camp && (req.headers.get("x-campaign-secret") || "") === camp) return true;
@@ -35,11 +35,13 @@ async function run(req: Request) {
   const sb = campaignAdmin();
   if (!sb) return NextResponse.json({ error: "Service indisponible (service role manquante)" }, { status: 500 });
 
-  // Phase 1 : posts planifiés arrivés à échéance. Phase 2 : nouvelles annonces sans post.
+  // Phase 1 : posts planifiés arrivés à échéance. Phase 2 : nouvelles annonces
+  // sans post. Phase 3 : reprise des posts en échec (max 3 tentatives).
   const scheduled = await publishDueScheduled(sb);
   const pending = await publishPendingAnnonces(sb);
+  const retried = await retryFailedPosts(sb);
 
-  return NextResponse.json({ ok: true, platforms, scheduled, pending });
+  return NextResponse.json({ ok: true, platforms, scheduled, pending, retried });
 }
 
 // GET → utilisé par le Cron Vercel. POST → déclenchement manuel.
