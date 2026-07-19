@@ -49,15 +49,14 @@ const PER_QUERY = Number(process.env.SCRAPE_PER_QUERY || 20);
 // Requêtes par défaut : secteurs phares de Wanteermako × villes principales.
 // Vocabulaire "catégorie Google Maps" : "boutique téléphone" renvoie des
 // boutiques de vêtements ; "magasin de téléphones portables" est précis.
-const DEFAULT_QUERIES = [
-  "magasin de téléphones portables Dakar",
-  "agence immobilière Dakar",
-  "concessionnaire automobile Dakar",
-  "vente de voitures d'occasion Dakar",
-  "magasin d'informatique Dakar",
-  "magasin de téléphones portables Thiès",
-  "agence immobilière Mbour",
-];
+// Personnalisable : SCRAPE_SECTORS="..." SCRAPE_CITIES="Dakar,Thiès" (séparés
+// par des virgules), ou requêtes complètes en arguments CLI.
+const SECTORS = (process.env.SCRAPE_SECTORS ||
+  "magasin de téléphones portables,agence immobilière,concessionnaire automobile,magasin d'informatique"
+).split(",").map((s) => s.trim()).filter(Boolean);
+const CITIES = (process.env.SCRAPE_CITIES || "Dakar,Thiès,Mbour")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+const DEFAULT_QUERIES = SECTORS.flatMap((s) => CITIES.map((c) => `${s} ${c}`));
 const queries = process.argv.slice(2).length ? process.argv.slice(2) : DEFAULT_QUERIES;
 
 // Lance l'acteur en ASYNCHRONE, attend la fin, récupère le dataset
@@ -133,12 +132,18 @@ async function main() {
     maxReviews: 0,
   });
 
+  // Google Maps élargit parfois la recherche hors du pays (résultats Canada,
+  // France…) : on ne garde que les numéros du pays ciblé.
+  const PREFIX = process.env.SCRAPE_PHONE_PREFIX || "+221";
+
   const seen = new Set();
   const rows = [];
+  let foreign = 0;
   for (const p of items) {
     if (!p || !p.title) continue;
     const phone = normalizePhone(p.phoneUnformatted || p.phone);
     if (!phone) continue;                    // sans téléphone, pas de prospection possible
+    if (!phone.startsWith(PREFIX)) { foreign++; continue; }
     if (seen.has(phone)) continue;           // dédup intra-lot (l'import dédoublonne vs la base)
     seen.add(phone);
     rows.push({
@@ -162,7 +167,7 @@ async function main() {
 
   const out = new URL("./acteurs.csv", import.meta.url);
   writeFileSync(out, toCsv(rows), "utf8");
-  console.log(`\n✅ ${rows.length} acteurs avec téléphone (sur ${items.length} fiches) → scripts/acteurs.csv`);
+  console.log(`\n✅ ${rows.length} acteurs avec téléphone ${PREFIX} (sur ${items.length} fiches${foreign ? `, ${foreign} hors pays écartées` : ""}) → scripts/acteurs.csv`);
   console.log(`   Importer  : node scripts/import-prospects.mjs scripts/acteurs.csv`);
   console.log(`   Qualifier : bouton « 🤖 Qualifier IA » dans le CRM Super Admin`);
 }

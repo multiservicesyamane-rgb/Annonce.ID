@@ -43,20 +43,39 @@ function toCsvLine(vals) {
 }
 
 // Adresses techniques/junk à ignorer.
-const JUNK = /no-?reply|example\.|sentry|wixpress|@.*\.(png|jpe?g|gif|svg|webp|css|js)$|godaddy|domain|cloudflare|schema\.org/i;
+const JUNK = /no-?reply|example\.|exemple|monsite|votresite|yourdomain|placeholder|sentry|wixpress|@.*\.(png|jpe?g|gif|svg|webp|css|js)$|godaddy|cloudflare|schema\.org/i;
 const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 
+// Décode les emails masqués anti-robots : &#097;, &#x40;, &amp;#64;…
+function decodeEntities(s) {
+  return s
+    .replace(/&amp;/gi, "&")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)));
+}
+
+// Validation stricte : forme d'email réelle, TLD plausible, domaine avec lettres.
+function isRealEmail(e) {
+  if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,10}$/.test(e)) return false;
+  const domain = e.split("@")[1];
+  const labels = domain.split(".");
+  if (!labels.slice(0, -1).some((l) => /[a-z]/.test(l))) return false; // ex: "263.high"
+  return !JUNK.test(e);
+}
+
 function extractEmails(htmlText) {
+  const text = decodeEntities(htmlText);
   const found = new Set();
   // mailto: d'abord (les plus fiables)
-  for (const m of htmlText.matchAll(/mailto:([^"'?\s>]+)/gi)) {
-    const e = decodeURIComponent(m[1]).trim().toLowerCase();
-    if (!JUNK.test(e)) found.add(e);
+  for (const m of text.matchAll(/mailto:([^"'?\s>]+)/gi)) {
+    let e = m[1].trim().toLowerCase();
+    try { e = decodeURIComponent(e); } catch {}
+    if (isRealEmail(e)) found.add(e);
   }
   // puis texte brut
-  for (const m of htmlText.matchAll(EMAIL_RE)) {
+  for (const m of text.matchAll(EMAIL_RE)) {
     const e = m[0].toLowerCase();
-    if (!JUNK.test(e)) found.add(e);
+    if (isRealEmail(e)) found.add(e);
   }
   return [...found];
 }
@@ -83,21 +102,66 @@ async function fetchText(url, timeoutMs = 12000) {
 
 const CONTACT_PATHS = ["", "/contact", "/contact-us", "/contactez-nous", "/nous-contacter", "/a-propos", "/about", "/mentions-legales"];
 
+// Emails déclarés dans les données structurées (JSON-LD schema.org).
+function extractJsonLdEmails(html) {
+  const found = [];
+  for (const m of html.matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+    for (const e of m[1].matchAll(/"email"\s*:\s*"([^"]+)"/gi)) {
+      const v = decodeEntities(e[1]).replace(/^mailto:/i, "").trim().toLowerCase();
+      if (isRealEmail(v)) found.push(v);
+    }
+  }
+  return found;
+}
+
+// Liens internes de type "contact" découverts sur la page d'accueil
+// (les sites n'utilisent pas tous les chemins standards).
+function discoverContactLinks(html, base) {
+  const links = new Set();
+  for (const m of html.matchAll(/<a[^>]+href=["']([^"'#]+)["'][^>]*>([\s\S]{0,80}?)<\/a>/gi)) {
+    const href = m[1];
+    const label = m[2].replace(/<[^>]+>/g, "");
+    if (/contact|about|propos|équipe|equipe|mentions/i.test(href + " " + label)) {
+      try {
+        const u = new URL(href, base.origin);
+        if (u.hostname === base.hostname) links.add(u.href);
+      } catch {}
+    }
+    if (links.size >= 3) break;
+  }
+  return [...links];
+}
+
+function pickEmail(emails, base) {
+  if (!emails.length) return "";
+  // Préfère un email du même domaine que le site, sinon le premier trouvé.
+  const own = emails.find((e) => e.endsWith("@" + base.hostname.replace(/^www\./, "")));
+  return own || emails[0];
+}
+
 async function emailForWebsite(website) {
   if (!website) return "";
   let base;
   try { base = new URL(website); } catch { return ""; }
   if (/facebook\.com|instagram\.com|wa\.me|whatsapp/i.test(base.hostname)) return "";
 
-  for (const path of CONTACT_PATHS) {
-    const url = path ? new URL(path, base.origin).href : base.href;
+  const visited = new Set();
+  const queue = CONTACT_PATHS.map((p) => (p ? new URL(p, base.origin).href : base.href));
+
+  while (queue.length) {
+    const url = queue.shift();
+    if (visited.has(url) || visited.size >= 10) continue;
+    visited.add(url);
+
     const html = await fetchText(url);
     if (!html) continue;
-    const emails = extractEmails(html);
-    if (emails.length) {
-      // Préfère un email du même domaine que le site, sinon le premier trouvé.
-      const own = emails.find((e) => e.endsWith("@" + base.hostname.replace(/^www\./, "")));
-      return own || emails[0];
+
+    const emails = [...extractEmails(html), ...extractJsonLdEmails(html)];
+    if (emails.length) return pickEmail(emails, base);
+
+    // Depuis l'accueil, suit les liens "contact" propres au site.
+    if (url === base.href || url === base.origin + "/") {
+      for (const l of discoverContactLinks(html, base)) queue.unshift(l);
     }
   }
   return "";

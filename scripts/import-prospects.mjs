@@ -86,10 +86,13 @@ async function main() {
   for (const r of rows) {
     const get = (col) => { const i = idx(col); return i > -1 ? (r[i] || "").trim() : ""; };
     const phone = normalizePhone(get("phone") || get("whatsapp"));
-    const email = get("email").toLowerCase();
+    let email = get("email").toLowerCase();
     if (!phone && !email) { skippedNoContact++; continue; }
     if (phone && seen.has(phone)) { skippedDup++; continue; }
     if (!phone && seenEmails.has(email)) { skippedDup++; continue; }
+    // Adresse déjà connue sur un autre prospect → on garde la fiche (téléphone)
+    // mais sans l'email, pour ne jamais écrire deux fois à la même adresse.
+    if (phone && email && seenEmails.has(email)) email = "";
     if (phone) seen.add(phone);
     if (email) seenEmails.add(email);
     toInsert.push({
