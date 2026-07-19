@@ -10,6 +10,12 @@ const SITE = "https://wanteermako.com";
 const WA_DISPLAY = "+221 77 682 78 51";
 const WA_LINK = `https://wa.me/221776827851?text=${encodeURIComponent("Bonjour, je vous écris suite à votre email au sujet de Wanteermako.")}`;
 
+// Boîte du propriétaire : reçoit les RÉPONSES des prospects (reply-to) et une
+// COPIE (BCC) de chaque email envoyé, pour suivi depuis le téléphone.
+function ownerInbox(): string {
+  return process.env.PROSPECT_INBOX || process.env.SUPER_ADMIN_EMAIL || "multiservicesyamane@gmail.com";
+}
+
 export function dailyCap(): number {
   const n = Number(process.env.PROSPECT_EMAIL_DAILY_CAP);
   return Number.isFinite(n) && n > 0 ? n : 15;
@@ -163,7 +169,17 @@ export async function sendProspectEmail(sb: SupabaseClient, id: string) {
   if (sent >= cap) return { error: `plafond du jour atteint (${cap}/jour)`, capReached: true, sentToday: sent, cap };
 
   const { subject, html, text } = buildProspectEmail(p);
-  const r = await sendBrevoEmail({ to: p.email, toName: p.name || undefined, subject, html, text });
+  const inbox = ownerInbox();
+  const r = await sendBrevoEmail({
+    to: p.email,
+    toName: p.name || undefined,
+    subject,
+    html,
+    text,
+    replyToEmail: inbox,          // réponses du prospect → boîte du propriétaire
+    replyToName: "Wanteermako",
+    bcc: inbox,                   // copie de suivi → boîte du propriétaire
+  });
   if (!r.ok) return { error: r.error || "échec d'envoi" };
 
   await sb.from("prospects").update({

@@ -17,6 +17,9 @@ export interface BrevoEmail {
   text?: string;
   senderEmail?: string;
   senderName?: string;
+  replyToEmail?: string;   // où arrivent les réponses (défaut : l'expéditeur)
+  replyToName?: string;
+  bcc?: string;            // copie cachée (ex : boîte du propriétaire pour suivi)
 }
 
 export async function sendBrevoEmail(e: BrevoEmail): Promise<{ ok: boolean; id?: string; error?: string }> {
@@ -25,14 +28,19 @@ export async function sendBrevoEmail(e: BrevoEmail): Promise<{ ok: boolean; id?:
   if (!e.to || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e.to)) return { ok: false, error: "email destinataire invalide" };
 
   const sender = { email: e.senderEmail || DEFAULT_SENDER, name: e.senderName || DEFAULT_NAME };
+  const replyTo = e.replyToEmail
+    ? { email: e.replyToEmail, name: e.replyToName || sender.name }
+    : sender;
+  const validBcc = e.bcc && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e.bcc) ? e.bcc : "";
   try {
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: { "api-key": key, "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         sender,
-        replyTo: sender,
+        replyTo,
         to: [{ email: e.to, ...(e.toName ? { name: e.toName } : {}) }],
+        ...(validBcc ? { bcc: [{ email: validBcc }] } : {}),
         subject: e.subject,
         htmlContent: e.html,
         ...(e.text ? { textContent: e.text } : {}),
