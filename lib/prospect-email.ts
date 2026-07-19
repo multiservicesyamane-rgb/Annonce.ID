@@ -13,7 +13,7 @@ const WA_LINK = `https://wa.me/221776827851?text=${encodeURIComponent("Bonjour, 
 // Boîte du propriétaire : reçoit les RÉPONSES des prospects (reply-to) et une
 // COPIE (BCC) de chaque email envoyé, pour suivi depuis le téléphone.
 function ownerInbox(): string {
-  return process.env.PROSPECT_INBOX || process.env.SUPER_ADMIN_EMAIL || "multiservicesyamane@gmail.com";
+  return process.env.PROSPECT_INBOX || process.env.SUPER_ADMIN_EMAIL || "wanteermako@gmail.com";
 }
 
 export function dailyCap(): number {
