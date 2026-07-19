@@ -16,3 +16,8 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Scheduled Functions (crons) : publication sociale + récolte de prospects.
+# Les horaires sont déclarés dans chaque fichier de netlify/functions/.
+[functions]
+  directory = "netlify/functions"

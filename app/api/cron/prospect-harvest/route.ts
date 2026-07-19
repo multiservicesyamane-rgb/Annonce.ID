@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic";
 // Extraction d'emails sur sites externes : laisse le temps aux requêtes.
 export const maxDuration = 60;
 
-// Autorisation : Cron Vercel (Authorization: Bearer CRON_SECRET), comme
-// /api/campaign/auto-publish. Fermé si le secret manque en production.
+// Autorisation : Scheduled Function Netlify (Authorization: Bearer CRON_SECRET),
+// comme /api/campaign/auto-publish. Fermé si le secret manque en production.
 function authorized(req: Request): boolean {
   const cron = process.env.CRON_SECRET;
   if (!cron) return process.env.NODE_ENV !== "production";
@@ -32,7 +32,7 @@ async function run(req: Request) {
   return NextResponse.json({ ok: true, ...result });
 }
 
-// GET → Cron Vercel. POST → déclenchement manuel.
+// GET/POST → Scheduled Function Netlify (netlify/functions/prospect-harvest-cron.mjs) ou manuel.
 export async function GET(req: Request) {
   return run(req);
 }

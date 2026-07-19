@@ -4,10 +4,10 @@ import { configuredPlatforms } from "@/lib/social";
 import { publishPendingAnnonces, publishDueScheduled, retryFailedPosts } from "@/lib/campaign-engine";
 
 export const dynamic = "force-dynamic";
-// Laisse le temps à l'IA + aux réseaux de répondre (Vercel : jusqu'à 60s en Pro).
+// Laisse le temps à l'IA + aux réseaux de répondre.
 export const maxDuration = 60;
 
-// Autorisation : Cron Vercel (Authorization: Bearer CRON_SECRET) OU header manuel
+// Autorisation : Scheduled Function Netlify (Authorization: Bearer CRON_SECRET) OU header manuel
 // x-campaign-secret (= CAMPAIGN_WEBHOOK_SECRET). Si aucun secret configuré → ouvert (mode test).
 function authorized(req: Request): boolean {
   const cron = process.env.CRON_SECRET;
@@ -44,7 +44,7 @@ async function run(req: Request) {
   return NextResponse.json({ ok: true, platforms, scheduled, pending, retried });
 }
 
-// GET → utilisé par le Cron Vercel. POST → déclenchement manuel.
+// GET/POST → Scheduled Function Netlify (netlify/functions/auto-publish-cron.mjs) ou déclenchement manuel.
 export async function GET(req: Request) {
   return run(req);
 }
