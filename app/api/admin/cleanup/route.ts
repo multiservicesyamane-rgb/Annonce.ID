@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
+import { verifyAdminPassword } from "@/lib/serverSecurity";
 import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || "";
 const CONFIRM = "DELETE_MOUSSA_AND_PROMOTE_ADMIN";
 
 function admin() {
@@ -19,11 +19,13 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  if (!ADMIN_PASS) {
-    return NextResponse.json({ error: "ADMIN_PASSWORD manquant cote serveur." }, { status: 500 });
+  const adminAuth = verifyAdminPassword(req, body?.pass, { otp: body?.otp });
+  if (!adminAuth.ok) return adminAuth.response;
+  if (body?.confirm !== CONFIRM) {
+    return NextResponse.json({ error: "Confirmation invalide." }, { status: 401 });
   }
-  if (body?.pass !== ADMIN_PASS || body?.confirm !== CONFIRM) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (process.env.ALLOW_DESTRUCTIVE_ADMIN_CLEANUP !== "true") {
+    return NextResponse.json({ error: "Nettoyage destructif desactive cote serveur." }, { status: 403 });
   }
 
   const supabase = admin();

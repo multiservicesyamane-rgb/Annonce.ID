@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { verifyAdminPassword } from "@/lib/serverSecurity";
 import { createClient } from "@supabase/supabase-js";
 import { OWNER_EMAILS } from "@/lib/owners";
 import { slugify } from "@/lib/utils";
@@ -11,7 +12,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || "";
 const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 function admin() {
@@ -38,12 +38,8 @@ async function adaptiveInsert(sb: any, payload: any) {
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    if (!ADMIN_PASS) {
-      return NextResponse.json({ error: "ADMIN_PASSWORD manquant cote serveur." }, { status: 500 });
-    }
-    if (body?.password !== ADMIN_PASS) {
-      return NextResponse.json({ error: "Mot de passe admin incorrect." }, { status: 401 });
-    }
+    const adminAuth = verifyAdminPassword(req, body?.password || body?.pass, { otp: body?.otp });
+    if (!adminAuth.ok) return adminAuth.response;
 
     const sb = admin();
     if (!sb) return NextResponse.json({ error: "Service indisponible (clé service role manquante)." }, { status: 500 });

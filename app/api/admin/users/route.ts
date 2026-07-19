@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
+import { ADMIN_SESSION_COOKIE, ADMIN_SESSION_MAX_AGE_SECONDS, createAdminSessionToken, verifyAdminPassword } from "@/lib/serverSecurity";
 import { createClient } from "@supabase/supabase-js";
 import { sendInvoiceEmail } from "@/lib/email";
 import { configuredPlatforms } from "@/lib/social";
 import { publishPendingAnnonces, publishDueScheduled, publishOneListing } from "@/lib/campaign-engine";
+import { qualifyProspects } from "@/lib/prospects";
 
 export const dynamic = "force-dynamic";
+// Laisse le temps aux appels Gemini (qualification prospects, campagne).
+export const maxDuration = 60;
 
 // Back-office serveur : utilise la clé SERVICE ROLE (bypass RLS) pour gérer
 // réellement la plateforme. Protégé par le mot de passe Super Admin.
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || "";
-
 const B2B_TABLES = new Set(["prospects", "campaigns", "employees"]);
 
 function admin() {
@@ -35,22 +37,40 @@ async function adaptiveWrite(run: (p: any) => PromiseLike<{ error: any }>, paylo
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  if (!ADMIN_PASS) {
-    return NextResponse.json({ error: "ADMIN_PASSWORD manquant cote serveur." }, { status: 500 });
+  const action = body?.action;
+
+  if (action === "logout") {
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set(ADMIN_SESSION_COOKIE, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+    return response;
   }
-  if (body?.pass !== ADMIN_PASS) {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  }
+
+  const adminAuth = verifyAdminPassword(req, body?.pass, { otp: body?.otp });
+  if (!adminAuth.ok) return adminAuth.response;
   const sb = admin();
   if (!sb) {
     return NextResponse.json({ error: "Back-office non configuré : SUPABASE_SERVICE_ROLE_KEY manquante côté serveur." }, { status: 500 });
   }
 
-  const action = body?.action;
-
   try {
     if (action === "ping") {
-      return NextResponse.json({ ok: true });
+      const token = createAdminSessionToken();
+      if (!token) return NextResponse.json({ error: "Session admin non configuree." }, { status: 500 });
+      const response = NextResponse.json({ ok: true });
+      response.cookies.set(ADMIN_SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: ADMIN_SESSION_MAX_AGE_SECONDS,
+      });
+      return response;
     }
 
     if (action === "dashboard") {
@@ -108,6 +128,11 @@ export async function POST(req: Request) {
         employees: employees.data || [],
         campaigns: campaigns.data || [],
       });
+    }
+
+    if (action === "qualifyProspects") {
+      const result = await qualifyProspects(sb, Number(body?.limit) || 6);
+      return NextResponse.json(result);
     }
 
     if (action === "b2bInsert") {

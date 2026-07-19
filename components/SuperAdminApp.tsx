@@ -134,9 +134,16 @@ export default function SuperAdminApp() {
   const T = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2100); };
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem("sa_authed") === "1") {
-      setAuthed(true);
-    }
+    let alive = true;
+    fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ action: "ping" }),
+    })
+      .then((res) => { if (alive && res.ok) setAuthed(true); })
+      .catch(() => { if (alive) setAuthed(false); });
+    return () => { alive = false; };
   }, []);
 
   // Fonction de chargement complète
@@ -213,6 +220,20 @@ export default function SuperAdminApp() {
     setDataLoading(false);
   };
 
+  // Qualification IA (score + accroche WhatsApp) des prospects sans score.
+  // Traite un petit lot par clic ; recliquer tant qu'il en reste.
+  async function qualifyProspectsUi() {
+    T("🤖 Qualification IA en cours…");
+    try {
+      const d = await adminApi("qualifyProspects");
+      if (d.skipped) { T(`⚠ ${d.reason}`); return; }
+      T(`✅ ${d.qualified} prospect(s) qualifié(s)${d.remaining ? ` — ${d.remaining} restant(s), recliquez` : " — tout est à jour"}`);
+      loadAllData();
+    } catch (e: any) {
+      T(`⚠ ${e?.message || "Erreur qualification"}`);
+    }
+  }
+
   // Ajout réel d'un prospect dans la table
   async function addProspect(p: Record<string, any>) {
     return addRow("prospects", p, "Prospect ajoute");
@@ -258,7 +279,7 @@ export default function SuperAdminApp() {
   useEffect(() => { loadAllData(); }, [authed]);
 
   async function doLogin() {
-    if (!ADMIN_CREDS.emails.includes(email.toLowerCase().trim()) || !pass || (code !== "1234" && code !== "")) {
+    if (!ADMIN_CREDS.emails.includes(email.toLowerCase().trim()) || !pass) {
       T("Identifiants incorrects");
       return;
     }
@@ -266,23 +287,31 @@ export default function SuperAdminApp() {
       const res = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pass, action: "ping" }),
+        credentials: "same-origin",
+        body: JSON.stringify({ pass, otp: code.trim(), action: "ping" }),
       });
-      if (!res.ok) throw new Error("Non autorise");
-      sessionStorage.setItem("sa_authed", "1");
-      sessionStorage.setItem("sa_pass", pass);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) throw new Error(data?.error || "Non autorise");
+      setPass("");
+      setCode("");
       setAuthed(true);
       T("Bienvenue, Super Administrateur");
-      return;
-    } catch {
-      T("Identifiants incorrects");
-      return;
+    } catch (error: any) {
+      T(error?.message || "Identifiants incorrects");
     }
-    if (ADMIN_CREDS.emails.includes(email.toLowerCase().trim()) && pass === ADMIN_CREDS.pass && (code === "1234" || code === "")) {
-      sessionStorage.setItem("sa_authed", "1"); sessionStorage.setItem("sa_pass", pass); setAuthed(true); T("✅ Bienvenue, Super Administrateur");
-    } else T("❌ Identifiants incorrects");
   }
-  function doLogout() { sessionStorage.removeItem("sa_authed"); sessionStorage.removeItem("sa_pass"); setAuthed(false); }
+  async function doLogout() {
+    try {
+      await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ action: "logout" }),
+      });
+    } finally {
+      setAuthed(false);
+    }
+  }
 
   async function moderate(id: string, status: string) {
     try {
@@ -313,7 +342,7 @@ export default function SuperAdminApp() {
           <p className="mb-6 text-center text-[.82rem] text-[#8B949E]">Wanteermako · YamaneTech</p>
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email administrateur" />
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="Mot de passe" />
-          <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="text" maxLength={4} value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && doLogin()} placeholder="Code 2FA (1234)" />
+          <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="text" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === "Enter" && doLogin()} placeholder="Code 2FA" />
           <button onClick={doLogin} className="w-full rounded-[10px] bg-g1 py-2.5 text-[.9rem] font-extrabold text-white shadow-[0_4px_20px_rgba(99,102,241,.35)] hover:-translate-y-px transition">Accéder au Super Admin →</button>
         </div>
         {toast && <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-[9px] bg-[#E6EDF3] px-4 py-2.5 text-[.82rem] font-bold text-[#1A1F36] shadow-lg">{toast}</div>}
@@ -372,7 +401,7 @@ export default function SuperAdminApp() {
             <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6366F1] border-t-transparent" /></div>
           ) : (<>
             {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} />}
-            {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} />}
+            {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} qualify={qualifyProspectsUi} />}
             {page === "marketing" && <Marketing T={T} />}
             {page === "campagne_ia" && <CampagneIA T={T} allListings={allListings} />}
             {page === "campagnes" && <Campagnes campaigns={campaigns} addCampaign={addCampaign} T={T} />}
@@ -485,7 +514,7 @@ function Overview({ counts, allListings, profiles, purchases, T, loading }: { co
   );
 }
 
-function CRM({ T, prospects, addProspect }: { T: (m: string) => void; prospects: any[]; addProspect: (p: Record<string, any>) => Promise<boolean> }) {
+function CRM({ T, prospects, addProspect, qualify }: { T: (m: string) => void; prospects: any[]; addProspect: (p: Record<string, any>) => Promise<boolean>; qualify: () => Promise<void> }) {
   const [form, setForm] = useState(false);
   const [f, setF] = useState<Record<string, string>>({ status: "new", pack: "Basic" });
   const stages: [string, string, string][] = [["🆕", "Nouveaux", "new"], ["📤", "Contactés", "ct"], ["🤝", "Intéressés", "int"], ["📅", "Rendez-vous", "rdv"], ["✅", "Clients", "cli"], ["❌", "Refusés", "ref"]];
@@ -500,6 +529,7 @@ function CRM({ T, prospects, addProspect }: { T: (m: string) => void; prospects:
   return (
     <>
       <PageHead title="🎯 CRM — Prospects" sub={`${prospects.length} prospect(s) · ${countBy("cli")} client(s)`}>
+        <button className={btnP} onClick={() => qualify()}>🤖 Qualifier IA</button>
         <button className={btnP} onClick={() => setForm((v) => !v)}>{form ? "✕ Fermer" : "+ Nouveau prospect"}</button>
       </PageHead>
 
@@ -533,17 +563,24 @@ function CRM({ T, prospects, addProspect }: { T: (m: string) => void; prospects:
       <div className="mt-3"><Card title="Prospects">
         {prospects.length === 0 ? (
           <div className="py-8 text-center text-[.85rem] text-[#8B949E]">Aucun prospect pour l'instant. Cliquez sur « + Nouveau prospect » pour commencer.</div>
-        ) : prospects.map((p) => (
+        ) : [...prospects].sort((a, b) => (b.score ?? -1) - (a.score ?? -1)).map((p) => {
+          const waNumber = (p.whatsapp || p.phone || "").replace(/\D/g, "");
+          const waLink = waNumber ? `https://wa.me/${waNumber}${p.accroche_whatsapp ? `?text=${encodeURIComponent(p.accroche_whatsapp)}` : ""}` : "";
+          return (
           <div key={p.id} className="mb-2 flex flex-wrap items-center gap-3 rounded-[12px] border border-[#21262D] bg-[#0D1117] p-2.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-g1 text-[1rem] font-bold text-white">{(p.name || "?").slice(0, 1).toUpperCase()}</div>
             <div className="min-w-[140px] flex-1"><div className="text-[.84rem] font-bold text-[#E6EDF3]">{p.name}</div><div className="text-[.72rem] text-[#8B949E]">{p.sector || "—"} · {p.city || "—"}{p.pack ? <> · Pack: <b className="text-[#FFC93C]">{p.pack}</b></> : null}</div></div>
+            {typeof p.score === "number" && (
+              <span title="Score IA de pertinence (0-100)" className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${p.score >= 70 ? "bg-[#2EA043]/20 text-[#3FB950]" : p.score >= 40 ? "bg-[#D29922]/20 text-[#E3B341]" : "bg-white/10 text-gray-300"}`}>⭐ {p.score}</span>
+            )}
             <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${ST_PILL[p.status] || "bg-white/10 text-gray-300"}`}>{ST_LABELS[p.status] || p.status}</span>
             <div className="flex gap-1.5">
               {p.email && <a href={`mailto:${p.email}`} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem] hover:bg-[#6366F1]/20">📧</a>}
-              {p.phone && <a href={`https://wa.me/${(p.phone || "").replace(/\D/g, "")}`} target="_blank" className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem] hover:bg-[#25D366]/20">💬</a>}
+              {waLink && <a href={waLink} target="_blank" title={p.accroche_whatsapp ? "WhatsApp avec message IA pré-rempli" : "WhatsApp"} className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-white/5 text-[.78rem] hover:bg-[#25D366]/20">💬</a>}
             </div>
           </div>
-        ))}
+          );
+        })}
       </Card></div>
     </>
   );
@@ -2198,14 +2235,12 @@ function ImportProduits({ T, reload, profiles }: { T: (m: string) => void; reloa
     if (!isWa && !f.external_url.trim()) { T("⚠️ Lien externe obligatoire"); return; }
     setBusy(true);
     try {
-      const pass = (typeof window !== "undefined" && sessionStorage.getItem("sa_pass")) || "";
-      if (!pass) throw new Error("Session admin expiree.");
       const cat = CATEGORIES.find((c) => c.slug === f.category);
       const res = await fetch("/api/admin/import-product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
-          password: pass,
           owner_id: ownerId || undefined,
           product: { ...f, order_whatsapp: isWa ? f.order_whatsapp : "", category: cat?.name || "Autre", category_slug: f.category || "" },
         }),
@@ -2318,9 +2353,12 @@ function ImportProduits({ T, reload, profiles }: { T: (m: string) => void; reloa
 }
 
 async function adminApi(action: string, payload: Record<string, any> = {}) {
-  const pass = typeof window !== "undefined" ? sessionStorage.getItem("sa_pass") : "";
-  if (!pass) throw new Error("Session admin expiree.");
-  const res = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pass, action, ...payload }) });
+  const res = await fetch("/api/admin/users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ action, ...payload }),
+  });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error || "Erreur serveur");
   return data;

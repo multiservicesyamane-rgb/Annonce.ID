@@ -21,7 +21,9 @@ export async function geminiGenerate(prompt: string, system = SYSTEM_INSTRUCTION
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `${system}\n\n[Consigne]:\n${prompt}` }] }],
-          generationConfig: { temperature: 0.8, maxOutputTokens: 800 },
+          // 2048 et non 800 : sur gemini-2.5-*, les tokens de "thinking" comptent
+          // dans maxOutputTokens — à 800 la réponse était tronquée en plein texte.
+          generationConfig: { temperature: 0.8, maxOutputTokens: 2048 },
         }),
       },
     );
