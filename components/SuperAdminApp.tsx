@@ -11,14 +11,14 @@ const GRADS = ["bg-g1", "bg-g2", "bg-g3", "bg-g4", "bg-g5", "bg-g6", "bg-g7", "b
 
 const NAV: { id: string; icon: string; label: string; section?: string; badge?: number }[] = [
   { id: "overview", icon: "📊", label: "Vue d'ensemble", section: "Tableau de bord" },
-  { id: "crm", icon: "🎯", label: "CRM Prospects", badge: 23 },
+  { id: "crm", icon: "🎯", label: "CRM Prospects" },
   { id: "marketing", icon: "📢", label: "Centre Marketing" },
   { id: "campagne_ia", icon: "🚀", label: "Campagne IA 2025" },
   { id: "campagnes", icon: "📨", label: "Campagnes" },
   { id: "employes", icon: "👨‍💼", label: "Employés", section: "Commercial" },
   { id: "ambassadeurs", icon: "🤝", label: "Ambassadeurs" },
   { id: "offres", icon: "💎", label: "Offres commerciales" },
-  { id: "moderation", icon: "🛡️", label: "Modération", section: "Plateforme", badge: 8 },
+  { id: "moderation", icon: "🛡️", label: "Modération", section: "Plateforme" },
   { id: "import", icon: "🛒", label: "Import Produits" },
   { id: "users", icon: "👥", label: "Utilisateurs" },
   { id: "encaissement", icon: "💵", label: "Encaissement (espèces)" },
@@ -361,7 +361,7 @@ export default function SuperAdminApp() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0D1117] p-4">
         <div className="w-full max-w-[400px] rounded-[24px] border border-[#30363D] bg-[#161B22] p-5 sm:p-8 shadow-[0_0_60px_rgba(99,102,241,.15)]">
-          <img src="/logo-icon.png" alt="Wanteermako" className="mx-auto mb-4 h-16 w-16 rounded-2xl object-contain shadow-[0_0_30px_rgba(99,102,241,.4)]" />
+          <img src="/icon-512.png?v=3" alt="Wanteermako" className="mx-auto mb-4 h-16 w-16 rounded-2xl object-contain shadow-[0_0_30px_rgba(99,102,241,.4)]" />
           <h1 className="text-center text-[1.2rem] font-extrabold text-white">Super Admin</h1>
           <p className="mb-6 text-center text-[.82rem] text-[#8B949E]">Wanteermako · YamaneTech</p>
           <input className="mb-2.5 w-full rounded-[10px] border-[1.5px] border-[#30363D] bg-[#0D1117] px-3.5 py-2.5 text-[.88rem] text-white outline-none focus:border-[#6366F1]" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email administrateur" />
@@ -380,7 +380,7 @@ export default function SuperAdminApp() {
       {/* Sidebar */}
       <aside className={`fixed top-0 bottom-0 z-[200] w-[240px] flex flex-col border-r border-[#21262D] bg-[#161B22] transition-transform ${sbOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
         <div className="flex items-center gap-2.5 border-b border-[#21262D] px-4 py-4">
-          <img src="/logo-icon.png" alt="Wanteermako" className="h-9 w-9 rounded-[9px] object-contain shadow-[0_0_16px_rgba(99,102,241,.4)]" />
+          <img src="/icon-512.png?v=3" alt="Wanteermako" className="h-9 w-9 rounded-[9px] object-contain shadow-[0_0_16px_rgba(99,102,241,.4)]" />
           <div className="font-extrabold leading-tight text-[.88rem]">YamaneTech<span className="block text-[.64rem] font-semibold tracking-wide text-[#FFC93C]">SUPER ADMIN</span></div>
         </div>
         <div className="m-2.5 flex items-center gap-2.5 rounded-[11px] border border-[#6366F1]/20 bg-[#6366F1]/10 px-3 py-2.5">
@@ -394,7 +394,10 @@ export default function SuperAdminApp() {
               <button onClick={() => { setPage(n.id); setSbOpen(false); }} className={`mb-0.5 flex w-full items-center gap-2.5 rounded-[9px] px-3 py-2.5 text-left text-[.83rem] font-semibold transition ${page === n.id ? "border-l-2 border-[#6366F1] bg-[#6366F1]/15 text-[#A5B4FC]" : "text-[#8B949E] hover:bg-white/5 hover:text-white"}`}>
                 <span className="w-4 text-center text-[.85rem]">{n.icon}</span>
                 <span className="truncate">{n.label}</span>
-                {n.badge && <span className="ml-auto rounded-md bg-red-500 px-1.5 py-0.5 text-[.58rem] font-bold text-white">{n.badge}</span>}
+                {(() => {
+                  const b = n.id === "moderation" ? counts.pending : n.id === "crm" ? prospects.filter((p: any) => p.status === "new").length : 0;
+                  return b > 0 ? <span className="ml-auto rounded-md bg-red-500 px-1.5 py-0.5 text-[.58rem] font-bold text-white">{b}</span> : null;
+                })()}
               </button>
             </div>
           ))}
@@ -424,7 +427,7 @@ export default function SuperAdminApp() {
           {dataLoading && page !== "overview" ? (
             <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6366F1] border-t-transparent" /></div>
           ) : (<>
-            {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} />}
+            {page === "overview" && <Overview counts={counts} allListings={allListings} profiles={profiles} purchases={purchases} T={T} loading={dataLoading} reload={loadAllData} />}
             {page === "crm" && <CRM T={T} prospects={prospects} addProspect={addProspect} qualify={qualifyProspectsUi} sendEmail={sendProspectEmailUi} optOut={optOutProspectUi} />}
             {page === "marketing" && <Marketing T={T} />}
             {page === "campagne_ia" && <CampagneIA T={T} allListings={allListings} />}
@@ -464,7 +467,7 @@ function PageHead({ title, sub, children }: { title: string; sub?: string; child
 const btnP = "rounded-[9px] bg-g1 px-3.5 py-2 text-[.78rem] font-bold text-white";
 const btnG = "rounded-[9px] border border-[#30363D] bg-[#21262D] px-3.5 py-2 text-[.78rem] font-bold text-[#8B949E] hover:text-white";
 
-function Overview({ counts, allListings, profiles, purchases, T, loading }: { counts: any; allListings: any[]; profiles: any[]; purchases: any[]; T: (m: string) => void; loading: boolean }) {
+function Overview({ counts, allListings, profiles, purchases, T, loading, reload }: { counts: any; allListings: any[]; profiles: any[]; purchases: any[]; T: (m: string) => void; loading: boolean; reload: () => void }) {
   const totalRevenue = purchases.reduce((s: number, p: any) => s + (p.amount || 0), 0);
   const totalViews = allListings.reduce((s: number, a: any) => s + (a.views || 0), 0);
 
@@ -486,7 +489,7 @@ function Overview({ counts, allListings, profiles, purchases, T, loading }: { co
   return (
     <>
       <PageHead title="🚀 Super Admin — Wanteermako" sub="Tableau de bord temps réel · données Supabase">
-        <button className={btnG} onClick={() => T("Actualisation…")}>{loading ? "⏳" : "🔄"} Rafraîchir</button>
+        <button className={btnG} onClick={() => { reload(); T("Actualisation…"); }}>{loading ? "⏳" : "🔄"} Rafraîchir</button>
       </PageHead>
       <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
         <Kpi grad="bg-g1" icon="📦" label="Annonces totales" value={counts.total} trend="réel" />
@@ -852,10 +855,10 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
   }
 
   async function triggerRepublier(post: any) {
-    if (!confirm("Republier ce post ? Cela va déclencher le webhook Make.com.")) return;
+    if (!confirm("Republier ce post directement sur Facebook (API Meta) ?")) return;
     try {
       await adminApi("campaignPostRepublish", { postId: post.id });
-      T("🚀 Webhook de republication envoyé à Make.com !");
+      T("🚀 Publication Facebook relancée !");
     } catch (e: any) {
       T(`❌ ${e.message}`);
     }
@@ -1217,7 +1220,7 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
               {/* Configuration Make.com */}
               <div className="mt-3">
                 <Card title="⚙️ Connexion Make.com — Endpoints à copier">
-                  <p className="mb-2 text-[.78rem] text-[#8B949E]">Colle ces URLs dans tes scénarios Make.com. Ajoute le header <code className="text-[#A5B4FC]">x-campaign-secret</code> = ta valeur <code className="text-[#A5B4FC]">CAMPAIGN_WEBHOOK_SECRET</code> (sur Vercel).</p>
+                  <p className="mb-2 text-[.78rem] text-[#8B949E]">Optionnel (intégration externe) : colle ces URLs dans tes scénarios Make.com. Ajoute le header <code className="text-[#A5B4FC]">x-campaign-secret</code> = ta valeur <code className="text-[#A5B4FC]">CAMPAIGN_WEBHOOK_SECRET</code> (variables d'env Netlify).</p>
                   <div className="space-y-1.5">
                     {endpoints.map(([m, path, desc]) => (
                       <div key={path} className="flex flex-wrap items-center gap-2 rounded-[8px] bg-[#0D1117] p-2">
@@ -1229,7 +1232,7 @@ function CampagneIA({ T, allListings }: { T: (m: string) => void; allListings: a
                     ))}
                   </div>
                   <div className="mt-3 rounded-[8px] border border-[#6366F1]/30 bg-[#6366F1]/10 p-2.5 text-[.74rem] text-[#A5B4FC]">
-                    ℹ️ Variables à mettre sur Vercel : <b>CAMPAIGN_WEBHOOK_SECRET</b>, MAKE_WEBHOOK_URL, META_PAGE_ID, META_ACCESS_TOKEN, OPENAI_API_KEY, CANVA_ACCESS_TOKEN, BUFFER_ACCESS_TOKEN, MANYCHAT_API_KEY.
+                    ℹ️ Variables à mettre sur Netlify : <b>CAMPAIGN_WEBHOOK_SECRET</b>, MAKE_WEBHOOK_URL, META_PAGE_ID, META_ACCESS_TOKEN, OPENAI_API_KEY, CANVA_ACCESS_TOKEN, BUFFER_ACCESS_TOKEN, MANYCHAT_API_KEY.
                   </div>
                 </Card>
               </div>
@@ -2921,9 +2924,13 @@ function AdsAdmin({ allListings, T, reload }: { allListings: any[]; T: (m: strin
   });
 
   async function changeStatus(id: string, status: string) {
-    const sb = createClient();
-    const { error } = await sb.from("listings").update({ status }).eq("id", id);
-    if (error) { T("⚠ Erreur: droits insuffisants"); return; }
+    // Passe par l'API admin (service role) : la clé anon est bloquée par RLS.
+    try {
+      await adminApi("setListingStatus", { listingId: id, status });
+    } catch (e: any) {
+      T(`❌ ${e?.message || "Action refusée (droits admin requis)"}`);
+      return;
+    }
     T(status === "active" ? "✅ Annonce activée" : status === "rejected" ? "❌ Annonce rejetée" : `📦 Statut → ${status}`);
     reload();
   }

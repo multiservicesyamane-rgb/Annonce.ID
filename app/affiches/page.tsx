@@ -135,7 +135,7 @@ function BrandLight({ className = "h-7" }: { className?: string }) {
   return (
     <span className="flex items-center gap-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-icon.png" alt="" className={`${className} w-auto rounded-lg object-contain`} />
+      <img src="/icon-512.png?v=3" alt="" className={`${className} w-auto rounded-lg object-contain`} />
       <span className="font-display text-[.95rem] font-black bg-gradient-to-r from-[#6366F1] to-[#FFC93C] bg-clip-text text-transparent">Wanteermako</span>
     </span>
   );

@@ -81,9 +81,9 @@ export default function Header() {
       <div className="header-shell mx-auto max-w-[1320px] rounded-[16px] border border-white/5 bg-[#0A0E14]/85 px-3 py-1.5 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
         <div className="flex items-center justify-between gap-2 md:gap-4">
           <Link href={homeHref} aria-label={"Accueil " + BRAND.name} className="flex shrink-0 items-center">
-            <span className="inline-flex items-center rounded-[10px] bg-white px-1.5 py-1 shadow-md ring-1 ring-black/5 md:px-2">
-              <img src="/logo-full.jpg" alt={BRAND.name} className="h-[34px] w-auto object-contain md:h-[58px]" />
-            </span>
+            {/* Logo clair (mode clair) / logo néon (mode sombre) — l'en-tête s'adapte au thème */}
+            <img src="/logo-clair.png?v=3" alt={BRAND.name} className="block h-[32px] w-auto object-contain md:h-[48px] dark:hidden" />
+            <img src="/logo-dark.png?v=3" alt={BRAND.name} className="hidden h-[32px] w-auto object-contain md:h-[48px] dark:block" />
           </Link>
 
           <div className="hidden max-w-[550px] flex-1 md:flex">

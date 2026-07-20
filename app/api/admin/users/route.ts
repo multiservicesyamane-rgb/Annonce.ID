@@ -99,7 +99,7 @@ export async function POST(req: Request) {
         sb.from("messages").select("id", { count: "exact", head: true }),
         sb.from("reports").select("id", { count: "exact", head: true }),
         sb.from("listings").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(50),
-        sb.from("listings").select("id, title, slug, category, image, status, views, price, location, created_at, user_id").order("created_at", { ascending: false }).limit(100),
+        sb.from("listings").select("id, title, slug, category, image, status, views, price, location, created_at, user_id").order("created_at", { ascending: false }).limit(2000),
         sb.from("profiles").select("*").order("created_at", { ascending: false }).limit(200),
         sb.from("reports").select("*").order("created_at", { ascending: false }).limit(30),
         sb.from("prospects").select("*").order("created_at", { ascending: false }).limit(100),
