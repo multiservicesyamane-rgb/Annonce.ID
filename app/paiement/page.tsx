@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import PaymentFlow from "@/components/PaymentFlow";
 import ManualPayment from "@/components/ManualPayment";
 import { ONLINE_PAYMENT_ENABLED } from "@/lib/payment";
-import { fetchPrices, effectivePrice, type PriceMap } from "@/lib/prices";
+import { fetchPublicSettings, effectivePrice, isOnlinePayable, type PriceMap } from "@/lib/prices";
 import { BOOSTS, SUBSCRIPTION_PLANS } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
 
@@ -38,14 +38,15 @@ function PaiementContent() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("boost");
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>("vehicules");
   const [prices, setPrices] = useState<PriceMap>({});
+  const [onlineOffers, setOnlineOffers] = useState<string[]>([]);
   const [pricingReady, setPricingReady] = useState(false);
   const [checkoutInfo, setCheckoutInfo] = useState<CheckoutInfo | null>(null);
 
   useEffect(() => {
     let active = true;
-    fetchPrices()
-      .then((nextPrices) => {
-        if (active) setPrices(nextPrices);
+    fetchPublicSettings()
+      .then(({ prices: nextPrices, online }) => {
+        if (active) { setPrices(nextPrices); setOnlineOffers(online); }
       })
       .catch(() => undefined)
       .finally(() => {
@@ -124,11 +125,12 @@ function PaiementContent() {
             </p>
           </header>
 
-          {/* Paiement en ligne (Chariow) : uniquement les 3 boosts, seuls produits
-              mappés côté Chariow. Les abonnements passent par le paiement manuel
-              (dépôt Wave/OM + reçu WhatsApp + activation via Admin > Encaissement)
-              tant que leurs produits Chariow n'existent pas. */}
-          {ONLINE_PAYMENT_ENABLED && checkoutInfo.boostKey ? (
+          {/* Paiement en ligne (Chariow) pour toute offre reliée à un produit
+              Chariow (CHARIOW_PRODUCTS). Les offres non reliées passent par le
+              paiement manuel (dépôt Wave/OM + reçu WhatsApp + activation via
+              Admin > Encaissement). Ajouter un produit Chariow + son mapping
+              suffit à basculer une offre en ligne, sans toucher au code. */}
+          {ONLINE_PAYMENT_ENABLED && isOnlinePayable(onlineOffers, checkoutInfo) ? (
             <PaymentFlow
               itemName={checkoutInfo.itemName}
               price={checkoutInfo.price}

@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { sendInvoiceEmail } from "@/lib/email";
 import { publishOneListing } from "@/lib/campaign-engine";
 import { assertProviderAmount, ensureListingOwnedByUser, PaymentValidationError } from "@/lib/paymentSecurity";
+import { SUBSCRIPTION_PLANS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -201,13 +202,33 @@ export async function POST(req: Request) {
     if (listingId) {
       await activateListing(supabase, listingId, boostKey);
     } else if (subKey && userId) {
-      await supabase.from("profiles").update({
+      // Plan réel (quotas + durée) depuis la grille du site ; repli sur "general".
+      const plan =
+        SUBSCRIPTION_PLANS[category]?.find((p) => p.key === subKey) ||
+        SUBSCRIPTION_PLANS.general?.find((p) => p.key === subKey);
+      const months = plan?.duration?.match(/(\d+)\s*mois/i);
+      const days = months ? parseInt(months[1], 10) * 30 : 30;
+      const expires = new Date(Date.now() + days * 86400000).toISOString();
+
+      const subUpdate: Record<string, unknown> = {
         role: "pro",
         is_pro: true,
         subscription_plan: subKey,
         subscription_category: category,
-        free_ads_remaining: subKey === "standard" ? 5 : subKey === "premium" ? 15 : 50,
-      }).eq("id", userId);
+        plan_key: subKey,
+        subscription_expires_at: expires,
+        plan_expires_at: expires,
+        free_ads_remaining: plan?.limits?.activeAds ?? (subKey === "standard" ? 5 : subKey === "premium" ? 15 : 50),
+      };
+      // Tolérance de schéma : retire les colonnes absentes et réessaie.
+      for (let i = 0; i < 8; i++) {
+        const { error } = await supabase.from("profiles").update(subUpdate).eq("id", userId);
+        if (!error) break;
+        const m = (error.message || "").match(/'([^']+)' column/) || (error.message || "").match(/column "([^"]+)"/) || (error.message || "").match(/Could not find the '([^']+)'/);
+        if (m?.[1] && m[1] in subUpdate) { delete subUpdate[m[1]]; continue; }
+        console.error("Chariow subscription activation error:", error);
+        break;
+      }
     } else if (userId) {
       const { data: profile } = await supabase.from("profiles").select("credits").eq("id", userId).single();
       await supabase
