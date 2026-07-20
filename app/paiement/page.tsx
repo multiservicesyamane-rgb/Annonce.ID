@@ -124,7 +124,11 @@ function PaiementContent() {
             </p>
           </header>
 
-          {ONLINE_PAYMENT_ENABLED ? (
+          {/* Paiement en ligne (Chariow) : uniquement les 3 boosts, seuls produits
+              mappés côté Chariow. Les abonnements passent par le paiement manuel
+              (dépôt Wave/OM + reçu WhatsApp + activation via Admin > Encaissement)
+              tant que leurs produits Chariow n'existent pas. */}
+          {ONLINE_PAYMENT_ENABLED && checkoutInfo.boostKey ? (
             <PaymentFlow
               itemName={checkoutInfo.itemName}
               price={checkoutInfo.price}
