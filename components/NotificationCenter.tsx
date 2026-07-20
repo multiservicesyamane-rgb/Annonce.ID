@@ -15,6 +15,7 @@ type Notif = {
 // Icône + couleur par type (charte du site : vert/ambre/rouge/indigo).
 const STYLE: Record<string, { icon: string; ring: string; bg: string }> = {
   message: { icon: "💬", ring: "text-indigo-500", bg: "bg-indigo-500/10" },
+  new_listing: { icon: "🆕", ring: "text-green", bg: "bg-green/10" },
   listing_approved: { icon: "✅", ring: "text-green", bg: "bg-green/10" },
   listing_sold: { icon: "📦", ring: "text-brand-red", bg: "bg-red-500/10" },
   listing_expired: { icon: "⏰", ring: "text-amber-500", bg: "bg-amber-500/10" },

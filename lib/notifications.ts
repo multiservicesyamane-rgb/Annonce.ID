@@ -4,7 +4,7 @@ import { sendPushToUser } from "@/lib/push";
 // Centre de notifications : création d'une notification (fil in-app + push),
 // et balayage des annonces expirées. Nécessite database/MIGRATION_NOTIFICATIONS.sql.
 
-export type NotificationType = "message" | "listing_approved" | "listing_sold" | "listing_expired";
+export type NotificationType = "message" | "new_listing" | "listing_approved" | "listing_sold" | "listing_expired";
 
 export interface NewNotification {
   userId: string;

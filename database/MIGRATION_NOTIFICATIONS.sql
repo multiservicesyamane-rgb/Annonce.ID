@@ -77,4 +77,39 @@ create trigger trg_notify_listing_status
   after update of status on public.listings
   for each row execute procedure public.notify_listing_status();
 
-select 'Table notifications + trigger créés.' as resultat;
+-- ──────────────────────────────────────────────────────────
+-- Diffusion : à chaque annonce PUBLIÉE (status active), notifier TOUS les
+-- utilisateurs (sauf le vendeur). Idempotent : une annonce n'est diffusée
+-- qu'une seule fois (garde `not exists`), même si elle repasse active plus tard.
+-- Une seule requête INSERT ... SELECT → efficace.
+-- ──────────────────────────────────────────────────────────
+create or replace function public.broadcast_new_listing()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status = 'active'
+     and not exists (select 1 from public.notifications where listing_id = new.id and type = 'new_listing') then
+    insert into public.notifications (user_id, type, title, body, url, listing_id)
+    select p.id, 'new_listing', '🆕 Nouvelle annonce',
+           'Une nouvelle annonce vient d''être publiée : « ' || coalesce(new.title, 'sans titre') || ' ». Découvre-la !',
+           coalesce('/' || nullif(new.slug, ''), '/annonce/' || new.id),
+           new.id
+    from public.profiles p
+    where p.id is distinct from new.user_id;
+  end if;
+  return new;
+end;
+$$;
+
+-- Se déclenche à la création (INSERT) d'une annonce active ET quand une annonce
+-- passe au statut active (UPDATE OF status). Ne se déclenche PAS sur les autres
+-- updates (ex : incrément des vues) → pas de surcharge.
+drop trigger if exists trg_broadcast_new_listing on public.listings;
+create trigger trg_broadcast_new_listing
+  after insert or update of status on public.listings
+  for each row execute procedure public.broadcast_new_listing();
+
+select 'Table notifications + triggers (statut vendeur + diffusion) créés.' as resultat;
