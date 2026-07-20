@@ -137,7 +137,7 @@ export default async function HomePage() {
                 <Link
                   key={ad.id}
                   href={`/annonce/${ad.id}/${ad.slug}`}
-                  className="w-[200px] md:w-[290px] shrink-0 overflow-hidden rounded-[16px] bg-white dark:bg-[#1A1A1A]/80 backdrop-blur-md border border-gray-100 dark:border-white/10 shadow-sm dark:shadow-none transition-all duration-300 hover:-translate-y-2 hover:border-gold/50 dark:hover:border-gold/50 hover:shadow-[0_12px_30px_rgba(212,175,55,0.15)] snap-start group"
+                  className="w-[200px] md:w-[290px] shrink-0 overflow-hidden rounded-[16px] border-[1.5px] border-[#FFD24A] ring-1 ring-neon-gold/25 bg-gradient-to-br from-[#FFFEF8] via-[#FFF4D6] to-[#FFE7AE] dark:from-[#211a07] dark:via-[#2a2009] dark:to-[#161208] shadow-[0_10px_30px_rgba(245,166,35,0.18)] transition-all duration-300 hover:-translate-y-2 hover:border-[#FFE08A] hover:shadow-[0_18px_46px_rgba(245,166,35,0.38)] snap-start group"
                 >
                   <div className="relative w-full aspect-square overflow-hidden bg-gray-100 dark:bg-black/50">
                     <Image src={ad.image} alt={ad.title} width={400} height={400} sizes="(max-width: 768px) 200px, 290px" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-100" />
@@ -157,7 +157,7 @@ export default async function HomePage() {
                     <h3 className="line-clamp-2 text-[.7rem] md:text-[.85rem] font-bold text-gray-900 dark:text-white leading-tight mb-1 md:mb-2 group-hover:text-gold dark:group-hover:text-gold transition-colors">
                       {ad.title}
                     </h3>
-                    <div className="font-display text-[.8rem] md:text-[1.05rem] font-extrabold text-gold mb-0.5">
+                    <div className="font-display text-[.8rem] md:text-[1.05rem] font-black mb-0.5 text-transparent bg-clip-text bg-gradient-to-r from-[#D4891A] via-[#F5A623] to-[#FFC93C]">
                       {ad.price}
                     </div>
                     <div className="text-[.55rem] md:text-[.7rem] text-gray-500 dark:text-gray-400 font-medium">

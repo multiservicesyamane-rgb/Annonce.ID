@@ -43,9 +43,9 @@ export default function AdCard({ ad }: { ad: Listing }) {
     titleStyles = "text-gray-900 dark:text-white group-hover:text-[#D4891A] dark:group-hover:text-neon-gold";
     priceStyles = "text-transparent bg-clip-text bg-gradient-to-r from-[#D4891A] via-[#F5A623] to-[#FFC93C] font-black dark:drop-shadow-[0_0_8px_rgba(245,166,35,0.4)]";
   } else if (isFeatured) {
-    cardStyles = "border-[1.5px] border-purple-500/60 dark:border-purple-400/50 shadow-[0_8px_20px_rgba(168,85,247,0.1)] hover:shadow-[0_12px_30px_rgba(168,85,247,0.25)] bg-gradient-to-b from-white to-[#faf5ff] dark:from-[#111722] dark:to-[#17101a] hover:border-purple-500";
-    titleStyles = "text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400";
-    priceStyles = "text-purple-600 dark:text-purple-400 font-black dark:drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]";
+    cardStyles = "border-[1.5px] border-purple-300/70 dark:border-purple-400/35 shadow-[0_8px_20px_rgba(168,85,247,0.07)] hover:shadow-[0_12px_30px_rgba(168,85,247,0.18)] bg-gradient-to-b from-white to-[#fbf7ff] dark:from-[#111722] dark:to-[#191324] hover:border-purple-400";
+    titleStyles = "text-gray-900 dark:text-white group-hover:text-purple-500 dark:group-hover:text-purple-300";
+    priceStyles = "text-purple-500 dark:text-purple-300 font-black dark:drop-shadow-[0_0_8px_rgba(168,85,247,0.3)]";
   }
 
   return (
@@ -96,7 +96,7 @@ export default function AdCard({ ad }: { ad: Listing }) {
             </span>
           )}
           {isFeatured && !isPremium && (
-            <span className="text-[0.44rem] md:text-[0.5rem] font-extrabold uppercase tracking-wide text-purple-500 dark:text-purple-400">
+            <span className="text-[0.44rem] md:text-[0.5rem] font-extrabold uppercase tracking-wide text-purple-400 dark:text-purple-300">
               À la Une
             </span>
           )}
