@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { PaymentValidationError, resolveCheckoutIntent } from "@/lib/paymentSecurity";
 
 export const dynamic = "force-dynamic";
 
@@ -28,18 +29,15 @@ export async function POST(req: Request) {
     if (authError || !user) return NextResponse.json({ error: "Non autorisé. Veuillez vous connecter." }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const { amount, itemName, listingId, boostKey, subKey } = body;
-    if (typeof amount !== "number" || amount <= 0 || amount > 10000000) {
-      return NextResponse.json({ error: "Montant invalide." }, { status: 400 });
-    }
+    const intent = await resolveCheckoutIntent(user.id, body);
 
     // XOF : le montant doit être un multiple de 5
-    const xof = Math.max(5, Math.round(amount / 5) * 5);
+    const xof = Math.max(5, Math.round(intent.amount / 5) * 5);
     const baseUrl = getBaseUrl(req);
     // CinetPay exige des URLs HTTPS publiques ; en dev on bascule sur le domaine prod
     const PROD = (process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com").replace(/\/+$/, "");
     const publicBase = baseUrl.startsWith("https://") ? baseUrl : PROD;
-    const transactionId = `WMK-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const transactionId = intent.reference;
 
     const payload = {
       apikey: API_KEY,
@@ -47,12 +45,12 @@ export async function POST(req: Request) {
       transaction_id: transactionId,
       amount: xof,
       currency: "XOF",
-      description: (itemName || "Paiement Wanteermako").slice(0, 100),
+      description: intent.itemName.slice(0, 100),
       notify_url: `${publicBase}/api/cinetpay/notify`,
-      return_url: `${publicBase}/paiement/succes` + (listingId ? `?listing_id=${listingId}` : ""),
+      return_url: `${publicBase}/paiement/succes` + (intent.listingId ? `?listing_id=${intent.listingId}` : ""),
       channels: "ALL",
       lang: "fr",
-      metadata: JSON.stringify({ userId: user.id, listingId: listingId || "", boostKey: boostKey || "", subKey: subKey || "" }),
+      metadata: JSON.stringify(intent.metadata),
     };
 
     const res = await fetch("https://api-checkout.cinetpay.com/v2/payment", {
@@ -66,9 +64,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ redirect_url: data.data.payment_url });
     }
     console.error("CinetPay error:", data);
-    return NextResponse.json({ error: `CinetPay a refusé: ${data?.message || data?.description || "erreur"}` }, { status: 400 });
+    return NextResponse.json({ error: "CinetPay a refuse la demande de paiement." }, { status: 400 });
   } catch (error: any) {
     console.error("CinetPay API Error:", error);
-    return NextResponse.json({ error: `Erreur interne: ${error?.message}` }, { status: 500 });
+    if (error instanceof PaymentValidationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Erreur interne du paiement." }, { status: 500 });
   }
 }

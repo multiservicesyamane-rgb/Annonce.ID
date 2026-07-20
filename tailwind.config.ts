@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Tokens de design Annonce.ID (voir section 4 du brief).
+ * Tokens de design Wanteermako (voir section 4 du brief).
  * Hybride : fond sombre néon (hero/admin) + fond clair (listings).
  */
 const config: Config = {

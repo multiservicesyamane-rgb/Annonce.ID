@@ -70,6 +70,38 @@ export default function HowItWorksPage() {
         </div>
       </div>
 
+      {/* Badges de Confiance */}
+      <div className="mt-20">
+        <div className="text-center mb-10">
+          <h2 className="font-display text-[2rem] font-bold text-gray-900 dark:text-white">Nos Badges de Confiance</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Pour vous garantir une expérience sécurisée, Wanteermako utilise plusieurs badges.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-dark-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border">
+            <div className="inline-flex items-center gap-1.5 rounded-md bg-green/10 px-2 py-1 text-[0.8rem] font-bold text-green mb-4">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+              Vérifié
+            </div>
+            <h3 className="font-bold text-gray-900 dark:text-white mb-2">Identité confirmée</h3>
+            <p className="text-[.9rem] text-gray-600 dark:text-gray-400">Ce vendeur a prouvé son identité à nos équipes (vérification de la pièce d'identité et du numéro de téléphone). Les transactions avec ce vendeur sont considérées comme très sûres.</p>
+          </div>
+          <div className="bg-white dark:bg-dark-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border">
+            <div className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-neon-gold to-[#D4891A] px-2 py-1 text-[0.8rem] font-bold text-dark-900 uppercase tracking-wider mb-4 shadow-sm">
+              👑 PRO
+            </div>
+            <h3 className="font-bold text-gray-900 dark:text-white mb-2">Vendeur Professionnel</h3>
+            <p className="text-[.9rem] text-gray-600 dark:text-gray-400">Il s'agit d'une entreprise ou d'une boutique officielle ayant souscrit à un abonnement professionnel. Vous bénéficiez souvent d'un meilleur service client et d'une adresse physique fixe.</p>
+          </div>
+          <div className="bg-white dark:bg-dark-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-dark-border">
+            <div className="inline-flex items-center gap-1.5 rounded-md bg-blue-500/10 px-2 py-1 text-[0.8rem] font-bold text-blue-600 mb-4">
+              🛡️ Garanti
+            </div>
+            <h3 className="font-bold text-gray-900 dark:text-white mb-2">Produit sous garantie</h3>
+            <p className="text-[.9rem] text-gray-600 dark:text-gray-400">L'article vendu bénéficie d'une garantie explicite (ex: satisfait ou remboursé, ou garantie constructeur). Vérifiez les détails exacts de la garantie dans la description de l'annonce.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Pro Section */}
       <div className="mt-20 bg-[#111722] rounded-[2rem] p-8 md:p-12 border border-white/10 relative overflow-hidden flex flex-col md:flex-row items-center gap-8">
         <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-gold/20 blur-[80px]"></div>

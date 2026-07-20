@@ -12,7 +12,7 @@ export default function RecommendedForYou() {
 
   useEffect(() => {
     try {
-      const hist = JSON.parse(localStorage.getItem("annonceid_history") || "[]");
+      const hist = JSON.parse(localStorage.getItem("wanteermako_history") || "[]");
       if (!Array.isArray(hist) || hist.length === 0) return;
       const cat = hist[0]?.category;
       if (!cat) return;

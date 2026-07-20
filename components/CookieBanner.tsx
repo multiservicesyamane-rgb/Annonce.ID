@@ -8,7 +8,7 @@ export default function CookieBanner() {
 
   useEffect(() => {
     // Check if the user has already consented
-    const consent = localStorage.getItem("annonceid_cookie_consent");
+    const consent = localStorage.getItem("wanteermako_cookie_consent");
     if (!consent) {
       // Delay showing the banner slightly for better UX
       const timer = setTimeout(() => setShow(true), 1000);
@@ -17,12 +17,12 @@ export default function CookieBanner() {
   }, []);
 
   const acceptCookies = () => {
-    localStorage.setItem("annonceid_cookie_consent", "accepted");
+    localStorage.setItem("wanteermako_cookie_consent", "accepted");
     setShow(false);
   };
 
   const declineCookies = () => {
-    localStorage.setItem("annonceid_cookie_consent", "declined");
+    localStorage.setItem("wanteermako_cookie_consent", "declined");
     setShow(false);
   };
 

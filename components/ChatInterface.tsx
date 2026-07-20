@@ -269,24 +269,31 @@ export default function ChatInterface() {
     setMessages(prev => [...prev, newMessage]);
 
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const { data, error } = await supabase.storage.from("chat_media").upload(fileName, file);
+      const session = await supabase.auth.getSession();
+      const userId = session.data.session?.user.id;
+      if (!userId) return;
+
+      const fallbackExt = isImage ? "jpg" : "bin";
+      const safeExt = (file.name.split(".").pop() || fallbackExt).toLowerCase().replace(/[^a-z0-9]/g, "") || fallbackExt;
+      const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
+      const { error } = await supabase.storage.from("chat_media").upload(fileName, file, {
+        upsert: false,
+        contentType: file.type || "application/octet-stream",
+      });
       
       if (!error) {
-        const { data: publicUrlData } = supabase.storage.from("chat_media").getPublicUrl(fileName);
-        
-        const session = await supabase.auth.getSession();
-        if (session.data.session) {
-          await supabase.from("messages").insert([{
-            sender_id: session.data.session.user.id,
-            receiver_id: activeContact.id,
-            listing_id: activeContact.listingId,
-            type: t,
-            media_url: publicUrlData.publicUrl,
-            content: file.name
-          }]);
-        }
+        const { data: signedUrlData } = await supabase.storage
+          .from("chat_media")
+          .createSignedUrl(fileName, 60 * 60 * 24 * 7);
+
+        await supabase.from("messages").insert([{
+          sender_id: userId,
+          receiver_id: activeContact.id,
+          listing_id: activeContact.listingId,
+          type: t,
+          media_url: signedUrlData?.signedUrl || localUrl,
+          content: file.name
+        }]);
       }
     } catch(e) {
       console.error(e);

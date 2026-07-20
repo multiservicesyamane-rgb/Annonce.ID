@@ -12,26 +12,28 @@ import { ToastProvider } from "./Toast";
 /**
  * Décide quels éléments de chrome afficher selon la route.
  * - /yamanetech : aucun chrome (admin plein écran custom)
- * - auth/paiement/dashboard : header + bottom nav, pas de footer
+ * - auth/dashboard : parcours autonomes, sans chrome public
+ * - paiement/publication : header public, sans footer ni navigation basse
  * - home/listing/annonce/recherche/categorie : chrome complet + bande catégories
  */
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/";
 
   const isAdmin = pathname.startsWith("/yamanetech");
-  
-  const isAuthOrDashboard = 
-    pathname.startsWith("/connexion") ||
-    pathname.startsWith("/inscription") ||
+  const isAuth = pathname.startsWith("/connexion") || pathname.startsWith("/inscription");
+  const isDashboard = pathname.startsWith("/dashboard");
+  const isFocusedFlow =
+    isAuth ||
+    isDashboard ||
     pathname.startsWith("/paiement") ||
-    pathname.startsWith("/publier") ||
-    pathname.startsWith("/dashboard");
+    pathname.startsWith("/publier");
 
-  const noFooter = isAdmin || isAuthOrDashboard;
+  const noFooter = isAdmin || isFocusedFlow;
+  const hideHeader = isAdmin || isAuth || isDashboard;
   const isAnnoncePage = pathname.startsWith("/annonce/");
   
   // On cache le BottomNav et WhatsApp sur les pages où ça gène
-  const hideChrome = isAdmin || isAuthOrDashboard;
+  const hideChrome = isAdmin || isFocusedFlow;
   const hideBottomNav = hideChrome || isAnnoncePage;
 
   const showCatStrip =
@@ -59,7 +61,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
       <PWARegister />
-      <Header />
+      {!hideHeader && <Header />}
       {showCatStrip && <CategoryStrip />}
       <main className={`min-h-[40vh] ${hideBottomNav ? 'pb-8' : 'pb-20 lg:pb-0'}`}>{children}</main>
       {!noFooter && <Footer />}

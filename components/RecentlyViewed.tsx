@@ -12,7 +12,7 @@ export default function RecentlyViewed() {
 
   useEffect(() => {
     try {
-      const hist = JSON.parse(localStorage.getItem("annonceid_history") || "[]");
+      const hist = JSON.parse(localStorage.getItem("wanteermako_history") || "[]");
       setViewed(Array.isArray(hist) ? hist.filter((h: any) => h && h.id && h.title).slice(0, 5) : []);
     } catch {
       setViewed([]);

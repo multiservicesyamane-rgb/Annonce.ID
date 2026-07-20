@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { PaymentValidationError, resolveCheckoutIntent } from "@/lib/paymentSecurity";
 
 export const dynamic = "force-dynamic";
 
@@ -29,25 +30,22 @@ export async function POST(req: Request) {
     if (authError || !user) return NextResponse.json({ error: "Non autorisé. Veuillez vous connecter." }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const { amount, itemName, listingId, boostKey, subKey } = body;
-    if (typeof amount !== "number" || amount <= 0 || amount > 10000000) {
-      return NextResponse.json({ error: "Montant invalide." }, { status: 400 });
-    }
+    const intent = await resolveCheckoutIntent(user.id, body);
 
     // XOF : montant entier, multiple de 5
-    const xof = Math.max(5, Math.round(amount / 5) * 5);
+    const xof = Math.max(5, Math.round(intent.amount / 5) * 5);
     const baseUrl = getBaseUrl(req);
     // Wave exige des URLs HTTPS publiques ; en dev on bascule sur le domaine prod
     const PROD = (process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com").replace(/\/+$/, "");
     const publicBase = baseUrl.startsWith("https://") ? baseUrl : PROD;
 
     // On encode les infos de la commande dans client_reference (relu au webhook)
-    const clientRef = [user.id, listingId || "", boostKey || "", subKey || ""].join("|").slice(0, 250);
+    const clientRef = [user.id, intent.listingId, intent.boostKey, intent.subKey, intent.category, String(xof), intent.type].join("|").slice(0, 250);
 
     const payload = {
       amount: String(xof),
       currency: "XOF",
-      success_url: `${publicBase}/paiement/succes` + (listingId ? `?listing_id=${listingId}` : ""),
+      success_url: `${publicBase}/paiement/succes` + (intent.listingId ? `?listing_id=${intent.listingId}` : ""),
       error_url: `${publicBase}/paiement/echec`,
       client_reference: clientRef,
     };
@@ -67,10 +65,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ redirect_url: data.wave_launch_url });
     }
     console.error("Wave error:", data);
-    const msg = data?.message || data?.error_message || data?.code || "erreur";
-    return NextResponse.json({ error: `Wave a refusé: ${msg}` }, { status: 400 });
+    return NextResponse.json({ error: "Wave a refuse la demande de paiement." }, { status: 400 });
   } catch (error: any) {
     console.error("Wave API Error:", error);
-    return NextResponse.json({ error: `Erreur interne: ${error?.message}` }, { status: 500 });
+    if (error instanceof PaymentValidationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Erreur interne du paiement." }, { status: 500 });
   }
 }

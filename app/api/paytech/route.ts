@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { PaymentValidationError, resolveCheckoutIntent } from "@/lib/paymentSecurity";
 
 // Cette route doit toujours s'exécuter dynamiquement (jamais au build)
 export const dynamic = "force-dynamic";
@@ -73,24 +74,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Non autorisé. Veuillez vous connecter." }, { status: 401 });
     }
 
-    // 3. SECURITE: 4.1 Validation stricte (remplacement de Zod)
     const body = await req.json().catch(() => ({}));
-    const { amount, itemName, refCommand, listingId, boostKey, subKey, category } = body;
-
-    if (typeof amount !== 'number' || amount <= 0 || amount > 10000000) {
-      return NextResponse.json({ error: "Montant invalide." }, { status: 400 });
-    }
-    if (itemName && (typeof itemName !== 'string' || itemName.length > 255)) {
-      return NextResponse.json({ error: "Nom d'article invalide." }, { status: 400 });
-    }
-    if (refCommand && (typeof refCommand !== 'string' || refCommand.length > 255)) {
-      return NextResponse.json({ error: "Référence invalide." }, { status: 400 });
-    }
-    if (listingId && typeof listingId !== 'string') {
-      return NextResponse.json({ error: "ID d'annonce invalide." }, { status: 400 });
-    }
-
-    const secureUserId = user.id;
+    const intent = await resolveCheckoutIntent(user.id, body);
 
     // URL publique fiable (Vercel inclus) pour les callbacks PayTech
     const baseUrl = getBaseUrl(req);
@@ -106,24 +91,18 @@ export async function POST(req: Request) {
     const paytechEnv = process.env.PAYTECH_ENV || (isDev ? "test" : "prod");
 
     const paymentData = {
-      item_name: itemName || "Boost Annonce",
-      item_price: amount,
+      item_name: intent.itemName,
+      item_price: intent.amount,
       currency: "XOF",
-      ref_command: refCommand || `CMD-${Date.now()}`,
+      ref_command: intent.reference,
       command_name: "Paiement Wanteermako",
-      custom_field: JSON.stringify({
-        userId: secureUserId,
-        listingId: listingId || "",
-        boostKey: boostKey || "",
-        subKey: subKey || "",
-        category: category || ""
-      }),
+      custom_field: JSON.stringify(intent.metadata),
 
       env: paytechEnv,
       // PayTech exige des URLs HTTPS publiques pour l'IPN.
       ipn_url: `${ipnBaseUrl}/api/paytech/ipn`,
       // En dev, on redirige vers localhost pour une meilleure UX de test
-      success_url: `${baseUrl}/paiement/succes` + (listingId ? `?listing_id=${listingId}` : ""),
+      success_url: `${baseUrl}/paiement/succes` + (intent.listingId ? `?listing_id=${intent.listingId}` : ""),
       cancel_url: `${baseUrl}/paiement/erreur`,
     };
 
@@ -144,11 +123,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ redirect_url: data.redirect_url });
     } else {
       console.error("PayTech Error:", data);
-      const reason = data?.errors ? (Array.isArray(data.errors) ? data.errors.join(", ") : data.errors) : JSON.stringify(data);
-      return NextResponse.json({ error: `PayTech a refusé la demande: ${reason}` }, { status: 400 });
+      return NextResponse.json({ error: "PayTech a refuse la demande de paiement." }, { status: 400 });
     }
   } catch (error: any) {
     console.error("Payment API Error:", error);
-    return NextResponse.json({ error: `Erreur interne: ${error.message}` }, { status: 500 });
+    if (error instanceof PaymentValidationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Erreur interne du paiement." }, { status: 500 });
   }
 }

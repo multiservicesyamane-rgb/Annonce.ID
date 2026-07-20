@@ -107,7 +107,7 @@
 ---
 
 ## ✅ Récapitulatif des corrections (vs ancien document)
-- Marque unifiée : **Wanteermako** (l'appellation « Annonce.ID » a été retirée).
-- Domaine corrigé partout : **www.wanteermako.com** (au lieu de annonce.id).
+- Marque unifiée : **Wanteermako** (l'appellation « Wanteermako » a été retirée).
+- Domaine corrigé partout : **www.wanteermako.com** (au lieu de wanteermako.com).
 - Authentification : **Google / email** (au lieu de « SMS OTP »).
 - Nouvel argument de vente ajouté : **diffusion automatique Telegram + Facebook** et **assistant IA**.

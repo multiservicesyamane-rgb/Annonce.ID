@@ -6,6 +6,7 @@ const OTP_MAX_REQUESTS = 5;
 
 const DEMO_CODE = "1234";
 const isSmsConfigured = Boolean(process.env.AFRICASTALKING_API_KEY);
+const allowDemoOtp = process.env.NODE_ENV !== "production" && process.env.OTP_DEMO_ENABLED === "true";
 
 export async function POST(req: Request) {
   // 1. Rate Limiting
@@ -35,8 +36,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Format du code invalide" }, { status: 400 });
   }
 
-  // 3. Vérification du code
+  // 3. Verification du code
   if (code !== undefined) {
+    if (!isSmsConfigured && !allowDemoOtp) {
+      return NextResponse.json({ ok: false, error: "Service OTP non configure" }, { status: 503 });
+    }
     const valid = isSmsConfigured
       ? false // TODO: comparer avec otp_codes en base
       : code === DEMO_CODE;
@@ -45,6 +49,9 @@ export async function POST(req: Request) {
 
   // 4. Envoi d'un code
   if (!isSmsConfigured) {
+    if (!allowDemoOtp) {
+      return NextResponse.json({ ok: false, error: "Service OTP non configure" }, { status: 503 });
+    }
     return NextResponse.json({ ok: true, demo: true, demoCode: DEMO_CODE });
   }
 

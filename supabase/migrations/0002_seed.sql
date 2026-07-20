@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
---  Annonce.ID — Données de référence (27 pays + 12 catégories)
+--  Wanteermako — Données de référence (27 pays + 12 catégories)
 -- ════════════════════════════════════════════════════════════════
 
 insert into countries (code, name, dial_code, capital, currency, flag) values

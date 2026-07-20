@@ -231,11 +231,11 @@ Ces pages doivent être créées et optimisées manuellement — elles ne sont p
 <title>AnnoncesWest — Petites Annonces en Afrique de l'Ouest | 27 Pays</title>
 
 <!-- Meta description — 150-160 caractères -->
-<meta name="description" content="Achetez, vendez et trouvez des annonces en Afrique de l'Ouest. Immobilier, véhicules, électronique — 250 000+ annonces en Sénégal, Côte d'Ivoire, Mali et 24 autres pays.">
+<meta name="description" content="Achetez, vendez et trouvez des annonces en Afrique de l'Ouest. Immobilier, véhicules, électronique — des milliers d'annonces en Sénégal, Côte d'Ivoire, Mali et 24 autres pays.">
 
 <!-- Open Graph (WhatsApp, Facebook, LinkedIn) -->
 <meta property="og:title" content="AnnoncesWest — Le marché de l'Afrique de l'Ouest">
-<meta property="og:description" content="250 000+ annonces en Afrique francophone. Achetez, vendez, contactez directement.">
+<meta property="og:description" content="Des milliers d'annonces en Afrique francophone. Achetez, vendez, contactez directement.">
 <meta property="og:image" content="https://annonceswest.com/og-home.jpg"> <!-- 1200×630px -->
 <meta property="og:url" content="https://annonceswest.com/">
 <meta property="og:type" content="website">
@@ -306,7 +306,7 @@ Le wizard doit guider l'utilisateur à créer des titres optimisés :
 
 ```html
 <title>Petites Annonces au Sénégal — Acheter & Vendre | AnnoncesWest</title>
-<meta name="description" content="Toutes les annonces au Sénégal : immobilier, voitures, électronique, emploi. 50 000+ annonces à Dakar, Thiès, Saint-Louis, Ziguinchor.">
+<meta name="description" content="Toutes les annonces au Sénégal : immobilier, voitures, électronique, emploi. Des milliers d'annonces à Dakar, Thiès, Saint-Louis, Ziguinchor.">
 ```
 
 ---

@@ -5,6 +5,8 @@ export const BRAND = {
   name: "Wanteermako",
   tagline: "Le marché de l'Afrique de l'Ouest dans votre poche",
   legal: "Wanteermako by YamaneTech",
+  domain: "wanteermako.com",
+  supportEmail: "support@wanteermako.com",
 } as const;
 
 export type Country = {

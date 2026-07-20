@@ -22,7 +22,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
 
   useEffect(() => {
     try {
-      const r = JSON.parse(localStorage.getItem("annonceid_recent") || "[]");
+      const r = JSON.parse(localStorage.getItem("wanteermako_recent") || "[]");
       if (Array.isArray(r)) setRecent(r.slice(0, 5));
     } catch {
       /* ignore */
@@ -89,7 +89,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
       const next = [query, ...recent.filter((r) => r !== query)].slice(0, 5);
       setRecent(next);
       try {
-        localStorage.setItem("annonceid_recent", JSON.stringify(next));
+        localStorage.setItem("wanteermako_recent", JSON.stringify(next));
       } catch {
         /* ignore */
       }
@@ -113,7 +113,7 @@ export default function SearchBar({ variant = "header" }: { variant?: "header" |
     e.stopPropagation();
     const next = recent.filter((r) => r !== term);
     setRecent(next);
-    localStorage.setItem("annonceid_recent", JSON.stringify(next));
+    localStorage.setItem("wanteermako_recent", JSON.stringify(next));
   }
 
   const big = variant === "hero";

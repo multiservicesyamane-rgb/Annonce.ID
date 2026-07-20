@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
-const STORAGE_KEY = "annonceid_favs";
+const STORAGE_KEY = "wanteermako_favs";
 
 function readFavs(): string[] {
   if (typeof window === "undefined") return [];

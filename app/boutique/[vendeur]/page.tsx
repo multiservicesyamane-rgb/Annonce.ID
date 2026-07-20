@@ -3,13 +3,14 @@ import Link from "next/link";
 import AdCard from "@/components/AdCard";
 import { createClient } from "@supabase/supabase-js";
 import { formatNumber } from "@/lib/utils";
+import { BRAND } from "@/lib/constants";
 
 type Props = { params: { vendeur: string } };
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: Props) {
-  return { title: `Boutique — Annonce.ID` };
+  return { title: `Boutique — ${BRAND.name}` };
 }
 
 export default async function BoutiquePage({ params }: Props) {

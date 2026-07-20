@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Annonce.ID - Schéma complet (Profils, Annonces + Tables secondaires)
+-- Wanteermako - Schéma complet (Profils, Annonces + Tables secondaires)
 -- Exécutez ce script dans l'éditeur SQL de votre dashboard Supabase.
 -- ==============================================================================
 

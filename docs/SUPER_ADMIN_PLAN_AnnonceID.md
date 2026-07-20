@@ -1,5 +1,5 @@
 # 👑 PLAN D'IMPLÉMENTATION — TABLEAU DE BORD SUPER ADMIN
-## Annonce.ID — Konnecta Groupe | Niveau : ENTREPRISE
+## Wanteermako — Konnecta Groupe | Niveau : ENTREPRISE
 
 > **Version** : 2.0 Pro  
 > **Propriétaire** : Konnecta Groupe  
@@ -10,7 +10,7 @@
 
 ## 📐 VISION GLOBALE
 
-Le panneau Super Admin est le **centre nerveux souverain** d'Annonce.ID. Il offre à Konnecta Groupe une visibilité totale, un contrôle opérationnel complet et des outils de monétisation avancés — accessible uniquement par l'administrateur certifié.
+Le panneau Super Admin est le **centre nerveux souverain** de Wanteermako. Il offre à Konnecta Groupe une visibilité totale, un contrôle opérationnel complet et des outils de monétisation avancés — accessible uniquement par l'administrateur certifié.
 
 ```
 annonce-id/
@@ -518,6 +518,6 @@ Puis exécution dans l'ordre : Sprint 1 → 2 → 3 → 4 → 5
 
 ---
 
-*Plan rédigé pour Konnecta Groupe — Annonce.ID Platform*  
+*Plan rédigé pour Konnecta Groupe — Wanteermako Platform*  
 *Architecture : Next.js 14 App Router + Supabase + Tailwind CSS*  
 *Niveau : Production Enterprise*

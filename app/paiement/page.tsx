@@ -1,221 +1,135 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import PaymentFlow from "@/components/PaymentFlow";
 import ManualPayment from "@/components/ManualPayment";
-import { ONLINE_PAYMENT_ENABLED, PAYMENT_REQUIRED } from "@/lib/payment";
+import { ONLINE_PAYMENT_ENABLED } from "@/lib/payment";
 import { fetchPrices, effectivePrice, type PriceMap } from "@/lib/prices";
 import { BOOSTS, SUBSCRIPTION_PLANS } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 
-import { Suspense } from "react";
+type ActiveTab = "boost" | "subscription";
+type CategoryKey = "vehicules" | "immobilier" | "electronique" | "general";
 
-async function adaptiveUpdate(table: string, id: string, payload: Record<string, any>) {
-  const supabase = createClient();
-  const p = { ...payload };
-  for (let i = 0; i < 8; i++) {
-    const res = await supabase.from(table).update(p).eq("id", id);
-    if (!res.error) return res;
-    const message = res.error.message || "";
-    const match = message.match(/Could not find the '([^']+)' column/) || message.match(/column "?([a-z_]+)"? of relation/i);
-    if (match?.[1] && match[1] in p) {
-      delete p[match[1]];
-      continue;
-    }
-    return res;
-  }
-  return { error: { message: "Schéma incompatible" } } as any;
-}
-
-function Row({ k, v, muted }: { k: string; v: string; muted?: boolean }) {
-  return (
-    <div className="flex justify-between py-1.5 text-[.9rem]">
-      <span className={muted ? "text-gray-500" : "font-medium text-gray-700 dark:text-gray-300"}>{k}</span>
-      <span className="text-right font-bold text-gray-900 dark:text-white">{v}</span>
-    </div>
-  );
-}
-
-function FreeActivationFlow({
-  itemName,
-  price,
-  duration,
-  listingId,
-  boostKey,
-  subKey,
-  category,
-}: {
+type CheckoutInfo = {
   itemName: string;
   price: number;
   duration: string;
-  listingId?: string;
   boostKey?: string;
   subKey?: string;
   category?: string;
-}) {
-  const [processing, setProcessing] = useState(false);
+};
 
-  async function activate() {
-    setProcessing(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      window.location.href = "/connexion";
-      return;
-    }
-
-    if (listingId && boostKey) {
-      const premium = boostKey === "premium" || boostKey === "vip";
-      const featured = boostKey === "alaune" || boostKey === "vip";
-      const { error } = await adaptiveUpdate("listings", listingId, {
-        status: "active",
-        premium,
-        featured,
-        is_premium: premium,
-        is_featured: featured,
-        boost_key: boostKey,
-      });
-      if (error) {
-        alert(error.message || "Impossible d'activer l'annonce.");
-        setProcessing(false);
-        return;
-      }
-      window.location.href = "/dashboard?panel=ads";
-      return;
-    }
-
-    if (subKey) {
-      const { error } = await adaptiveUpdate("profiles", user.id, {
-        role: "pro",
-        is_pro: true,
-        subscription_plan: subKey,
-        subscription_category: category || "general",
-        free_ads_remaining: subKey === "standard" ? 5 : subKey === "premium" ? 15 : 50,
-      });
-      if (error) {
-        alert(error.message || "Impossible d'activer le plan.");
-        setProcessing(false);
-        return;
-      }
-      window.location.href = "/dashboard?panel=showroom";
-      return;
-    }
-
-    alert("Choisissez une annonce à booster depuis votre dashboard.");
-    setProcessing(false);
-  }
-
-  return (
-    <div className="mx-auto max-w-[500px] px-4">
-      <div className="rounded-[16px] border-2 border-amber-100 bg-white p-8 text-center shadow-xl dark:border-amber-500/20 dark:bg-[#111722]/80">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-[2rem]">⚡</div>
-        <h2 className="mb-2 font-display text-[1.4rem] font-extrabold text-gray-800 dark:text-white">Paiement non obligatoire</h2>
-        <p className="mb-6 text-[.9rem] text-gray-500 dark:text-gray-400">
-          Le paiement en ligne est configuré, mais il n'est pas encore en vigueur. Vous pouvez activer cette option sans payer.
-        </p>
-        <div className="mb-6 rounded-[12px] border border-gray-100 bg-gray-50 p-5 text-left dark:border-white/5 dark:bg-white/5">
-          <Row k="Option" v={itemName} />
-          <Row k="Durée" v={duration} muted />
-          <div className="mt-4 flex justify-between border-t border-gray-200 pt-4 text-[1.05rem] font-extrabold dark:border-white/10 dark:text-white">
-            <span>Prix normal</span>
-            <span className="text-green">{formatNumber(price)} FCFA</span>
-          </div>
-        </div>
-        <button
-          onClick={activate}
-          disabled={processing}
-          className="btn btn-green btn-block h-[54px] text-[1rem] font-bold disabled:opacity-70"
-        >
-          {processing ? "Activation..." : "Activer sans payer"}
-        </button>
-      </div>
-    </div>
-  );
-}
+const CATEGORIES: { key: CategoryKey; label: string }[] = [
+  { key: "vehicules", label: "Véhicules" },
+  { key: "immobilier", label: "Immobilier" },
+  { key: "electronique", label: "Électronique" },
+  { key: "general", label: "Général" },
+];
 
 function PaiementContent() {
   const searchParams = useSearchParams();
-  const initialAnnonceId = searchParams.get("annonce_id") || searchParams.get("listing_id") || "";
+  const listingId = searchParams.get("annonce_id") || searchParams.get("listing_id") || "";
   const initialBoost = searchParams.get("boost") || "";
+  const autoOpened = useRef(false);
 
-  // Selection states
-  const [activeTab, setActiveTab] = useState<"boost" | "subscription">("boost");
-  const [selectedCategory, setSelectedCategory] = useState<"vehicules" | "immobilier" | "electronique" | "general">("vehicules");
-  // Prix réels configurés dans l'admin (override des prix par défaut)
+  const [activeTab, setActiveTab] = useState<ActiveTab>("boost");
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey>("vehicules");
   const [prices, setPrices] = useState<PriceMap>({});
-  useEffect(() => { fetchPrices().then(setPrices); }, []);
-  const boostPrice = (b: any) => effectivePrice(prices, `boost:${b.key}`, b.price);
-  const subPrice = (cat: string, s: any) => effectivePrice(prices, `sub:${cat}:${s.key}`, s.price);
-  const [checkoutInfo, setCheckoutInfo] = useState<{
-    itemName: string;
-    price: number;
-    duration: string;
-    boostKey?: string;
-    subKey?: string;
-    category?: string;
-  } | null>(
-    initialBoost
-      ? (() => {
-          const b = BOOSTS.find((b) => b.key === initialBoost);
-          return b
-            ? {
-                itemName: `Boost ${b.name}`,
-                price: b.price,
-                duration: b.duration,
-                boostKey: b.key,
-              }
-            : null;
-        })()
-      : null
-  );
+  const [pricingReady, setPricingReady] = useState(false);
+  const [checkoutInfo, setCheckoutInfo] = useState<CheckoutInfo | null>(null);
 
-  const handleSelectBoost = (b: any) => {
-    setCheckoutInfo({
-      itemName: `Boost ${b.name}`,
-      price: boostPrice(b),
-      duration: b.duration,
-      boostKey: b.key,
-    });
-  };
+  useEffect(() => {
+    let active = true;
+    fetchPrices()
+      .then((nextPrices) => {
+        if (active) setPrices(nextPrices);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setPricingReady(true);
+      });
 
-  const handleSelectSubscription = (s: any, categoryKey: string) => {
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pricingReady || autoOpened.current || !initialBoost || !listingId) return;
+    const boost = BOOSTS.find((item) => item.key === initialBoost && item.price > 0);
+    autoOpened.current = true;
+    if (!boost) return;
+
+    setActiveTab("boost");
     setCheckoutInfo({
-      itemName: `Abonnement Boutique : ${s.name}`,
-      price: subPrice(categoryKey, s),
-      duration: s.duration,
-      subKey: s.key,
-      category: categoryKey,
+      itemName: "Boost " + boost.name,
+      price: effectivePrice(prices, "boost:" + boost.key, boost.price),
+      duration: boost.duration,
+      boostKey: boost.key,
     });
-  };
+  }, [initialBoost, listingId, prices, pricingReady]);
+
+  function boostPrice(boost: (typeof BOOSTS)[number]) {
+    return effectivePrice(prices, "boost:" + boost.key, boost.price);
+  }
+
+  function subscriptionPrice(category: CategoryKey, plan: (typeof SUBSCRIPTION_PLANS)[CategoryKey][number]) {
+    return effectivePrice(prices, "sub:" + category + ":" + plan.key, plan.price);
+  }
+
+  function selectBoost(boost: (typeof BOOSTS)[number]) {
+    if (!listingId || !pricingReady) return;
+    setCheckoutInfo({
+      itemName: "Boost " + boost.name,
+      price: boostPrice(boost),
+      duration: boost.duration,
+      boostKey: boost.key,
+    });
+  }
+
+  function selectSubscription(plan: (typeof SUBSCRIPTION_PLANS)[CategoryKey][number]) {
+    if (!pricingReady) return;
+    setCheckoutInfo({
+      itemName: "Abonnement Boutique : " + plan.name,
+      price: subscriptionPrice(selectedCategory, plan),
+      duration: plan.duration,
+      subKey: plan.key,
+      category: selectedCategory,
+    });
+  }
 
   if (checkoutInfo) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-black py-10 transition-colors">
-        <div className="wrap">
+      <div className="min-h-[calc(100dvh-90px)] bg-gray-50 py-6 transition-colors dark:bg-[#0D1117] sm:py-9">
+        <div className="wrap max-w-[760px]">
           <button
+            type="button"
             onClick={() => setCheckoutInfo(null)}
-            className="mb-6 flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white"
+            className="mb-5 inline-flex min-h-[44px] items-center gap-2 rounded-[8px] px-2 text-sm font-semibold text-gray-600 transition hover:bg-white hover:text-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green/20 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
           >
-            ← Retour aux formules
+            <span aria-hidden="true">←</span>
+            Modifier la formule
           </button>
-          {!PAYMENT_REQUIRED ? (
-            <FreeActivationFlow
-              itemName={checkoutInfo.itemName}
-              price={checkoutInfo.price}
-              duration={checkoutInfo.duration}
-              listingId={initialAnnonceId}
-              boostKey={checkoutInfo.boostKey}
-              subKey={checkoutInfo.subKey}
-              category={checkoutInfo.category}
-            />
-          ) : ONLINE_PAYMENT_ENABLED ? (
+
+          <header className="mb-5">
+            <p className="text-[.72rem] font-bold uppercase tracking-[.12em] text-green">Étape 2 sur 2</p>
+            <h1 className="mt-1 font-display text-[1.45rem] font-extrabold text-gray-900 dark:text-white sm:text-[1.7rem]">
+              Vérifier et payer
+            </h1>
+            <p className="mt-1 text-[.84rem] text-gray-500 dark:text-gray-400">
+              Contrôlez la formule et le montant avant d’ouvrir le paiement sécurisé.
+            </p>
+          </header>
+
+          {ONLINE_PAYMENT_ENABLED ? (
             <PaymentFlow
               itemName={checkoutInfo.itemName}
               price={checkoutInfo.price}
               duration={checkoutInfo.duration}
-              listingId={initialAnnonceId}
+              listingId={listingId}
               boostKey={checkoutInfo.boostKey}
               subKey={checkoutInfo.subKey}
               category={checkoutInfo.category}
@@ -225,7 +139,7 @@ function PaiementContent() {
               itemName={checkoutInfo.itemName}
               price={checkoutInfo.price}
               duration={checkoutInfo.duration}
-              listingId={initialAnnonceId}
+              listingId={listingId}
               boostKey={checkoutInfo.boostKey}
               subKey={checkoutInfo.subKey}
               category={checkoutInfo.category}
@@ -236,158 +150,210 @@ function PaiementContent() {
     );
   }
 
+  const boostUnavailable = activeTab === "boost" && !listingId;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50/50 via-gray-50 to-white dark:from-[#0c0f1d] dark:via-black dark:to-black py-6 sm:py-10 transition-colors">
-      <div className="wrap max-w-5xl px-3 sm:px-4">
-        {/* Header sublime */}
-        <div className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#6366F1] via-[#7C5CFC] to-[#A855F7] px-5 py-7 sm:py-9 text-center text-white mb-6 sm:mb-8 shadow-[0_12px_40px_-12px_rgba(124,92,252,0.5)]">
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 15% 20%, #fff 1.5px, transparent 1.5px)", backgroundSize: "26px 26px" }} />
-          <div className="relative">
-            <h1 className="font-display text-[1.5rem] sm:text-[2.1rem] font-extrabold leading-tight">Boostez votre visibilité 🚀</h1>
-            <p className="mx-auto mt-2 max-w-lg text-[.85rem] sm:text-[.95rem] text-white/85">
-              Propulsez vos annonces ou créez votre boutique professionnelle certifiée.
-            </p>
-          </div>
+    <div className="min-h-[calc(100dvh-90px)] bg-gray-50 py-6 transition-colors dark:bg-[#0D1117] sm:py-9">
+      <div className="wrap max-w-5xl">
+        <header className="mb-6 border-b border-gray-200 pb-6 dark:border-white/10">
+          <Link href="/dashboard" className="inline-flex min-h-[40px] items-center gap-2 text-[.8rem] font-semibold text-gray-500 hover:text-green dark:text-gray-400">
+            <span aria-hidden="true">←</span>
+            Retour à mon espace
+          </Link>
+          <p className="mt-3 text-[.72rem] font-bold uppercase tracking-[.12em] text-green">Visibilité vendeur</p>
+          <h1 className="mt-1 font-display text-[1.55rem] font-extrabold text-gray-900 dark:text-white sm:text-[1.9rem]">
+            Boosts et boutiques professionnelles
+          </h1>
+          <p className="mt-2 max-w-2xl text-[.86rem] leading-relaxed text-gray-500 dark:text-gray-400">
+            Mettez une annonce précise en avant ou choisissez une formule mensuelle pour votre boutique.
+          </p>
+        </header>
+
+        <div
+          role="tablist"
+          aria-label="Type de formule"
+          className="mb-6 grid w-full max-w-md grid-cols-2 rounded-[8px] border border-gray-200 bg-white p-1 dark:border-white/10 dark:bg-dark-900"
+        >
+          <button
+            id="payment-tab-boost"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "boost"}
+            aria-controls="payment-panel-boost"
+            onClick={() => setActiveTab("boost")}
+            className={
+              "min-h-[44px] rounded-[6px] px-3 text-[.78rem] font-bold transition " +
+              (activeTab === "boost"
+                ? "bg-green text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white")
+            }
+          >
+            Booster une annonce
+          </button>
+          <button
+            id="payment-tab-subscription"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "subscription"}
+            aria-controls="payment-panel-subscription"
+            onClick={() => setActiveTab("subscription")}
+            className={
+              "min-h-[44px] rounded-[6px] px-3 text-[.78rem] font-bold transition " +
+              (activeTab === "subscription"
+                ? "bg-green text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white")
+            }
+          >
+            Boutique Pro
+          </button>
         </div>
 
-        {/* Tab Selector */}
-        <div className="flex justify-center mb-6 sm:mb-8 px-1">
-          <div className="inline-flex w-full max-w-md bg-white dark:bg-dark-900 border border-gray-200 dark:border-white/10 rounded-full p-1 shadow-sm">
-            <button
-              onClick={() => setActiveTab("boost")}
-              className={`flex-1 px-3 sm:px-5 py-2.5 rounded-full text-[.7rem] sm:text-xs font-bold transition-all uppercase tracking-wide ${
-                activeTab === "boost"
-                  ? "bg-gradient-to-r from-[#6366F1] to-[#A855F7] text-white shadow-md"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-            >
-              🚀 Booster
-            </button>
-            <button
-              onClick={() => setActiveTab("subscription")}
-              className={`flex-1 px-3 sm:px-5 py-2.5 rounded-full text-[.7rem] sm:text-xs font-bold transition-all uppercase tracking-wide ${
-                activeTab === "subscription"
-                  ? "bg-gradient-to-r from-[#6366F1] to-[#A855F7] text-white shadow-md"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-            >
-              💼 Boutique Pro
-            </button>
-          </div>
-        </div>
-
-        {/* BOOSTS LIST */}
-        {activeTab === "boost" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {BOOSTS.filter((b) => b.price > 0).map((b) => (
-              <div
-                key={b.key}
-                onClick={() => handleSelectBoost(b)}
-                className={`relative flex flex-col justify-between rounded-[16px] border bg-white dark:bg-dark-900 p-4 sm:p-5 shadow-sm transition cursor-pointer group hover:-translate-y-1 hover:shadow-[0_12px_30px_-12px_rgba(124,92,252,0.4)] duration-300 ${b.popular ? "border-indigo-400 ring-1 ring-indigo-300/50" : "border-gray-200 dark:border-white/10 hover:border-indigo-400"}`}
-              >
-                {b.popular && (
-                  <span className="absolute -top-3 right-4 rounded-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-3 py-0.5 text-[.6rem] font-extrabold text-white uppercase tracking-wider shadow-sm">
-                    POPULAIRE
-                  </span>
-                )}
-                <div>
-                  <h3 className="text-[1.05rem] font-bold text-gray-800 dark:text-white group-hover:text-indigo-600 transition-colors">{b.name}</h3>
-                  <div className="mt-2 font-display text-[1.35rem] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#6366F1] to-[#A855F7]">
-                    {formatNumber(boostPrice(b))} FCFA
-                  </div>
-                  <p className="mb-4 mt-1 text-[.75rem] text-gray-400">Durée : {b.duration}</p>
-                  <div className="space-y-1.5 text-[.8rem] text-gray-600 dark:text-gray-300 pt-3 border-t border-gray-100 dark:border-white/5">
-                    {b.features.map((f) => (
-                      <div key={f} className="flex items-center gap-1.5">
-                        <span className="text-indigo-500">✓</span> {f}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <button className="mt-5 w-full rounded-xl bg-indigo-50 dark:bg-white/5 py-2.5 text-center text-[.82rem] font-bold text-indigo-600 dark:text-indigo-300 transition group-hover:bg-gradient-to-r group-hover:from-[#6366F1] group-hover:to-[#A855F7] group-hover:text-white">
-                  Sélectionner →
-                </button>
-              </div>
-            ))}
+        {boostUnavailable && (
+          <div role="note" className="mb-6 flex flex-col gap-3 border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-amber-900 dark:bg-amber-500/10 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[.85rem] font-bold">
+                Choisissez d’abord l’annonce à booster.
+              </p>
+              <p className="mt-0.5 text-[.76rem] leading-relaxed opacity-80">
+                Un boost est toujours rattaché à une annonce qui vous appartient.
+              </p>
+            </div>
+            <Link href="/dashboard?panel=ads" className="btn min-h-[42px] shrink-0 border-amber-300 bg-white text-amber-900 hover:bg-amber-100">
+              Voir mes annonces
+            </Link>
           </div>
         )}
 
-        {/* SUBSCRIPTION LIST */}
-        {activeTab === "subscription" && (
-          <div>
-            {/* Category selection pills */}
-            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 mb-6 sm:flex-wrap sm:justify-center">
-              {(
-                [
-                  { key: "vehicules", label: "Véhicules 🚗" },
-                  { key: "immobilier", label: "Immobilier 🏠" },
-                  { key: "electronique", label: "Électronique 📱" },
-                  { key: "general", label: "Général 👗" },
-                ] as const
-              ).map((cat) => (
+        {activeTab === "boost" && (
+          <section
+            id="payment-panel-boost"
+            role="tabpanel"
+            aria-labelledby="payment-tab-boost"
+            aria-busy={!pricingReady}
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {BOOSTS.filter((boost) => boost.price > 0).map((boost) => (
+              <article
+                key={boost.key}
+                className={
+                  "relative flex flex-col justify-between rounded-[8px] border bg-white p-4 shadow-sm dark:bg-dark-900 sm:p-5 " +
+                  (boost.popular ? "border-green ring-1 ring-green/20" : "border-gray-200 dark:border-white/10")
+                }
+              >
+                {boost.popular && (
+                  <span className="absolute right-4 top-0 -translate-y-1/2 rounded-full bg-green px-2.5 py-0.5 text-[.62rem] font-bold text-white">
+                    Recommandé
+                  </span>
+                )}
+                <div>
+                  <h2 className="text-[1rem] font-bold text-gray-900 dark:text-white">{boost.name}</h2>
+                  <p className="mt-2 font-display text-[1.4rem] font-extrabold text-green">
+                    {pricingReady ? formatNumber(boostPrice(boost)) + " FCFA" : "Chargement..."}
+                  </p>
+                  <p className="mt-0.5 text-[.74rem] text-gray-500 dark:text-gray-400">Pendant {boost.duration}</p>
+                  <ul className="mt-4 grid gap-2 border-t border-gray-100 pt-4 text-[.78rem] text-gray-600 dark:border-white/10 dark:text-gray-300">
+                    {boost.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 leading-relaxed">
+                        <span className="mt-0.5 font-bold text-emerald-600" aria-hidden="true">✓</span>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
                 <button
-                  key={cat.key}
-                  onClick={() => setSelectedCategory(cat.key)}
-                  className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${
-                    selectedCategory === cat.key
-                      ? "bg-indigo-500/10 border-indigo-400 text-indigo-600 dark:text-indigo-300"
-                      : "bg-white dark:bg-dark-900 border-gray-200 dark:border-white/10 text-gray-500 hover:text-gray-900 dark:hover:text-white"
-                  }`}
+                  type="button"
+                  onClick={() => selectBoost(boost)}
+                  disabled={!pricingReady || !listingId}
+                  className="btn btn-green mt-5 min-h-[44px] w-full disabled:cursor-not-allowed disabled:opacity-45"
                 >
-                  {cat.label}
+                  Choisir cette formule
+                </button>
+              </article>
+            ))}
+          </section>
+        )}
+
+        {activeTab === "subscription" && (
+          <section
+            id="payment-panel-subscription"
+            role="tabpanel"
+            aria-labelledby="payment-tab-subscription"
+            aria-busy={!pricingReady}
+          >
+            <div className="no-scrollbar mb-6 flex gap-2 overflow-x-auto pb-1" aria-label="Catégorie de boutique">
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category.key}
+                  type="button"
+                  onClick={() => setSelectedCategory(category.key)}
+                  aria-pressed={selectedCategory === category.key}
+                  className={
+                    "min-h-[42px] shrink-0 rounded-[8px] border px-4 text-xs font-bold transition " +
+                    (selectedCategory === category.key
+                      ? "border-green bg-green/10 text-green"
+                      : "border-gray-200 bg-white text-gray-500 hover:text-gray-900 dark:border-white/10 dark:bg-dark-900 dark:text-gray-400 dark:hover:text-white")
+                  }
+                >
+                  {category.label}
                 </button>
               ))}
             </div>
 
-            {/* Plans grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {SUBSCRIPTION_PLANS[selectedCategory]
-                .filter((s) => s.price > 0)
-                .map((s, i) => (
-                  <div
-                    key={s.key}
-                    onClick={() => handleSelectSubscription(s, selectedCategory)}
-                    className={`relative flex flex-col justify-between rounded-[16px] border bg-white dark:bg-dark-900 p-4 sm:p-5 shadow-sm transition cursor-pointer group hover:-translate-y-1 hover:shadow-[0_12px_30px_-12px_rgba(124,92,252,0.4)] duration-300 ${i === 1 ? "border-indigo-400 ring-1 ring-indigo-300/50" : "border-gray-200 dark:border-white/10 hover:border-indigo-400"}`}
+                .filter((plan) => plan.price > 0)
+                .map((plan, index) => (
+                  <article
+                    key={plan.key}
+                    className={
+                      "relative flex flex-col justify-between rounded-[8px] border bg-white p-4 shadow-sm dark:bg-dark-900 sm:p-5 " +
+                      (index === 1 ? "border-green ring-1 ring-green/20" : "border-gray-200 dark:border-white/10")
+                    }
                   >
-                    {i === 1 && (
-                      <span className="absolute -top-3 right-4 rounded-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] px-3 py-0.5 text-[.6rem] font-extrabold text-white uppercase tracking-wider shadow-sm">POPULAIRE</span>
+                    {index === 1 && (
+                      <span className="absolute right-4 top-0 -translate-y-1/2 rounded-full bg-green px-2.5 py-0.5 text-[.62rem] font-bold text-white">
+                        Recommandé
+                      </span>
                     )}
                     <div>
-                      <h3 className="text-[1.1rem] font-bold text-gray-800 dark:text-white group-hover:text-indigo-600 transition-colors">
-                        {s.name}
-                      </h3>
-                      <div className="mt-2 font-display text-[1.5rem] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#6366F1] to-[#A855F7]">
-                        {formatNumber(subPrice(selectedCategory, s))} FCFA <span className="text-xs font-normal text-gray-400">/ mois</span>
-                      </div>
-                      <p className="mb-4 mt-1 text-[.75rem] text-gray-400">Facturation mensuelle</p>
+                      <h2 className="text-[1rem] font-bold text-gray-900 dark:text-white">{plan.name}</h2>
+                      <p className="mt-2 font-display text-[1.35rem] font-extrabold text-green">
+                        {pricingReady ? formatNumber(subscriptionPrice(selectedCategory, plan)) + " FCFA" : "Chargement..."}
+                      </p>
+                      <p className="mt-0.5 text-[.72rem] text-gray-500 dark:text-gray-400">par mois</p>
 
-                      <div className="bg-indigo-50/60 dark:bg-white/5 rounded-xl p-3 mb-4 space-y-1.5 text-[.75rem]">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Annonces actives :</span>
-                          <span className="font-bold text-gray-800 dark:text-white">{s.limits.activeAds}</span>
+                      <dl className="mt-4 grid gap-2 border-t border-gray-100 pt-4 text-[.76rem] dark:border-white/10">
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-gray-500 dark:text-gray-400">Annonces actives</dt>
+                          <dd className="font-bold text-gray-900 dark:text-white">{plan.limits.activeAds}</dd>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Photos max / annonce :</span>
-                          <span className="font-bold text-gray-800 dark:text-white">{s.limits.photos}</span>
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-gray-500 dark:text-gray-400">Photos par annonce</dt>
+                          <dd className="font-bold text-gray-900 dark:text-white">{plan.limits.photos}</dd>
                         </div>
-                      </div>
+                      </dl>
 
-                      <div className="space-y-1.5 text-[.8rem] text-gray-600 dark:text-gray-300 pt-3 border-t border-gray-100 dark:border-white/5">
-                        {s.features.map((f) => (
-                          <div key={f} className="flex items-start gap-1.5 leading-snug">
-                            <span className="text-indigo-500 shrink-0 mt-0.5">✓</span>
-                            <span>{f}</span>
-                          </div>
+                      <ul className="mt-4 grid gap-2 text-[.78rem] text-gray-600 dark:text-gray-300">
+                        {plan.features.map((feature) => (
+                          <li key={feature} className="flex items-start gap-2 leading-relaxed">
+                            <span className="mt-0.5 font-bold text-emerald-600" aria-hidden="true">✓</span>
+                            <span>{feature}</span>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     </div>
-                    <button className="mt-5 w-full rounded-xl bg-indigo-50 dark:bg-white/5 py-2.5 text-center text-[.82rem] font-bold text-indigo-600 dark:text-indigo-300 transition group-hover:bg-gradient-to-r group-hover:from-[#6366F1] group-hover:to-[#A855F7] group-hover:text-white">
-                      S'abonner →
+                    <button
+                      type="button"
+                      onClick={() => selectSubscription(plan)}
+                      disabled={!pricingReady}
+                      className="btn btn-green mt-5 min-h-[44px] w-full disabled:cursor-wait disabled:opacity-45"
+                    >
+                      Choisir cet abonnement
                     </button>
-                  </div>
+                  </article>
                 ))}
             </div>
-          </div>
+          </section>
         )}
       </div>
     </div>
@@ -396,7 +362,13 @@ function PaiementContent() {
 
 export default function PaiementPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-black py-12 flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold">Chargement des formules...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center bg-gray-50 px-4 text-sm font-semibold text-gray-500 dark:bg-[#0D1117] dark:text-gray-400">
+          Chargement des formules...
+        </div>
+      }
+    >
       <PaiementContent />
     </Suspense>
   );

@@ -12,7 +12,7 @@ export default function DarkToggle() {
 
   useEffect(() => {
     // Thème CLAIR par défaut ; on respecte le choix enregistré du visiteur.
-    const stored = localStorage.getItem("annonceid_dark");
+    const stored = localStorage.getItem("wanteermako_dark");
     const dark = stored === "true";
     setIsDark(dark);
     document.documentElement.classList.toggle("dark", dark);
@@ -23,7 +23,7 @@ export default function DarkToggle() {
     const next = !isDark;
     setIsDark(next);
     document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("annonceid_dark", String(next));
+    localStorage.setItem("wanteermako_dark", String(next));
   };
 
   if (!mounted) return null;

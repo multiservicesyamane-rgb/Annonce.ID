@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { publishOneListing } from "@/lib/campaign-engine";
+import { assertProviderAmount, ensureListingOwnedByUser, PaymentValidationError, purchaseAlreadyExists } from "@/lib/paymentSecurity";
 
 export const dynamic = "force-dynamic";
 
@@ -37,17 +38,28 @@ export async function POST(req: Request) {
     const supabase = createClient(supabaseUrl, serviceKey);
     let meta: any = {};
     try { meta = JSON.parse(check.data.metadata || "{}"); } catch { /* ignore */ }
-    const { userId, listingId, boostKey } = meta;
+    const { userId, listingId, boostKey, subKey, category, expectedAmount } = meta;
     const amount = parseInt(check.data.amount || "0", 10);
 
-    if (userId || listingId) {
-      await supabase.from("purchases").insert({
+    if (userId && (listingId || subKey)) {
+      assertProviderAmount(amount, expectedAmount);
+      if (listingId) await ensureListingOwnedByUser(supabase, String(listingId), String(userId));
+
+      if (await purchaseAlreadyExists(supabase, transactionId)) {
+        return NextResponse.json({ success: true, duplicate: true });
+      }
+
+      const { error: purchaseError } = await supabase.from("purchases").insert({
         user_id: userId || null,
         amount,
         ref_command: transactionId,
         status: "success",
-        type: listingId ? "boost" : "credits",
+        type: listingId ? "boost" : subKey ? "subscription" : "credits",
       });
+      if (purchaseError) {
+        if (purchaseError.code === "23505") return NextResponse.json({ success: true, duplicate: true });
+        throw new PaymentValidationError("Enregistrement paiement impossible.", 500);
+      }
       if (listingId) {
         const premium = boostKey === "premium" || boostKey === "vip" || !boostKey;
         const featured = boostKey === "alaune" || boostKey === "vip";
@@ -61,12 +73,23 @@ export async function POST(req: Request) {
         }).eq("id", listingId);
         // Publication instantanée sur les réseaux (idempotent).
         try { await publishOneListing(supabase, listingId); } catch (e) { console.warn("publishOneListing:", e); }
+      } else if (subKey && userId) {
+        await supabase.from("profiles").update({
+          role: "pro",
+          is_pro: true,
+          subscription_plan: subKey,
+          subscription_category: category || "general",
+          free_ads_remaining: subKey === "standard" ? 5 : subKey === "premium" ? 15 : 50,
+        }).eq("id", userId);
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("CinetPay notify error:", error);
+    if (error instanceof PaymentValidationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

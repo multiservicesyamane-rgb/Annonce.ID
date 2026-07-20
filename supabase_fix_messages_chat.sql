@@ -1,5 +1,5 @@
 -- ============================================================
--- MIGRATION FIX : Messages + Chat + Publication (Annonce.ID)
+-- MIGRATION FIX : Messages + Chat + Publication (Wanteermako)
 -- Exécutez ce script dans le SQL Editor de Supabase
 -- ============================================================
 

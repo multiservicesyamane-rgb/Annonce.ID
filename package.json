@@ -2,12 +2,13 @@
   "name": "annonce-id",
   "version": "1.0.0",
   "private": true,
-  "description": "Annonce.ID — Plateforme de petites annonces premium pour l'Afrique de l'Ouest",
+  "description": "Wanteermako — Plateforme de petites annonces premium pour l'Afrique de l'Ouest",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:security": "node scripts/security-smoke.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",
@@ -25,6 +26,7 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
+    "jimp": "^0.22.12",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.5.4"

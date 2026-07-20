@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import SiteShell from "@/components/SiteShell";
+import { BRAND } from "@/lib/constants";
 // import CookieBanner from "@/components/CookieBanner"; // réactiver avec AdSense
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com";
@@ -8,8 +9,8 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com";
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: {
-    default: "Wanteermako — Petites Annonces Premium au Sénégal",
-    template: "%s · Wanteermako",
+    default: `${BRAND.name} — Petites Annonces Premium au Sénégal`,
+    template: `%s · ${BRAND.name}`,
   },
   description:
     "Achetez, vendez, louez au Sénégal. Publication gratuite, 0% commission, contact direct WhatsApp sans intermédiaire.",
@@ -17,14 +18,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    siteName: "Wanteermako",
-    title: "Wanteermako — Petites Annonces Premium au Sénégal",
+    siteName: BRAND.name,
+    title: `${BRAND.name} — Petites Annonces Premium au Sénégal`,
     description: "Tout le Sénégal à portée de main · Achetez et vendez facilement.",
-    images: [{ url: "/logo-full.jpg", width: 1080, height: 360, alt: "Wanteermako" }],
+    images: [{ url: "/logo-full.jpg", width: 1080, height: 360, alt: BRAND.name }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Wanteermako — Petites Annonces Premium au Sénégal",
+    title: `${BRAND.name} — Petites Annonces Premium au Sénégal`,
     description: "Tout le Sénégal à portée de main · Achetez et vendez facilement.",
     images: ["/logo-full.jpg"],
   },
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
   other: { "google-adsense-account": "ca-pub-8749142175860365" },
   manifest: "/manifest.json",
   appleWebApp: {
-    title: "Wanteermako",
+    title: BRAND.name,
     statusBarStyle: "default",
     capable: true,
   },
@@ -57,7 +58,7 @@ const siteJsonLd = {
     {
       "@type": "Organization",
       "@id": `${appUrl}/#organization`,
-      name: "Wanteermako",
+      name: BRAND.name,
       url: appUrl,
       logo: `${appUrl}/logo-full.jpg`,
     },
@@ -65,7 +66,7 @@ const siteJsonLd = {
       "@type": "WebSite",
       "@id": `${appUrl}/#website`,
       url: appUrl,
-      name: "Wanteermako",
+      name: BRAND.name,
       inLanguage: "fr",
       publisher: { "@id": `${appUrl}/#organization` },
       potentialAction: {
@@ -88,7 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Anti-flash : applique le thème AVANT le rendu */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){
-            var s=localStorage.getItem('annonceid_dark');
+            var s=localStorage.getItem('wanteermako_dark');
             /* Thème CLAIR par défaut. Sombre uniquement si le visiteur l'a choisi. */
             var dark = s==='true';
             if(dark)document.documentElement.classList.add('dark');

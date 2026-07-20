@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { campaignAdmin } from "@/lib/campaign";
+import { campaignAdmin, checkCampaignSecret } from "@/lib/campaign";
 import { publishOneListing } from "@/lib/campaign-engine";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +8,9 @@ export const maxDuration = 30;
 // Publication INSTANTANÉE d'une annonce dès qu'elle est publiée sur le site.
 // Idempotent (ne republie pas) → sûr même appelé plusieurs fois.
 export async function POST(req: Request) {
+  if (!checkCampaignSecret(req)) {
+    return NextResponse.json({ error: "Non autorise" }, { status: 401 });
+  }
   const sb = campaignAdmin();
   if (!sb) return NextResponse.json({ error: "Service indisponible" }, { status: 500 });
 

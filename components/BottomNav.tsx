@@ -1,93 +1,106 @@
+"use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+const ITEMS = [
+  {
+    href: "/",
+    label: "Accueil",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    ),
+  },
+  {
+    href: "/favoris",
+    label: "Favoris",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/publier",
+    label: "Vendre",
+    primary: true,
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    href: "/dashboard?panel=messages",
+    label: "Messages",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/boutiques",
+    label: "Boutiques",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 9h18l-1.5-5h-15L3 9Z" />
+        <path d="M5 9v11h14V9" />
+        <path d="M9 20v-6h6v6" />
+      </svg>
+    ),
+  },
+] as const;
 
 export default function BottomNav() {
   const pathname = usePathname();
 
   if (pathname?.startsWith("/yamanetech")) return null;
 
-  const ITEMS = [
-    { 
-      href: "/", 
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          <polyline points="9 22 9 12 15 12 15 22"></polyline>
-        </svg>
-      ), 
-      label: "Accueil" 
-    },
-    { 
-      href: "/favoris", 
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-        </svg>
-      ), 
-      label: "Favoris" 
-    },
-    { 
-      href: "/publier", 
-      icon: (
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-      ), 
-      label: "Vendre",
-      primary: true
-    },
-    { 
-      href: "/dashboard", 
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-      ), 
-      label: "Messages" 
-    },
-    { 
-      href: "/boutiques", 
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          <path d="M9 22V12h6v10"></path>
-        </svg>
-      ), 
-      label: "Boutiques" 
-    },
-  ];
-
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-[800] flex border-t border-gray-200 dark:border-white/5 bg-white/95 dark:bg-[#0A0E14]/90 px-0 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur-xl lg:hidden rounded-t-[24px] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-none transition-colors">
-      {ITEMS.map((it) => {
-        const active = pathname === it.href;
-        
-        if (it.primary) {
+    <nav
+      aria-label="Navigation principale mobile"
+      className="fixed inset-x-0 bottom-0 z-[800] flex rounded-t-[16px] border-t border-gray-200 bg-white/95 px-0 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] backdrop-blur-xl transition-colors dark:border-white/5 dark:bg-[#0A0E14]/90 dark:shadow-none lg:hidden"
+    >
+      {ITEMS.map((item) => {
+        const itemPath = item.href.split("?")[0];
+        const active = itemPath === "/" ? pathname === "/" : pathname.startsWith(itemPath);
+
+        if ("primary" in item && item.primary) {
           return (
-            <Link key={it.href} href={it.href} className="relative flex flex-1 flex-col items-center justify-start group">
-              <div className="absolute -top-8 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-green-500 via-[#F5A623] to-[#FFD166] text-white shadow-[0_6px_20px_rgba(245,166,35,0.55)] transition-transform group-hover:scale-110 border-[3px] border-white dark:border-[#0A0E14] ring-2 ring-[#F5A623]/30">
-                {it.icon}
-              </div>
-              <span className="mt-8 text-[.6rem] font-bold text-[#F5A623] dark:text-[#F5A623]">
-                {it.label}
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-label={item.label}
+              aria-current={active ? "page" : undefined}
+              className="group relative flex min-h-[52px] flex-1 flex-col items-center justify-start"
+            >
+              <span className="absolute -top-8 flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-white bg-green text-white shadow-[0_6px_20px_rgba(99,102,241,0.4)] ring-2 ring-green/20 transition-transform group-active:scale-95 dark:border-[#0A0E14]">
+                {item.icon}
               </span>
+              <span className="mt-8 text-[.65rem] font-bold text-green">{item.label}</span>
             </Link>
           );
         }
-        
+
         return (
           <Link
-            key={it.href}
-            href={it.href}
-            className={`flex flex-1 flex-col items-center gap-1 py-1 text-[.65rem] font-medium transition ${
-              active ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-500"
-            }`}
+            key={item.href}
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+            className={
+              "flex min-h-[52px] flex-1 flex-col items-center gap-1 py-1 text-[.65rem] font-medium transition " +
+              (active ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-500")
+            }
           >
-            <span className={`${active ? 'opacity-100 scale-110' : 'opacity-80'} transition-transform`}>
-              {it.icon}
+            <span className={"transition-transform " + (active ? "scale-110 opacity-100" : "opacity-80")}>
+              {item.icon}
             </span>
-            {it.label}
+            {item.label}
           </Link>
         );
       })}

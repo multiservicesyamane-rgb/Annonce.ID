@@ -1,5 +1,5 @@
 -- ============================================================
---  Annonce.ID — VIP gratuit (annonces Premium offertes)
+--  Wanteermako — VIP gratuit (annonces Premium offertes)
 --  À exécuter dans Supabase → SQL Editor.
 --
 --  Ajoute le drapeau `free_premium` sur les comptes. Quand il est

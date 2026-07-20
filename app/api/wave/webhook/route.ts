@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { publishOneListing } from "@/lib/campaign-engine";
+import { assertProviderAmount, ensureListingOwnedByUser, PaymentValidationError, purchaseAlreadyExists } from "@/lib/paymentSecurity";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,7 @@ export async function POST(req: Request) {
     const WEBHOOK_SECRET = process.env.WAVE_WEBHOOK_SECRET;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!API_KEY || !supabaseUrl || !serviceKey) {
+    if (!API_KEY || !supabaseUrl || !serviceKey || (!WEBHOOK_SECRET && process.env.NODE_ENV === "production")) {
       return NextResponse.json({ error: "Config manquante" }, { status: 500 });
     }
 
@@ -46,17 +48,28 @@ export async function POST(req: Request) {
     }
 
     const supabase = createClient(supabaseUrl, serviceKey);
-    const [userId, listingId, boostKey] = String(session.client_reference || "").split("|");
+    const [userId, listingId, boostKey, subKey, category, expectedAmount] = String(session.client_reference || "").split("|");
     const amount = parseInt(session.amount || "0", 10);
 
-    if (userId || listingId) {
-      await supabase.from("purchases").insert({
+    if (userId && (listingId || subKey)) {
+      assertProviderAmount(amount, expectedAmount);
+      if (listingId) await ensureListingOwnedByUser(supabase, String(listingId), String(userId));
+
+      if (await purchaseAlreadyExists(supabase, sessionId)) {
+        return NextResponse.json({ success: true, duplicate: true });
+      }
+
+      const { error: purchaseError } = await supabase.from("purchases").insert({
         user_id: userId || null,
         amount,
         ref_command: sessionId,
         status: "success",
-        type: listingId ? "boost" : "credits",
+        type: listingId ? "boost" : subKey ? "subscription" : "credits",
       });
+      if (purchaseError) {
+        if (purchaseError.code === "23505") return NextResponse.json({ success: true, duplicate: true });
+        throw new PaymentValidationError("Enregistrement paiement impossible.", 500);
+      }
       if (listingId) {
         const premium = boostKey === "premium" || boostKey === "vip" || !boostKey;
         const featured = boostKey === "alaune" || boostKey === "vip";
@@ -68,12 +81,24 @@ export async function POST(req: Request) {
           is_featured: featured,
           boost_key: boostKey || null,
         }).eq("id", listingId);
+        try { await publishOneListing(supabase, listingId); } catch (e) { console.warn("publishOneListing:", e); }
+      } else if (subKey && userId) {
+        await supabase.from("profiles").update({
+          role: "pro",
+          is_pro: true,
+          subscription_plan: subKey,
+          subscription_category: category || "general",
+          free_ads_remaining: subKey === "standard" ? 5 : subKey === "premium" ? 15 : 50,
+        }).eq("id", userId);
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Wave webhook error:", error);
+    if (error instanceof PaymentValidationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

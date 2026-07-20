@@ -3,166 +3,392 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getSafeRedirectPath } from "@/lib/authRedirect";
+import { BRAND } from "@/lib/constants";
 
-/** Connexion par Email + mot de passe ou Google OAuth. */
+type Notice = {
+  tone: "error" | "success" | "info";
+  text: string;
+};
+
 export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup" }) {
-  const [toast, setToast] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [loading, setLoading] = useState(false);
-  const [redirectQuery, setRedirectQuery] = useState("");
-  const supabase = createClient();
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [routeQuery, setRouteQuery] = useState("");
+  const [supabase] = useState(() => createClient());
 
-  // Conserve ?redirect=/... à travers les liens connexion ⇄ inscription.
+  const isSignup = mode === "signup";
+  const isBusy = loading || oauthLoading || resetting;
+
   useEffect(() => {
-    const r = new URLSearchParams(window.location.search).get("redirect");
-    if (r && r.startsWith("/") && !r.startsWith("//")) setRedirectQuery(`?redirect=${encodeURIComponent(r)}`);
+    const params = new URLSearchParams(window.location.search);
+    const safeRedirect = getSafeRedirectPath(params.get("redirect"), "");
+    const referral = params.get("ref");
+    const kept = new URLSearchParams();
+
+    if (safeRedirect) kept.set("redirect", safeRedirect);
+    if (referral) kept.set("ref", referral);
+    const query = kept.toString();
+    if (query) setRouteQuery("?" + query);
+
+    const error = params.get("error");
+    if (error === "callback") {
+      setNotice({ tone: "error", text: "La connexion avec Google a été interrompue. Réessayez." });
+    } else if (error === "session") {
+      setNotice({ tone: "error", text: "Votre session a expiré. Reconnectez-vous pour continuer." });
+    }
   }, []);
 
-  const show = (m: string) => {
-    setToast(m);
-    setTimeout(() => setToast(null), 3000);
-  };
+  function getRedirect() {
+    if (typeof window === "undefined") return isSignup ? "/dashboard?panel=profile&welcome=1" : "/";
+    const requested = new URLSearchParams(window.location.search).get("redirect");
+    const fallback = isSignup ? "/dashboard?panel=profile&welcome=1" : "/";
+    return getSafeRedirectPath(requested, fallback);
+  }
 
-  // Destination après connexion : ?redirect=/... (ex. la fiche produit visée),
-  // sinon l'ACCUEIL. On n'accepte que des chemins internes (sécurité).
-  const getRedirect = () => {
-    if (typeof window === "undefined") return "/";
-    const r = new URLSearchParams(window.location.search).get("redirect") || "";
-    return r.startsWith("/") && !r.startsWith("//") ? r : "/";
-  };
+  function getCallbackUrl() {
+    return window.location.origin + "/auth/callback?next=" + encodeURIComponent(getRedirect());
+  }
 
-  async function handleEmailAuth(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email || !password) return show("⚠ Email et mot de passe requis.");
-    if (mode === "signup" && password.length < 6) return show("⚠ Mot de passe : 6 caractères minimum.");
+  function authErrorMessage(error: unknown) {
+    const message = error instanceof Error ? error.message : "Une erreur inattendue est survenue.";
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes("invalid login")) return "Email, nom d'utilisateur ou mot de passe incorrect.";
+    if (normalized.includes("email not confirmed")) return "Confirmez votre adresse email avant de vous connecter.";
+    if (normalized.includes("already registered") || normalized.includes("user already")) {
+      return "Un compte existe déjà avec cette adresse email. Connectez-vous.";
+    }
+    if (normalized.includes("password")) return "Le mot de passe ne respecte pas les règles de sécurité.";
+    if (normalized.includes("rate limit")) return "Trop de tentatives. Patientez quelques minutes avant de réessayer.";
+    return message;
+  }
+
+  async function handleEmailAuth(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setNotice(null);
+
+    const emailInput = email.trim();
+    const cleanName = fullName.trim();
+
+    if (isSignup && cleanName.length < 2) {
+      setNotice({ tone: "error", text: "Indiquez votre nom ou le nom de votre boutique." });
+      return;
+    }
+    if (!emailInput) {
+      setNotice({ tone: "error", text: "Indiquez votre adresse email." });
+      return;
+    }
+    if (isSignup && !/^\S+@\S+\.\S+$/.test(emailInput)) {
+      setNotice({ tone: "error", text: "Saisissez une adresse email valide." });
+      return;
+    }
+    if (password.length < 6) {
+      setNotice({ tone: "error", text: "Le mot de passe doit contenir au moins 6 caractères." });
+      return;
+    }
+
     setLoading(true);
     try {
-      if (mode === "signup") {
+      if (isSignup) {
+        const authEmail = emailInput.toLowerCase();
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: authEmail,
           password,
-          options: { data: { full_name: fullName } },
+          options: {
+            data: { full_name: cleanName },
+            emailRedirectTo: getCallbackUrl(),
+          },
         });
         if (error) throw error;
-        // Créer/compléter le profil
+
         if (data.user) {
-          await supabase.from("profiles").upsert({ id: data.user.id, full_name: fullName || email.split("@")[0] }, { onConflict: "id" });
-          // Parrainage : si arrivé via ?ref=<id>, on crédite le parrain
-          const ref = new URLSearchParams(window.location.search).get("ref");
-          if (ref) {
-            fetch("/api/referral", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: data.user.id, ref }) }).catch(() => {});
+          await supabase
+            .from("profiles")
+            .upsert({ id: data.user.id, full_name: cleanName }, { onConflict: "id" });
+
+          const referral = new URLSearchParams(window.location.search).get("ref");
+          if (referral) {
+            fetch("/api/referral", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: data.user.id, ref: referral }),
+            }).catch(() => undefined);
           }
         }
+
         if (data.session) {
           window.location.href = getRedirect();
-        } else {
-          show("✅ Compte créé ! Vérifiez votre email pour confirmer (si demandé), puis connectez-vous.");
+          return;
         }
+
+        setNotice({
+          tone: "success",
+          text: "Votre compte est créé. Ouvrez l'email de confirmation reçu, puis connectez-vous.",
+        });
       } else {
-        // Connexion par email OU par nom d'utilisateur (sans @ → complété automatiquement)
-        const loginId = email.includes("@") ? email.trim() : `${email.trim().toLowerCase()}@wanteermako.app`;
+        const loginId = emailInput.includes("@")
+          ? emailInput.toLowerCase()
+          : emailInput.toLowerCase() + "@wanteermako.app";
         const { error } = await supabase.auth.signInWithPassword({ email: loginId, password });
         if (error) throw error;
         window.location.href = getRedirect();
       }
-    } catch (err: any) {
-      const m = err?.message || "Erreur";
-      show(m.includes("Invalid login") ? "❌ Email ou mot de passe incorrect." : m.includes("already registered") ? "❌ Cet email a déjà un compte. Connectez-vous." : `❌ ${m}`);
+    } catch (error) {
+      setNotice({ tone: "error", text: authErrorMessage(error) });
     } finally {
       setLoading(false);
     }
   }
 
-  const GoogleButton = () => (
-    <button
-      type="button"
-      onClick={async () => {
-        show("Redirection vers Google...");
-        // Utilise TOUJOURS le domaine courant (wanteermako.com, vercel.app ou localhost)
-        const dest = getRedirect();
-        const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(dest)}`;
-        await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirectUrl } });
-      }}
-      className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-gray-100 bg-white py-3 text-[.92rem] font-semibold text-gray-700 hover:border-gray-300 transition-colors shadow-sm hover:shadow-md"
-    >
-      <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-      </svg>
-      Continuer avec Google
-    </button>
-  );
+  async function handleGoogleAuth() {
+    setNotice({ tone: "info", text: "Ouverture de la connexion Google..." });
+    setOauthLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: getCallbackUrl() },
+    });
+    if (error) {
+      setNotice({ tone: "error", text: authErrorMessage(error) });
+      setOauthLoading(false);
+    }
+  }
+
+  async function handlePasswordReset() {
+    const resetEmail = email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(resetEmail)) {
+      setNotice({ tone: "error", text: "Indiquez d'abord l'adresse email liée à votre compte." });
+      return;
+    }
+
+    setResetting(true);
+    setNotice(null);
+    try {
+      const next = "/dashboard?panel=security";
+      const redirectTo =
+        window.location.origin + "/auth/callback?next=" + encodeURIComponent(next);
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, { redirectTo });
+      if (error) throw error;
+      setNotice({
+        tone: "success",
+        text: "Un lien de réinitialisation vient d'être envoyé à votre adresse email.",
+      });
+    } catch (error) {
+      setNotice({ tone: "error", text: authErrorMessage(error) });
+    } finally {
+      setResetting(false);
+    }
+  }
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] bg-grad-hero">
-      {/* Panneau gauche (confiance) */}
-      <div className="relative hidden flex-1 items-center justify-center overflow-hidden p-12 md:flex">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(at_20%_30%,rgba(245,166,35,.22)_0,transparent_45%)]" />
-        <div className="relative z-10 max-w-[360px]">
-          <h2 className="mb-5 font-display text-[1.4rem] font-extrabold leading-snug text-white">
-            Rejoignez la plateforme d&apos;annonces <em className="not-italic text-neon-gold [text-shadow:0_0_16px_rgba(255,201,60,.5)]">100% fiable</em>
+    <main className="grid min-h-dvh bg-white dark:bg-[#0D1117] md:grid-cols-[minmax(0,1fr)_minmax(420px,520px)]">
+      <section className="hidden bg-[#111827] px-10 py-12 text-white md:flex md:items-center md:justify-center" aria-label="Avantages Wanteermako">
+        <div className="w-full max-w-[440px]">
+          <p className="mb-4 text-[.76rem] font-bold uppercase tracking-[.16em] text-gold">
+            Acheter et vendre simplement
+          </p>
+          <h2 className="font-display text-[2rem] font-extrabold leading-tight">
+            Votre espace de confiance pour les bonnes affaires.
           </h2>
-          <div className="flex flex-col gap-3">
-            {[["🔒", "Connexion sécurisée"], ["✅", "Vendeurs vérifiés par la communauté"], ["💬", "Contact direct WhatsApp / Appel"], ["💳", "Orange Money · Wave · MTN · Moov"]].map(([ic, t]) => (
-              <div key={t} className="flex items-center gap-3 text-[.85rem] text-white/85">
-                <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-neon-gold/30 bg-neon-gold/15">{ic}</span>
-                {t}
-              </div>
+          <p className="mt-4 max-w-[390px] text-[.95rem] leading-relaxed text-white/70">
+            {BRAND.tagline}. Publiez, échangez et gérez vos annonces depuis un seul compte.
+          </p>
+
+          <ul className="mt-8 grid gap-4">
+            {[
+              ["publication", "Publication guidée", "Créez une annonce claire en quelques étapes."],
+              ["contact", "Contact direct", "Échangez par messagerie, WhatsApp ou appel."],
+              ["commission", "Aucune commission", "Vous gardez le contrôle de votre vente."],
+            ].map(([key, title, description]) => (
+              <li key={key} className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white/10 text-gold ring-1 ring-white/10" aria-hidden="true">
+                  {key === "publication" ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
+                  ) : key === "contact" ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M8 12h8" /></svg>
+                  )}
+                </span>
+                <span>
+                  <span className="block text-[.9rem] font-bold">{title}</span>
+                  <span className="mt-0.5 block text-[.78rem] leading-relaxed text-white/60">{description}</span>
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
-      </div>
+      </section>
 
-      {/* Panneau droit (formulaire) */}
-      <div className="flex w-full flex-col justify-center bg-white px-6 py-8 md:w-[460px] md:shrink-0">
-        <Link href="/" className="mb-6 flex justify-center">
-          <span className="inline-flex rounded-2xl bg-white border border-gray-100 px-4 py-2 shadow-sm">
-            <img src="/logo-full.jpg" alt="Wanteermako" className="h-9 w-auto object-contain" />
-          </span>
-        </Link>
+      <section className="flex w-full flex-col justify-center px-5 py-8 sm:px-10 md:px-12">
+        <div className="mx-auto w-full max-w-[400px]">
+          <Link href="/" className="mb-7 inline-flex rounded-[10px] border border-gray-100 bg-white px-3 py-2 shadow-sm dark:border-white/10 dark:bg-white">
+            <img src="/logo-full.jpg" alt={BRAND.name} className="h-10 w-auto object-contain" />
+          </Link>
 
-        <h2 className="mb-2 font-display text-[1.4rem] font-extrabold text-center text-gray-900">
-          {mode === "signup" ? "Créez votre compte" : "Bon retour 👋"}
-        </h2>
-        <p className="mb-6 text-[.88rem] text-gray-500 text-center">
-          {mode === "signup" ? "Inscrivez-vous par email ou avec Google." : "Connectez-vous par email ou avec Google."}
-        </p>
+          <h1 className="font-display text-[1.55rem] font-extrabold text-gray-900 dark:text-white">
+            {isSignup ? "Créer votre compte" : "Heureux de vous revoir"}
+          </h1>
+          <p className="mb-6 mt-2 text-[.88rem] leading-relaxed text-gray-500 dark:text-gray-400">
+            {isSignup
+              ? "Quelques secondes suffisent pour rejoindre Wanteermako."
+              : "Connectez-vous pour retrouver vos annonces et vos messages."}
+          </p>
 
-        <GoogleButton />
-
-        <div className="my-4 flex items-center gap-3 text-[.78rem] text-gray-400">
-          <div className="h-px flex-1 bg-gray-100" /> ou par email <div className="h-px flex-1 bg-gray-100" />
-        </div>
-
-        <form onSubmit={handleEmailAuth} className="flex flex-col gap-3">
-          {mode === "signup" && (
-            <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nom complet ou boutique" className="rounded-[10px] border-2 border-gray-100 bg-gray-50 px-4 py-3 text-[.92rem] outline-none focus:border-green focus:bg-white transition" />
-          )}
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="text" placeholder={mode === "signup" ? "Adresse email" : "Email ou nom d'utilisateur"} className="rounded-[10px] border-2 border-gray-100 bg-gray-50 px-4 py-3 text-[.92rem] outline-none focus:border-green focus:bg-white transition" />
-          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Mot de passe" className="rounded-[10px] border-2 border-gray-100 bg-gray-50 px-4 py-3 text-[.92rem] outline-none focus:border-green focus:bg-white transition" />
-          <button type="submit" disabled={loading} className="btn btn-green rounded-[10px] py-3 text-[.95rem] font-bold disabled:opacity-60">
-            {loading ? "⏳ Patientez…" : mode === "signup" ? "Créer mon compte" : "Se connecter"}
+          <button
+            type="button"
+            onClick={handleGoogleAuth}
+            disabled={isBusy}
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[10px] border-2 border-gray-200 bg-white px-4 text-[.92rem] font-semibold text-gray-700 shadow-sm transition hover:border-gray-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green/20 disabled:cursor-wait disabled:opacity-60 dark:border-white/15 dark:bg-[#161B22] dark:text-white"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+            </svg>
+            {oauthLoading ? "Ouverture de Google..." : "Continuer avec Google"}
           </button>
-        </form>
 
-        <p className="mt-6 text-center text-[.85rem] text-gray-500">
-          {mode === "signup" ? (
-            <>Déjà un compte ? <Link href={`/connexion${redirectQuery}`} className="font-bold text-green">Se connecter</Link></>
-          ) : (
-            <>Pas encore de compte ? <Link href={`/inscription${redirectQuery}`} className="font-bold text-green">Créer un compte</Link></>
+          <div className="my-5 flex items-center gap-3 text-[.78rem] text-gray-400" aria-hidden="true">
+            <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+            ou avec votre email
+            <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
+          </div>
+
+          {notice && (
+            <div
+              id="auth-notice"
+              role={notice.tone === "error" ? "alert" : "status"}
+              aria-live="polite"
+              className={
+                "mb-4 rounded-[8px] border px-3.5 py-3 text-[.82rem] leading-relaxed " +
+                (notice.tone === "error"
+                  ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200"
+                  : notice.tone === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                    : "border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200")
+              }
+            >
+              {notice.text}
+            </div>
           )}
-        </p>
-      </div>
 
-      {toast && (
-        <div className="fixed bottom-20 left-1/2 z-[9999] -translate-x-1/2 max-w-[90vw] rounded-[10px] border border-neon-gold bg-dark-900 px-5 py-2.5 text-center text-[.88rem] font-medium text-white shadow-lg">
-          {toast}
+          <form onSubmit={handleEmailAuth} className="grid gap-4" aria-describedby={notice ? "auth-notice" : undefined} noValidate>
+            {isSignup && (
+              <div>
+                <label htmlFor="auth-name" className="label dark:text-gray-300">Nom ou boutique</label>
+                <input
+                  id="auth-name"
+                  name="name"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  autoComplete="name"
+                  required
+                  className="input min-h-[48px] dark:bg-[#161B22]"
+                  placeholder="Ex. Awa Ndiaye"
+                />
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="auth-email" className="label dark:text-gray-300">
+                {isSignup ? "Adresse email" : "Email ou nom d'utilisateur"}
+              </label>
+              <input
+                id="auth-email"
+                name="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                type={isSignup ? "email" : "text"}
+                inputMode={isSignup ? "email" : "text"}
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+                className="input min-h-[48px] dark:bg-[#161B22]"
+                placeholder={isSignup ? "vous@exemple.com" : "vous@exemple.com"}
+              />
+            </div>
+
+            <div>
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <label htmlFor="auth-password" className="label !mb-0 dark:text-gray-300">Mot de passe</label>
+                {!isSignup && (
+                  <button
+                    type="button"
+                    onClick={handlePasswordReset}
+                    disabled={isBusy}
+                    className="text-[.75rem] font-semibold text-green hover:underline disabled:opacity-50"
+                  >
+                    Mot de passe oublié ?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  id="auth-password"
+                  name="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  type={showPassword ? "text" : "password"}
+                  autoComplete={isSignup ? "new-password" : "current-password"}
+                  minLength={6}
+                  required
+                  className="input min-h-[48px] pr-12 dark:bg-[#161B22]"
+                  aria-describedby={isSignup ? "password-help" : undefined}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  title={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-400 transition hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green dark:hover:text-white"
+                >
+                  {showPassword ? (
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m3 3 18 18" /><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" /><path d="M9.9 4.2A10.6 10.6 0 0 1 12 4c5 0 9 4 10 8a12 12 0 0 1-2.1 4.1M6.6 6.6C4.4 8 2.8 10 2 12c1 4 5 8 10 8 1.3 0 2.5-.3 3.6-.8" /></svg>
+                  ) : (
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>
+                  )}
+                </button>
+              </div>
+              {isSignup && (
+                <p id="password-help" className="mt-1.5 text-[.72rem] text-gray-500 dark:text-gray-400">
+                  6 caractères minimum. Évitez un mot de passe déjà utilisé ailleurs.
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isBusy}
+              className="btn btn-green min-h-[48px] w-full rounded-[10px] text-[.95rem] disabled:cursor-wait disabled:opacity-60"
+            >
+              {loading ? "Veuillez patienter..." : isSignup ? "Créer mon compte" : "Se connecter"}
+            </button>
+          </form>
+
+          {isSignup && (
+            <p className="mt-4 text-[.72rem] leading-relaxed text-gray-500 dark:text-gray-400">
+              En créant votre compte, vous acceptez les <Link href="/cgu" className="font-semibold text-green hover:underline">conditions d'utilisation</Link> et la <Link href="/politique-confidentialite" className="font-semibold text-green hover:underline">politique de confidentialité</Link>.
+            </p>
+          )}
+
+          <p className="mt-6 text-center text-[.85rem] text-gray-500 dark:text-gray-400">
+            {isSignup ? (
+              <>Déjà un compte ? <Link href={"/connexion" + routeQuery} className="font-bold text-green hover:underline">Se connecter</Link></>
+            ) : (
+              <>Nouveau sur {BRAND.name} ? <Link href={"/inscription" + routeQuery} className="font-bold text-green hover:underline">Créer un compte</Link></>
+            )}
+          </p>
         </div>
-      )}
-    </div>
+      </section>
+    </main>
   );
 }

@@ -13,7 +13,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { uploadImages } from "@/lib/storage";
 import { isOwner } from "@/lib/owners";
-import { PAYMENT_REQUIRED } from "@/lib/payment";
+import { FREE_LISTING_LIMIT, normalizeFreeAdsRemaining } from "@/lib/businessRules";
 import Link from "next/link";
 import ImageCropperModal from "./ImageCropperModal";
 
@@ -91,7 +91,7 @@ export default function PublishWizard() {
         }
       });
     } else {
-      const draft = localStorage.getItem("annonceid_draft");
+      const draft = localStorage.getItem("wanteermako_draft");
       if (draft) {
         try {
           const d = JSON.parse(draft);
@@ -114,7 +114,7 @@ export default function PublishWizard() {
   useEffect(() => {
     if (!catSlug && !title && !desc && !price && photos.length === 0) return;
     const t = setTimeout(() => {
-      localStorage.setItem("annonceid_draft", JSON.stringify({ catSlug, subCategory, title, desc, price, priceType, photos, region, commune, customCommune, specs }));
+      localStorage.setItem("wanteermako_draft", JSON.stringify({ catSlug, subCategory, title, desc, price, priceType, photos, region, commune, customCommune, specs }));
     }, 1000);
     return () => clearTimeout(t);
   }, [catSlug, subCategory, title, desc, price, priceType, photos, region, commune, customCommune, specs]);
@@ -204,7 +204,7 @@ export default function PublishWizard() {
   }
 
   const isKonnecta = isOwner(userEmail);
-  const freeAdsRemaining = isKonnecta ? 999 : Math.max(0, Math.min(2, Number(userProfile?.free_ads_remaining ?? 2)));
+  const freeAdsRemaining = isKonnecta ? 999 : normalizeFreeAdsRemaining(userProfile?.free_ads_remaining);
 
   // Photos autorisées selon le boost sélectionné ; admin sans limite pratique.
   const PHOTO_LIMITS: Record<string, number> = { gratuit: 3, premium: 5, alaune: 8, vip: 12 };
@@ -280,7 +280,7 @@ export default function PublishWizard() {
     // Comptes propriétaires + VIP gratuit : Premium + À la Une offerts, sans limite ni paiement
     const isVipFree = isOwner(userEmail) || !!userProfile?.free_premium;
     if (!editModeId && boost === 0 && !isVipFree && !isKonnecta && freeAdsRemaining <= 0) {
-      return show("⚠ Vous avez déjà utilisé vos 2 annonces gratuites. Choisissez Premium, À la Une ou VIP.");
+      return show(`Vous avez deja utilise vos ${FREE_LISTING_LIMIT} annonces gratuites. Choisissez Premium, A la Une ou VIP.`);
     }
 
     setIsPublishing(true);
@@ -306,9 +306,7 @@ export default function PublishWizard() {
     const uploadedPhotos = await uploadImages(photos, "listings");
 
     const selectedBoostKey = BOOSTS[boost]?.key || "gratuit";
-    const paymentBypassed = !PAYMENT_REQUIRED && boost > 0 && !isVipFree && !isKonnecta;
-    const premiumBoost = selectedBoostKey === "premium" || selectedBoostKey === "vip";
-    const featuredBoost = selectedBoostKey === "alaune" || selectedBoostKey === "vip";
+    const requiresPayment = boost > 0 && !isVipFree && !isKonnecta;
 
     const payload: Record<string, any> = {
       user_id: user.id,
@@ -325,63 +323,54 @@ export default function PublishWizard() {
       image: uploadedPhotos.length > 0 ? uploadedPhotos[0] : "https://placehold.co/600x400?text=Sans+Image",
       photos: uploadedPhotos, specs,
       duplicate_key: duplicateKey,
-      // VIP gratuit ou paiement temporairement non obligatoire.
-      premium: (isVipFree || paymentBypassed) ? (isVipFree || premiumBoost) : undefined,
-      featured: (isVipFree || paymentBypassed) ? (isVipFree || featuredBoost) : undefined,
-      is_premium: (isVipFree || paymentBypassed) ? (isVipFree || premiumBoost) : undefined,
-      is_featured: (isVipFree || paymentBypassed) ? (isVipFree || featuredBoost) : undefined,
+      premium: isVipFree ? true : undefined,
+      featured: isVipFree ? true : undefined,
+      is_premium: isVipFree ? true : undefined,
+      is_featured: isVipFree ? true : undefined,
       boost_key: boost > 0 ? selectedBoostKey : undefined,
-      status: (boost === 0 || isVipFree || paymentBypassed) ? "active" : "pending"
+      status: requiresPayment ? "pending" : "active"
     };
 
-    async function saveAdaptive(isUpdate: boolean) {
-      const p: Record<string, any> = { ...payload };
-      for (let i = 0; i < 10; i++) {
-        const res = isUpdate
-          ? await supabase.from('listings').update(p).eq('id', editModeId!).select().single()
-          : await supabase.from('listings').insert(p).select().single();
-        if (!res.error) return res;
-        const m = res.error.message || "";
-        const match = m.match(/Could not find the '([^']+)' column/) || m.match(/column "?([a-z_]+)"? of relation/i);
-        if (match && match[1] in p) { delete p[match[1]]; continue; }
-        return res;
-      }
-      return { data: null as any, error: { message: "Schéma incompatible" } as any };
+    const publishRes = await fetch("/api/listings/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        editModeId,
+        boostKey: selectedBoostKey,
+        duplicateConfirmed: !!duplicateWarning,
+        listing: payload,
+      }),
+    });
+    const publishResult = await publishRes.json().catch(() => ({}));
+
+    if (publishRes.status === 409 && publishResult.duplicate) {
+      setDuplicateWarning(publishResult.duplicate);
+      show("Annonce similaire detectee. Verifiez avant de publier.");
+      setIsPublishing(false);
+      return;
     }
 
-    let data, error;
-    if (editModeId) { const r = await saveAdaptive(true); data = r.data; error = r.error; }
-    else { const r = await saveAdaptive(false); data = r.data; error = r.error; }
-
-    if (error) { console.error("Supabase Error:", error); show(`⚠ ${error.message}`); setIsPublishing(false); return; }
-
-    // Dès sa 1ère annonce, le vendeur devient visible dans les Boutiques (auto)
-    // + on enregistre son numéro sur le profil (pour qu'il reçoive les acheteurs)
-    if (!editModeId) {
-      const profUpdate: Record<string, any> = { has_boutique: true };
-      if (contactPhone) profUpdate.phone = `+221${contactPhone}`;
-      supabase.from('profiles').update(profUpdate).eq('id', user.id).then(() => {}, () => {});
+    if (!publishRes.ok || publishResult.error) {
+      show(`Erreur publication : ${publishResult.error || publishRes.statusText}`);
+      setIsPublishing(false);
+      return;
     }
 
-    if (!editModeId && boost === 0 && !isVipFree && !isKonnecta) {
-      const nextFreeAds = Math.max(0, freeAdsRemaining - 1);
-      supabase.from('profiles').update({ free_ads_remaining: nextFreeAds }).eq('id', user.id).then(() => {}, () => {});
+    const data = publishResult.listing;
+    const requiresPaymentAfterPublish = !!publishResult.requiresPayment;
+    if (!data?.id) {
+      show("Erreur publication : reponse serveur invalide.");
+      setIsPublishing(false);
+      return;
     }
 
-    if (!editModeId && (boost === 0 || isKonnecta)) {
-      if (isKonnecta && boost > 0) {
-        const boostKey = BOOSTS[boost].key;
-        await supabase.from('listings').update({ status: 'active', premium: boostKey === 'premium' || boostKey === 'vip' }).eq('id', data.id);
-      }
-    }
-
-    localStorage.removeItem("annonceid_draft");
+    localStorage.removeItem("wanteermako_draft");
     setDuplicateWarning(null);
 
     // BOOST GRATUIT VIA CRÉDIT : si le vendeur possède un crédit (offert ou acheté)
     // correspondant au boost choisi, on l'applique → annonce active SANS paiement.
     let usedCredit = false;
-    if (!editModeId && PAYMENT_REQUIRED && boost > 0 && !isVipFree && !isKonnecta && data?.id) {
+    if (!editModeId && boost > 0 && !isVipFree && !isKonnecta && data?.id) {
       const wantKey = BOOSTS[boost].key;
       const credit = credits.find((c: any) => c.boost_key === wantKey && c.status === "available");
       if (credit) {
@@ -399,7 +388,7 @@ export default function PublishWizard() {
 
     // Publication instantanée sur les réseaux (Telegram/Facebook…) si l'annonce
     // est active dès maintenant. Idempotent côté serveur ; "fire-and-forget".
-    const isActiveNow = !editModeId && (boost === 0 || isVipFree || isKonnecta || usedCredit || paymentBypassed);
+    const isActiveNow = !editModeId && (boost === 0 || isVipFree || isKonnecta || usedCredit);
     if (isActiveNow && data?.id) {
       fetch("/api/campaign/publish-listing", {
         method: "POST",
@@ -409,7 +398,7 @@ export default function PublishWizard() {
     }
 
     if (editModeId) { show("✅ Annonce mise à jour !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}`), 1200); }
-    else if (boost === 0 || isKonnecta || usedCredit || paymentBypassed) { show(usedCredit ? "✅ Publiée avec votre boost offert !" : paymentBypassed ? "✅ Annonce publiée sans paiement." : "✅ Annonce publiée !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}?published=1`), 1200); }
+    else if (!requiresPaymentAfterPublish || usedCredit) { show(usedCredit ? "Boost applique avec votre credit offert !" : "Annonce publiee !"); setTimeout(() => router.push(`/annonce/${data.id}/${data.slug}?published=1`), 1200); }
     else { router.push(`/paiement?annonce_id=${data.id}`); }
   }
 
@@ -617,12 +606,7 @@ export default function PublishWizard() {
             <h2 className="font-display text-[1rem] md:text-[1.15rem] font-bold text-gray-900 dark:text-white">Visibilité</h2>
             {!isKonnecta && (
               <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-[.78rem] font-semibold text-green-800 dark:border-green-500/20 dark:bg-green-900/15 dark:text-green-300">
-                Il vous reste {freeAdsRemaining} annonce{freeAdsRemaining > 1 ? "s" : ""} gratuite{freeAdsRemaining > 1 ? "s" : ""} sur 2.
-              </p>
-            )}
-            {!PAYMENT_REQUIRED && (
-              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[.78rem] font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-900/15 dark:text-amber-300">
-                Paiement pas encore obligatoire : les options de visibilité peuvent être publiées sans paiement.
+                Il vous reste {freeAdsRemaining} annonce{freeAdsRemaining > 1 ? "s" : ""} gratuite{freeAdsRemaining > 1 ? "s" : ""} sur {FREE_LISTING_LIMIT}.
               </p>
             )}
             <div className="space-y-2">
@@ -694,7 +678,7 @@ export default function PublishWizard() {
                   : duplicateWarning
                     ? "Publier quand même"
                   : boost > 0
-                    ? (credits.find((c: any) => c.boost_key === BOOSTS[boost].key && c.status === "available") ? "🎁 Publier (boost offert)" : PAYMENT_REQUIRED ? "Payer & Publier" : "Publier sans payer")
+                    ? (credits.find((c: any) => c.boost_key === BOOSTS[boost].key && c.status === "available") ? "Publier (boost offert)" : "Payer & Publier")
                     : "Publier"}
               </button>
             )}

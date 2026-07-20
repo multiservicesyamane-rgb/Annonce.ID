@@ -2,17 +2,10 @@
 
 import { useState } from "react";
 import { formatNumber } from "@/lib/utils";
-import { WAVE_NUMBER, ORANGE_NUMBER, whatsappLink, ONLINE_PAYMENT_ENABLED } from "@/lib/payment";
+import { WAVE_NUMBER, ORANGE_NUMBER, whatsappLink } from "@/lib/payment";
+import { BRAND } from "@/lib/constants";
 
-export default function ManualPayment({
-  itemName,
-  price,
-  duration,
-  listingId,
-  boostKey,
-  subKey,
-  category,
-}: {
+type ManualPaymentProps = {
   itemName: string;
   price: number;
   duration: string;
@@ -20,138 +13,133 @@ export default function ManualPayment({
   boostKey?: string;
   subKey?: string;
   category?: string;
-}) {
-  const [copied, setCopied] = useState("");
-  const [processing, setProcessing] = useState(false);
+};
 
-  async function payTech() {
-    setProcessing(true);
+export default function ManualPayment({
+  itemName,
+  price,
+  duration,
+  listingId,
+}: ManualPaymentProps) {
+  const [copied, setCopied] = useState<"" | "wave" | "orange">("");
+  const [copyError, setCopyError] = useState("");
+
+  async function copyNumber(number: string, provider: "wave" | "orange") {
+    setCopyError("");
     try {
-      const res = await fetch("/api/paytech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: price,
-          itemName,
-          refCommand: `WMK-${Date.now()}`,
-          listingId: listingId || "",
-          boostKey: boostKey || "",
-          subKey: subKey || "",
-          category: category || "",
-        }),
-      });
-      if (res.status === 401) { alert("Connecte-toi d'abord pour payer en ligne."); window.location.href = "/connexion"; return; }
-      const data = await res.json();
-      if (data.redirect_url) window.location.href = data.redirect_url;
-      else { alert(data.error || "Erreur d'initialisation du paiement."); setProcessing(false); }
+      if (!navigator.clipboard) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(number.replace(/\s/g, ""));
+      setCopied(provider);
+      window.setTimeout(() => setCopied(""), 1800);
     } catch {
-      alert("Erreur de connexion au paiement.");
-      setProcessing(false);
+      setCopyError("Copie automatique indisponible. Sélectionnez le numéro pour le copier.");
     }
   }
 
-  function copy(num: string, label: string) {
-    navigator.clipboard?.writeText(num.replace(/\s/g, ""));
-    setCopied(label);
-    setTimeout(() => setCopied(""), 1500);
-  }
-
+  const listingReference = listingId ? "\nAnnonce : " + listingId : "";
   const message =
-    `Bonjour 👋, je souhaite activer : *${itemName}* (${formatNumber(price)} FCFA, ${duration}).\n` +
-    `Je viens de faire le dépôt et je vous envoie le reçu. Merci d'activer mon plan.`;
+    "Bonjour, je souhaite activer : *" +
+    itemName +
+    "* (" +
+    formatNumber(price) +
+    " FCFA, " +
+    duration +
+    ")." +
+    listingReference +
+    "\nJe joins le reçu de mon dépôt pour vérification.";
 
-  const Step = ({ n, children }: { n: number; children: React.ReactNode }) => (
-    <li className="flex items-start gap-3">
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green text-[.78rem] font-extrabold text-white">{n}</span>
-      <span className="pt-0.5">{children}</span>
-    </li>
-  );
+  const accounts = [
+    { key: "wave" as const, name: "Wave", number: WAVE_NUMBER, color: "border-[#1DC8FF]/50 bg-[#1DC8FF]/10 text-[#087da0]" },
+    { key: "orange" as const, name: "Orange Money", number: ORANGE_NUMBER, color: "border-orange-400/50 bg-orange-50 text-orange-700" },
+  ];
 
   return (
-    <div className="mx-auto max-w-[540px] px-4">
-      <div className="overflow-hidden rounded-[22px] border border-gray-100 bg-white dark:bg-[#111722] dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.25)]">
-        {/* En-tête dégradé */}
-        <div className="relative bg-gradient-to-br from-green-600 via-green-700 to-emerald-900 px-6 py-7 text-center text-white">
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, #fff 1.5px, transparent 1.5px)", backgroundSize: "24px 24px" }} />
-          <div className="relative">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm text-[1.8rem] shadow-inner">🧾</div>
-            <h2 className="font-display text-[1.35rem] font-extrabold">Finaliser votre commande</h2>
-            <p className="mt-1 text-[.85rem] text-white/85">{itemName}</p>
-          </div>
-        </div>
+    <div className="mx-auto max-w-[620px]">
+      <section
+        aria-labelledby="manual-payment-title"
+        className="overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#161B22]"
+      >
+        <header className="border-b border-gray-100 px-5 py-4 dark:border-white/10 sm:px-6">
+          <h2 id="manual-payment-title" className="font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white">
+            Paiement manuel
+          </h2>
+          <p className="mt-1 text-[.76rem] text-gray-500 dark:text-gray-400">
+            Le support active la formule après vérification du reçu.
+          </p>
+        </header>
 
-        <div className="p-5 sm:p-7">
-          {/* Montant en évidence */}
-          <div className="mb-6 rounded-[16px] border border-green/20 bg-green/5 p-5 text-center">
-            <div className="text-[.74rem] font-semibold uppercase tracking-wider text-gray-500">Montant à déposer</div>
-            <div className="my-1 font-display text-[2.2rem] font-extrabold leading-none text-green">{formatNumber(price)}<span className="ml-1 text-[1rem] font-bold">FCFA</span></div>
-            <div className="text-[.78rem] text-gray-500">Durée : <b className="text-gray-700 dark:text-gray-300">{duration}</b></div>
-          </div>
+        <div className="p-5 sm:p-6">
+          <dl className="grid gap-3 text-[.86rem]">
+            <div className="flex items-start justify-between gap-4">
+              <dt className="text-gray-500 dark:text-gray-400">Formule</dt>
+              <dd className="max-w-[65%] text-right font-bold text-gray-900 dark:text-white">{itemName}</dd>
+            </div>
+            <div className="flex items-start justify-between gap-4">
+              <dt className="text-gray-500 dark:text-gray-400">Durée</dt>
+              <dd className="text-right font-semibold text-gray-700 dark:text-gray-200">{duration}</dd>
+            </div>
+            <div className="mt-1 flex items-end justify-between gap-4 border-t border-dashed border-gray-200 pt-4 dark:border-white/10">
+              <dt className="font-bold text-gray-900 dark:text-white">Montant à déposer</dt>
+              <dd className="font-display text-[1.55rem] font-extrabold leading-none text-green">
+                {formatNumber(price)} <span className="text-[.78rem]">FCFA</span>
+              </dd>
+            </div>
+          </dl>
 
-          {/* Étapes */}
-          <ol className="mb-5 space-y-4 text-[.9rem] text-gray-700 dark:text-gray-200">
-            <Step n={1}>Déposez le montant sur l'un des numéros ci-dessous (appui long pour copier) :</Step>
-          </ol>
+          <ol className="mt-6 grid gap-5 text-[.84rem] text-gray-700 dark:text-gray-200">
+            <li>
+              <div className="mb-3 flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green text-[.72rem] text-white" aria-hidden="true">1</span>
+                Déposez le montant exact
+              </div>
+              <div className="grid gap-2.5">
+                {accounts.map((account) => (
+                  <button
+                    key={account.key}
+                    type="button"
+                    onClick={() => copyNumber(account.number, account.key)}
+                    aria-label={"Copier le numéro " + account.name + " " + account.number}
+                    className={"flex min-h-[58px] w-full items-center gap-3 rounded-[8px] border px-4 text-left transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green/20 dark:bg-white/5 " + account.color}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[.7rem] font-bold uppercase">{account.name}</span>
+                      <span className="block select-all break-all font-mono text-[1rem] font-extrabold text-gray-900 dark:text-white">{account.number}</span>
+                    </span>
+                    <span className="shrink-0 text-[.72rem] font-bold">
+                      {copied === account.key ? "Copié" : "Copier"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div aria-live="polite" className="mt-2 min-h-[20px] text-[.72rem] text-red-600 dark:text-red-300">
+                {copyError}
+              </div>
+            </li>
 
-          <div className="mb-5 grid gap-2.5">
-            <button onClick={() => copy(WAVE_NUMBER, "wave")} className="group flex items-center gap-3 rounded-[14px] border border-[#1DC8FF]/40 bg-gradient-to-r from-[#1DC8FF]/15 to-transparent px-4 py-3.5 text-left transition hover:border-[#1DC8FF]">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1DC8FF]/20 text-[1.1rem]">🌊</span>
-              <span className="flex-1">
-                <span className="block text-[.7rem] font-semibold uppercase tracking-wide text-[#0b97c4] dark:text-[#1DC8FF]">Wave</span>
-                <span className="block font-mono text-[1.05rem] font-extrabold tracking-wide dark:text-white">{WAVE_NUMBER}</span>
-              </span>
-              <span className="rounded-md bg-white/70 dark:bg-white/10 px-2 py-1 text-[.7rem] font-bold text-gray-600 dark:text-gray-300">{copied === "wave" ? "✓ Copié" : "📋 Copier"}</span>
-            </button>
-            <button onClick={() => copy(ORANGE_NUMBER, "orange")} className="group flex items-center gap-3 rounded-[14px] border border-orange-400/40 bg-gradient-to-r from-orange-400/15 to-transparent px-4 py-3.5 text-left transition hover:border-orange-400">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-400/20 text-[1.1rem]">🟠</span>
-              <span className="flex-1">
-                <span className="block text-[.7rem] font-semibold uppercase tracking-wide text-orange-600 dark:text-orange-400">Orange Money</span>
-                <span className="block font-mono text-[1.05rem] font-extrabold tracking-wide dark:text-white">{ORANGE_NUMBER}</span>
-              </span>
-              <span className="rounded-md bg-white/70 dark:bg-white/10 px-2 py-1 text-[.7rem] font-bold text-gray-600 dark:text-gray-300">{copied === "orange" ? "✓ Copié" : "📋 Copier"}</span>
-            </button>
-          </div>
-
-          <ol className="mb-6 space-y-4 text-[.9rem] text-gray-700 dark:text-gray-200">
-            <Step n={2}>Envoyez la <b>capture du reçu</b> sur WhatsApp (bouton ci-dessous).</Step>
-            <Step n={3}>Votre plan est activé <b>dès réception</b> du reçu. 🎉</Step>
+            <li className="flex items-start gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green text-[.72rem] font-bold text-white" aria-hidden="true">2</span>
+              <span className="pt-0.5">Conservez la capture ou le reçu du dépôt.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green text-[.72rem] font-bold text-white" aria-hidden="true">3</span>
+              <span className="pt-0.5">Envoyez le reçu au support WhatsApp pour vérification.</span>
+            </li>
           </ol>
 
           <a
             href={whatsappLink(message)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-[56px] w-full items-center justify-center gap-2 rounded-[14px] bg-[#25D366] text-[1.05rem] font-bold text-white shadow-lg shadow-[#25D366]/30 transition-all hover:scale-[1.02] hover:bg-[#1da851]"
+            className="mt-6 flex min-h-[52px] w-full items-center justify-center rounded-[8px] bg-[#25D366] px-4 text-center text-[.95rem] font-bold text-white transition hover:bg-[#1da851] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#25D366]/25"
           >
-            💬 Envoyer mon reçu sur WhatsApp
+            Envoyer mon reçu sur WhatsApp
           </a>
 
-          {/* Alternative : paiement automatique en ligne (PayTech) — masqué tant que
-              le compte PayTech n'est pas activé en production. */}
-          {ONLINE_PAYMENT_ENABLED && (
-            <>
-              <div className="my-4 flex items-center gap-3 text-[.75rem] text-gray-400">
-                <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
-                ou payer en ligne (automatique)
-                <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
-              </div>
-              <button
-                onClick={payTech}
-                disabled={processing}
-                className="flex h-[52px] w-full items-center justify-center rounded-[14px] bg-gradient-to-r from-green-500 to-neon-gold text-[1rem] font-bold text-white shadow-lg transition-all hover:scale-[1.02] disabled:opacity-70"
-              >
-                {processing ? "⏳ Ouverture du paiement…" : `💳 Payer ${formatNumber(price)} FCFA en ligne (PayTech)`}
-              </button>
-            </>
-          )}
-
-          <div className="mt-6 flex items-center justify-center gap-4 border-t border-gray-100 dark:border-white/10 pt-4 text-[.72rem] font-medium text-gray-400">
-            <span className="flex items-center gap-1">🔒 Sécurisé</span>
-            <span className="flex items-center gap-1">⚡ Activation rapide</span>
-            <span className="flex items-center gap-1">🧾 Reçu par email</span>
-          </div>
+          <p className="mt-4 text-center text-[.7rem] leading-relaxed text-gray-500 dark:text-gray-400">
+            Ne partagez jamais votre code secret Mobile Money. {BRAND.name} demande uniquement le reçu de la transaction.
+          </p>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

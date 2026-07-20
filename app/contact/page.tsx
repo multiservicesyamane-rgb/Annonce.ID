@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { BRAND } from "@/lib/constants";
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
@@ -46,7 +47,7 @@ export default function ContactPage() {
               <div className="w-10 h-10 rounded-full bg-green/10 text-green flex items-center justify-center text-xl shrink-0">📧</div>
               <div>
                 <div className="font-bold text-gray-900 dark:text-white">Email</div>
-                <div className="text-gray-500 text-[.9rem]">support@annonce.id</div>
+                <a href={"mailto:" + BRAND.supportEmail} className="text-gray-500 text-[.9rem] hover:text-green hover:underline">{BRAND.supportEmail}</a>
               </div>
             </div>
             

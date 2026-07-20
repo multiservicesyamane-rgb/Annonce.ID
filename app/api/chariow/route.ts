@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { PaymentValidationError, resolveCheckoutIntent } from "@/lib/paymentSecurity";
 
 export const dynamic = "force-dynamic";
 
@@ -115,13 +116,9 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { listingId, boostKey, subKey, category } = body;
+    const intent = await resolveCheckoutIntent(user.id, body);
 
-    if (listingId && typeof listingId !== "string") {
-      return NextResponse.json({ error: "ID d'annonce invalide." }, { status: 400 });
-    }
-
-    const productId = resolveProductId(String(boostKey || ""), String(subKey || ""), String(category || ""));
+    const productId = resolveProductId(intent.boostKey, intent.subKey, intent.category);
     if (!productId) {
       return NextResponse.json(
         { error: "Offre non reliee a un produit Chariow (CHARIOW_PRODUCTS)." },
@@ -148,7 +145,7 @@ export async function POST(req: Request) {
 
     const baseUrl = getBaseUrl(req);
     const redirectUrl =
-      `${baseUrl}/paiement/succes?sale={sale_id}` + (listingId ? `&listing_id=${listingId}` : "");
+      `${baseUrl}/paiement/succes?sale={sale_id}` + (intent.listingId ? `&listing_id=${intent.listingId}` : "");
 
     // custom_metadata (max 10 cles, 255 caracteres par valeur) : repris tel quel
     // dans le payload du Pulse, c'est notre seul lien vente -> utilisateur/annonce.
@@ -163,11 +160,13 @@ export async function POST(req: Request) {
       },
       redirect_url: redirectUrl,
       custom_metadata: {
-        userId: user.id,
-        listingId: String(listingId || ""),
-        boostKey: String(boostKey || ""),
-        subKey: String(subKey || ""),
-        category: String(category || ""),
+        userId: intent.metadata.userId,
+        listingId: intent.metadata.listingId,
+        boostKey: intent.metadata.boostKey,
+        subKey: intent.metadata.subKey,
+        category: intent.metadata.category,
+        expectedAmount: String(intent.metadata.expectedAmount),
+        intentType: intent.metadata.intentType,
       },
     };
 
@@ -191,7 +190,7 @@ export async function POST(req: Request) {
     if (response.ok && step === "completed") {
       // Produit gratuit : la vente est finalisee immediatement, le Pulse fera l'activation.
       return NextResponse.json({
-        redirect_url: `${baseUrl}/paiement/succes` + (listingId ? `?listing_id=${listingId}` : ""),
+        redirect_url: `${baseUrl}/paiement/succes` + (intent.listingId ? `?listing_id=${intent.listingId}` : ""),
       });
     }
 
@@ -203,13 +202,12 @@ export async function POST(req: Request) {
     }
 
     console.error("Chariow error:", data);
-    const reason =
-      data.data?.message ||
-      data.message ||
-      (data.errors ? JSON.stringify(data.errors) : `HTTP ${response.status}`);
-    return NextResponse.json({ error: `Chariow a refuse la demande: ${reason}` }, { status: 400 });
+    return NextResponse.json({ error: "Chariow a refuse la demande de paiement." }, { status: 400 });
   } catch (error: any) {
     console.error("Chariow API Error:", error);
-    return NextResponse.json({ error: `Erreur interne: ${error?.message}` }, { status: 500 });
+    if (error instanceof PaymentValidationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Erreur interne du paiement." }, { status: 500 });
   }
 }

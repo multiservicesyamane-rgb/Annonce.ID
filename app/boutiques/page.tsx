@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import BoutiquesView from "@/components/BoutiquesView";
+import { BRAND } from "@/lib/constants";
 
 export const metadata = {
-  title: "Boutiques — Annonce.ID",
-  description: "Découvrez toutes les boutiques et vendeurs professionnels sur Annonce.ID",
+  title: `Boutiques — ${BRAND.name}`,
+  description: `Découvrez toutes les boutiques et vendeurs professionnels sur ${BRAND.name}`,
 };
 
 // Force dynamic rendering to query profiles and listings in real-time from Supabase
@@ -46,7 +47,7 @@ export default async function BoutiquesPage() {
           🏪 Toutes les Boutiques
         </h1>
         <p className="text-gray-500 dark:text-gray-400 text-[.95rem] max-w-xl mx-auto">
-          Découvrez les vendeurs professionnels et boutiques partenaires sur Annonce.ID
+          Découvrez les vendeurs professionnels et boutiques partenaires sur {BRAND.name}
         </p>
       </div>
 
@@ -66,7 +67,7 @@ export default async function BoutiquesPage() {
             name: (shop.full_name || "Boutique").includes("@") ? (shop.full_name || "Boutique").split("@")[0] : (shop.full_name || "Boutique"),
             avatar: shop.avatar_url || "https://placehold.co/100x100?text=B",
             cover: shop.cover_url || null,
-            bio: shop.bio || "Vendeur sur Annonce.ID",
+            bio: shop.bio || `Vendeur sur ${BRAND.name}`,
             isPro: shop.role === "pro" || shop.role === "business" || !!shop.free_premium,
             phone: shop.phone || "",
             memberSince: shop.created_at ? new Date(shop.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" }) : "",

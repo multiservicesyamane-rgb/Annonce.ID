@@ -13,7 +13,7 @@ const explicitOnline = process.env.NEXT_PUBLIC_ONLINE_PAYMENT_ENABLED === "true"
 const explicitChariow = process.env.NEXT_PUBLIC_CHARIOW_PAYMENT_ENABLED === "true";
 const explicitWave = process.env.NEXT_PUBLIC_WAVE_PAYMENT_ENABLED === "true";
 const explicitCinetPay = process.env.NEXT_PUBLIC_CINETPAY_PAYMENT_ENABLED === "true";
-export const PAYMENT_REQUIRED = process.env.NEXT_PUBLIC_PAYMENT_REQUIRED === "true";
+export const PAYMENT_REQUIRED = process.env.NEXT_PUBLIC_PAYMENT_REQUIRED !== "false";
 
 export const PAYMENT_PROVIDER = paymentProvider;
 export const ONLINE_PAYMENT_ENABLED =

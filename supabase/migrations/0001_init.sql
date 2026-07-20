@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════
---  Annonce.ID — Schéma initial (section 16 du brief)
+--  Wanteermako — Schéma initial (section 16 du brief)
 --  À exécuter dans Supabase > SQL Editor, OU via `supabase db push`.
 -- ════════════════════════════════════════════════════════════════
 

@@ -1,9 +1,43 @@
 import { createServerClient } from '@supabase/ssr'
+import type { User } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getCategoryBySubdomain } from './lib/categories'
 import { getSubRouteQuery } from './lib/subRoutes'
+import { getSafeRedirectPath } from './lib/authRedirect'
 
 const SHORT_LISTING_PATH_REGEX = /^\/[^/]+-\d{10,}$/
+
+function getSupabaseProjectRef(supabaseUrl: string) {
+  try {
+    return new URL(supabaseUrl).hostname.split('.')[0] || ''
+  } catch {
+    return ''
+  }
+}
+
+function clearSupabaseAuthCookies(response: NextResponse, request: NextRequest, supabaseUrl: string) {
+  const projectRef = getSupabaseProjectRef(supabaseUrl)
+  if (!projectRef) return
+
+  const authCookiePrefix = `sb-${projectRef}-auth-token`
+  request.cookies.getAll().forEach(({ name }) => {
+    if (name.startsWith(authCookiePrefix)) {
+      response.cookies.delete(name)
+    }
+  })
+}
+
+function isInvalidSessionError(error: unknown) {
+  if (!error) return false
+
+  const code =
+    typeof error === 'object' && error && 'code' in error
+      ? String((error as { code?: unknown }).code || '')
+      : ''
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
+
+  return code === 'refresh_token_not_found' || message.includes('refresh token')
+}
 
 export async function middleware(request: NextRequest) {
   const originalPathname = request.nextUrl.pathname
@@ -65,7 +99,21 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user: User | null = null
+  let authError: unknown = null
+
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    user = data.user
+    authError = error
+  } catch (error) {
+    authError = error
+  }
+
+  const hasInvalidSession = isInvalidSessionError(authError)
+  if (hasInvalidSession) {
+    clearSupabaseAuthCookies(supabaseResponse, request, supabaseUrl)
+  }
 
   const pathname = shouldRewriteCategorySubdomain ? rewriteUrl.pathname : originalPathname;
 
@@ -80,8 +128,17 @@ export async function middleware(request: NextRequest) {
 
   if (isPrivateRoute && !user) {
     const url = request.nextUrl.clone()
+    const redirectPath = getSafeRedirectPath(`${originalPathname}${request.nextUrl.search}`, '/')
     url.pathname = '/connexion'
-    return NextResponse.redirect(url)
+    url.search = ''
+    url.searchParams.set('redirect', redirectPath)
+    if (hasInvalidSession) url.searchParams.set('error', 'session')
+
+    const response = NextResponse.redirect(url)
+    if (hasInvalidSession) {
+      clearSupabaseAuthCookies(response, request, supabaseUrl)
+    }
+    return response
   }
 
   return supabaseResponse

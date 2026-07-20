@@ -59,6 +59,7 @@ alter table public.purchases add column if not exists method text;
 alter table public.purchases add column if not exists plan_key text;
 alter table public.purchases add column if not exists plan_name text;
 alter table public.purchases add column if not exists expires_at timestamptz;
+create unique index if not exists idx_purchases_ref_command_unique on public.purchases (ref_command) where ref_command is not null;
 
 -- paramètres globaux (tarifs, toggles) gérés depuis le super admin
 create table if not exists public.app_settings (
@@ -142,26 +143,43 @@ create table if not exists public.reports (
 );
 alter table public.reports enable row level security;
 
--- ───────────────────────── 5) STOCKAGE D'IMAGES (buckets) ─────────────────────────
--- Crée les buckets PUBLICS pour les images (boutique, annonces, avatars) et le chat.
+-- ------------------------- 5) STOCKAGE D'IMAGES (buckets) -------------------------
+-- images reste public pour annonces/avatars. chat_media est prive et servi via URLs signees.
 insert into storage.buckets (id, name, public) values ('images', 'images', true)
   on conflict (id) do update set public = true;
-insert into storage.buckets (id, name, public) values ('chat_media', 'chat_media', true)
-  on conflict (id) do update set public = true;
+insert into storage.buckets (id, name, public) values ('chat_media', 'chat_media', false)
+  on conflict (id) do update set public = false;
 
--- Lecture publique des images
+-- Lecture publique uniquement des images publiques.
 drop policy if exists "wmk_public_read" on storage.objects;
 create policy "wmk_public_read" on storage.objects
-  for select using (bucket_id in ('images', 'chat_media'));
+  for select using (bucket_id = 'images');
 
--- Envoi d'images par les utilisateurs connectés
+-- Lecture chat limitee au proprietaire du chemin userId/...
+drop policy if exists "wmk_chat_owner_read" on storage.objects;
+create policy "wmk_chat_owner_read" on storage.objects
+  for select to authenticated using (
+    bucket_id = 'chat_media'
+    and split_part(name, '/', 1) = auth.uid()::text
+  );
+
+-- Upload limite au chemin controle par l'utilisateur.
 drop policy if exists "wmk_auth_upload" on storage.objects;
 create policy "wmk_auth_upload" on storage.objects
-  for insert to authenticated with check (bucket_id in ('images', 'chat_media'));
+  for insert to authenticated with check (
+    (bucket_id = 'images' and split_part(name, '/', 2) = auth.uid()::text)
+    or (bucket_id = 'chat_media' and split_part(name, '/', 1) = auth.uid()::text)
+  );
 
--- Mise à jour / remplacement par les utilisateurs connectés
+-- Mise a jour/remplacement limite au meme chemin utilisateur.
 drop policy if exists "wmk_auth_update" on storage.objects;
 create policy "wmk_auth_update" on storage.objects
-  for update to authenticated using (bucket_id in ('images', 'chat_media'));
+  for update to authenticated using (
+    (bucket_id = 'images' and split_part(name, '/', 2) = auth.uid()::text)
+    or (bucket_id = 'chat_media' and split_part(name, '/', 1) = auth.uid()::text)
+  ) with check (
+    (bucket_id = 'images' and split_part(name, '/', 2) = auth.uid()::text)
+    or (bucket_id = 'chat_media' and split_part(name, '/', 1) = auth.uid()::text)
+  );
 
--- ✅ Terminé. La bannière, les avatars, le chat et les paiements manuels fonctionnent.
+-- Termine. La banniere, les avatars, le chat et les paiements manuels fonctionnent.

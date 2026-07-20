@@ -2,13 +2,25 @@
 
 import { useState } from "react";
 import { formatNumber } from "@/lib/utils";
+import { getCurrentPathWithSearch, getLoginUrl } from "@/lib/authRedirect";
 import {
   CHARIOW_PAYMENT_ENABLED,
   CINETPAY_ONLINE_PAYMENT_ENABLED,
   WAVE_ONLINE_PAYMENT_ENABLED,
 } from "@/lib/payment";
+import { BRAND } from "@/lib/constants";
 
 type Provider = "paytech" | "cinetpay" | "wave" | "chariow";
+
+type PaymentFlowProps = {
+  itemName: string;
+  price: number;
+  duration: string;
+  listingId?: string;
+  boostKey?: string;
+  subKey?: string;
+  category?: string;
+};
 
 export default function PaymentFlow({
   itemName,
@@ -18,30 +30,43 @@ export default function PaymentFlow({
   boostKey,
   subKey,
   category,
-}: {
-  itemName: string;
-  price: number;
-  duration: string;
-  listingId?: string;
-  boostKey?: string;
-  subKey?: string;
-  category?: string;
-}) {
+}: PaymentFlowProps) {
   const [processing, setProcessing] = useState<"" | Provider>("");
-  const total = price;
-  const secondaryProvidersEnabled = WAVE_ONLINE_PAYMENT_ENABLED || CINETPAY_ONLINE_PAYMENT_ENABLED;
-  const hasProvider = CHARIOW_PAYMENT_ENABLED || secondaryProvidersEnabled;
+  const [error, setError] = useState("");
+
+  const paytechEnabled =
+    !CHARIOW_PAYMENT_ENABLED &&
+    !WAVE_ONLINE_PAYMENT_ENABLED &&
+    !CINETPAY_ONLINE_PAYMENT_ENABLED;
+  const hasProvider =
+    CHARIOW_PAYMENT_ENABLED ||
+    WAVE_ONLINE_PAYMENT_ENABLED ||
+    CINETPAY_ONLINE_PAYMENT_ENABLED ||
+    paytechEnabled;
+
+  const methodLabels = Array.from(
+    new Set(
+      [
+        CHARIOW_PAYMENT_ENABLED ? "Mobile Money ou carte" : "",
+        WAVE_ONLINE_PAYMENT_ENABLED ? "Wave" : "",
+        CINETPAY_ONLINE_PAYMENT_ENABLED ? "Orange Money, MTN, Moov ou carte" : "",
+        paytechEnabled ? "Mobile Money ou carte" : "",
+      ].filter(Boolean),
+    ),
+  );
 
   async function pay(provider: Provider) {
+    if (processing) return;
     setProcessing(provider);
+    setError("");
+
     try {
-      const res = await fetch(`/api/${provider}`, {
+      const response = await fetch("/api/" + provider, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: total,
-          itemName: itemName,
-          refCommand: `WMK-${Math.floor(Math.random() * 100000)}`,
+          amount: price,
+          itemName,
           listingId: listingId || "",
           boostKey: boostKey || "",
           subKey: subKey || "",
@@ -49,145 +74,132 @@ export default function PaymentFlow({
         }),
       });
 
-      if (res.status === 401) {
-        alert("Votre session de connexion a expiré. Veuillez vous reconnecter.");
-        window.location.href = "/connexion";
+      if (response.status === 401) {
+        window.location.href = getLoginUrl(getCurrentPathWithSearch());
         return;
       }
 
-      const data = await res.json();
-      if (data.redirect_url) {
-        window.location.href = data.redirect_url;
-      } else {
-        alert(data.error || "Erreur d'initialisation du paiement");
-        setProcessing("");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.redirect_url) {
+        setError(data.error || "Le paiement n’a pas pu être initialisé. Réessayez.");
+        return;
       }
-    } catch (err) {
-      console.error(err);
+
+      window.location.href = data.redirect_url;
+    } catch {
+      setError("Connexion au service de paiement impossible. Vérifiez votre réseau et réessayez.");
+    } finally {
       setProcessing("");
     }
   }
 
   return (
-    <div className="mx-auto max-w-[540px] px-3 sm:px-4">
-      <div className="overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-[0_20px_60px_-20px_rgba(124,92,252,0.45)] dark:border-white/10 dark:bg-[#111722]/90 dark:backdrop-blur-xl animate-fadeUp">
-        {/* En-tête dégradé */}
-        <div className="relative bg-gradient-to-br from-[#6366F1] via-[#7C5CFC] to-[#A855F7] px-5 py-7 text-center text-white sm:px-8 sm:py-8">
-          <div
-            className="absolute inset-0 opacity-10"
-            style={{ backgroundImage: "radial-gradient(circle at 15% 20%, #fff 1.5px, transparent 1.5px)", backgroundSize: "26px 26px" }}
-          />
-          <div className="relative">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-[1.7rem] backdrop-blur-sm ring-1 ring-white/25 sm:h-16 sm:w-16 sm:text-[2rem]">
-              💳
+    <div className="mx-auto max-w-[620px]">
+      <section
+        aria-labelledby="checkout-summary-title"
+        className="overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#161B22]"
+      >
+        <header className="border-b border-gray-100 px-5 py-4 dark:border-white/10 sm:px-6">
+          <h2 id="checkout-summary-title" className="font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white">
+            Récapitulatif
+          </h2>
+          <p className="mt-1 text-[.76rem] text-gray-500 dark:text-gray-400">Activation automatique après confirmation du paiement.</p>
+        </header>
+
+        <div className="p-5 sm:p-6">
+          <dl className="grid gap-3 text-[.86rem]">
+            <div className="flex items-start justify-between gap-4">
+              <dt className="text-gray-500 dark:text-gray-400">Formule</dt>
+              <dd className="max-w-[65%] text-right font-bold text-gray-900 dark:text-white">{itemName}</dd>
             </div>
-            <h2 className="font-display text-[1.25rem] font-extrabold sm:text-[1.45rem]">Finaliser la commande</h2>
-            <p className="mt-1 text-[.85rem] text-white/80">Paiement sécurisé · Activation automatique</p>
-          </div>
-        </div>
-
-        {/* Corps */}
-        <div className="p-5 sm:p-7">
-          {/* Récapitulatif */}
-          <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 sm:p-5 dark:border-white/5 dark:bg-white/5">
-            <Row k="Formule" v={itemName} />
-            <Row k="Durée" v={duration} muted />
-            <div className="mt-3 flex items-center justify-between border-t border-dashed border-gray-200 pt-3 dark:border-white/10">
-              <span className="text-[.95rem] font-extrabold text-gray-800 dark:text-white">Total à payer</span>
-              <span className="font-display text-[1.45rem] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#6366F1] to-[#A855F7] sm:text-[1.6rem]">
-                {formatNumber(total)} <span className="text-[.85rem]">FCFA</span>
-              </span>
+            <div className="flex items-start justify-between gap-4">
+              <dt className="text-gray-500 dark:text-gray-400">Durée</dt>
+              <dd className="text-right font-semibold text-gray-700 dark:text-gray-200">{duration}</dd>
             </div>
-          </div>
+            <div className="mt-1 flex items-end justify-between gap-4 border-t border-dashed border-gray-200 pt-4 dark:border-white/10">
+              <dt className="font-bold text-gray-900 dark:text-white">Total à payer</dt>
+              <dd className="text-right font-display text-[1.55rem] font-extrabold leading-none text-green">
+                {formatNumber(price)} <span className="text-[.78rem]">FCFA</span>
+              </dd>
+            </div>
+          </dl>
 
-          {/* Moyens de paiement acceptés */}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
-            {["🌊 Wave", "🟠 Orange Money", "🟡 MTN", "🔵 Moov", "💳 Carte"].map((m) => (
-              <span
-                key={m}
-                className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[.68rem] font-bold text-gray-600 sm:text-[.72rem] dark:border-white/10 dark:bg-white/5 dark:text-gray-300"
-              >
-                {m}
-              </span>
-            ))}
-          </div>
+          {methodLabels.length > 0 && (
+            <div className="mt-5 rounded-[8px] bg-gray-50 px-3 py-2.5 text-[.74rem] text-gray-600 dark:bg-white/5 dark:text-gray-300">
+              <span className="font-bold">Moyens disponibles : </span>
+              {methodLabels.join(" · ")}
+            </div>
+          )}
 
-          {/* Bouton principal */}
-          <div className="mt-5 space-y-3">
+          {error && (
+            <div role="alert" className="mt-4 rounded-[8px] border border-red-200 bg-red-50 px-3.5 py-3 text-[.82rem] leading-relaxed text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-5 grid gap-3" aria-busy={Boolean(processing)}>
             {CHARIOW_PAYMENT_ENABLED && (
               <button
+                type="button"
                 onClick={() => pay("chariow")}
-                disabled={!!processing}
-                className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-[#6366F1] via-[#7C5CFC] to-[#A855F7] px-4 py-4 text-[1rem] font-extrabold text-white shadow-lg shadow-[#7C5CFC]/30 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-[#7C5CFC]/40 disabled:opacity-70 disabled:hover:scale-100 sm:py-[18px] sm:text-[1.05rem]"
+                disabled={Boolean(processing)}
+                className="btn btn-green min-h-[50px] w-full text-[.94rem] disabled:cursor-wait disabled:opacity-60"
               >
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                {processing === "chariow" ? "⏳ Ouverture du paiement sécurisé…" : `Payer ${formatNumber(total)} FCFA maintenant`}
+                {processing === "chariow" ? "Ouverture du paiement..." : "Continuer vers le paiement sécurisé"}
               </button>
-            )}
-
-            {CHARIOW_PAYMENT_ENABLED && secondaryProvidersEnabled && (
-              <div className="flex items-center gap-3 text-[.72rem] font-semibold uppercase tracking-wider text-gray-400">
-                <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
-                ou
-                <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
-              </div>
             )}
 
             {WAVE_ONLINE_PAYMENT_ENABLED && (
               <button
+                type="button"
                 onClick={() => pay("wave")}
-                disabled={!!processing}
-                className="w-full rounded-2xl bg-[#1DC8FF] px-4 py-4 text-[1rem] font-extrabold text-white shadow-lg shadow-[#1DC8FF]/30 transition-all hover:scale-[1.02] hover:bg-[#08b4ec] disabled:opacity-70 disabled:hover:scale-100"
+                disabled={Boolean(processing)}
+                className="flex min-h-[50px] w-full items-center justify-center rounded-[8px] bg-[#1DC8FF] px-4 text-[.94rem] font-extrabold text-white transition hover:bg-[#08b4ec] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1DC8FF]/25 disabled:cursor-wait disabled:opacity-60"
               >
-                {processing === "wave" ? "⏳ Ouverture de Wave…" : `🌊 Payer ${formatNumber(total)} FCFA avec Wave`}
+                {processing === "wave" ? "Ouverture de Wave..." : "Payer avec Wave"}
               </button>
             )}
 
             {CINETPAY_ONLINE_PAYMENT_ENABLED && (
               <button
+                type="button"
                 onClick={() => pay("cinetpay")}
-                disabled={!!processing}
-                className="w-full rounded-2xl bg-green px-4 py-3.5 text-[.95rem] font-extrabold text-white shadow-lg shadow-green/30 transition-all hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100"
+                disabled={Boolean(processing)}
+                className="btn min-h-[50px] w-full border-green bg-white text-[.94rem] font-extrabold text-green hover:bg-green/5 dark:bg-transparent disabled:cursor-wait disabled:opacity-60"
               >
-                {processing === "cinetpay" ? "⏳ Ouverture du paiement…" : `💳 Orange Money · MTN · Moov · Carte`}
+                {processing === "cinetpay" ? "Ouverture du paiement..." : "Payer par Mobile Money ou carte"}
+              </button>
+            )}
+
+            {paytechEnabled && (
+              <button
+                type="button"
+                onClick={() => pay("paytech")}
+                disabled={Boolean(processing)}
+                className="btn btn-green min-h-[50px] w-full text-[.94rem] disabled:cursor-wait disabled:opacity-60"
+              >
+                {processing === "paytech" ? "Ouverture du paiement..." : "Continuer vers le paiement sécurisé"}
               </button>
             )}
 
             {!hasProvider && (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[.85rem] font-semibold text-amber-800">
-                Aucun prestataire en ligne n'est activé. Configurez NEXT_PUBLIC_PAYMENT_PROVIDER pour continuer.
+              <p role="alert" className="rounded-[8px] border border-amber-200 bg-amber-50 px-4 py-3 text-[.82rem] font-semibold text-amber-800">
+                Aucun prestataire de paiement n’est disponible pour le moment.
               </p>
             )}
           </div>
 
-          {/* Réassurance */}
-          <div className="mt-5 grid grid-cols-3 gap-2 border-t border-gray-100 pt-4 text-center dark:border-white/5">
-            {[
-              { icon: "🔒", label: "Paiement crypté" },
-              { icon: "⚡", label: "Activation auto" },
-              { icon: "🧾", label: "Reçu par email" },
-            ].map((t) => (
-              <div key={t.label} className="flex flex-col items-center gap-1">
-                <span className="text-[1.05rem]">{t.icon}</span>
-                <span className="text-[.65rem] font-semibold text-gray-400 sm:text-[.7rem]">{t.label}</span>
-              </div>
-            ))}
-          </div>
+          <ul className="mt-5 grid grid-cols-3 gap-2 border-t border-gray-100 pt-4 text-center text-[.68rem] font-semibold text-gray-500 dark:border-white/10 dark:text-gray-400">
+            <li>Paiement chiffré</li>
+            <li>Activation automatique</li>
+            <li>Montant vérifié</li>
+          </ul>
         </div>
-      </div>
+      </section>
 
-      <p className="mt-4 text-center text-[.72rem] text-gray-400">
-        🔒 Transaction 100% sécurisée — aucune donnée bancaire n'est stockée sur Wanteermako.
+      <p className="mt-4 text-center text-[.7rem] leading-relaxed text-gray-500 dark:text-gray-400">
+        Aucune donnée bancaire n’est stockée par {BRAND.name}.
       </p>
-    </div>
-  );
-}
-
-function Row({ k, v, muted }: { k: string; v: string; muted?: boolean }) {
-  return (
-    <div className="flex justify-between gap-3 py-1.5 text-[.88rem]">
-      <span className={muted ? "text-gray-400 dark:text-gray-500" : "font-medium text-gray-600 dark:text-gray-300"}>{k}</span>
-      <span className="text-right font-bold text-gray-900 dark:text-white">{v}</span>
     </div>
   );
 }

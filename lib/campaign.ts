@@ -12,6 +12,6 @@ export function campaignAdmin() {
 // le header "x-campaign-secret". Sinon (non configuré) on laisse passer (mode test).
 export function checkCampaignSecret(req: Request): boolean {
   const secret = process.env.CAMPAIGN_WEBHOOK_SECRET;
-  if (!secret) return true;
+  if (!secret) return process.env.NODE_ENV !== "production";
   return (req.headers.get("x-campaign-secret") || "") === secret;
 }

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentPathWithSearch, getLoginUrl } from "@/lib/authRedirect";
 
 export default function ProfilRedirect() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function ProfilRedirect() {
       if (user) {
         router.replace("/dashboard?panel=profile");
       } else {
-        router.replace("/connexion");
+        router.replace(getLoginUrl(getCurrentPathWithSearch()));
       }
     });
   }, [router, supabase]);

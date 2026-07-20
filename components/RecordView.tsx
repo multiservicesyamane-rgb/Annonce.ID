@@ -10,7 +10,7 @@ export default function RecordView({ ad }: { ad: any }) {
   useEffect(() => {
     if (!ad?.id) return;
     try {
-      const key = "annonceid_history";
+      const key = "wanteermako_history";
       const hist = JSON.parse(localStorage.getItem(key) || "[]");
       const arr = Array.isArray(hist) ? hist.filter((h: any) => h && h.id && h.id !== ad.id) : [];
       arr.unshift(ad);

@@ -1,5 +1,5 @@
 -- =======================================================================================
--- SCHEMA INITIAL POUR ANNONCE.ID (SUPABASE)
+-- SCHEMA INITIAL POUR WANTEERMAKO (SUPABASE)
 -- Copiez ce code et collez-le dans le "SQL Editor" de votre tableau de bord Supabase
 -- =======================================================================================
 

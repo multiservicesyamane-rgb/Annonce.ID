@@ -1,5 +1,5 @@
 -- ============================================================
---  Annonce.ID — Accès Super Admin aux tables B2B
+--  Wanteermako — Accès Super Admin aux tables B2B
 --  À exécuter dans Supabase → SQL Editor (après MIGRATION_B2B.sql).
 --
 --  Le Super Admin se connecte via un mot de passe côté application

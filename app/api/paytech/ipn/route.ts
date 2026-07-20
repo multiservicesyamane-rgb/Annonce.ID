@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { sendInvoiceEmail } from "@/lib/email";
 import { publishOneListing } from "@/lib/campaign-engine";
+import { assertProviderAmount, ensureListingOwnedByUser, PaymentValidationError, purchaseAlreadyExists } from "@/lib/paymentSecurity";
 
 // Forcer le rendu dynamique : cette route ne doit pas être évaluée au build
 export const dynamic = "force-dynamic";
@@ -46,17 +47,33 @@ export async function POST(req: Request) {
         payload = { userId: custom_field };
       }
 
-      const { userId, listingId, boostKey, subKey, category } = payload;
+      const { userId, listingId, boostKey, subKey, category, expectedAmount } = payload;
+      const amount = parseInt(item_price || "0", 10);
 
-      if (userId || listingId) {
+      if (userId && (listingId || subKey)) {
+        if (!ref_command) {
+          return NextResponse.json({ error: "Reference manquante" }, { status: 400 });
+        }
+
+        assertProviderAmount(amount, expectedAmount);
+        if (listingId) await ensureListingOwnedByUser(supabase, String(listingId), String(userId));
+
+        if (await purchaseAlreadyExists(supabase, ref_command)) {
+          return NextResponse.json({ success: true, duplicate: true });
+        }
+
         // 2. Ajouter la transaction dans la table "purchases"
-        await supabase.from("purchases").insert({
+        const { error: purchaseError } = await supabase.from("purchases").insert({
           user_id: userId || null,
-          amount: parseInt(item_price || "0", 10),
+          amount,
           ref_command: ref_command,
           status: "success",
-          type: listingId ? "boost" : "credits"
+          type: listingId ? "boost" : subKey ? "subscription" : "credits"
         });
+        if (purchaseError) {
+          if (purchaseError.code === "23505") return NextResponse.json({ success: true, duplicate: true });
+          throw new PaymentValidationError("Enregistrement paiement impossible.", 500);
+        }
 
         // 3. Activer le Boost de l'annonce si un listingId est fourni
         if (listingId) {
@@ -111,7 +128,7 @@ export async function POST(req: Request) {
             await sendInvoiceEmail({
               to: email, customerName: name,
               itemName: params.get("item_name") || (listingId ? "Boost annonce" : subKey ? "Abonnement" : "Crédits"),
-              amount: parseInt(item_price || "0", 10), method: "PayTech", ref: ref_command || undefined,
+              amount, method: "PayTech", ref: ref_command || undefined,
             });
           } catch (e) { console.error("Invoice email error:", e); }
         }
@@ -121,6 +138,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("IPN Error:", error);
+    if (error instanceof PaymentValidationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

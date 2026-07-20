@@ -1,30 +1,45 @@
 import { createClient } from "@/lib/supabase/client";
 
-// Nom du bucket Supabase Storage (public). À créer dans Supabase :
-// Storage > New bucket > nom "images" > Public.
 const BUCKET = "images";
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_FOLDERS = new Set(["listings", "covers", "avatars", "campaigns"]);
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
 
-/** Convertit une data URI base64 en Blob (côté navigateur). */
+function getSafeFolder(folder: string) {
+  const safeFolder = String(folder || "listings")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+
+  return ALLOWED_FOLDERS.has(safeFolder) ? safeFolder : null;
+}
+
 function dataURItoBlob(dataURI: string): Blob {
   const [meta, b64] = dataURI.split(",");
-  const mime = meta.match(/:(.*?);/)?.[1] || "image/jpeg";
+  const mime = (meta.match(/^data:(image\/(?:jpeg|png|webp|gif));base64$/i)?.[1] || "").toLowerCase();
+
+  if (!mime || !IMAGE_EXTENSIONS[mime] || !b64) {
+    throw new Error("Format image invalide.");
+  }
+
   const binary = atob(b64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+  if (bytes.byteLength > MAX_IMAGE_BYTES) {
+    throw new Error("Image trop volumineuse.");
+  }
+
   return new Blob([bytes], { type: mime });
 }
 
-/**
- * Envoie une image vers Supabase Storage et renvoie son URL publique.
- * - Si `src` est déjà une URL (http/https), elle est renvoyée telle quelle.
- * - Si l'upload échoue (bucket absent, hors-ligne...), on renvoie la base64
- *   d'origine pour ne pas bloquer l'utilisateur (repli dégradé).
- */
 export async function uploadImage(src: string, folder = "listings"): Promise<string> {
-  if (!src || !src.startsWith("data:")) return src; // déjà une URL distante
+  if (!src || !src.startsWith("data:")) return src;
 
-  // 1) Voie fiable : upload serveur (clé service_role, crée le bucket au besoin,
-  //    contourne les permissions Storage du navigateur).
   try {
     const res = await fetch("/api/upload", {
       method: "POST",
@@ -33,17 +48,25 @@ export async function uploadImage(src: string, folder = "listings"): Promise<str
     });
     const data = await res.json();
     if (res.ok && data?.url) return data.url;
-    console.warn("[storage] Upload serveur refusé:", data?.error);
+    console.warn("[storage] Upload serveur refuse:", data?.error);
   } catch (e) {
     console.warn("[storage] Upload serveur indisponible:", e);
   }
 
-  // 2) Repli : upload direct côté navigateur (si policies Storage configurées).
   try {
+    const safeFolder = getSafeFolder(folder);
+    if (!safeFolder) throw new Error("Dossier d'upload invalide.");
+
     const supabase = createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error("Connexion requise pour envoyer une image.");
+
     const blob = dataURItoBlob(src);
-    const ext = (blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
-    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const ext = IMAGE_EXTENSIONS[blob.type] || "jpg";
+    const path = `${safeFolder}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
     const { error } = await supabase.storage
       .from(BUCKET)
@@ -54,12 +77,11 @@ export async function uploadImage(src: string, folder = "listings"): Promise<str
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
     return data.publicUrl;
   } catch (e) {
-    console.warn("[storage] Upload échoué, repli sur base64:", e);
-    return src; // repli ultime : on garde la base64 pour ne pas casser la publication
+    console.warn("[storage] Upload echoue, repli sur base64:", e);
+    return src;
   }
 }
 
-/** Envoie plusieurs images en parallèle et renvoie les URLs (ou base64 en repli). */
 export async function uploadImages(srcs: string[], folder = "listings"): Promise<string[]> {
   return Promise.all((srcs || []).map((s) => uploadImage(s, folder)));
 }

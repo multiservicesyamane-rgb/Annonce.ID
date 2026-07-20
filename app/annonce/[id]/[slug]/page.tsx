@@ -32,7 +32,7 @@ async function fetchAd(idParam: string) {
     if (isNaN(Number(idParam))) return null;
   }
 
-  const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url, phone, role, created_at)').eq('id', idParam).single();
+  const { data } = await supabase.from('listings').select('*, profiles(full_name, avatar_url, phone, role, created_at)').eq('id', idParam).eq('status', 'active').single();
   if (data) {
     // Statut "vérifié" du vendeur — requête séparée et sécurisée (la colonne peut ne pas exister)
     let sellerVerified = false;
@@ -326,8 +326,8 @@ export default async function AnnoncePage({ params }: Props) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[0.9rem] font-extrabold text-gray-900 dark:text-white truncate">{seller.name}</span>
-                    {seller.isPro && <span className="rounded-md bg-gradient-to-r from-neon-gold to-[#D4891A] px-1.5 py-0.5 text-[0.55rem] font-black uppercase tracking-wide text-dark-900">PRO</span>}
-                    {seller.isVerified && <span className="inline-flex items-center gap-0.5 rounded-md bg-green/10 px-1.5 py-0.5 text-[0.58rem] font-bold text-green"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>Vérifié</span>}
+                    {seller.isPro && <span title="Entreprise ou boutique certifiée" className="rounded-md bg-gradient-to-r from-neon-gold to-[#D4891A] px-1.5 py-0.5 text-[0.55rem] font-black uppercase tracking-wide text-dark-900 cursor-help">PRO</span>}
+                    {seller.isVerified && <span title="Identité confirmée (téléphone et documents)" className="inline-flex items-center gap-0.5 rounded-md bg-green/10 px-1.5 py-0.5 text-[0.58rem] font-bold text-green cursor-help"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>Vérifié</span>}
                   </div>
                   <div className="text-[0.72rem] text-gray-500 dark:text-gray-400 mt-0.5">
                     {seller.memberSince ? `Membre depuis ${seller.memberSince}` : "Vendeur Wanteermako"}

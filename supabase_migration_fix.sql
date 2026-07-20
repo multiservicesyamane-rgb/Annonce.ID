@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Annonce.ID - Migration corrective (Dashboard Diagnostic)
+-- Wanteermako - Migration corrective (Dashboard Diagnostic)
 -- Exécutez ce script dans l'éditeur SQL de votre dashboard Supabase.
 -- ==============================================================================
 

@@ -1,4 +1,4 @@
-# Annonce.ID
+# Wanteermako
 
 Plateforme de petites annonces **premium** pour l'Afrique de l'Ouest (27 pays).
 Design ultra-premium (néon + gradients sur fond sombre pour le hero, fond clair pour les listings), mobile-first, **contact direct WhatsApp/Appel/Message — sans panier**.
@@ -144,4 +144,4 @@ Push sur GitHub → importe le repo dans **Vercel** → ajoute les variables d'e
 
 ---
 
-*Annonce.ID by YamaneTech — v1.0*
+*Wanteermako by YamaneTech — v1.0*

@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { sendInvoiceEmail } from "@/lib/email";
 import { publishOneListing } from "@/lib/campaign-engine";
+import { assertProviderAmount, ensureListingOwnedByUser, PaymentValidationError } from "@/lib/paymentSecurity";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ function safeEqual(a: string, b: string): boolean {
 
 function checkToken(req: Request): boolean {
   const expected = process.env.CHARIOW_WEBHOOK_TOKEN;
-  if (!expected) return true;
+  if (!expected) return process.env.NODE_ENV !== "production";
   const url = new URL(req.url);
   const provided = url.searchParams.get("token") || req.headers.get("x-webhook-token") || "";
   return safeEqual(provided, expected);
@@ -120,13 +121,17 @@ async function insertPurchaseOnce(
 
   if (existing?.id) return true;
 
-  await supabase.from("purchases").insert({
+  const { error } = await supabase.from("purchases").insert({
     user_id: userId || null,
     amount,
     ref_command: reference,
     status: "success",
     type,
   });
+  if (error) {
+    if (error.code === "23505") return true;
+    throw new PaymentValidationError("Enregistrement paiement impossible.", 500);
+  }
   return false;
 }
 
@@ -176,12 +181,17 @@ export async function POST(req: Request) {
     const subKey = String(metadata.subKey || metadata.sub_key || "");
     const category = String(metadata.category || "general");
     const amount = Math.round(Number(verified.amount?.value ?? sale.amount?.value ?? 0)) || 0;
+    const expectedAmount = metadata.expectedAmount || metadata.expected_amount;
 
     if (!userId && !listingId) {
       return NextResponse.json({ error: "Metadonnees paiement manquantes" }, { status: 400 });
     }
 
+    assertProviderAmount(amount, expectedAmount);
+
     const supabase = createClient(supabaseUrl, serviceKey);
+    if (listingId) await ensureListingOwnedByUser(supabase, listingId, userId);
+
     const purchaseType = listingId ? "boost" : subKey ? "subscription" : "credits";
     const alreadyProcessed = await insertPurchaseOnce(supabase, userId, amount, saleId, purchaseType);
     if (alreadyProcessed) {
@@ -229,6 +239,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Chariow webhook error:", error);
+    if (error instanceof PaymentValidationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
