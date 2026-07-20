@@ -15,6 +15,12 @@ const explicitWave = process.env.NEXT_PUBLIC_WAVE_PAYMENT_ENABLED === "true";
 const explicitCinetPay = process.env.NEXT_PUBLIC_CINETPAY_PAYMENT_ENABLED === "true";
 export const PAYMENT_REQUIRED = process.env.NEXT_PUBLIC_PAYMENT_REQUIRED !== "false";
 
+// Abonnements Boutique masqués sur le site pour l'instant (stratégie : on ne
+// vend en ligne que les 3 boosts). Pour les réactiver plus tard : passer à true
+// (et créer les produits Chariow correspondants pour le paiement en ligne).
+// L'admin peut toujours activer un abonnement à la main via Encaissement.
+export const SUBSCRIPTIONS_ENABLED = false;
+
 export const PAYMENT_PROVIDER = paymentProvider;
 export const ONLINE_PAYMENT_ENABLED =
   PAYMENT_REQUIRED &&

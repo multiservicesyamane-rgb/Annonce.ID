@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import PaymentFlow from "@/components/PaymentFlow";
 import ManualPayment from "@/components/ManualPayment";
-import { ONLINE_PAYMENT_ENABLED } from "@/lib/payment";
+import { ONLINE_PAYMENT_ENABLED, SUBSCRIPTIONS_ENABLED } from "@/lib/payment";
 import { fetchPublicSettings, effectivePrice, isOnlinePayable, type PriceMap } from "@/lib/prices";
 import { BOOSTS, SUBSCRIPTION_PLANS } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
@@ -168,13 +168,16 @@ function PaiementContent() {
           </Link>
           <p className="mt-3 text-[.72rem] font-bold uppercase tracking-[.12em] text-green">Visibilité vendeur</p>
           <h1 className="mt-1 font-display text-[1.55rem] font-extrabold text-gray-900 dark:text-white sm:text-[1.9rem]">
-            Boosts et boutiques professionnelles
+            {SUBSCRIPTIONS_ENABLED ? "Boosts et boutiques professionnelles" : "Booster une annonce"}
           </h1>
           <p className="mt-2 max-w-2xl text-[.86rem] leading-relaxed text-gray-500 dark:text-gray-400">
-            Mettez une annonce précise en avant ou choisissez une formule mensuelle pour votre boutique.
+            {SUBSCRIPTIONS_ENABLED
+              ? "Mettez une annonce précise en avant ou choisissez une formule mensuelle pour votre boutique."
+              : "Mettez votre annonce en avant pour toucher plus d'acheteurs, en quelques clics."}
           </p>
         </header>
 
+        {SUBSCRIPTIONS_ENABLED && (
         <div
           role="tablist"
           aria-label="Type de formule"
@@ -213,6 +216,7 @@ function PaiementContent() {
             Boutique Pro
           </button>
         </div>
+        )}
 
         {boostUnavailable && (
           <div role="note" className="mb-6 flex flex-col gap-3 border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-amber-900 dark:bg-amber-500/10 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between">
@@ -279,7 +283,7 @@ function PaiementContent() {
           </section>
         )}
 
-        {activeTab === "subscription" && (
+        {SUBSCRIPTIONS_ENABLED && activeTab === "subscription" && (
           <section
             id="payment-panel-subscription"
             role="tabpanel"
