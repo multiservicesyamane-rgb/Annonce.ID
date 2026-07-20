@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { harvestTick } from "@/lib/prospect-harvest";
+import { sweepExpiredListings } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 // Extraction d'emails sur sites externes : laisse le temps aux requêtes.
@@ -29,7 +30,9 @@ async function run(req: Request) {
   if (!sb) return NextResponse.json({ error: "Service indisponible (service role manquante)" }, { status: 500 });
 
   const result = await harvestTick(sb);
-  return NextResponse.json({ ok: true, ...result });
+  // Balayage des annonces expirées → notification "à renouveler" + statut expired.
+  const expiry = await sweepExpiredListings(sb).catch(() => ({ notified: 0, expired: 0 }));
+  return NextResponse.json({ ok: true, ...result, expiry });
 }
 
 // GET/POST → Scheduled Function Netlify (netlify/functions/prospect-harvest-cron.mjs) ou manuel.

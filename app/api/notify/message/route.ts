@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
-import { sendPushToUser } from "@/lib/push";
 import { sendNotificationEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -23,12 +23,13 @@ export async function POST(req: Request) {
   const body = `${fromName} vous a écrit${listingTitle ? ` à propos de « ${listingTitle} »` : ""}.`;
   const url = "/dashboard?panel=messages";
 
-  // Push (best-effort)
-  sendPushToUser(toUserId, { title, body, url, tag: `msg-${toUserId}` }).catch(() => {});
-
-  // Email (best-effort) — récupère l'email du destinataire via service role
   try {
     const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+
+    // Notification in-app (fil persistant) + push, en une fois.
+    await createNotification(admin, { userId: toUserId, type: "message", title, body, url, listingId });
+
+    // Email (best-effort) — récupère l'email du destinataire via service role
     const { data } = await admin.auth.admin.getUserById(toUserId);
     const email = data?.user?.email;
     if (email) {

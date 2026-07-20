@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -13,31 +13,34 @@ import EnableNotifications from "./EnableNotifications";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage";
 import { PAYMENT_PROVIDER, whatsappLink } from "@/lib/payment";
-import { BOOSTS } from "@/lib/constants";
+import { BOOSTS, BRAND } from "@/lib/constants";
+import NotificationCenter from "./NotificationCenter";
 import { fetchPrices, effectivePrice } from "@/lib/prices";
 import { formatNumber } from "@/lib/utils";
+import { FREE_LISTING_LIMIT } from "@/lib/businessRules";
 import ConfirmModal from "./ConfirmModal";
 import EmptyState from "./EmptyState";
 import { useFavorites } from "./FavButton";
 import ImageCropperModal from "./ImageCropperModal";
 import ChatInterface from "./ChatInterface";
 import MarketingPanel from "./MarketingPanel";
-type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "reviews" | "alerts" | "profile" | "faq" | "security";
+type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "notifications" | "reviews" | "alerts" | "profile" | "faq" | "security";
 
 const NAV: { id: string; icon: string; label: string; section?: string; badge?: number; isLink?: boolean; href?: string }[] = [
-  { id: "overview", icon: "📊", label: "Accueil", section: "Principal" },
+  { id: "overview", icon: "📊", label: "Vue d’ensemble", section: "Principal" },
   { id: "stats", icon: "📈", label: "Statistiques" },
-  { id: "ads", icon: "📋", label: "Gérer mes annonces" },
+  { id: "ads", icon: "📋", label: "Mes annonces" },
   { id: "campaigns", icon: "🚀", label: "Marketing & Pub" },
   { id: "publish", icon: "➕", label: "Publier une annonce", isLink: true, href: "/publier" },
   { id: "credits", icon: "🎟️", label: "Mes Crédits & Boosts" },
   { id: "purchases", icon: "🛒", label: "Historique d'achats" },
   { id: "showroom", icon: "🏪", label: "Ma Boutique" },
   { id: "favorites", icon: "❤", label: "Mes Favoris", section: "Interactions" },
-  { id: "messages", icon: "💬", label: "Messagerie & Chat" },
+  { id: "notifications", icon: "🔔", label: "Notifications" },
+  { id: "messages", icon: "💬", label: "Messages" },
   { id: "reviews", icon: "⭐", label: "Avis reçus" },
-  { id: "alerts", icon: "🔔", label: "Gérer mes alertes" },
-  { id: "profile", icon: "👤", label: "Mon Profil & CV", section: "Paramètres" },
+  { id: "alerts", icon: "📣", label: "Gérer mes alertes" },
+  { id: "profile", icon: "👤", label: "Mon profil", section: "Paramètres" },
   { id: "security", icon: "🔒", label: "Sécurité & Vie privée" },
   { id: "faq", icon: "❓", label: "FAQ" },
 ];
@@ -60,18 +63,22 @@ function getPaymentProviderLabel(provider: string) {
 
 export default function Dashboard() {
   const searchParams = useSearchParams();
-  const [panel, setPanel] = useState<Panel>((searchParams.get("panel") as Panel) || "overview");
+  const router = useRouter();
+  const requestedPanel = searchParams.get("panel");
+  const initialPanel = requestedPanel && NAV.some((item) => !item.isLink && item.id === requestedPanel)
+    ? requestedPanel as Panel
+    : "overview";
+  const [panel, setPanel] = useState<Panel>(initialPanel);
   const [toast, setToast] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [profileName, setProfileName] = useState("");
   const [profileBio, setProfileBio] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
-  const [profileLanguage, setProfileLanguage] = useState("Français");
   const [hasBoutique, setHasBoutique] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // Security Panel States
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -93,9 +100,8 @@ export default function Dashboard() {
   const [creditTarget, setCreditTarget] = useState<Record<string, string>>({});
   const [planPrices, setPlanPrices] = useState<Record<string, number>>({});
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const { favs } = useFavorites();
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [adToDelete, setAdToDelete] = useState<string | number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -157,8 +163,11 @@ export default function Dashboard() {
   };
 
   const handlePanelChange = (id: string) => {
+    const isKnownPanel = NAV.some((item) => !item.isLink && item.id === id);
+    if (!isKnownPanel) return;
     setPanel(id as Panel);
     setIsMobileMenuOpen(false);
+    router.replace("/dashboard?panel=" + encodeURIComponent(id), { scroll: false });
   };
 
   // Bannière "cadeau de lancement" : visible tant que l'utilisateur ne l'a pas fermée
@@ -173,16 +182,14 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    // Lire le panel depuis l'URL si présent (ex: ?panel=campaigns)
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const p = params.get("panel");
-      if (p && ["overview", "ads", "campaigns", "purchases", "showroom", "credits", "favorites", "messages", "alerts", "profile", "faq", "security"].includes(p)) {
-        setPanel(p as Panel);
-        // Nettoyer l'URL sans recharger
-        window.history.replaceState({}, '', window.location.pathname);
-      }
+    const nextPanel = searchParams.get("panel");
+    if (nextPanel && NAV.some((item) => !item.isLink && item.id === nextPanel)) {
+      setPanel(nextPanel as Panel);
+    }
+  }, [searchParams]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
       // Load real campaigns from Supabase
       try {
         supabase.from('campagnes_pub').select('*').eq('status', 'active').order('created_at', { ascending: false }).limit(1).then(({ data }) => {
@@ -201,7 +208,7 @@ export default function Dashboard() {
           }
         });
 
-        const purch = localStorage.getItem('annonceid_purchases');
+        const purch = localStorage.getItem('wanteermako_purchases');
         if (purch) setPurchases(JSON.parse(purch));
       } catch { }
     }
@@ -218,13 +225,13 @@ export default function Dashboard() {
           if (profData) {
             setProfile(profData);
             setProfileName(profData.full_name || defaultName);
-            setProfileBio(profData.bio || "La référence en bonnes affaires");
+            setProfileBio(profData.bio || "");
             setProfilePhone(profData.phone || "");
             setShowroomName(profData.full_name || defaultName);
             setShowroomBio(profData.bio || "La référence en bonnes affaires");
             setShowroomSocials(profData.social_links || {});
             setShowroomCover(profData.cover_url || "");
-            setHasBoutique(profData.has_boutique !== false);
+            setHasBoutique(Boolean(profData.has_boutique));
             setAlertPrefs(profData.alert_prefs || { messages: true, expired: true, stats: false, search: true, promos: false });
           } else {
             setProfileName(defaultName);
@@ -262,7 +269,7 @@ export default function Dashboard() {
               status: p.status
             })));
           } else {
-            const purch = localStorage.getItem('annonceid_purchases');
+            const purch = localStorage.getItem('wanteermako_purchases');
             if (purch) setPurchases(JSON.parse(purch));
           }
         });
@@ -342,22 +349,91 @@ export default function Dashboard() {
     setAds(ads.filter(a => a.id !== adToDelete));
 
     // DB Update
-    const { error } = await supabase.from('listings').delete().eq('id', adToDelete);
+    const { error } = await supabase.from('listings').update({ status: 'inactive' }).eq('id', adToDelete);
     if (error) {
       setAds(previousAds);
-      show("❌ Suppression impossible : " + error.message);
+      show("Retrait impossible : " + error.message);
       setAdToDelete(null);
       return;
     }
 
-    show("🗑️ Annonce supprimée avec succès !");
+    show("Annonce retiree de la mise en ligne.");
     setAdToDelete(null);
   }
 
   const show = (m: string) => {
     setToast(m);
-    setTimeout(() => setToast(null), 2000);
+    setTimeout(() => setToast(null), 3500);
   };
+
+  async function saveProfile() {
+    if (!user || savingProfile) return;
+
+    const normalizedName = profileName.trim();
+    const normalizedBio = profileBio.trim();
+    const localPhone = profilePhone.replace(/\D/g, "").replace(/^221/, "");
+
+    if (normalizedName.length < 2) {
+      show("Indiquez votre nom ou le nom de votre boutique.");
+      return;
+    }
+    if (profilePhone && localPhone.length !== 9) {
+      show("Le numéro WhatsApp doit contenir 9 chiffres après +221.");
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const normalizedPhone = localPhone ? "+221" + localPhone : "";
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: normalizedName,
+          bio: normalizedBio,
+          phone: normalizedPhone,
+        })
+        .eq("id", user.id);
+
+      if (error) {
+        show("Enregistrement impossible : " + error.message);
+        return;
+      }
+
+      const { error: boutiqueError } = await supabase
+        .from("profiles")
+        .update({ has_boutique: hasBoutique })
+        .eq("id", user.id);
+
+      const savedBoutique = boutiqueError
+        ? Boolean(profile?.has_boutique)
+        : hasBoutique;
+
+      setHasBoutique(savedBoutique);
+      setProfileName(normalizedName);
+      setProfileBio(normalizedBio);
+      setProfilePhone(normalizedPhone);
+      setProfile((previous: any) => ({
+        ...(previous || {}),
+        full_name: normalizedName,
+        bio: normalizedBio,
+        phone: normalizedPhone,
+        has_boutique: savedBoutique,
+      }));
+
+      show(
+        boutiqueError
+          ? "Profil enregistré. La préférence de boutique n'a pas pu être mise à jour."
+          : "Profil enregistré avec succès.",
+      );
+
+      if (searchParams.get("welcome") === "1") {
+        router.replace("/dashboard?panel=profile", { scroll: false });
+      }
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
   const max = Math.max(...CHART);
 
   // Crédits boost : vendus par l'admin (espèces) ou achetés, utilisables sur ses annonces
@@ -386,7 +462,16 @@ export default function Dashboard() {
   const displayName = profileName || profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || user?.phone || "Utilisateur";
   const displayEmail = user?.email || user?.phone || "Nouvel utilisateur";
   const isKonnecta = typeof displayEmail === 'string' && displayEmail.toLowerCase().includes('multiservicesyamane');
-  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || "https://i.pravatar.cc/96?img=12";
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || "";
+  const isWelcome = searchParams.get("welcome") === "1";
+  const profileChecklist = [
+    { label: "Nom", done: profileName.trim().length >= 2 },
+    { label: "Téléphone", done: profilePhone.replace(/\D/g, "").replace(/^221/, "").length === 9 },
+    { label: "Présentation", done: profileBio.trim().length >= 20 },
+  ];
+  const profileCompletion = Math.round(
+    (profileChecklist.filter((item) => item.done).length / profileChecklist.length) * 100,
+  );
 
   // Favoris: fetch from Supabase based on stored IDs
   const [favListings, setFavListings] = useState<any[]>([]);
@@ -501,36 +586,57 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden dark:bg-dark-900">
+    <div className="flex h-dvh flex-col overflow-hidden dark:bg-dark-900 lg:flex-row">
       {/* Mobile top bar */}
-      <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-900 px-4 py-3 lg:hidden">
-        <div className="font-bold dark:text-white flex items-center gap-2">
-          <span className="text-xl">📊</span> Tableau de bord
-        </div>
-        <button onClick={() => setIsMobileMenuOpen(true)} className="text-2xl dark:text-white">☰</button>
+      <div className="flex min-h-[60px] items-center justify-between border-b border-gray-100 bg-white px-3 py-2 dark:border-dark-border dark:bg-dark-900 lg:hidden">
+        <Link href="/" aria-label={"Accueil " + BRAND.name} className="flex min-w-0 items-center gap-2">
+          <img src="/logo-full.jpg" alt={BRAND.name} className="h-9 w-auto max-w-[150px] rounded-[6px] object-contain" />
+          <span className="hidden text-[.78rem] font-bold text-gray-500 min-[390px]:inline dark:text-gray-300">Espace vendeur</span>
+        </Link>
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          aria-label="Ouvrir le menu du tableau de bord"
+          aria-expanded={isMobileMenuOpen}
+          aria-controls="dashboard-sidebar"
+          className="flex h-11 w-11 items-center justify-center rounded-[8px] text-gray-700 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green/20 dark:text-white dark:hover:bg-white/10"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
       </div>
 
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-[1000] bg-black/60 lg:hidden backdrop-blur-sm transition-opacity"
+        <button
+          type="button"
+          aria-label="Fermer le menu du tableau de bord"
+          className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm transition-opacity lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-[1001] w-[260px] flex-col border-r border-gray-100 dark:border-dark-border bg-white dark:bg-dark-900 shadow-2xl transition-transform duration-300 lg:static lg:flex lg:w-[220px] lg:translate-x-0 lg:shadow-none ${isMobileMenuOpen ? "translate-x-0 flex" : "-translate-x-full flex"}`}>
-        <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border px-3 pt-3">
-          <span className="text-[.8rem] font-extrabold dark:text-white">📊 Mon Espace</span>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="text-xl text-gray-400 lg:hidden">✕</button>
+      <aside id="dashboard-sidebar" className={`fixed inset-y-0 left-0 z-[1001] w-[280px] flex-col border-r border-gray-100 dark:border-dark-border bg-white dark:bg-dark-900 shadow-2xl transition-transform duration-300 lg:static lg:flex lg:w-[220px] lg:translate-x-0 lg:shadow-none ${isMobileMenuOpen ? "translate-x-0 flex" : "-translate-x-full flex"}`}>
+        <div className="flex min-h-[60px] items-center justify-between border-b border-gray-100 px-3 py-2 dark:border-dark-border">
+          <Link href="/" aria-label={"Accueil " + BRAND.name} className="flex min-w-0 items-center gap-2">
+            <img src="/logo-full.jpg" alt={BRAND.name} className="h-9 w-auto max-w-[145px] rounded-[6px] object-contain" />
+          </Link>
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Fermer le menu"
+            className="flex h-10 w-10 items-center justify-center rounded-[8px] text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 lg:hidden"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
         </div>
         {/* Carte profil gradient (style Wanteermako) */}
         <div className="m-3 relative overflow-hidden rounded-[18px] bg-g1 p-4 text-white">
-          <div className="absolute -right-5 -top-7 h-24 w-24 rounded-full bg-white/10" />
-          <div className="absolute -bottom-5 left-5 h-16 w-16 rounded-full bg-white/[.07]" />
           <div className="relative z-10">
             <div className="mb-2 h-12 w-12 overflow-hidden rounded-[14px] border-2 border-white/30 bg-white/20">
-              {loadingProfile ? <div className="h-full w-full animate-pulse bg-white/20"></div> : avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-lg font-extrabold">{(displayName || "U").slice(0, 2).toUpperCase()}</div>}
+              {loadingProfile ? <div className="h-full w-full animate-pulse bg-white/20"></div> : avatarUrl ? <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-lg font-extrabold">{(displayName || "U").slice(0, 2).toUpperCase()}</div>}
             </div>
             <div className="text-[.92rem] font-extrabold truncate">{loadingProfile ? "Chargement..." : displayName}</div>
             <div className="text-[.7rem] opacity-85 truncate">📍 {profile?.location || profile?.region || "Sénégal"}</div>
@@ -560,8 +666,10 @@ export default function Dashboard() {
                 </Link>
               ) : (
                 <button
+                  type="button"
                   onClick={() => handlePanelChange(n.id)}
-                  className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-[.87rem] transition ${panel === n.id ? "border-green bg-green/[.06] font-semibold text-green" : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
+                  aria-current={panel === n.id ? "page" : undefined}
+                  className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-left text-[.87rem] transition ${panel === n.id ? "border-green bg-green/[.06] font-semibold text-green" : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
                     }`}
                 >
                   <span className="w-5 text-center shrink-0">{n.icon}</span>
@@ -679,7 +787,7 @@ export default function Dashboard() {
             ) : ads.length === 0 ? (
               <EmptyState
                 title="Vous n'avez pas encore d'annonce"
-                description="Commencez à vendre vos produits à des millions d'acheteurs en publiant votre première annonce."
+                description="Commencez à vendre vos produits à des milliers d'acheteurs en publiant votre première annonce."
                 ctaLabel="Publier une annonce"
                 ctaHref="/publier"
                 emoji="📢"
@@ -726,7 +834,7 @@ export default function Dashboard() {
                             </button>
                             <Link href={`/paiement?annonce_id=${a.id}`} className="block w-full text-left px-4 py-2 text-[.85rem] text-gold font-bold hover:bg-gray-50 dark:hover:bg-dark-700 sm:hidden">⭐ Booster</Link>
                             <div className="my-1 border-t border-gray-100 dark:border-dark-border"></div>
-                            <button onClick={() => { setAdToDelete(a.id); setOpenMenuId(null); }} className="block w-full text-left px-4 py-2 text-[.85rem] text-brand-red font-bold hover:bg-red-50 dark:hover:bg-red-900/10">🗑️ Supprimer</button>
+                            <button onClick={() => { setAdToDelete(a.id); setOpenMenuId(null); }} className="block w-full text-left px-4 py-2 text-[.85rem] text-brand-red font-bold hover:bg-red-50 dark:hover:bg-red-900/10">Retirer</button>
                           </div>
                         )}
                       </div>
@@ -942,7 +1050,7 @@ export default function Dashboard() {
                             </button>
                             <Link href={`/paiement?annonce_id=${ad.id}`} className="block w-full text-left px-4 py-2 text-[.85rem] text-gold font-bold hover:bg-gray-50 dark:hover:bg-dark-700 sm:hidden">⭐ Booster</Link>
                             <div className="my-1 border-t border-gray-100 dark:border-dark-border"></div>
-                            <button onClick={() => { setAdToDelete(ad.id); setOpenMenuId(null); }} className="block w-full text-left px-4 py-2 text-[.85rem] text-brand-red font-bold hover:bg-red-50 dark:hover:bg-red-900/10">🗑️ Supprimer</button>
+                            <button onClick={() => { setAdToDelete(ad.id); setOpenMenuId(null); }} className="block w-full text-left px-4 py-2 text-[.85rem] text-brand-red font-bold hover:bg-red-50 dark:hover:bg-red-900/10">Retirer</button>
                           </div>
                         )}
                       </div>
@@ -1050,167 +1158,173 @@ export default function Dashboard() {
 
 
         {panel === "profile" && (
-          <div className="animate-fadeUp max-w-[800px] mx-auto">
-            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold dark:text-white">Mon profil</h2>
-            <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-6">
-              <div className="flex items-center gap-6 mb-6 pb-6 border-b border-gray-100 dark:border-dark-border">
-                <img src={avatarUrl} alt="Avatar" className="w-20 h-20 rounded-full border border-gray-200 dark:border-dark-border object-cover" />
+          <div className="animate-fadeUp mx-auto max-w-[800px]">
+            <header className="mb-5">
+              <h1 className="font-display text-[1.25rem] font-extrabold text-gray-900 dark:text-white">Mon profil</h1>
+              <p className="mt-1 text-[.82rem] text-gray-500 dark:text-gray-400">
+                Ces informations rassurent les acheteurs et facilitent vos échanges.
+              </p>
+            </header>
+
+            {isWelcome && (
+              <section
+                aria-labelledby="welcome-title"
+                className="mb-5 border-l-4 border-green bg-indigo-50 px-4 py-4 dark:bg-indigo-500/10 sm:px-5"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-[.7rem] font-bold uppercase tracking-[.12em] text-green">Bienvenue sur {BRAND.name}</p>
+                    <h2 id="welcome-title" className="mt-1 font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white">
+                      Complétez votre profil avant votre première vente
+                    </h2>
+                    <p className="mt-1 max-w-[560px] text-[.8rem] leading-relaxed text-gray-600 dark:text-gray-300">
+                      Votre nom, votre numéro WhatsApp et une courte présentation suffisent pour démarrer.
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-[.82rem] font-extrabold text-green">{profileCompletion}%</span>
+                </div>
+                <div
+                  className="mt-3 h-2 overflow-hidden rounded-full bg-white dark:bg-white/10"
+                  role="progressbar"
+                  aria-label="Progression du profil"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={profileCompletion}
+                >
+                  <div className="h-full rounded-full bg-green transition-all" style={{ width: profileCompletion + "%" }} />
+                </div>
+                <ul className="mt-3 grid gap-2 text-[.75rem] text-gray-600 dark:text-gray-300 sm:grid-cols-3">
+                  {profileChecklist.map((item) => (
+                    <li key={item.label} className="flex items-center gap-1.5">
+                      <span className={item.done ? "font-bold text-emerald-600" : "text-gray-400"} aria-hidden="true">
+                        {item.done ? "✓" : "○"}
+                      </span>
+                      {item.label}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <section aria-labelledby="profile-details-title" className="rounded-[8px] border border-gray-200 bg-white p-4 dark:border-dark-border dark:bg-dark-800 sm:p-6">
+              <h2 id="profile-details-title" className="sr-only">Informations du profil</h2>
+
+              <div className="mb-6 flex flex-col gap-4 border-b border-gray-100 pb-6 dark:border-dark-border sm:flex-row sm:items-center">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-900">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={"Photo de " + displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center font-display text-[1.2rem] font-extrabold text-gray-400">
+                      {(displayName || "U").slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
                 <div>
-                  <label className="btn btn-outline btn-sm mb-2 cursor-pointer inline-block">
+                  <label htmlFor="profile-avatar" className="btn btn-outline btn-sm cursor-pointer">
                     Changer la photo
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setCropModalZone("avatar");
-                        setCropModalImage(URL.createObjectURL(e.target.files[0]));
-                      }
-                    }} />
                   </label>
-                  <p className="text-[.75rem] text-gray-500">JPG, PNG ou GIF. Max 2Mo.</p>
+                  <input
+                    id="profile-avatar"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      setCropModalZone("avatar");
+                      setCropModalImage(URL.createObjectURL(file));
+                    }}
+                  />
+                  <p className="mt-2 text-[.72rem] text-gray-500 dark:text-gray-400">JPG, PNG ou GIF, 2 Mo maximum.</p>
                 </div>
               </div>
 
               <div className="grid gap-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                   <div>
-                    <label className="label">Nom de la boutique / Entreprise</label>
+                    <label htmlFor="profile-name" className="label">Nom ou boutique</label>
                     <input
-                      className="input"
+                      id="profile-name"
+                      className="input min-h-[46px]"
                       value={profileName}
-                      onChange={(e) => setProfileName(e.target.value)}
+                      onChange={(event) => setProfileName(event.target.value)}
+                      autoComplete="name"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="label">Numéro de téléphone (WhatsApp)</label>
+                    <label htmlFor="profile-phone" className="label">Numéro WhatsApp</label>
                     <div className="flex items-stretch">
-                      <span className="inline-flex items-center gap-1 rounded-l-lg border border-r-0 border-gray-300 dark:border-dark-border bg-gray-50 dark:bg-dark-900 px-3 text-sm font-bold text-gray-600 dark:text-white/70 select-none">🇸🇳 +221</span>
+                      <span aria-hidden="true" className="inline-flex items-center rounded-l-[8px] border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm font-bold text-gray-600 select-none dark:border-dark-border dark:bg-dark-900 dark:text-white/70">
+                        +221
+                      </span>
                       <input
-                        className="input rounded-l-none"
+                        id="profile-phone"
+                        className="input min-h-[46px] rounded-l-none"
                         inputMode="numeric"
+                        autoComplete="tel-national"
                         maxLength={9}
                         placeholder="77 000 00 00"
                         value={profilePhone.replace(/\D/g, "").replace(/^221/, "").slice(0, 9)}
-                        onChange={(e) => { const d = e.target.value.replace(/\D/g, "").slice(0, 9); setProfilePhone(d ? "+221" + d : ""); }}
+                        onChange={(event) => {
+                          const digits = event.target.value.replace(/\D/g, "").slice(0, 9);
+                          setProfilePhone(digits ? "+221" + digits : "");
+                        }}
+                        aria-describedby="profile-phone-help"
                       />
                     </div>
-                    <p className="mt-1 text-[.72rem] text-gray-400 dark:text-white/40">Écris seulement ton numéro (ex : 77 682 78 51). Le +221 est ajouté automatiquement.</p>
+                    <p id="profile-phone-help" className="mt-1 text-[.72rem] text-gray-500 dark:text-gray-400">
+                      Saisissez les 9 chiffres après +221.
+                    </p>
                   </div>
                 </div>
+
                 <div>
-                  <label className="label">Description de la boutique</label>
+                  <label htmlFor="profile-bio" className="label">Présentation</label>
                   <textarea
+                    id="profile-bio"
                     className="input resize-y"
-                    rows={3}
-                    placeholder="Que propose votre boutique ?"
+                    rows={4}
+                    maxLength={500}
+                    placeholder="Présentez ce que vous vendez et votre zone de disponibilité."
                     value={profileBio}
-                    onChange={(e) => setProfileBio(e.target.value)}
+                    onChange={(event) => setProfileBio(event.target.value)}
+                    aria-describedby="profile-bio-help"
                   />
-                </div>
-                <div>
-                  <label className="label">Langue de communication</label>
-                  <select
-                    className="input max-w-[200px]"
-                    value={profileLanguage}
-                    onChange={(e) => setProfileLanguage(e.target.value)}
-                  >
-                    <option value="Français">Français</option>
-                    <option value="Anglais">Anglais</option>
-                    <option value="Wolof">Wolof</option>
-                  </select>
+                  <p id="profile-bio-help" className="mt-1 text-right text-[.7rem] text-gray-400">{profileBio.length}/500</p>
                 </div>
 
-                {/* Ouvrir une boutique = décision personnelle du vendeur */}
-                <div className="flex items-start justify-between gap-4 rounded-xl border-[1.5px] border-gray-100 dark:border-dark-border bg-gray-50/60 dark:bg-dark-900/40 p-4">
+                <div className="flex items-start justify-between gap-4 border-t border-gray-100 pt-5 dark:border-dark-border">
                   <div>
-                    <h3 className="font-display text-[.95rem] font-bold dark:text-white">🏪 Ma boutique publique</h3>
-                    <p className="mt-1 text-[.8rem] text-gray-500 dark:text-white/60">
-                      Votre boutique s'ouvre <b>automatiquement</b> dès que vous publiez une annonce, et apparaît dans la page « Boutiques ». Désactivez ici si vous préférez la <b>masquer</b>.
+                    <h3 className="font-display text-[.92rem] font-bold text-gray-900 dark:text-white">Boutique publique</h3>
+                    <p className="mt-1 text-[.78rem] leading-relaxed text-gray-500 dark:text-gray-400">
+                      Elle apparaît automatiquement après votre première annonce active. Vous pouvez la masquer ici.
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setHasBoutique((v) => !v)}
+                    onClick={() => setHasBoutique((value) => !value)}
+                    aria-label={hasBoutique ? "Masquer ma boutique publique" : "Afficher ma boutique publique"}
                     aria-pressed={hasBoutique}
-                    className={`relative mt-1 h-7 w-12 shrink-0 rounded-full transition ${hasBoutique ? "bg-green" : "bg-gray-300 dark:bg-dark-border"}`}
+                    className={"relative mt-1 h-7 w-12 shrink-0 rounded-full transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green/20 " + (hasBoutique ? "bg-green" : "bg-gray-300 dark:bg-dark-border")}
                   >
-                    <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${hasBoutique ? "left-6" : "left-1"}`} />
+                    <span className={"absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all " + (hasBoutique ? "left-6" : "left-1")} />
                   </button>
                 </div>
               </div>
+
               <button
-                onClick={async () => {
-                  if (!user) return;
-                  const { error } = await supabase.from('profiles').update({
-                    full_name: profileName,
-                    bio: profileBio,
-                    phone: profilePhone
-                  }).eq('id', user.id);
-                  // Activation boutique (best-effort : nécessite la colonne has_boutique)
-                  await supabase.from('profiles').update({ has_boutique: hasBoutique }).eq('id', user.id);
-                  if (error) {
-                    show("❌ Erreur : " + error.message);
-                  } else {
-                    show("✓ Profil sauvegardé avec succès !");
-                    setProfile((prev: any) => prev ? { ...prev, full_name: profileName, bio: profileBio, phone: profilePhone, has_boutique: hasBoutique } : { full_name: profileName, bio: profileBio, phone: profilePhone, has_boutique: hasBoutique });
-                  }
-                }}
-                className="btn btn-green mt-6"
+                type="button"
+                onClick={saveProfile}
+                disabled={savingProfile}
+                className="btn btn-green mt-6 min-h-[46px] w-full disabled:cursor-wait disabled:opacity-60 sm:w-auto"
               >
-                Sauvegarder les modifications
+                {savingProfile ? "Enregistrement..." : isWelcome ? "Enregistrer et continuer" : "Enregistrer le profil"}
               </button>
-            </div>
+            </section>
           </div>
         )}
 
-        {panel === "security" && (
-          <div className="animate-fadeUp max-w-[800px] mx-auto">
-            <h2 className="mb-6 font-display text-[1.2rem] font-extrabold dark:text-white">Sécurité & Confidentialité</h2>
-            <div className="flex flex-col gap-4">
-              <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5 flex justify-between items-center">
-                <div>
-                  <h3 className="mb-1 font-display text-[.95rem] font-bold dark:text-white">Contact vérifié ✅</h3>
-                  <p className="text-[.83rem] text-gray-500 dark:text-white/60">{displayEmail}</p>
-                </div>
-                <button onClick={() => show("La modification de l'email n'est pas encore disponible.")} className="btn btn-outline btn-sm">Modifier</button>
-              </div>
-
-              <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5 flex justify-between items-center">
-                <div>
-                  <h3 className="mb-1 font-display text-[.95rem] font-bold dark:text-white">Mot de passe</h3>
-                  <p className="text-[.83rem] text-gray-500 dark:text-white/60">Sécurisez votre compte avec un mot de passe fort.</p>
-                </div>
-                <button onClick={async () => {
-                  if (user?.email) {
-                    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-                      redirectTo: window.location.origin + '/dashboard',
-                    });
-                    if (error) {
-                      show("Erreur : " + error.message);
-                    } else {
-                      show("✓ Email de réinitialisation envoyé ! Vérifiez votre boîte de réception.");
-                    }
-                  }
-                }} className="btn btn-outline btn-sm">Changer</button>
-              </div>
-
-              <div className="rounded-lg border-[1.5px] border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 p-5 flex justify-between items-center">
-                <div>
-                  <h3 className="mb-1 font-display text-[.95rem] font-bold dark:text-white">Sessions actives</h3>
-                  <p className="text-[.83rem] text-gray-500 dark:text-white/60">1 appareil connecté actuellement.</p>
-                </div>
-                <button onClick={async () => {
-                  await supabase.auth.signOut();
-                  window.location.href = '/connexion';
-                }} className="btn btn-outline btn-sm">Déconnexion</button>
-              </div>
-
-              <div className="rounded-lg border-[1.5px] border-[#fee2e2] dark:border-brand-red/30 bg-white dark:bg-[#fee2e2]/5 p-5 mt-4">
-                <h3 className="mb-1 font-display text-[.95rem] font-bold text-brand-red">Zone dangereuse</h3>
-                <p className="mb-4 text-[.83rem] text-gray-500 dark:text-white/60">La suppression de votre compte est irréversible et supprimera toutes vos annonces.</p>
-                <button onClick={() => setShowDeleteModal(true)} className="btn btn-sm bg-[#fee2e2] dark:bg-brand-red/20 !text-brand-red">Supprimer le compte</button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {panel === "campaigns" && (
           <div className="animate-fadeUp max-w-[1200px] mx-auto">
@@ -1580,7 +1694,7 @@ export default function Dashboard() {
                                   };
 
                                   const allPurchases = [newPurchase, ...purchases];
-                                  localStorage.setItem('annonceid_purchases', JSON.stringify(allPurchases));
+                                  localStorage.setItem('wanteermako_purchases', JSON.stringify(allPurchases));
                                   setPurchases(allPurchases);
                                   show("🎉 Nouvelle campagne activée (Privilège Super Admin).");
                                 }
@@ -2021,7 +2135,7 @@ export default function Dashboard() {
                         </button>
                       )}
                       <button onClick={() => { setAdToDelete(prod.id); setOpenMenuId(null); }} className="rounded-lg bg-red-50 px-3 py-2 text-[.74rem] font-extrabold text-brand-red transition hover:bg-red-100 dark:bg-red-900/20">
-                        Supprimer
+                        Retirer
                       </button>
                     </div>
                   </div>
@@ -2208,8 +2322,8 @@ export default function Dashboard() {
             })()}
 
             <div className="text-center mb-8">
-              <h2 className="font-display text-[1.3rem] sm:text-[1.6rem] font-extrabold dark:text-white mb-2">Booster une annonce</h2>
-              <p className="text-sm text-gray-500">Choisissez une formule de boost pour gagner en visibilité. Prix officiels du site.</p>
+              <h2 className="font-display text-[1.3rem] sm:text-[1.6rem] font-extrabold dark:text-white mb-2">Formules de visibilité</h2>
+              <p className="text-sm text-gray-500">Consultez les tarifs, puis choisissez l’annonce à mettre en avant.</p>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2226,19 +2340,22 @@ export default function Dashboard() {
                     <ul className="space-y-1.5 mb-5 flex-1 text-[.78rem] text-gray-600 dark:text-gray-300">
                       {b.features.map((f) => <li key={f} className="flex gap-1.5"><span className="text-gold">✓</span> {f}</li>)}
                     </ul>
-                    <Link
-                      href={`/paiement?boost=${b.key}`}
+                    <button
+                      type="button"
+                      onClick={() => handlePanelChange("ads")}
                       className={`w-full py-2.5 rounded-lg font-bold transition text-center block text-sm ${b.popular ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-dark-900 dark:text-white dark:hover:bg-dark-700"}`}
                     >
-                      Choisir ce boost →
-                    </Link>
+                      Choisir une annonce
+                    </button>
                   </div>
                 );
               })}
             </div>
-            <p className="mt-6 text-center text-xs text-gray-400">💡 Pour booster une annonce précise : « Gérer mes annonces » → ⭐ Booster.</p>
+            <p className="mt-6 text-center text-xs text-gray-400">Dans « Mes annonces », utilisez l’action « Booster » sur l’annonce concernée.</p>
           </div>
         )}
+
+        {panel === "notifications" && <NotificationCenter />}
 
         {panel === "messages" && (
           <div className="animate-fadeUp max-w-[1000px] mx-auto h-[calc(100dvh-150px)] min-h-[460px] flex flex-col">
@@ -2251,69 +2368,129 @@ export default function Dashboard() {
 
 
         {panel === "security" && (
-          <div className="animate-fadeUp max-w-[800px] mx-auto">
-            <h2 className="mb-6 font-display text-[1.2rem] sm:text-[1.4rem] font-extrabold dark:text-white">Sécurité & Vie privée</h2>
-            <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6">
-              <h3 className="font-bold text-lg mb-1 dark:text-white">Mon adresse email</h3>
-              <p className="text-[.8rem] text-gray-500 mb-4">Si votre compte a été créé sur le terrain (nom d'utilisateur), mettez ici votre <b>vrai email</b> pour sécuriser votre compte.</p>
-              <div className="flex flex-col sm:flex-row gap-2 max-w-lg">
-                <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="votre@email.com" className="flex-1 bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-border rounded-lg px-4 py-2.5 text-sm outline-none focus:border-green" />
-                <button
-                  className="btn btn-green whitespace-nowrap"
-                  onClick={async () => {
-                    if (!newEmail || !newEmail.includes("@")) { show("❌ Email invalide"); return; }
-                    const { error } = await supabase.auth.updateUser({ email: newEmail });
-                    if (error) { show("❌ Erreur: " + error.message); }
-                    else { show("✓ Email mis à jour. Vérifiez votre boîte mail pour confirmer."); setNewEmail(""); }
-                  }}
-                >Enregistrer l'email</button>
-              </div>
-            </div>
+          <div className="animate-fadeUp mx-auto max-w-[800px]">
+            <header className="mb-5">
+              <h1 className="font-display text-[1.25rem] font-extrabold text-gray-900 dark:text-white">Sécurité et vie privée</h1>
+              <p className="mt-1 text-[.82rem] text-gray-500 dark:text-gray-400">
+                Gérez vos identifiants et les demandes liées à votre compte.
+              </p>
+            </header>
 
-            <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-6 shadow-sm mb-6">
-              <h3 className="font-bold text-lg mb-4 dark:text-white">Modifier le mot de passe</h3>
-              <div className="space-y-4 max-w-md">
-                <div>
-                  <label className="text-[.8rem] text-gray-500 font-bold mb-1 block">Nouveau mot de passe</label>
-                  <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" className="w-full bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-border rounded-lg px-4 py-2.5 text-sm outline-none focus:border-green" />
+            <div className="grid gap-4">
+              <section aria-labelledby="security-email-title" className="rounded-[8px] border border-gray-200 bg-white p-5 dark:border-dark-border dark:bg-dark-800 sm:p-6">
+                <h2 id="security-email-title" className="font-display text-[1rem] font-bold text-gray-900 dark:text-white">Adresse email</h2>
+                <p className="mt-1 text-[.8rem] text-gray-500 dark:text-gray-400">
+                  Adresse actuelle : <span className="break-all font-semibold text-gray-700 dark:text-gray-200">{displayEmail}</span>
+                </p>
+                <div className="mt-4 max-w-lg">
+                  <label htmlFor="security-email" className="label">Nouvelle adresse email</label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      id="security-email"
+                      type="email"
+                      value={newEmail}
+                      onChange={(event) => setNewEmail(event.target.value)}
+                      placeholder="vous@exemple.com"
+                      autoComplete="email"
+                      className="input min-h-[46px] flex-1"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-green min-h-[46px] whitespace-nowrap"
+                      onClick={async () => {
+                        const candidate = newEmail.trim().toLowerCase();
+                        if (!/^\S+@\S+\.\S+$/.test(candidate)) {
+                          show("Saisissez une adresse email valide.");
+                          return;
+                        }
+                        const { error } = await supabase.auth.updateUser({ email: candidate });
+                        if (error) {
+                          show("Mise à jour impossible : " + error.message);
+                        } else {
+                          show("Un email de confirmation a été envoyé à votre nouvelle adresse.");
+                          setNewEmail("");
+                        }
+                      }}
+                    >
+                      Mettre à jour l'email
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[.8rem] text-gray-500 font-bold mb-1 block">Confirmer le nouveau mot de passe</label>
-                  <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className="w-full bg-gray-50 dark:bg-dark-900 border border-gray-200 dark:border-dark-border rounded-lg px-4 py-2.5 text-sm outline-none focus:border-green" />
+              </section>
+
+              <section aria-labelledby="security-password-title" className="rounded-[8px] border border-gray-200 bg-white p-5 dark:border-dark-border dark:bg-dark-800 sm:p-6">
+                <h2 id="security-password-title" className="font-display text-[1rem] font-bold text-gray-900 dark:text-white">Mot de passe</h2>
+                <p className="mt-1 text-[.8rem] text-gray-500 dark:text-gray-400">
+                  Utilisez au moins 6 caractères et évitez un mot de passe déjà utilisé ailleurs.
+                </p>
+                <div className="mt-4 grid max-w-md gap-4">
+                  <div>
+                    <label htmlFor="security-password" className="label">Nouveau mot de passe</label>
+                    <input
+                      id="security-password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      autoComplete="new-password"
+                      minLength={6}
+                      className="input min-h-[46px]"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="security-password-confirm" className="label">Confirmer le mot de passe</label>
+                    <input
+                      id="security-password-confirm"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      autoComplete="new-password"
+                      minLength={6}
+                      className="input min-h-[46px]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-green min-h-[46px] w-full"
+                    onClick={async () => {
+                      if (newPassword.length < 6) {
+                        show("Le mot de passe doit contenir au moins 6 caractères.");
+                        return;
+                      }
+                      if (newPassword !== confirmPassword) {
+                        show("Les deux mots de passe ne correspondent pas.");
+                        return;
+                      }
+                      const { error } = await supabase.auth.updateUser({ password: newPassword });
+                      if (error) {
+                        show("Mise à jour impossible : " + error.message);
+                      } else {
+                        show("Mot de passe mis à jour.");
+                        setNewPassword("");
+                        setConfirmPassword("");
+                      }
+                    }}
+                  >
+                    Enregistrer le nouveau mot de passe
+                  </button>
                 </div>
-                <button
-                  className="btn btn-green w-full"
-                  onClick={async () => {
-                    if (!newPassword || newPassword !== confirmPassword) {
-                      show("❌ Les mots de passe ne correspondent pas");
-                      return;
-                    }
-                    if (newPassword.length < 6) {
-                      show("❌ Le mot de passe doit faire au moins 6 caractères");
-                      return;
-                    }
-                    const { error } = await supabase.auth.updateUser({ password: newPassword });
-                    if (error) {
-                      show("❌ Erreur: " + error.message);
-                    } else {
-                      show("✓ Mot de passe mis à jour");
-                      setNewPassword("");
-                      setConfirmPassword("");
-                    }
-                  }}
+              </section>
+
+              <section aria-labelledby="security-delete-title" className="rounded-[8px] border border-red-200 bg-red-50 p-5 dark:border-red-500/30 dark:bg-red-500/10 sm:p-6">
+                <h2 id="security-delete-title" className="font-display text-[1rem] font-bold text-red-700 dark:text-red-200">Suppression du compte</h2>
+                <p className="mt-1 text-[.8rem] leading-relaxed text-red-700/80 dark:text-red-200/80">
+                  La suppression est définitive. Le support vérifie votre identité avant de traiter la demande.
+                </p>
+                <a
+                  href={"mailto:" + BRAND.supportEmail + "?subject=" + encodeURIComponent("Demande de suppression de compte")}
+                  className="btn mt-4 min-h-[44px] border-red-300 bg-white text-red-700 hover:bg-red-100 dark:border-red-500/40 dark:bg-transparent dark:text-red-200"
                 >
-                  Mettre à jour le mot de passe
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
-              <h3 className="font-bold text-lg mb-2 text-brand-red">Zone de danger</h3>
-              <p className="text-sm text-red-700/80 mb-4">La suppression de votre compte est définitive et entraînera la perte de toutes vos données, annonces, et achats.</p>
-              <button onClick={() => show("⚠️ Pour supprimer votre compte, veuillez nous contacter à contact@annonce.id avec votre adresse email.")} className="btn btn-outline text-brand-red border-brand-red hover:bg-brand-red hover:text-white">Supprimer mon compte</button>
+                  Contacter le support
+                </a>
+              </section>
             </div>
           </div>
         )}
+
 
         {panel === "alerts" && (
           <div className="animate-fadeUp max-w-[800px] mx-auto">
@@ -2370,9 +2547,9 @@ export default function Dashboard() {
 
             <div className="space-y-4">
               {[
-                { q: "Comment publier une annonce gratuitement ?", a: "Vous avez droit à 3 annonces gratuites par mois. Rendez-vous dans la section 'Publier une annonce', remplissez le formulaire, et sélectionnez l'option gratuite à la dernière étape." },
+                { q: "Comment publier une annonce gratuitement ?", a: `Vous avez droit a ${FREE_LISTING_LIMIT} annonces gratuites par compte. Rendez-vous dans la section 'Publier une annonce', remplissez le formulaire, et selectionnez l'option gratuite a la derniere etape.` },
                 { q: "Quels sont les avantages du mode Premium ?", a: "Le mode Premium place votre annonce en tête de liste, lui ajoute un badge 'VIP', et augmente sa visibilité de 500% par rapport à une annonce classique." },
-                { q: "Comment modifier ou supprimer mon annonce ?", a: "Allez dans 'Gérer mes annonces'. Cliquez sur les boutons 'Modifier' ou 'Supprimer' situés à côté de l'annonce concernée." },
+                { q: "Comment modifier ou retirer mon annonce ?", a: "Allez dans 'Gérer mes annonces'. Cliquez sur les boutons 'Modifier' ou 'Retirer' situés à côté de l'annonce concernée." },
                 { q: "Les paiements par Orange Money sont-ils sécurisés ?", a: "Oui, tous nos paiements sont cryptés et traités directement par l'API officielle de Wave et Orange Money." },
               ].map((faq, idx) => (
                 <details key={idx} className="group rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 p-5 shadow-sm cursor-pointer">
@@ -2390,29 +2567,23 @@ export default function Dashboard() {
         )}
       </div>
 
-      <ConfirmModal
-        open={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={() => show("Demande de suppression envoyée au support.")}
-        title="Supprimer votre compte ?"
-        description="Attention ! Cette action supprimera définitivement votre profil et toutes vos annonces. Voulez-vous continuer ?"
-        confirmLabel="Oui, supprimer"
-        danger
-      />
-
       {/* Modal Suppression d'Annonce */}
       <ConfirmModal
         open={!!adToDelete}
         onClose={() => setAdToDelete(null)}
         onConfirm={handleDeleteAd}
-        title="Supprimer cette annonce ?"
-        description="Attention ! Cette action est irréversible. L'annonce sera définitivement supprimée de la plateforme."
-        confirmLabel="Oui, supprimer l'annonce"
+        title="Retirer cette annonce ?"
+        description="L'annonce sera retiree de la mise en ligne et passera en statut inactif."
+        confirmLabel="Retirer l'annonce"
         danger
       />
 
       {toast && (
-        <div className="fixed bottom-20 left-1/2 z-[9999] -translate-x-1/2 whitespace-nowrap rounded-[10px] border border-neon-gold bg-dark-900 px-5 py-2.5 text-[.88rem] font-medium text-white shadow-lg animate-fadeUp">
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-5 left-1/2 z-[9999] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-[10px] border border-neon-gold bg-dark-900 px-5 py-2.5 text-center text-[.88rem] font-medium text-white shadow-lg animate-fadeUp"
+        >
           {toast}
         </div>
       )}
