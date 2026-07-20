@@ -28,18 +28,18 @@ const RATE_LIMIT_WINDOW = 60 * 1000;
 const MAX_REQUESTS = 5;
 
 function getBaseUrl(req: Request): string {
-  const envUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
-  if (envUrl) return envUrl.trim().replace(/\/+$/, "");
+  // Domaine canonique = sans www (le site redirige www -> non-www).
+  const normalize = (u: string) =>
+    u.trim().replace(/\/+$/, "").replace(/^(https?:\/\/)www\./i, "$1");
 
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  }
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
+  if (envUrl) return normalize(envUrl);
 
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
   const proto = req.headers.get("x-forwarded-proto") || "https";
-  if (host) return `${proto}://${host}`;
+  if (host) return normalize(`${proto}://${host}`);
 
-  return new URL(req.url).origin;
+  return normalize(new URL(req.url).origin);
 }
 
 // Correspondance offre du site -> produit Chariow.
@@ -120,25 +120,26 @@ export async function POST(req: Request) {
 
     const productId = resolveProductId(intent.boostKey, intent.subKey, intent.category);
     if (!productId) {
+      // Offre pas encore reliee a un produit Chariow (ex: abonnements non mappes).
       return NextResponse.json(
-        { error: "Offre non reliee a un produit Chariow (CHARIOW_PRODUCTS)." },
-        { status: 500 }
+        { error: "Le paiement en ligne de cette offre n'est pas encore disponible. Contactez-nous sur WhatsApp pour finaliser." },
+        { status: 400 }
       );
     }
 
     // Coordonnees client requises par Chariow (email, nom, telephone).
+    // NB: la table profiles a `full_name` et `phone` (pas de colonne name/email).
     const { data: profile } = await supabase
       .from("profiles")
-      .select("name, phone, email")
+      .select("full_name, phone")
       .eq("id", user.id)
       .maybeSingle();
 
     const email =
       user.email ||
-      profile?.email ||
       `client-${user.id.replace(/-/g, "").slice(0, 12)}@wanteermako.com`;
     const { first, last } = splitName(
-      profile?.name || (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || ""
+      profile?.full_name || (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || ""
     );
     const phoneNumber = cleanPhone(profile?.phone || user.phone || "");
     const phoneCountry = (process.env.CHARIOW_PHONE_COUNTRY || "SN").toUpperCase();
@@ -196,7 +197,7 @@ export async function POST(req: Request) {
 
     if (step === "already_purchased") {
       return NextResponse.json(
-        { error: "Ce produit a deja ete achete avec ce compte. (Utilisez un produit Chariow de type Licence pour autoriser les achats repetes.)" },
+        { error: "Vous avez deja achete cette offre avec ce compte. Contactez-nous si vous souhaitez la renouveler." },
         { status: 400 }
       );
     }
