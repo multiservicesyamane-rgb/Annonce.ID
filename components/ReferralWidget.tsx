@@ -26,7 +26,7 @@ export default function ReferralWidget() {
   }, [supabase]);
 
   const enc = encodeURIComponent;
-  const msg = `Rejoins Wanteermako, la marketplace n°1 d'Afrique de l'Ouest : ${link}`;
+  const msg = `Rejoins Wanteermako, la marketplace n°1 d'Afrique de l'Ouest, et publie tes annonces gratuitement : ${link}`;
 
   async function copy() {
     try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* ignore */ }
@@ -40,8 +40,8 @@ export default function ReferralWidget() {
         <div className="flex items-center gap-2">
           <span className="text-[1.3rem]">🎁</span>
           <div>
-            <h3 className="font-display text-[.98rem] font-extrabold text-gray-900 dark:text-white">Parrainez & gagnez</h3>
-            <p className="text-[.76rem] text-gray-500 dark:text-white/60">Invitez un ami → <b className="text-amber-600 dark:text-amber-400">+50 points</b> par inscription</p>
+            <h3 className="font-display text-[.98rem] font-extrabold text-gray-900 dark:text-white">Parrainez & gagnez un boost</h3>
+            <p className="text-[.76rem] text-gray-500 dark:text-white/60">Chaque ami inscrit → <b className="text-amber-600 dark:text-amber-400">1 boost Premium OFFERT</b> 🎁</p>
           </div>
         </div>
         <div className="flex gap-3 text-center">
