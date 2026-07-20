@@ -151,6 +151,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ sentToday, cap: dailyCap() });
     }
 
+    if (action === "acquisitionStats") {
+      const monthStart = new Date();
+      monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
+      const ms = monthStart.toISOString();
+      const todayStart = new Date(); todayStart.setUTCHours(0, 0, 0, 0);
+
+      const [signups, pro, boutiques, emailsMonth, emailsToday, referrals] = await Promise.all([
+        sb.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", ms),
+        sb.from("profiles").select("id", { count: "exact", head: true }).eq("is_pro", true),
+        sb.from("profiles").select("id", { count: "exact", head: true }).eq("has_boutique", true).gte("created_at", ms),
+        sb.from("prospects").select("id", { count: "exact", head: true }).gte("email_sent_at", ms),
+        sb.from("prospects").select("id", { count: "exact", head: true }).gte("email_sent_at", todayStart.toISOString()),
+        sb.from("profiles").select("id", { count: "exact", head: true }).not("referred_by", "is", null).gte("created_at", ms),
+      ]);
+
+      return NextResponse.json({
+        signupsMonth: signups.count || 0, targetSignups: 100,
+        proTotal: pro.count || 0, targetPro: 15,
+        boutiquesMonth: boutiques.count || 0,
+        emailsMonth: emailsMonth.count || 0,
+        emailsToday: emailsToday.count || 0, emailCap: dailyCap(),
+        referralsMonth: referrals.count || 0,
+      });
+    }
+
     if (action === "b2bInsert") {
       const table = String(body?.table || "");
       if (!B2B_TABLES.has(table)) {

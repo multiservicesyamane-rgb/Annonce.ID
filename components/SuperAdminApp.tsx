@@ -538,6 +538,55 @@ function Overview({ counts, allListings, profiles, purchases, T, loading }: { co
   );
 }
 
+// Tableau de bord « Objectif 100 » — suivi mensuel de l'acquisition.
+function AcquisitionTracker() {
+  const [s, setS] = useState<any>(null);
+  useEffect(() => { adminApi("acquisitionStats").then(setS).catch(() => {}); }, []);
+  if (!s) return null;
+
+  const mois = new Date().toLocaleDateString("fr-FR", { month: "long" });
+  const Bar = ({ label, val, target, color }: { label: string; val: number; target: number; color: string }) => {
+    const pct = Math.min(100, Math.round((val / target) * 100));
+    return (
+      <div className="rounded-[12px] border border-[#21262D] bg-[#0D1117] p-3.5">
+        <div className="mb-1.5 flex items-baseline justify-between">
+          <span className="text-[.75rem] font-bold text-[#8B949E]">{label}</span>
+          <span className="text-[.8rem] font-extrabold text-white">{val}<span className="text-[#484F58]">/{target}</span></span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-[#21262D]">
+          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+        </div>
+        <div className="mt-1 text-right text-[.65rem] font-bold" style={{ color }}>{pct}%</div>
+      </div>
+    );
+  };
+  const Tile = ({ label, val, icon }: { label: string; val: number | string; icon: string }) => (
+    <div className="rounded-[12px] border border-[#21262D] bg-[#0D1117] p-3.5">
+      <div className="text-[1.35rem] font-extrabold text-white">{icon} {val}</div>
+      <div className="mt-0.5 text-[.7rem] text-[#8B949E]">{label}</div>
+    </div>
+  );
+
+  return (
+    <div className="mb-5 rounded-[14px] border border-[#6366F1]/30 bg-gradient-to-br from-[#6366F1]/10 to-transparent p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-[.95rem] font-extrabold text-white">🎯 Objectif du mois — {mois}</h2>
+        <span className="text-[.68rem] text-[#8B949E]">mise à jour en direct</span>
+      </div>
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        <Bar label="Vendeurs inscrits ce mois" val={s.signupsMonth} target={s.targetSignups} color="#3FB950" />
+        <Bar label="Abonnés PRO" val={s.proTotal} target={s.targetPro} color="#FFC93C" />
+      </div>
+      <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <Tile label="Boutiques créées (mois)" val={s.boutiquesMonth} icon="🏪" />
+        <Tile label="Emails prospection (mois)" val={s.emailsMonth} icon="✉️" />
+        <Tile label={`Emails aujourd'hui (max ${s.emailCap})`} val={`${s.emailsToday}/${s.emailCap}`} icon="📧" />
+        <Tile label="Parrainages ce mois" val={s.referralsMonth} icon="🤝" />
+      </div>
+    </div>
+  );
+}
+
 function CRM({ T, prospects, addProspect, qualify, sendEmail, optOut }: { T: (m: string) => void; prospects: any[]; addProspect: (p: Record<string, any>) => Promise<boolean>; qualify: () => Promise<void>; sendEmail: (id: string) => Promise<boolean>; optOut: (id: string) => Promise<void> }) {
   const [form, setForm] = useState(false);
   const [f, setF] = useState<Record<string, string>>({ status: "new", pack: "Basic" });
@@ -559,6 +608,8 @@ function CRM({ T, prospects, addProspect, qualify, sendEmail, optOut }: { T: (m:
 
   return (
     <>
+      <AcquisitionTracker />
+
       <PageHead title="🎯 CRM — Prospects" sub={`${prospects.length} prospect(s) · ${countBy("cli")} client(s) · ${withEmail} avec email`}>
         <span className={`rounded-[9px] border px-3 py-2 text-[.78rem] font-bold ${sentToday >= CAP ? "border-[#F85149]/40 bg-[#F85149]/10 text-[#F85149]" : "border-[#30363D] bg-[#0D1117] text-[#8B949E]"}`} title="Emails de prospection envoyés aujourd'hui (plafond quotidien)">
           ✉️ {sentToday}/{CAP} aujourd'hui
