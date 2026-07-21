@@ -8,6 +8,33 @@ import { crossSubdomainCookieDomain } from './lib/cookieDomain'
 
 const SHORT_LISTING_PATH_REGEX = /^\/[^/]+-\d{10,}$/
 
+// Mode maintenance (toggle admin). Lu via /api/settings, mis en cache 30 s pour
+// éviter un appel par requête. Fail-safe : en cas d'erreur on ne bloque pas.
+let maintCache = { at: 0, on: false }
+async function isMaintenanceOn(request: NextRequest): Promise<boolean> {
+  if (Date.now() - maintCache.at < 30000) return maintCache.on
+  try {
+    const res = await fetch(`${request.nextUrl.origin}/api/settings`, { cache: 'no-store' })
+    const data = await res.json()
+    maintCache = { at: Date.now(), on: !!data?.flags?.maintenance }
+  } catch {
+    maintCache = { at: Date.now(), on: maintCache.on }
+  }
+  return maintCache.on
+}
+
+// Restent accessibles même en maintenance : back-office, API, auth, la page
+// de maintenance elle-même.
+function isMaintenanceExempt(pathname: string): boolean {
+  return (
+    pathname.startsWith('/yamanetech') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/connexion') ||
+    pathname === '/maintenance'
+  )
+}
+
 function getSupabaseProjectRef(supabaseUrl: string) {
   try {
     return new URL(supabaseUrl).hostname.split('.')[0] || ''
@@ -46,6 +73,15 @@ function isInvalidSessionError(error: unknown) {
 
 export async function middleware(request: NextRequest) {
   const originalPathname = request.nextUrl.pathname
+
+  // Mode maintenance : redirige le public vers /maintenance (admin/API/auth exemptés).
+  if (!isMaintenanceExempt(originalPathname) && (await isMaintenanceOn(request))) {
+    const maintenanceUrl = request.nextUrl.clone()
+    maintenanceUrl.pathname = '/maintenance'
+    maintenanceUrl.search = ''
+    return NextResponse.rewrite(maintenanceUrl)
+  }
+
   const categoryFromSubdomain = getCategoryBySubdomain(
     request.headers.get('host') || request.nextUrl.host,
   )

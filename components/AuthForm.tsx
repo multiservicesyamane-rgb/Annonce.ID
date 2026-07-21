@@ -21,10 +21,23 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
   const [resetting, setResetting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [routeQuery, setRouteQuery] = useState("");
+  const [signupsOpen, setSignupsOpen] = useState(true);
   const [supabase] = useState(() => createClient());
 
   const isSignup = mode === "signup";
   const isBusy = loading || oauthLoading || resetting;
+  const signupBlocked = isSignup && !signupsOpen;
+
+  // Inscriptions ouvertes/fermées : piloté depuis l'admin (toggle système).
+  useEffect(() => {
+    if (!isSignup) return;
+    let active = true;
+    fetch("/api/settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => { if (active && d?.flags && d.flags.signups === false) setSignupsOpen(false); })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [isSignup]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -83,6 +96,10 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
     }
     if (!emailInput) {
       setNotice({ tone: "error", text: "Indiquez votre adresse email." });
+      return;
+    }
+    if (signupBlocked) {
+      setNotice({ tone: "error", text: "Les inscriptions sont momentanément fermées. Réessayez plus tard." });
       return;
     }
     if (isSignup && !/^\S+@\S+\.\S+$/.test(emailInput)) {
@@ -365,12 +382,18 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
               )}
             </div>
 
+            {signupBlocked && (
+              <div role="alert" className="rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-3 text-[.82rem] font-semibold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                Les inscriptions sont momentanément fermées. Revenez bientôt ou contactez-nous.
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isBusy}
+              disabled={isBusy || signupBlocked}
               className="btn btn-green min-h-[48px] w-full rounded-[10px] text-[.95rem] disabled:cursor-wait disabled:opacity-60"
             >
-              {loading ? "Veuillez patienter..." : isSignup ? "Créer mon compte" : "Se connecter"}
+              {loading ? "Veuillez patienter..." : signupBlocked ? "Inscriptions fermées" : isSignup ? "Créer mon compte" : "Se connecter"}
             </button>
           </form>
 

@@ -11,14 +11,21 @@ export type PriceMap = Record<string, number>;
 export const boostPriceKey = (key: string) => `boost:${key}`;
 export const subPriceKey = (cat: string, key: string) => `sub:${cat}:${key}`;
 
-/** Prix admin + offres payables en ligne (reliées à un produit Chariow). */
-export async function fetchPublicSettings(): Promise<{ prices: PriceMap; online: string[] }> {
+export type SiteFlags = { maintenance: boolean; signups: boolean; payments: boolean };
+const DEFAULT_FLAGS: SiteFlags = { maintenance: false, signups: true, payments: true };
+
+/** Prix admin + offres payables en ligne + interrupteurs système (toggles admin). */
+export async function fetchPublicSettings(): Promise<{ prices: PriceMap; online: string[]; flags: SiteFlags }> {
   try {
     const res = await fetch("/api/settings", { cache: "no-store" });
     const d = await res.json();
-    return { prices: (d?.prices as PriceMap) || {}, online: Array.isArray(d?.online) ? d.online : [] };
+    return {
+      prices: (d?.prices as PriceMap) || {},
+      online: Array.isArray(d?.online) ? d.online : [],
+      flags: { ...DEFAULT_FLAGS, ...(d?.flags || {}) },
+    };
   } catch {
-    return { prices: {}, online: [] };
+    return { prices: {}, online: [], flags: DEFAULT_FLAGS };
   }
 }
 

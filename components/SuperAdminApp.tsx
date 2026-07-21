@@ -3260,11 +3260,17 @@ function Rapports({ T, allListings, profiles, purchases }: { T: (m: string) => v
   );
 }
 
-const TOGGLE_KEYS = ["Mode maintenance", "Inscriptions ouvertes", "Programme ambassadeurs", "Assistant IA", "Diffusion Facebook auto", "Paiements actifs"];
+// Toggles RÉELLEMENT appliqués sur le site (lus via /api/settings).
+const TOGGLE_KEYS = ["Mode maintenance", "Inscriptions ouvertes", "Paiements actifs"];
+const TOGGLE_DESC: Record<string, string> = {
+  "Mode maintenance": "Affiche une page « Site en maintenance » au public (le back-office reste accessible).",
+  "Inscriptions ouvertes": "Autorise la création de nouveaux comptes. Coupé = inscriptions fermées.",
+  "Paiements actifs": "Autorise les paiements. Coupé = boutons de paiement masqués sur le site.",
+};
 
 function Settings({ T }: { T: (m: string) => void }) {
   const [prices, setPrices] = useState<Record<string, number>>({});
-  const [toggles, setToggles] = useState<Record<string, boolean>>({ "Mode maintenance": false, "Inscriptions ouvertes": true, "Programme ambassadeurs": true, "Assistant IA": true, "Diffusion Facebook auto": true, "Paiements actifs": true });
+  const [toggles, setToggles] = useState<Record<string, boolean>>({ "Mode maintenance": false, "Inscriptions ouvertes": true, "Paiements actifs": true });
   const [cat, setCat] = useState<string>(Object.keys(SUBSCRIPTION_PLANS)[0] || "");
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -3334,14 +3340,17 @@ function Settings({ T }: { T: (m: string) => void }) {
           }}>Nettoyer les sessions lourdes</button>
         </Card>
 
-        <Card title="Toggles système">
+        <Card title="Toggles système" sub="Appliqués en direct sur le site (~30 s de propagation)">
           <div className="space-y-2.5">
             {TOGGLE_KEYS.map((n) => {
               const on = !!toggles[n];
               return (
-                <div key={n} className="flex items-center justify-between rounded-[9px] bg-[#0D1117] p-2.5">
-                  <span className="text-[.83rem] font-semibold text-[#C9D1D9]">{n}</span>
-                  <button onClick={() => toggleOne(n)} className={`relative h-[22px] w-10 rounded-full transition ${on ? "bg-emerald-500" : "bg-[#30363D]"}`}><span className={`absolute top-[3px] h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[21px]" : "left-[3px]"}`} /></button>
+                <div key={n} className="flex items-start justify-between gap-3 rounded-[9px] bg-[#0D1117] p-2.5">
+                  <div className="min-w-0">
+                    <div className="text-[.83rem] font-semibold text-[#C9D1D9]">{n}</div>
+                    {TOGGLE_DESC[n] && <div className="mt-0.5 text-[.68rem] leading-snug text-[#8B949E]">{TOGGLE_DESC[n]}</div>}
+                  </div>
+                  <button onClick={() => toggleOne(n)} className={`relative mt-0.5 h-[22px] w-10 shrink-0 rounded-full transition ${on ? "bg-emerald-500" : "bg-[#30363D]"}`}><span className={`absolute top-[3px] h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[21px]" : "left-[3px]"}`} /></button>
                 </div>
               );
             })}

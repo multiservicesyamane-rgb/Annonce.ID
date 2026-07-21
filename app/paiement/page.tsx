@@ -39,14 +39,15 @@ function PaiementContent() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>("vehicules");
   const [prices, setPrices] = useState<PriceMap>({});
   const [onlineOffers, setOnlineOffers] = useState<string[]>([]);
+  const [paymentsOn, setPaymentsOn] = useState(true);
   const [pricingReady, setPricingReady] = useState(false);
   const [checkoutInfo, setCheckoutInfo] = useState<CheckoutInfo | null>(null);
 
   useEffect(() => {
     let active = true;
     fetchPublicSettings()
-      .then(({ prices: nextPrices, online }) => {
-        if (active) { setPrices(nextPrices); setOnlineOffers(online); }
+      .then(({ prices: nextPrices, online, flags }) => {
+        if (active) { setPrices(nextPrices); setOnlineOffers(online); setPaymentsOn(flags.payments); }
       })
       .catch(() => undefined)
       .finally(() => {
@@ -125,12 +126,17 @@ function PaiementContent() {
             </p>
           </header>
 
-          {/* Paiement en ligne (Chariow) pour toute offre reliée à un produit
+          {/* Paiements coupés depuis l'admin (toggle « Paiements actifs »). */}
+          {!paymentsOn ? (
+            <div role="alert" className="rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-5 text-center text-[.9rem] font-semibold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+              💤 Les paiements sont momentanément suspendus. Réessayez plus tard ou contactez-nous sur WhatsApp.
+            </div>
+          ) : /* Paiement en ligne (Chariow) pour toute offre reliée à un produit
               Chariow (CHARIOW_PRODUCTS). Les offres non reliées passent par le
               paiement manuel (dépôt Wave/OM + reçu WhatsApp + activation via
               Admin > Encaissement). Ajouter un produit Chariow + son mapping
-              suffit à basculer une offre en ligne, sans toucher au code. */}
-          {ONLINE_PAYMENT_ENABLED && isOnlinePayable(onlineOffers, checkoutInfo) ? (
+              suffit à basculer une offre en ligne, sans toucher au code. */
+          ONLINE_PAYMENT_ENABLED && isOnlinePayable(onlineOffers, checkoutInfo) ? (
             <PaymentFlow
               itemName={checkoutInfo.itemName}
               price={checkoutInfo.price}

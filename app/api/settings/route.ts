@@ -15,17 +15,31 @@ function onlineOfferKeys(): string[] {
   return keys;
 }
 
-// Lecture PUBLIQUE des prix configurés dans l'admin (app_settings.global.prices)
-// + liste des offres payables en ligne. Sert à la page de paiement.
+// Interrupteurs système pilotés depuis l'admin (Paramètres → Toggles).
+// Défauts « ouverts » pour ne jamais bloquer le site par accident.
+export type SiteFlags = { maintenance: boolean; signups: boolean; payments: boolean };
+const DEFAULT_FLAGS: SiteFlags = { maintenance: false, signups: true, payments: true };
+
+function readFlags(data: any): SiteFlags {
+  const t = (data && data.toggles) || {};
+  return {
+    maintenance: t["Mode maintenance"] === true,
+    signups: t["Inscriptions ouvertes"] !== false,
+    payments: t["Paiements actifs"] !== false,
+  };
+}
+
+// Lecture PUBLIQUE : prix admin + offres payables en ligne + état des toggles.
 export async function GET() {
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) return NextResponse.json({ prices: {}, online: onlineOfferKeys() });
+    if (!url || !key) return NextResponse.json({ prices: {}, online: onlineOfferKeys(), flags: DEFAULT_FLAGS });
     const sb = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
     const { data } = await sb.from("app_settings").select("data").eq("id", "global").maybeSingle();
-    return NextResponse.json({ prices: (data?.data as any)?.prices || {}, online: onlineOfferKeys() });
+    const d = (data?.data as any) || {};
+    return NextResponse.json({ prices: d.prices || {}, online: onlineOfferKeys(), flags: readFlags(d) });
   } catch {
-    return NextResponse.json({ prices: {}, online: onlineOfferKeys() });
+    return NextResponse.json({ prices: {}, online: onlineOfferKeys(), flags: DEFAULT_FLAGS });
   }
 }
