@@ -598,7 +598,8 @@ function CRM({ T, prospects, addProspect, qualify, sendEmail, optOut }: { T: (m:
   const countBy = (st: string) => prospects.filter((p) => p.status === st).length;
 
   // Compteur d'envois du jour (calculé depuis les prospects chargés).
-  const CAP = 15;
+  // Indicatif : le vrai plafond serveur = PROSPECT_EMAIL_DAILY_CAP (défaut 40).
+  const CAP = 40;
   const isToday = (iso?: string) => !!iso && new Date(iso).toDateString() === new Date().toDateString();
   const sentToday = prospects.filter((p) => isToday(p.email_sent_at)).length;
   const withEmail = prospects.filter((p) => p.email && !p.email_opt_out).length;

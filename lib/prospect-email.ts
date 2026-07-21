@@ -16,9 +16,25 @@ function ownerInbox(): string {
   return process.env.PROSPECT_INBOX || process.env.SUPER_ADMIN_EMAIL || "wanteermako@gmail.com";
 }
 
+// Plafond d'envois par JOUR (tous prospects confondus). Brevo gratuit = 300/j.
+// Défaut prudent (40) : monter progressivement via PROSPECT_EMAIL_DAILY_CAP
+// pour chauffer le domaine sans se faire blacklister.
 export function dailyCap(): number {
   const n = Number(process.env.PROSPECT_EMAIL_DAILY_CAP);
-  return Number.isFinite(n) && n > 0 ? n : 15;
+  return Number.isFinite(n) && n > 0 ? n : 40;
+}
+
+// Jours entre deux emails à un même prospect (relance hebdomadaire).
+export function relanceDays(): number {
+  const n = Number(process.env.PROSPECT_EMAIL_RELANCE_DAYS);
+  return Number.isFinite(n) && n > 0 ? n : 7;
+}
+
+// Nombre MAX d'emails par entreprise (1er + relances). Au-delà : on arrête.
+// Plafonné pour rester dans les clous (anti-spam / réputation / légal).
+export function maxSends(): number {
+  const n = Number(process.env.PROSPECT_EMAIL_MAX_SENDS);
+  return Number.isFinite(n) && n > 0 ? n : 4;
 }
 
 type Sector = "immobilier" | "automobile" | "telephonie" | "generique";
@@ -52,14 +68,22 @@ function esc(s: string) {
   return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export function buildProspectEmail(p: ProspectForEmail): { subject: string; html: string; text: string } {
+export function buildProspectEmail(p: ProspectForEmail, attempt = 1): { subject: string; html: string; text: string } {
   const name = (p.name || "votre établissement").trim();
   const city = (p.city || "").trim();
   const sector = detectSector(`${p.sector || ""} ${p.name || ""} ${p.notes || ""}`);
   const w = WORDS[sector];
   const lieu = city ? ` à ${city}` : "";
+  const isFollowUp = attempt >= 2;
 
-  const subject = `${name}, ${w.vitrine} devant les acheteurs du Sénégal`;
+  // Objet + phrase d'accroche : version « premier contact » ou « relance »,
+  // pour ne jamais renvoyer un email identique.
+  const subject = isFollowUp
+    ? `${name}, votre vitrine gratuite vous attend toujours`
+    : `${name}, ${w.vitrine} devant les acheteurs du Sénégal`;
+  const lead = isFollowUp
+    ? `Je me permets de revenir vers vous : chaque jour, des acheteurs sénégalais cherchent ${w.cherche} en ligne, et votre vitrine gratuite sur Wanteermako reste disponible${lieu}.`
+    : `Vous faites partie des professionnels qui comptent${lieu} — et chaque jour, des acheteurs sénégalais cherchent ${w.cherche} en ligne. Notre rôle est simple : les amener jusqu'à vous.`;
 
   const bullets: [string, string][] = [
     [`Une vitrine gratuite pour ${w.vitrine}`, w.item],
@@ -82,7 +106,7 @@ export function buildProspectEmail(p: ProspectForEmail): { subject: string; html
   <tr><td style="padding:28px 34px 0;font-family:Arial,Helvetica,sans-serif">
     <p style="font-size:15px;color:#1F2437;margin:0 0 16px">Bonjour <b>${esc(name)}</b>,</p>
     <p style="font-size:14px;color:#3D4356;line-height:1.75;margin:0 0 18px">
-      Vous faites partie des professionnels qui comptent${esc(lieu)} — et chaque jour, des acheteurs sénégalais cherchent ${esc(w.cherche)} en ligne. Notre rôle est simple&nbsp;: les amener jusqu'à vous.
+      ${esc(lead)}
     </p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 4px">
       ${bullets.map(([t, d]) => `<tr>
@@ -111,7 +135,7 @@ export function buildProspectEmail(p: ProspectForEmail): { subject: string; html
 
   const text = `Bonjour ${name},
 
-Vous faites partie des professionnels qui comptent${lieu} — et chaque jour, des acheteurs sénégalais cherchent ${w.cherche} en ligne. Notre rôle est simple : les amener jusqu'à vous.
+${lead}
 
 Sur Wanteermako (wanteermako.com) :
 ${bullets.map(([t, d]) => `- ${t} : ${d}`).join("\n")}
@@ -142,33 +166,55 @@ export async function emailsSentToday(sb: SupabaseClient): Promise<number> {
   return count || 0;
 }
 
-/** Envoie l'email de prospection à un prospect (plafond, anti-doublon, opt-out). */
+/**
+ * Envoie l'email de prospection à un prospect.
+ * Règles : opt-out respecté ; plafond quotidien ; relance autorisée seulement
+ * après `relanceDays` jours et tant que le nombre d'envois < `maxSends`.
+ * Tolérant au schéma : fonctionne même si email_sent_count n'existe pas encore
+ * (avant la migration relance → comportement « 1 seul envoi »).
+ */
 export async function sendProspectEmail(sb: SupabaseClient, id: string) {
   if (!brevoConfigured()) return { error: "BREVO_API_KEY manquante côté serveur" };
   if (!id) return { error: "prospect manquant" };
 
-  const { data: p, error } = await sb
-    .from("prospects")
-    .select("id, name, sector, city, email, source_url, notes, email_sent_at, email_opt_out")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) {
-    if (/column .*email_sent_at|email_opt_out/i.test(error.message || "")) {
-      return { error: "Exécuter database/MIGRATION_PROSPECTS_EMAIL_OUTREACH.sql d'abord" };
+  // Sélection tolérante : email_sent_count peut manquer (migration non appliquée).
+  const cols = "id, name, sector, city, email, source_url, notes, email_sent_at, email_opt_out";
+  let p: any = null;
+  const withCount = await sb.from("prospects").select(`${cols}, email_sent_count`).eq("id", id).maybeSingle();
+  if (withCount.error && /email_sent_count/i.test(withCount.error.message || "")) {
+    const noCount = await sb.from("prospects").select(cols).eq("id", id).maybeSingle();
+    if (noCount.error) {
+      if (/email_sent_at|email_opt_out/i.test(noCount.error.message || "")) return { error: "Exécuter database/MIGRATION_PROSPECTS_EMAIL_OUTREACH.sql d'abord" };
+      return { error: noCount.error.message };
     }
-    return { error: error.message };
+    p = noCount.data ? { ...noCount.data, email_sent_count: noCount.data.email_sent_at ? 1 : 0 } : null;
+  } else if (withCount.error) {
+    if (/email_sent_at|email_opt_out/i.test(withCount.error.message || "")) return { error: "Exécuter database/MIGRATION_PROSPECTS_EMAIL_OUTREACH.sql d'abord" };
+    return { error: withCount.error.message };
+  } else {
+    p = withCount.data;
   }
+
   if (!p) return { error: "prospect introuvable" };
   if (!p.email) return { error: "ce prospect n'a pas d'email" };
   if (p.email_opt_out) return { error: "prospect désinscrit (STOP)" };
-  if (p.email_sent_at) return { error: "email déjà envoyé à ce prospect", already: true };
+
+  const count = Number(p.email_sent_count || 0);
+  const maxN = maxSends();
+  if (count >= maxN) return { error: `plafond de relances atteint (${maxN} max)`, already: true };
+  if (p.email_sent_at) {
+    const gap = relanceDays();
+    if (Date.now() - new Date(p.email_sent_at).getTime() < gap * 86400000) {
+      return { error: `déjà contacté il y a moins de ${gap} jours`, already: true };
+    }
+  }
 
   const cap = dailyCap();
   const sent = await emailsSentToday(sb);
   if (sent >= cap) return { error: `plafond du jour atteint (${cap}/jour)`, capReached: true, sentToday: sent, cap };
 
-  const { subject, html, text } = buildProspectEmail(p);
+  const attempt = count + 1;
+  const { subject, html, text } = buildProspectEmail(p, attempt);
   const inbox = ownerInbox();
   const r = await sendBrevoEmail({
     to: p.email,
@@ -182,12 +228,15 @@ export async function sendProspectEmail(sb: SupabaseClient, id: string) {
   });
   if (!r.ok) return { error: r.error || "échec d'envoi" };
 
-  await sb.from("prospects").update({
-    email_sent_at: new Date().toISOString(),
-    status: "ct", // contacté
-  }).eq("id", id);
+  // Mise à jour tolérante au schéma (email_sent_count optionnel).
+  const upd: Record<string, unknown> = { email_sent_at: new Date().toISOString(), email_sent_count: attempt, status: "ct" };
+  const u = await sb.from("prospects").update(upd).eq("id", id);
+  if (u.error && /email_sent_count/i.test(u.error.message || "")) {
+    delete upd.email_sent_count;
+    await sb.from("prospects").update(upd).eq("id", id);
+  }
 
-  return { ok: true, sentToday: sent + 1, cap, to: p.email };
+  return { ok: true, sentToday: sent + 1, cap, to: p.email, attempt };
 }
 
 /**
@@ -208,22 +257,38 @@ export async function sendProspectEmailsBatch(sb: SupabaseClient, maxOverride?: 
     return { ok: true, sent: 0, attempted: 0, sentToday: already, cap, note: "plafond du jour déjà atteint" };
   }
 
-  // Candidats contactables : email présent, jamais contacté, pas désinscrit.
-  const { data: candidates, error } = await sb
+  // Candidats : jamais contactés OU à relancer (dernier envoi > relanceDays,
+  // sous le plafond de relances). Les plus anciens/nouveaux d'abord.
+  const cutoff = new Date(Date.now() - relanceDays() * 86400000).toISOString();
+  let candidates: any[] | null = null;
+  let query = await sb
     .from("prospects")
     .select("id")
     .not("email", "is", null)
-    .is("email_sent_at", null)
     .not("email_opt_out", "is", true)
-    .order("score", { ascending: false, nullsFirst: false })
+    .lt("email_sent_count", maxSends())
+    .or(`email_sent_at.is.null,email_sent_at.lt.${cutoff}`)
+    .order("email_sent_at", { ascending: true, nullsFirst: true })
     .limit(remaining);
 
-  if (error) {
-    if (/column .*email_sent_at|email_opt_out|score/i.test(error.message || "")) {
+  if (query.error && /email_sent_count/i.test(query.error.message || "")) {
+    // Migration relance pas encore appliquée → comportement « 1 seul envoi ».
+    query = await sb
+      .from("prospects")
+      .select("id")
+      .not("email", "is", null)
+      .not("email_opt_out", "is", true)
+      .is("email_sent_at", null)
+      .order("score", { ascending: false, nullsFirst: false })
+      .limit(remaining);
+  }
+  if (query.error) {
+    if (/email_sent_at|email_opt_out|score/i.test(query.error.message || "")) {
       return { error: "Exécuter database/MIGRATION_PROSPECTS_EMAIL_OUTREACH.sql d'abord" };
     }
-    return { error: error.message };
+    return { error: query.error.message };
   }
+  candidates = query.data;
 
   let sent = 0;
   const errors: string[] = [];
