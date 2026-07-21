@@ -375,6 +375,31 @@ export const CATEGORIES: Category[] = [
       { label: "Localisation", type: "text", placeholder: "Ex : Dakar" },
     ],
   },
+  {
+    slug: "alimentation",
+    subdomainSlug: "alimentation",
+    name: "Alimentation & Boissons",
+    icon: "🍔",
+    count: "1 200",
+    subs: ["Jus & Boissons", "Plats préparés", "Épicerie", "Fruits & Légumes", "Pâtisserie & Snacks", "Produits locaux", "Compléments alimentaires", "Autre"],
+    fields: [
+      { label: "Type de produit", type: "text", placeholder: "Ex : Jus de bissap, Attiéké" },
+      { label: "Conditionnement", type: "text", placeholder: "Ex : Bouteille 1L, Sachet 500g" },
+      { label: "Disponibilité", type: "select", options: ["En stock", "Sur commande", "Livraison à domicile"] },
+    ],
+  },
+  {
+    slug: "numerique",
+    subdomainSlug: "numerique",
+    name: "Produits Numériques",
+    icon: "💻",
+    count: "600",
+    subs: ["Ebooks", "Formations", "Logiciels & Licences", "Templates & Design", "Musique & Audio", "Autre"],
+    fields: [
+      { label: "Format", type: "select", options: ["PDF", "Vidéo", "Audio", "Logiciel", "Autre"] },
+      { label: "Livraison", type: "select", options: ["Téléchargement", "Lien par email", "WhatsApp"] },
+    ],
+  },
 ];
 
 export const categoryBySlug = (slug: string) =>

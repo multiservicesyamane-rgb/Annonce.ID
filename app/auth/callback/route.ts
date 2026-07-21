@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getSafeRedirectPath } from '@/lib/authRedirect'
+import { crossSubdomainCookieDomain } from '@/lib/cookieDomain'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = getSafeRedirectPath(searchParams.get('next'), '/dashboard')
+  const cookieDomain = crossSubdomainCookieDomain(request.headers.get('host') || new URL(request.url).host)
 
   const redirectToLogin = (error?: string) => {
     const url = new URL('/connexion', origin)
@@ -27,7 +29,7 @@ export async function GET(request: Request) {
           setAll(cookiesToSet: any[]) {
             try {
               cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
+                cookieStore.set(name, value, cookieDomain ? { ...options, domain: cookieDomain } : options)
               )
             } catch (error) {
               // The `setAll` method was called from a Server Component.
@@ -35,6 +37,7 @@ export async function GET(request: Request) {
             }
           },
         },
+        ...(cookieDomain ? { cookieOptions: { domain: cookieDomain } } : {}),
       }
     )
     

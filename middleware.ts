@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getCategoryBySubdomain } from './lib/categories'
 import { getSubRouteQuery } from './lib/subRoutes'
 import { getSafeRedirectPath } from './lib/authRedirect'
+import { crossSubdomainCookieDomain } from './lib/cookieDomain'
 
 const SHORT_LISTING_PATH_REGEX = /^\/[^/]+-\d{10,}$/
 
@@ -15,7 +16,7 @@ function getSupabaseProjectRef(supabaseUrl: string) {
   }
 }
 
-function clearSupabaseAuthCookies(response: NextResponse, request: NextRequest, supabaseUrl: string) {
+function clearSupabaseAuthCookies(response: NextResponse, request: NextRequest, supabaseUrl: string, cookieDomain?: string) {
   const projectRef = getSupabaseProjectRef(supabaseUrl)
   if (!projectRef) return
 
@@ -23,6 +24,10 @@ function clearSupabaseAuthCookies(response: NextResponse, request: NextRequest, 
   request.cookies.getAll().forEach(({ name }) => {
     if (name.startsWith(authCookiePrefix)) {
       response.cookies.delete(name)
+      // Efface aussi la variante partagée entre sous-domaines (domaine explicite).
+      if (cookieDomain) {
+        response.cookies.set(name, '', { path: '/', domain: cookieDomain, maxAge: 0 })
+      }
     }
   })
 }
@@ -84,6 +89,10 @@ export async function middleware(request: NextRequest) {
     throw new Error("CRITICAL: Variables d'environnement Supabase manquantes. L'application ne peut pas démarrer de manière sécurisée.");
   }
 
+  // Domaine partagé entre sous-domaines (ex : .wanteermako.com) → la session
+  // suit l'utilisateur d'un sous-domaine à l'autre (plus de re-connexion).
+  const cookieDomain = crossSubdomainCookieDomain(request.headers.get('host') || request.nextUrl.host)
+
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
@@ -93,10 +102,11 @@ export async function middleware(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
         supabaseResponse = createSupabaseResponse()
         cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
+          supabaseResponse.cookies.set(name, value, cookieDomain ? { ...options, domain: cookieDomain } : options)
         )
       },
     },
+    ...(cookieDomain ? { cookieOptions: { domain: cookieDomain } } : {}),
   })
 
   let user: User | null = null
@@ -112,7 +122,7 @@ export async function middleware(request: NextRequest) {
 
   const hasInvalidSession = isInvalidSessionError(authError)
   if (hasInvalidSession) {
-    clearSupabaseAuthCookies(supabaseResponse, request, supabaseUrl)
+    clearSupabaseAuthCookies(supabaseResponse, request, supabaseUrl, cookieDomain)
   }
 
   const pathname = shouldRewriteCategorySubdomain ? rewriteUrl.pathname : originalPathname;
@@ -136,7 +146,7 @@ export async function middleware(request: NextRequest) {
 
     const response = NextResponse.redirect(url)
     if (hasInvalidSession) {
-      clearSupabaseAuthCookies(response, request, supabaseUrl)
+      clearSupabaseAuthCookies(response, request, supabaseUrl, cookieDomain)
     }
     return response
   }
