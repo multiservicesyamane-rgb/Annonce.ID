@@ -190,6 +190,61 @@ export async function sendProspectEmail(sb: SupabaseClient, id: string) {
   return { ok: true, sentToday: sent + 1, cap, to: p.email };
 }
 
+/**
+ * Envoi automatique du lot quotidien (cron du matin).
+ * Complète le plafond du jour SANS le dépasser : si l'admin a déjà envoyé
+ * des emails à la main, on n'envoie que le reste. Meilleurs prospects d'abord
+ * (score IA décroissant). Anti-doublon, opt-out et marquage gérés par
+ * sendProspectEmail (réutilisé tel quel pour rester cohérent avec le CRM).
+ */
+export async function sendProspectEmailsBatch(sb: SupabaseClient, maxOverride?: number) {
+  if (!brevoConfigured()) return { error: "BREVO_API_KEY manquante côté serveur" };
+
+  const cap = dailyCap();
+  const already = await emailsSentToday(sb);
+  let remaining = Math.max(0, cap - already);
+  if (typeof maxOverride === "number" && maxOverride > 0) remaining = Math.min(remaining, maxOverride);
+  if (remaining <= 0) {
+    return { ok: true, sent: 0, attempted: 0, sentToday: already, cap, note: "plafond du jour déjà atteint" };
+  }
+
+  // Candidats contactables : email présent, jamais contacté, pas désinscrit.
+  const { data: candidates, error } = await sb
+    .from("prospects")
+    .select("id")
+    .not("email", "is", null)
+    .is("email_sent_at", null)
+    .not("email_opt_out", "is", true)
+    .order("score", { ascending: false, nullsFirst: false })
+    .limit(remaining);
+
+  if (error) {
+    if (/column .*email_sent_at|email_opt_out|score/i.test(error.message || "")) {
+      return { error: "Exécuter database/MIGRATION_PROSPECTS_EMAIL_OUTREACH.sql d'abord" };
+    }
+    return { error: error.message };
+  }
+
+  let sent = 0;
+  const errors: string[] = [];
+  for (const c of candidates || []) {
+    const r = await sendProspectEmail(sb, c.id);
+    if (r.ok) sent++;
+    else if (r.capReached) break; // sécurité (course avec un envoi manuel)
+    else if (r.error) errors.push(r.error);
+    await new Promise((res) => setTimeout(res, 1200)); // throttle doux (réputation expéditeur)
+  }
+
+  return {
+    ok: true,
+    sent,
+    attempted: (candidates || []).length,
+    sentToday: already + sent,
+    cap,
+    errors: errors.slice(0, 5),
+  };
+}
+
 /** Marque un prospect comme désinscrit (réponse STOP). */
 export async function optOutProspect(sb: SupabaseClient, id: string) {
   if (!id) return { error: "prospect manquant" };
