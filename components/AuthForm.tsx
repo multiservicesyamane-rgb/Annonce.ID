@@ -51,8 +51,14 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
     if (query) setRouteQuery("?" + query);
 
     const error = params.get("error");
+    const reason = params.get("reason"); // DIAGNOSTIC temporaire (login Google)
     if (error === "callback") {
-      setNotice({ tone: "error", text: "La connexion avec Google a été interrompue. Réessayez." });
+      setNotice({
+        tone: "error",
+        text:
+          "La connexion avec Google a été interrompue. Réessayez." +
+          (reason ? ` [diagnostic : ${reason}]` : ""),
+      });
     } else if (error === "session") {
       setNotice({ tone: "error", text: "Votre session a expiré. Reconnectez-vous pour continuer." });
     }
