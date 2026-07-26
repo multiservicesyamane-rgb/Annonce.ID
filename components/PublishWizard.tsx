@@ -11,7 +11,7 @@ import {
   type DuplicateMatch,
 } from "@/lib/listingQuality";
 import { createClient } from "@/lib/supabase/client";
-import { uploadImages } from "@/lib/storage";
+import { uploadImages, uploadVideo, getVideoDuration, MAX_VIDEO_BYTES, MAX_VIDEO_SECONDS } from "@/lib/storage";
 import { isOwner } from "@/lib/owners";
 import { FREE_LISTING_LIMIT, normalizeFreeAdsRemaining } from "@/lib/businessRules";
 import Link from "next/link";
@@ -30,6 +30,8 @@ export default function PublishWizard() {
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [video, setVideo] = useState<string | null>(null);
+  const [videoUploading, setVideoUploading] = useState(false);
   const [boost, setBoost] = useState(0);
   const [region, setRegion] = useState("Dakar");
   const [commune, setCommune] = useState("Plateau");
@@ -84,6 +86,7 @@ export default function PublishWizard() {
           setPrice(data.price?.toString() || "");
           setPriceType(data.price_type || "Prix Fixe");
           setPhotos(data.photos || []);
+          setVideo(data.video || null);
           setRegion(data.region || "Dakar");
           setCommune(data.commune);
           setCustomCommune(data.custom_commune || "");
@@ -102,6 +105,7 @@ export default function PublishWizard() {
           if (d.price) setPrice(d.price);
           if (d.priceType) setPriceType(d.priceType);
           if (d.photos) setPhotos(d.photos);
+          if (d.video) setVideo(d.video);
           if (d.region) setRegion(d.region);
           if (d.commune) setCommune(d.commune);
           if (d.customCommune) setCustomCommune(d.customCommune);
@@ -112,12 +116,12 @@ export default function PublishWizard() {
   }, [editId, supabase]);
 
   useEffect(() => {
-    if (!catSlug && !title && !desc && !price && photos.length === 0) return;
+    if (!catSlug && !title && !desc && !price && photos.length === 0 && !video) return;
     const t = setTimeout(() => {
-      localStorage.setItem("wanteermako_draft", JSON.stringify({ catSlug, subCategory, title, desc, price, priceType, photos, region, commune, customCommune, specs }));
+      localStorage.setItem("wanteermako_draft", JSON.stringify({ catSlug, subCategory, title, desc, price, priceType, photos, video, region, commune, customCommune, specs }));
     }, 1000);
     return () => clearTimeout(t);
-  }, [catSlug, subCategory, title, desc, price, priceType, photos, region, commune, customCommune, specs]);
+  }, [catSlug, subCategory, title, desc, price, priceType, photos, video, region, commune, customCommune, specs]);
 
   useEffect(() => {
     setDuplicateWarning(null);
@@ -133,6 +137,7 @@ export default function PublishWizard() {
       title,
       description: desc,
       photos,
+      video,
     });
 
   // Aide IA (gratuit via modèles intégrés, ou Gemini si la clé est active)
@@ -221,6 +226,43 @@ export default function PublishWizard() {
     }
   };
 
+  // Vidéo de présentation (optionnelle, max 1 min 30). Upload immédiat vers
+  // Supabase Storage : on ne garde qu'une URL en mémoire (jamais le fichier lourd).
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("video/")) return show("⚠ Choisissez un fichier vidéo (MP4…).");
+    if (file.size > MAX_VIDEO_BYTES) return show("⚠ Vidéo trop lourde (max 50 Mo).");
+    setVideoUploading(true);
+    show("📤 Envoi de la vidéo...");
+    try {
+      // Seuls le type vidéo et la taille (≤ 50 Mo) sont obligatoires.
+      // Le contrôle de durée est « best-effort » et NE BLOQUE JAMAIS : beaucoup
+      // de vidéos (WhatsApp, exports divers) n'exposent pas leur durée au
+      // navigateur — les bloquer reviendrait à refuser des MP4 parfaitement
+      // valides. Au pire, on affiche juste un conseil si elle dépasse 1 min 30.
+      let tooLong = false;
+      try {
+        const duration = await getVideoDuration(file);
+        tooLong = duration > MAX_VIDEO_SECONDS + 1;
+      } catch {
+        /* durée indéterminable → on n'empêche pas l'envoi */
+      }
+      const url = await uploadVideo(file);
+      setVideo(url);
+      show(
+        tooLong
+          ? "✅ Vidéo ajoutée (elle semble dépasser 1 min 30 — pensez à la raccourcir si possible)."
+          : "✅ Vidéo ajoutée"
+      );
+    } catch (err: any) {
+      show("⚠ " + (err?.message || "Erreur lors de l'envoi de la vidéo."));
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
   const handleNext = () => {
     if (step === 1) {
       if (!catSlug) return show("⚠ Choisissez une catégorie.");
@@ -229,7 +271,7 @@ export default function PublishWizard() {
       if (contactPhone.length !== 9) return show("📞 Entrez votre numéro (9 chiffres après +221) pour recevoir les acheteurs.");
     }
     if (step === 2) {
-      if (photos.length === 0) return show("⚠ Ajoutez au moins une photo.");
+      if (photos.length === 0 && !video) return show("⚠ Ajoutez au moins une photo ou une vidéo.");
     }
     if (step === 3) {
       const quality = getDraftQuality();
@@ -321,7 +363,7 @@ export default function PublishWizard() {
       location: commune === "Autre" ? (customCommune ? `${region} - ${customCommune}` : region) : `${region} - ${commune}`,
       region, commune, custom_commune: customCommune,
       image: uploadedPhotos.length > 0 ? uploadedPhotos[0] : "https://placehold.co/600x400?text=Sans+Image",
-      photos: uploadedPhotos, specs,
+      photos: uploadedPhotos, video: video || undefined, specs,
       duplicate_key: duplicateKey,
       premium: isVipFree ? true : undefined,
       featured: isVipFree ? true : undefined,
@@ -524,6 +566,29 @@ export default function PublishWizard() {
                 ))}
               </div>
             )}
+
+            {/* Vidéo de présentation (optionnelle, max 1 min 30) */}
+            <div className="pt-3 mt-1 border-t border-gray-100 dark:border-dark-border">
+              <h2 className="font-display text-[0.95rem] md:text-[1.15rem] font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                🎥 Vidéo <span className="text-[.7rem] font-semibold text-gray-400">(facultatif)</span>
+              </h2>
+              {!video && (
+                <label className={`mt-2 block w-full rounded-[14px] border-[2px] border-dashed border-green-400/40 bg-green-500/5 dark:bg-black/40 px-3 py-3 md:py-5 text-center transition-all ${videoUploading ? "opacity-60 cursor-wait" : "cursor-pointer hover:bg-green-500/10"}`}>
+                  <input type="file" accept="video/*" className="hidden" disabled={videoUploading} onChange={handleVideoUpload} />
+                  <div className="w-8 h-8 mx-auto bg-gradient-to-br from-green-500 to-green-700 rounded-lg flex items-center justify-center mb-1.5 shadow-md">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                  </div>
+                  <div className="font-bold text-gray-900 dark:text-white text-[.85rem]">{videoUploading ? "Envoi en cours..." : "Ajoutez une vidéo"}</div>
+                  <div className="text-[.7rem] text-gray-500 mt-0.5">MP4 / MOV · ~1 min 30 conseillé · max 50 Mo — montrez votre article en action</div>
+                </label>
+              )}
+              {video && (
+                <div className="mt-2 relative rounded-[14px] overflow-hidden border-2 border-green-500/40 bg-black">
+                  <video src={video} controls playsInline preload="metadata" className="w-full max-h-[280px] object-contain bg-black" />
+                  <button type="button" onClick={() => setVideo(null)} className="absolute top-2 right-2 w-7 h-7 bg-black/70 hover:bg-brand-red text-white rounded-full flex items-center justify-center text-[.75rem] shadow">✕</button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

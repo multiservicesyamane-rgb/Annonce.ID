@@ -73,7 +73,8 @@ export async function POST(req: Request) {
     const title = String(listing.title || "").trim();
     const description = String(listing.description || "").trim();
     const photos = Array.isArray(listing.photos) ? listing.photos.filter(Boolean) : [];
-    const quality = validateListingDraft({ title, description, photos });
+    const video = typeof listing.video === "string" && listing.video.trim() ? listing.video.trim() : null;
+    const quality = validateListingDraft({ title, description, photos, video });
     if (!quality.valid) return jsonError(quality.errors[0] || "Annonce invalide.");
 
     const priceType = String(listing.priceType || listing.price_type || "Prix Fixe");
@@ -144,6 +145,7 @@ export async function POST(req: Request) {
       custom_commune: String(listing.customCommune || listing.custom_commune || ""),
       image: String(listing.image || photos[0] || "https://placehold.co/600x400?text=Sans+Image"),
       photos,
+      video: video || undefined,
       specs: typeof listing.specs === "object" && listing.specs ? listing.specs : {},
       duplicate_key: duplicateKey,
       premium: vipFree ? true : activeWithoutPayment && premiumBoost ? true : undefined,

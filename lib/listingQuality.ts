@@ -2,6 +2,7 @@ export type ListingDraftForValidation = {
   title: string;
   description: string;
   photos?: string[];
+  video?: string | null;
 };
 
 export type ListingQualityResult = {
@@ -181,8 +182,10 @@ export function validateListingDraft(draft: ListingDraftForValidation): ListingQ
   if (description.length < 30) {
     errors.push("La description doit contenir au moins 30 caractères.");
   }
-  if (photos.length < 1) {
-    errors.push("Ajoutez au moins une photo.");
+  // Média obligatoire : au moins une photo OU une vidéo (les deux sont possibles).
+  const hasVideo = !!(draft.video && String(draft.video).trim());
+  if (photos.length < 1 && !hasVideo) {
+    errors.push("Ajoutez au moins une photo ou une vidéo.");
   }
 
   return { valid: errors.length === 0, errors };

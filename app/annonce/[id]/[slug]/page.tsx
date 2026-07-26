@@ -53,6 +53,7 @@ async function fetchAd(idParam: string) {
       location: data.location,
       image: data.image || "https://placehold.co/600x400?text=Sans+Image",
       photos: data.photos || [],
+      video: data.video || null,
       premium: data.premium,
       externalUrl: data.external_url || null,
       source: data.source || null,
@@ -121,6 +122,10 @@ export default async function AnnoncePage({ params }: Props) {
   if (!ad) notFound();
 
   const images = ad.photos && ad.photos.length > 0 ? ad.photos : [ad.image];
+  // Carrousel : vraies photos si présentes ; sinon, si vidéo seule, aucune image
+  // (la galerie n'affichera que la vidéo) ; sinon l'image de repli.
+  const realPhotos = (ad.photos || []).filter(Boolean);
+  const galleryImages = realPhotos.length > 0 ? realPhotos : ad.video ? [] : [ad.image];
   const similar = await fetchSimilar(ad.category, ad.id);
   const seller = ad.seller;
   const adCategory = categoryBySlug(ad.categorySlug);
@@ -185,7 +190,7 @@ export default async function AnnoncePage({ params }: Props) {
       <div className="grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
         {/* GAUCHE */}
         <div className="flex flex-col">
-          <Gallery images={images} title={ad.title} />
+          <Gallery images={galleryImages} title={ad.title} video={ad.video} />
 
           {/* MOBILE ONLY: Title & Price immediately after image */}
           <div className="lg:hidden mt-4 bg-white dark:bg-dark-800 p-4 rounded-xl border-[1.5px] border-gray-100 dark:border-dark-border shadow-sm">

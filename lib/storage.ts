@@ -85,3 +85,105 @@ export async function uploadImage(src: string, folder = "listings"): Promise<str
 export async function uploadImages(srcs: string[], folder = "listings"): Promise<string[]> {
   return Promise.all((srcs || []).map((s) => uploadImage(s, folder)));
 }
+
+/* ------------------------------------------------------------------ */
+/* VIDÉO — présentation d'annonce (max 1 min 30)                       */
+/* ------------------------------------------------------------------ */
+
+const VIDEO_BUCKET = "videos";
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50 Mo
+export const MAX_VIDEO_SECONDS = 90; // 1 min 30
+
+const VIDEO_EXTENSIONS: Record<string, string> = {
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+  "video/ogg": "ogv",
+};
+
+/**
+ * Lit la durée (en secondes) d'un fichier vidéo côté navigateur.
+ * Gère le cas fréquent des MP4 de téléphone qui renvoient une durée `Infinity`
+ * au chargement des métadonnées : on force le calcul par un « seek » très loin.
+ * Rejette uniquement si le navigateur ne sait pas décoder la vidéo (HEVC…).
+ */
+export function getVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.muted = true;
+
+    let timer: ReturnType<typeof setTimeout>;
+    const cleanup = () => {
+      clearTimeout(timer);
+      v.onloadedmetadata = null;
+      v.onerror = null;
+      v.ontimeupdate = null;
+      URL.revokeObjectURL(url);
+    };
+    const done = (d: number) => {
+      cleanup();
+      resolve(Number.isFinite(d) && d > 0 ? d : 0);
+    };
+
+    // Filet de sécurité : si rien ne se déclenche (fichier bloquant), on n'attend
+    // pas indéfiniment — on considère la durée comme indéterminée (0).
+    timer = setTimeout(() => done(0), 15000);
+
+    v.onloadedmetadata = () => {
+      if (v.duration === Infinity || Number.isNaN(v.duration)) {
+        // Durée absente de l'en-tête : on saute très loin pour forcer son calcul.
+        v.ontimeupdate = () => {
+          v.ontimeupdate = null;
+          done(v.duration);
+        };
+        try {
+          v.currentTime = 1e101;
+        } catch {
+          done(0);
+        }
+      } else {
+        done(v.duration);
+      }
+    };
+    v.onerror = () => {
+      const code = v.error?.code;
+      cleanup();
+      const err = new Error("Vidéo illisible.") as Error & { code?: number };
+      err.code = code;
+      reject(err);
+    };
+    v.src = url;
+  });
+}
+
+/**
+ * Envoie une vidéo directement vers Supabase Storage (bucket public `videos`).
+ * Upload direct navigateur → Storage : indispensable car les fonctions
+ * serveur Netlify sont limitées à ~6 Mo de corps de requête, trop peu pour
+ * une vidéo. Renvoie l'URL publique.
+ */
+export async function uploadVideo(file: File): Promise<string> {
+  if (!file) throw new Error("Aucune vidéo sélectionnée.");
+  if (!file.type.startsWith("video/")) throw new Error("Le fichier doit être une vidéo.");
+  if (file.size > MAX_VIDEO_BYTES) throw new Error("Vidéo trop lourde (max 50 Mo).");
+
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("Connexion requise pour envoyer une vidéo.");
+
+  const ext = VIDEO_EXTENSIONS[file.type] || (file.name.split(".").pop() || "mp4").toLowerCase();
+  const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from(VIDEO_BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false, cacheControl: "31536000" });
+  if (error) throw new Error(error.message || "Envoi de la vidéo impossible.");
+
+  const { data } = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
