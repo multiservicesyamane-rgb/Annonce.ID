@@ -148,7 +148,7 @@ export default function PublishWizard() {
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, topic, city: region, category: subCategory || cat?.name, tier: "user" }),
+        body: JSON.stringify({ kind, topic, city: region, category: subCategory || cat?.name, categorySlug: catSlug, specs, tier: "user" }),
       });
       const data = await res.json();
       if (data.text) {
@@ -170,7 +170,7 @@ export default function PublishWizard() {
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "listing_all", topic, city: region, category: subCategory || cat?.name, fields, tier: "user" }),
+        body: JSON.stringify({ kind: "listing_all", topic, city: region, category: subCategory || cat?.name, categorySlug: catSlug, fields, specs, tier: "user" }),
       });
       const data = await res.json();
       if (data.title) setTitle(data.title.replace(/^["']|["']$/g, "").slice(0, 80));
@@ -198,7 +198,7 @@ export default function PublishWizard() {
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "listing_price", topic, city: region, category: subCategory || cat?.name, tier: "user" }),
+        body: JSON.stringify({ kind: "listing_price", topic, city: region, category: subCategory || cat?.name, categorySlug: catSlug, tier: "user" }),
       });
       const data = await res.json();
       const num = (data.text || "").replace(/[^0-9]/g, "");
