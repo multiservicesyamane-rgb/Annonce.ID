@@ -179,8 +179,8 @@ export function validateListingDraft(draft: ListingDraftForValidation): ListingQ
   if (hasEmojiRun(title)) {
     errors.push("Évitez les suites d'emojis dans le titre.");
   }
-  if (description.length < 30) {
-    errors.push("La description doit contenir au moins 30 caractères.");
+  if (description.length < 100) {
+    errors.push("La description doit contenir au moins 100 caractères (soyez précis : état, détails, atouts).");
   }
   // Média obligatoire : au moins une photo OU une vidéo (les deux sont possibles).
   const hasVideo = !!(draft.video && String(draft.video).trim());

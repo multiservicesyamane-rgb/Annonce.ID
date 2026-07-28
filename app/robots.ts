@@ -10,7 +10,26 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/yamanetech", "/dashboard", "/api/"],
+      disallow: [
+        // Zones privées / techniques (aucune valeur SEO)
+        "/yamanetech",
+        "/dashboard",
+        "/connexion",
+        "/inscription",
+        "/favoris",
+        "/profil",
+        "/paiement",
+        "/api/",
+        // Paramètres de filtre et de tri : évitent le crawl de doublons/URLs infinies
+        "/*?sort=",
+        "/*?min=",
+        "/*?max=",
+        "/*?condition=",
+        "/*?sellerType=",
+        "/*?location=",
+        "/*?premium=",
+        "/*?category=",
+      ],
     },
     sitemap: `${base}/sitemap.xml`,
   };

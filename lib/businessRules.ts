@@ -33,6 +33,21 @@ export function isPaidBoostKey(boostKey: unknown): boolean {
   return typeof boostKey === "string" && boostKey.trim() !== "" && boostKey !== "gratuit";
 }
 
+// Prix minimum cohérent par catégorie — bloque le spam à 1 FCFA. Le prix 0
+// (annonce « Gratuit ») et « Sur devis » restent autorisés (gérés à part).
+const MIN_PRICE_BY_CATEGORY: Record<string, number> = {
+  vehicules: 100000,
+  immobilier: 20000,
+  "equipements-pro": 5000,
+  entreprises: 5000,
+  electronique: 1000,
+};
+
+export function minPriceForCategory(categorySlug: unknown): number {
+  const slug = String(categorySlug || "").toLowerCase();
+  return MIN_PRICE_BY_CATEGORY[slug] ?? 500;
+}
+
 export function freeAdsForSubscription(subKey: unknown): number {
   if (subKey === "standard") return 5;
   if (subKey === "premium") return 15;

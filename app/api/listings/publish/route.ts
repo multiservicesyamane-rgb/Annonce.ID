@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin } from "@supabase/supabase-js";
 import { BOOSTS } from "@/lib/constants";
-import { FREE_LISTING_LIMIT, isPaidBoostKey, normalizeFreeAdsRemaining } from "@/lib/businessRules";
+import { FREE_LISTING_LIMIT, isPaidBoostKey, minPriceForCategory, normalizeFreeAdsRemaining } from "@/lib/businessRules";
 import { isOwner } from "@/lib/owners";
+import { tidyTitle } from "@/lib/utils";
 import {
   createDuplicateKey,
   findDuplicateListing,
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
     const duplicateConfirmed = body?.duplicateConfirmed === true;
     const boostKey = BOOST_KEYS.has(body?.boostKey) ? body.boostKey : "gratuit";
 
-    const title = String(listing.title || "").trim();
+    const title = tidyTitle(String(listing.title || "").trim());
     const description = String(listing.description || "").trim();
     const photos = Array.isArray(listing.photos) ? listing.photos.filter(Boolean) : [];
     const video = typeof listing.video === "string" && listing.video.trim() ? listing.video.trim() : null;
@@ -80,6 +81,16 @@ export async function POST(req: Request) {
     const priceType = String(listing.priceType || listing.price_type || "Prix Fixe");
     const price = String(listing.price || "0");
     if (priceType !== "Sur devis" && !price) return jsonError("Indiquez un prix.");
+
+    // Prix minimum cohérent par catégorie (bloque le spam à 1 FCFA). Le 0
+    // (« Gratuit ») et « Sur devis » restent autorisés.
+    if (priceType !== "Sur devis") {
+      const priceNum = Number(price.replace(/\D/g, "")) || 0;
+      const minPrice = minPriceForCategory(listing.categorySlug || listing.category_slug);
+      if (priceNum > 0 && priceNum < minPrice) {
+        return jsonError(`Prix trop bas pour cette catégorie (minimum ${minPrice.toLocaleString("fr-FR")} FCFA).`);
+      }
+    }
 
     const phone = String(listing.phone || "").trim();
     const duplicateKey = createDuplicateKey({ title, price, phone });

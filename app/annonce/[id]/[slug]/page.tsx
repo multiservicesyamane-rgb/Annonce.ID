@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import Gallery from "@/components/Gallery";
@@ -11,7 +11,7 @@ import ReportListing from "@/components/ReportListing";
 import SharePublishedBanner from "@/components/SharePublishedBanner";
 import RecordView from "@/components/RecordView";
 import { createClient } from "@supabase/supabase-js";
-import { formatNumber, limitEmojis } from "@/lib/utils";
+import { formatNumber, tidyTitle, buildListingSeoTitle, buildListingSeoDescription, cleanTitleForSeo } from "@/lib/utils";
 import { detectLanguage } from "@/lib/listingQuality";
 import { categoryBySlug } from "@/lib/constants";
 import { getRootUrl, getSubdomainUrl } from "@/lib/categories";
@@ -20,6 +20,15 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+// Client admin (service role) — SERVEUR UNIQUEMENT. Sert à retrouver une annonce
+// non active (que la RLS anon ne laisse pas lire) pour la rediriger au lieu d'un 404.
+function adminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+}
 
 // Mise en cache (ISR) : chaque fiche annonce est servie depuis le cache pendant
 // 5 min → réduit fortement le transfert serveur Vercel (page la plus visitée).
@@ -61,6 +70,7 @@ async function fetchAd(idParam: string) {
       views: data.views,
       favorites: 0,
       date: new Date(data.created_at).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' }),
+      createdAt: data.created_at,
       specs: data.specs || {},
       seller: {
         id: data.user_id,
@@ -95,6 +105,21 @@ async function fetchSimilar(category: string, currentId: string) {
   }));
 }
 
+// T5 — une annonce vendue/expirée/inactive ne doit JAMAIS renvoyer un 404 :
+// on récupère sa catégorie pour rediriger (308 permanent) vers la page catégorie.
+async function fetchListingRedirectTarget(idParam: string): Promise<string | null> {
+  const sb = adminClient();
+  if (!sb) return null;
+  try {
+    const { data } = await sb.from('listings').select('category_slug').eq('id', idParam).maybeSingle();
+    if (!data) return null;
+    const slug = String(data.category_slug || "").trim();
+    return slug ? `/categorie/${slug}` : "/";
+  } catch {
+    return null;
+  }
+}
+
 type Props = { params: { id: string; slug: string } };
 
 // SEO dynamique par annonce (section 18)
@@ -104,13 +129,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Annonces encore en anglais (imports non traduits) → noindex : on évite de
   // faire indexer du contenu à faible valeur / dupliqué par Google (AdSense).
   const isEnglish = detectLanguage(`${ad.title} ${ad.description}`) === "en";
-  return {
+  const seoTitle = buildListingSeoTitle(ad.title, ad.price, ad.location);
+  const seoDesc = buildListingSeoDescription({
     title: ad.title,
-    description: ad.description.slice(0, 160),
+    price: ad.price,
+    category: ad.category,
+    location: ad.location,
+    description: ad.description,
+  });
+  return {
+    // `absolute` : on court-circuite le template "%s · Wanteermako" (la marque
+    // est déjà incluse dans notre titre SEO, sinon elle apparaîtrait en double).
+    title: { absolute: seoTitle },
+    description: seoDesc,
     robots: isEnglish ? { index: false, follow: true } : undefined,
     openGraph: {
-      title: ad.title,
-      description: ad.description.slice(0, 160),
+      title: cleanTitleForSeo(ad.title),
+      description: seoDesc,
       images: [{ url: ad.image }],
       type: "website",
     },
@@ -119,7 +154,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AnnoncePage({ params }: Props) {
   const ad = await fetchAd(params.id);
-  if (!ad) notFound();
+  if (!ad) {
+    // Annonce non active mais existante (vendue/expirée/inactive) → 308 vers la
+    // catégorie plutôt qu'un 404 (préserve le jus SEO, pas d'impasse crawl).
+    const target = await fetchListingRedirectTarget(params.id);
+    if (target) permanentRedirect(target);
+    notFound();
+  }
 
   const images = ad.photos && ad.photos.length > 0 ? ad.photos : [ad.image];
   // Carrousel : vraies photos si présentes ; sinon, si vidéo seule, aucune image
@@ -130,39 +171,74 @@ export default async function AnnoncePage({ params }: Props) {
   const seller = ad.seller;
   const adCategory = categoryBySlug(ad.categorySlug);
 
-  // Schema.org pour le SEO riche : Product + Offer (avec vendeur) + fil d'Ariane.
+  // Schema.org pour le SEO riche : Product + Offer + type spécifique catégorie + fil d'Ariane.
   const base = process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com";
   const canonicalUrl = `${base}/annonce/${ad.id}/${ad.slug}`;
   const priceValue = ad.price.replace(/[^0-9]/g, ""); // "" si "Sur devis" / "Gratuit"
   const categoryUrl = adCategory ? getSubdomainUrl(adCategory) : base;
+  const seoName = cleanTitleForSeo(ad.title);
+  const spec = (k: string) => (ad.specs && ad.specs[k] ? String(ad.specs[k]).trim() : "");
+  const digits = (s: string) => s.replace(/[^0-9]/g, "");
+
+  const offerNode = {
+    "@type": "Offer",
+    url: canonicalUrl,
+    priceCurrency: "XOF",
+    ...(priceValue ? { price: priceValue } : {}),
+    availability: "https://schema.org/InStock",
+    areaServed: { "@type": "AdministrativeArea", name: ad.location || "Sénégal" },
+    seller: {
+      "@type": seller?.isPro ? "Organization" : "Person",
+      name: seller?.name || "Vendeur",
+    },
+  };
+
+  // Type structuré spécifique : Car pour les véhicules, RealEstateListing pour l'immobilier.
+  let categoryNode: Record<string, any> | null = null;
+  if (ad.categorySlug === "vehicules") {
+    const year = digits(spec("Année"));
+    const km = digits(spec("Kilométrage"));
+    categoryNode = {
+      "@type": "Car",
+      name: seoName,
+      ...(spec("Marque") ? { brand: { "@type": "Brand", name: spec("Marque") } } : {}),
+      ...(spec("Modèle") ? { model: spec("Modèle") } : {}),
+      ...(year ? { vehicleModelDate: year } : {}),
+      ...(km ? { mileageFromOdometer: { "@type": "QuantitativeValue", value: Number(km), unitCode: "KMT" } } : {}),
+      ...(spec("Carburant") ? { fuelType: spec("Carburant") } : {}),
+      ...(spec("Boîte de vitesse") ? { vehicleTransmission: spec("Boîte de vitesse") } : {}),
+      image: images,
+      offers: offerNode,
+    };
+  } else if (ad.categorySlug === "immobilier") {
+    categoryNode = {
+      "@type": "RealEstateListing",
+      name: seoName,
+      url: canonicalUrl,
+      image: images,
+      ...(ad.createdAt ? { datePosted: ad.createdAt } : {}),
+      description: ad.description,
+    };
+  }
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "Product",
-        name: ad.title,
+        name: seoName,
         description: ad.description,
         image: images,
         category: ad.category,
-        offers: {
-          "@type": "Offer",
-          url: canonicalUrl,
-          priceCurrency: "XOF",
-          ...(priceValue ? { price: priceValue } : {}),
-          availability: "https://schema.org/InStock",
-          seller: {
-            "@type": seller?.isPro ? "Organization" : "Person",
-            name: seller?.name || "Vendeur",
-          },
-        },
+        offers: offerNode,
       },
+      ...(categoryNode ? [categoryNode] : []),
       {
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Accueil", item: base },
           { "@type": "ListItem", position: 2, name: ad.category, item: categoryUrl },
-          { "@type": "ListItem", position: 3, name: ad.title },
+          { "@type": "ListItem", position: 3, name: seoName },
         ],
       },
     ],
@@ -198,7 +274,7 @@ export default async function AnnoncePage({ params }: Props) {
               <span className="text-[.65rem] font-bold uppercase tracking-wider text-dark-900 bg-neon-gold px-2.5 py-0.5 rounded-sm shadow-[0_0_10px_rgba(245,166,35,0.3)]">{ad.category}</span>
               <span className="text-[.75rem] text-gray-500 font-medium">📍 {ad.location}</span>
             </div>
-            <h1 className="font-display text-[1.25rem] font-bold leading-tight dark:text-white mb-4 text-gray-900">{limitEmojis(ad.title)}</h1>
+            <h1 className="font-display text-[1.25rem] font-bold leading-tight dark:text-white mb-4 text-gray-900">{tidyTitle(ad.title)}</h1>
             
             {/* Price Banner style premium */}
             <div className="rounded-[16px] overflow-hidden border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-black/40 shadow-sm mb-4 relative">
@@ -251,7 +327,7 @@ export default async function AnnoncePage({ params }: Props) {
             <div className="overflow-hidden rounded-[12px] border border-gray-200 dark:border-dark-border">
               <iframe
                 title="Carte de localisation"
-                src={`https://maps.google.com/maps?q=${encodeURIComponent((ad.location || "Dakar") + ", Afrique de l'Ouest")}&z=12&output=embed`}
+                src={`https://maps.google.com/maps?q=${encodeURIComponent((ad.location || "Dakar") + ", Sénégal")}&z=12&output=embed`}
                 className="h-44 w-full sm:h-56"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -287,7 +363,7 @@ export default async function AnnoncePage({ params }: Props) {
               <div className="flex items-start justify-between gap-4 mb-2">
                 <div>
                   <div className="text-[.68rem] font-bold uppercase tracking-widest text-gray-400 mb-1">{ad.category}</div>
-                  <h1 className="font-display text-[1.4rem] font-bold leading-tight dark:text-white">{limitEmojis(ad.title)}</h1>
+                  <h1 className="font-display text-[1.4rem] font-bold leading-tight dark:text-white">{tidyTitle(ad.title)}</h1>
                 </div>
                 <div className="shrink-0">
                   <ShareButton title={ad.title} />

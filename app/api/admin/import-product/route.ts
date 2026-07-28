@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdminPassword } from "@/lib/serverSecurity";
 import { createClient } from "@supabase/supabase-js";
 import { OWNER_EMAILS } from "@/lib/owners";
-import { slugify } from "@/lib/utils";
+import { slugify, tidyTitle } from "@/lib/utils";
 import {
   createDuplicateKey,
   findDuplicateListing,
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
       const needsModeration = preparedText.needsModeration || !quality.valid || !!duplicate;
       const payload: any = {
         user_id: ownerId,
-        title: preparedText.title,
+        title: tidyTitle(preparedText.title),
         slug: `${slugify(preparedText.title).slice(0, 60)}-${Math.random().toString(36).slice(2, 7)}`,
         description: preparedText.description,
         price: String(prod?.price ?? "").replace(/[^0-9]/g, "") || "0",
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
       const { data, error } = await adaptiveInsert(sb, payload);
       if (error) results.push({ title, ok: false, error: error.message || "Erreur insertion" });
       else results.push({
-        title: preparedText.title,
+        title: tidyTitle(preparedText.title),
         ok: true,
         id: data?.id,
         slug: data?.slug,

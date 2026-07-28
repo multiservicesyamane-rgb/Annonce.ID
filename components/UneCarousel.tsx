@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Listing } from "@/lib/types";
 import { colorForCategory } from "@/lib/constants";
+import { tidyTitle } from "@/lib/utils";
 function getRelativeTime(dateString?: string) {
   if (!dateString) return "";
   try {
@@ -114,7 +115,7 @@ export default function UneCarousel({ listings }: { listings: Listing[] }) {
             {/* Info details */}
             <div className="flex-1 px-1">
               <div className="font-bold text-white text-[0.7rem] md:text-[0.82rem] leading-tight line-clamp-2 mb-0.5 group-hover:underline">
-                {ad.title}
+                {tidyTitle(ad.title)}
               </div>
               <div className="font-display font-black text-white text-[0.82rem] md:text-[1.05rem] mb-1.5 drop-shadow-sm">
                 {ad.price}

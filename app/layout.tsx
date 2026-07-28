@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   },
   description:
     "Achetez, vendez, louez au Sénégal. Publication gratuite, 0% commission, contact direct WhatsApp sans intermédiaire.",
-  keywords: ["petites annonces", "Afrique de l'Ouest", "Dakar", "Abidjan", "immobilier", "voitures", "occasion"],
   openGraph: {
     type: "website",
     locale: "fr_FR",
