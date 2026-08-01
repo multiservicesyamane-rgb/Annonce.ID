@@ -33,11 +33,14 @@ export default async function BoutiquesPage() {
     countMap[l.user_id] = (countMap[l.user_id] || 0) + 1;
   });
 
-  // Boutique = TOUT vendeur ayant au moins 1 annonce active (affichage automatique,
-  // indépendant du flag has_boutique pour ne jamais rater un vendeur).
-  const boutiques = (allProfiles || []).filter(
-    (p: any) => (countMap[p.id] || 0) > 0,
-  );
+  // Phase de lancement : on affiche TOUS les inscrits comme boutiques (le site
+  // aurait l'air vide avec seulement les vendeurs ayant déjà publié).
+  // Tri : ceux qui ont le plus d'annonces d'abord, puis les inscrits récents.
+  const boutiques = [...(allProfiles || [])].sort((a: any, b: any) => {
+    const diff = (countMap[b.id] || 0) - (countMap[a.id] || 0);
+    if (diff !== 0) return diff;
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  });
 
   return (
     <div className="wrap py-6">
@@ -71,6 +74,7 @@ export default async function BoutiquesPage() {
             isPro: shop.role === "pro" || shop.role === "business" || !!shop.free_premium,
             phone: shop.phone || "",
             memberSince: shop.created_at ? new Date(shop.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" }) : "",
+            adCount: countMap[shop.id] || 0,
           }))}
         />
       )}

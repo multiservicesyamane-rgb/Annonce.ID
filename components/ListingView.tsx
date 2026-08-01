@@ -9,6 +9,7 @@ import { formatNumber } from "@/lib/utils";
 import FilterDrawer from "./FilterDrawer";
 import EmptyState from "./EmptyState";
 import { SkeletonGrid } from "./SkeletonCard";
+import SearchAlertButton from "./SearchAlertButton";
 import { CATEGORIES } from "@/lib/constants";
 
 /**
@@ -193,6 +194,12 @@ export default function ListingView({
               </span>
             </div>
             <div className="flex gap-2">
+              <SearchAlertButton
+                categoryName={category}
+                location={location}
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+              />
               <button
                 type="button"
                 onClick={() => setDrawer(true)}

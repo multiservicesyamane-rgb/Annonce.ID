@@ -8,6 +8,7 @@ import AdCard from "@/components/AdCard";
 import HomeRecent from "@/components/HomeRecent";
 import { getFeaturedListings, getPremiumListings, getRecentListings } from "@/lib/homeSections";
 import { createClient } from "@supabase/supabase-js";
+import { buildMapPoints } from "@/lib/geo";
 
 import UneCarousel from "@/components/UneCarousel";
 import FeaturedSlider from "@/components/FeaturedSlider";
@@ -47,18 +48,31 @@ export default async function HomePage() {
     .select('user_id')
     .eq('status', 'active');
 
+  // Annonces à placer sur la carte du hero (position au niveau commune,
+  // jamais l'adresse exacte du vendeur).
+  const { data: locationRows } = await supabase
+    .from('listings')
+    .select('id, slug, title, price, image, region, commune, location')
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  const mapPoints = buildMapPoints(locationRows || []);
+
   const bCountMap: Record<string, number> = {};
   (boutiqueCounts || []).forEach((l: any) => { bCountMap[l.user_id] = (bCountMap[l.user_id] || 0) + 1; });
 
-  const activeSellers = (allBoutiques || [])
-    .filter((b: any) => (bCountMap[b.id] || 0) > 0);
+  // Phase de lancement : on montre tous les vendeurs inscrits (ceux qui ont
+  // déjà publié en premier), sinon la section boutiques paraît vide.
+  const activeSellers = [...(allBoutiques || [])].sort(
+    (a: any, b: any) => (bCountMap[b.id] || 0) - (bCountMap[a.id] || 0),
+  );
   const boutiques = activeSellers.slice(0, 8);
   // Avatars pour la preuve sociale (petits ronds), sans aucun chiffre.
   const sellerAvatars = activeSellers.slice(0, 12);
 
   return (
     <>
-      <Hero />
+      <Hero points={mapPoints} />
 
       {/* Bandeau "À la Une" + Premium (déduplication par id), cliquable */}
       <FeaturedSlider listings={[...uneList, ...premList].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)} />

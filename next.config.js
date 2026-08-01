@@ -7,6 +7,9 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "media-src 'self' data: blob: https:",
+  // Sans frame-src, les iframes retombaient sur default-src 'self' : la carte
+  // Google Maps des fiches annonce était bloquée par le navigateur.
+  "frame-src 'self' https:",
   "font-src 'self' data:",
   "connect-src 'self' https: wss:",
   "frame-ancestors 'self'",

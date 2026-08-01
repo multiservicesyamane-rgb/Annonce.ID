@@ -1,9 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import SearchBar from "./SearchBar";
+import type { MapPoint } from "@/lib/geo";
 
-export default function Hero() {
+// Leaflet manipule `window` : chargement client uniquement, et hors du bundle
+// initial pour ne pas retarder l'affichage du hero (LCP).
+const ListingsMap = dynamic(() => import("./ListingsMap"), {
+  ssr: false,
+  // Mêmes hauteurs que la carte réelle (en-tête + carte + légende) : la place
+  // est réservée dès le premier rendu, donc aucun décalage (CLS).
+  loading: () => (
+    <div className="h-[258px] rounded-[14px] border border-white/10 bg-[#0D1420] sm:h-[290px] md:h-[330px]" />
+  ),
+});
+
+export default function Hero({ points = [] }: { points?: MapPoint[] }) {
   return (
     <section className="hero-shell w-full bg-[#0A0E14] dark:bg-[#0A0E14] pb-0 pt-0 md:pb-3 md:pt-1.5 px-2 md:px-4 transition-colors">
       <div className="mx-auto max-w-[1000px]">
@@ -56,6 +69,13 @@ export default function Hero() {
               </div>
             </div>
           </div>
+
+          {/* Carte des zones vendeurs (Leaflet + OpenStreetMap) */}
+          {points.length > 0 && (
+            <div className="relative z-10 mt-3">
+              <ListingsMap points={points} />
+            </div>
+          )}
         </div>
       </div>
     </section>

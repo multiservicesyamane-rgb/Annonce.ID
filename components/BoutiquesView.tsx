@@ -12,7 +12,24 @@ type Shop = {
   isPro: boolean;
   phone: string;
   memberSince: string;
+  adCount?: number;
 };
+
+/** Pastille « n annonces » (ou « Nouveau » si le vendeur n'a encore rien publié). */
+function AdCountBadge({ n, className = "" }: { n?: number; className?: string }) {
+  const count = n || 0;
+  return (
+    <span
+      className={`rounded-full px-1.5 py-0.5 text-[.55rem] font-bold ${
+        count > 0
+          ? "bg-green/15 text-green"
+          : "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400"
+      } ${className}`}
+    >
+      {count > 0 ? `${count} annonce${count > 1 ? "s" : ""}` : "Nouveau"}
+    </span>
+  );
+}
 
 type View = "mosaic" | "list" | "detail";
 
@@ -66,6 +83,7 @@ export default function BoutiquesView({ boutiques }: { boutiques: Shop[] }) {
                   <img src={s.avatar} alt={s.name} className="h-full w-full rounded-full border border-white dark:border-dark-800 object-cover bg-white" />
                 </div>
                 <h3 className="mt-1.5 line-clamp-1 text-center font-display text-[.85rem] font-bold text-gray-900 dark:text-white group-hover:text-green">{s.name}</h3>
+                <AdCountBadge n={s.adCount} className="mt-1" />
                 <span className="mt-2 w-full rounded-lg bg-gray-50 dark:bg-white/5 py-1.5 text-center text-[.7rem] font-bold text-green group-hover:bg-green group-hover:text-white transition-all">Voir la boutique →</span>
               </div>
             </Link>
@@ -85,6 +103,7 @@ export default function BoutiquesView({ boutiques }: { boutiques: Shop[] }) {
                 <div className="flex items-center gap-2">
                   <h3 className="truncate font-bold text-[.9rem] text-gray-900 dark:text-white group-hover:text-green">{s.name}</h3>
                   {s.isPro && <span className="rounded-full bg-gold/15 px-1.5 py-0.5 text-[.55rem] font-bold uppercase text-gold-dark">Pro</span>}
+                  <AdCountBadge n={s.adCount} />
                 </div>
                 <p className="truncate text-[.75rem] text-gray-500 dark:text-gray-400">{s.bio}</p>
               </div>
