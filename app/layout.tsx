@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import SiteShell from "@/components/SiteShell";
 import { BRAND } from "@/lib/constants";
+import InstallPWAButton from "@/components/InstallPWAButton";
 // import CookieBanner from "@/components/CookieBanner"; // réactiver avec AdSense
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com";
@@ -115,6 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-body antialiased">
         <SiteShell>{children}</SiteShell>
+        <InstallPWAButton />
         {/* Bandeau cookies désactivé jusqu'à l'activation d'AdSense.
             Pour le réafficher : décommenter la ligne ci-dessous. */}
         {/* <CookieBanner /> */}
