@@ -4,18 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import type { MapPoint } from "@/lib/geo";
 
-/** Prix compact pour la pastille : 2 750 000 → « 2,7M », 450 000 → « 450K ». */
-function compactPrice(raw: string): string {
-  const n = Number(String(raw || "").replace(/\D/g, "")) || 0;
-  if (!n) return "Voir";
-  if (n >= 1_000_000) {
-    const m = n / 1_000_000;
-    return `${m >= 10 ? Math.round(m) : m.toFixed(1).replace(".0", "").replace(".", ",")}M`;
-  }
-  if (n >= 1000) return `${Math.round(n / 1000)}K`;
-  return String(n);
-}
-
 function fullPrice(raw: string): string {
   const n = Number(String(raw || "").replace(/\D/g, "")) || 0;
   return n ? `${n.toLocaleString("fr-FR")} FCFA` : "Prix sur demande";
@@ -23,6 +11,26 @@ function fullPrice(raw: string): string {
 
 const escapeHtml = (s: string) =>
   String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** Icône + couleur par catégorie (marqueurs en goutte, façon annuaire). */
+const CATEGORY_PIN: Record<string, { icon: string; color: string }> = {
+  vehicules: { icon: "🚗", color: "#E91E63" },
+  immobilier: { icon: "🏠", color: "#3F51B5" },
+  electronique: { icon: "📱", color: "#E040FB" },
+  maison: { icon: "🛋️", color: "#009688" },
+  mode: { icon: "👗", color: "#FF5722" },
+  emploi: { icon: "💼", color: "#607D8B" },
+  services: { icon: "🔧", color: "#03A9F4" },
+  sport: { icon: "⚽", color: "#4CAF50" },
+  "equipements-pro": { icon: "🏗️", color: "#795548" },
+  agriculture: { icon: "🌾", color: "#8BC34A" },
+  animaux: { icon: "🐾", color: "#FF9800" },
+  entreprises: { icon: "🏢", color: "#9C27B0" },
+  alimentation: { icon: "☕", color: "#6D4C41" },
+  numerique: { icon: "💻", color: "#00BCD4" },
+};
+const DEFAULT_PIN = { icon: "🏷️", color: "#16a34a" };
+const pinFor = (slug: string) => CATEGORY_PIN[String(slug || "").toLowerCase()] || DEFAULT_PIN;
 
 /**
  * Carte des annonces (Leaflet + tuiles OpenStreetMap, sans clé API).
@@ -45,11 +53,11 @@ export default function ListingsMap({ points }: { points: MapPoint[] }) {
 
       // Bulle plus étroite sur petit écran pour ne pas recouvrir la carte.
       const isSmall = typeof window !== "undefined" && window.innerWidth < 480;
-      const popupWidth = isSmall ? 150 : 178;
+      const popupWidth = isSmall ? 250 : 290;
 
       const map = L.map(boxRef.current, {
         scrollWheelZoom: false, // ne capture pas le scroll de la page
-        zoomControl: !isSmall, // sur mobile on zoome aux doigts : plus de place
+        zoomControl: true,
       });
       mapRef.current = map;
 
@@ -81,41 +89,51 @@ export default function ListingsMap({ points }: { points: MapPoint[] }) {
       const coords: [number, number][] = [];
 
       for (const p of points) {
-        const label = compactPrice(p.price);
+        const pin = pinFor(p.categorySlug);
+        // Marqueur en goutte : cercle dont un coin est carré, pivoté de 45°.
         const icon = L.divIcon({
           className: "",
-          iconSize: [58, 26],
-          iconAnchor: [29, 26],
-          html: `<div style="display:flex;align-items:center;justify-content:center;
-                  height:24px;padding:0 9px;border-radius:9999px;white-space:nowrap;
-                  background:linear-gradient(135deg,#22c55e,#F5A623);color:#0A0E14;
-                  font-weight:800;font-size:11.5px;font-family:system-ui,sans-serif;
-                  border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">${escapeHtml(label)}</div>`,
+          iconSize: [40, 52],
+          iconAnchor: [20, 50],
+          popupAnchor: [0, -46],
+          html: `<div style="position:relative;width:40px;height:52px">
+                   <div style="position:absolute;top:0;left:0;width:40px;height:40px;
+                        background:${pin.color};border:3px solid #fff;
+                        border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+                        box-shadow:0 3px 10px rgba(0,0,0,.35)"></div>
+                   <div style="position:absolute;top:0;left:0;width:40px;height:40px;
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:17px;line-height:1">${pin.icon}</div>
+                 </div>`,
         });
 
         const href = `/annonce/${p.id}/${p.slug}`;
         // La photo est dans le HTML de la bulle : le navigateur ne la télécharge
         // qu'à l'ouverture de celle-ci (au clic). Vignette compacte : elle doit
         // rester lisible sur petit écran sans manger toute la carte.
+        // Bulle horizontale : photo à gauche, informations à droite.
         const popup = `
-          <div style="width:100%;font-family:system-ui,sans-serif">
+          <a href="${href}" style="display:flex;gap:10px;align-items:center;text-decoration:none;
+             color:inherit;font-family:system-ui,sans-serif;width:100%">
             ${
               p.image
-                ? `<a href="${href}"><img src="${escapeHtml(p.image)}" alt="" loading="lazy"
-                     style="width:100%;height:78px;object-fit:cover;border-radius:8px;display:block"/></a>`
+                ? `<img src="${escapeHtml(p.image)}" alt="" loading="lazy"
+                     style="width:86px;height:86px;flex:0 0 86px;object-fit:cover;border-radius:8px;
+                     border:1px solid #eee;display:block"/>`
                 : ""
             }
-            <div style="font-weight:700;font-size:12px;line-height:1.25;margin-top:6px;color:#111;
-                        display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">
-              ${escapeHtml(p.title.slice(0, 60))}
+            <div style="min-width:0;flex:1">
+              <div style="font-weight:700;font-size:13px;line-height:1.3;color:#111;
+                          display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
+                ${escapeHtml(p.title)}
+              </div>
+              <div style="font-weight:800;font-size:14px;color:#16a34a;margin-top:4px">${fullPrice(p.price)}</div>
+              <div style="font-size:11px;color:#888;margin-top:3px">
+                ${pin.icon} ${escapeHtml(p.category || "Annonce")}
+              </div>
+              <div style="font-size:11px;color:#888;margin-top:1px">📍 ${escapeHtml(p.zone)}</div>
             </div>
-            <div style="font-weight:800;font-size:13px;color:#16a34a;margin-top:2px">${fullPrice(p.price)}</div>
-            <div style="font-size:10.5px;color:#666;margin-top:1px">📍 ${escapeHtml(p.zone)}</div>
-            <a href="${href}" style="display:block;text-align:center;margin-top:7px;background:#16a34a;
-               color:#fff;padding:6px 10px;border-radius:7px;text-decoration:none;font-weight:700;font-size:11.5px">
-              Voir l'annonce
-            </a>
-          </div>`;
+          </a>`;
 
         L.marker([p.lat, p.lng], { icon, title: p.title })
           .addTo(map)
@@ -145,25 +163,20 @@ export default function ListingsMap({ points }: { points: MapPoint[] }) {
   const zones = new Set(points.map((p) => p.zone)).size;
 
   return (
-    <div className="relative w-full overflow-hidden rounded-[14px] border border-white/10 bg-[#0D1420]">
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 px-2.5 py-1.5 sm:px-3 sm:py-2">
-        <span className="text-[.68rem] font-bold text-white sm:text-[.72rem]">📍 Les annonces près de vous</span>
-        <span className="text-[.62rem] text-gray-400 sm:text-[.66rem]">
-          {points.length} annonce{points.length > 1 ? "s" : ""} · {zones} zone{zones > 1 ? "s" : ""}
-        </span>
-      </div>
-      <div className="relative">
-        {/* Hauteur fixée par palier : réserve la place dès le départ (pas de CLS)
-            tout en restant confortable au doigt sur mobile. */}
-        <div ref={boxRef} className="h-[210px] w-full sm:h-[240px] md:h-[280px]" />
-        {!ready && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#0D1420] text-[.72rem] text-gray-500">
-            Chargement de la carte…
-          </div>
-        )}
-      </div>
-      <div className="px-2.5 pb-1.5 text-center text-[.6rem] leading-tight text-gray-500 sm:pb-2 sm:text-[.62rem]">
-        Touchez une pastille pour voir la photo et le détail de l&apos;annonce
+    <div className="relative w-full overflow-hidden bg-[#0D1420]">
+      {/* Carte plein cadre. Hauteur fixée par palier : la place est réservée
+          dès le premier rendu (pas de décalage / CLS). */}
+      <div ref={boxRef} className="h-[420px] w-full sm:h-[440px] md:h-[500px]" />
+
+      {!ready && (
+        <div className="absolute inset-0 z-[1200] flex items-center justify-center bg-[#0D1420] text-[.75rem] text-gray-400">
+          Chargement de la carte…
+        </div>
+      )}
+
+      {/* Compteur discret, posé sur la carte (au-dessus des contrôles Leaflet) */}
+      <div className="pointer-events-none absolute bottom-2 left-2 z-[1100] rounded-full bg-black/65 px-2.5 py-1 text-[.65rem] font-semibold text-white backdrop-blur-sm">
+        {points.length} annonce{points.length > 1 ? "s" : ""} · {zones} zone{zones > 1 ? "s" : ""}
       </div>
     </div>
   );

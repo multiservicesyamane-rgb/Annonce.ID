@@ -96,6 +96,8 @@ export type MapPoint = {
   price: string;
   image: string;
   zone: string;
+  category: string;
+  categorySlug: string;
   lat: number;
   lng: number;
 };
@@ -106,6 +108,8 @@ type RawListing = RawListingLocation & {
   title?: string | null;
   price?: string | number | null;
   image?: string | null;
+  category?: string | null;
+  category_slug?: string | null;
 };
 
 /** Résout la zone (commune, sinon région) d'une annonce. */
@@ -160,6 +164,8 @@ export function buildMapPoints(rows: RawListing[], max = 120): MapPoint[] {
         price: String(row.price ?? ""),
         image: String(row.image || ""),
         zone: g.zone,
+        category: String(row.category || ""),
+        categorySlug: String(row.category_slug || ""),
         lat,
         lng,
       });

@@ -52,7 +52,7 @@ export default async function HomePage() {
   // jamais l'adresse exacte du vendeur).
   const { data: locationRows } = await supabase
     .from('listings')
-    .select('id, slug, title, price, image, region, commune, location')
+    .select('id, slug, title, price, image, region, commune, location, category, category_slug')
     .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(200);
