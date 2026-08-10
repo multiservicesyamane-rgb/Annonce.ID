@@ -24,22 +24,33 @@ import { useFavorites } from "./FavButton";
 import ImageCropperModal from "./ImageCropperModal";
 import ChatInterface from "./ChatInterface";
 import MarketingPanel from "./MarketingPanel";
-type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "notifications" | "reviews" | "alerts" | "profile" | "faq" | "security";
+import MonActivite from "./MonActivite";
+type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "notifications" | "reviews" | "alerts" | "profile" | "faq" | "security"
+  // Espace Freelancer
+  | "activity" | "clients" | "projects" | "quotes" | "invoices";
+
+// Panneaux servis par le module freelance (components/MonActivite.tsx).
+const PRO_PANELS: Panel[] = ["activity", "clients", "projects", "quotes", "invoices"];
 
 const NAV: { id: string; icon: string; label: string; section?: string; badge?: number; isLink?: boolean; href?: string }[] = [
   { id: "overview", icon: "📊", label: "Vue d’ensemble", section: "Principal" },
   { id: "stats", icon: "📈", label: "Statistiques" },
-  { id: "ads", icon: "📋", label: "Mes annonces" },
+  { id: "ads", icon: "📋", label: "Mes annonces", section: "Vente" },
+  { id: "showroom", icon: "🏪", label: "Ma Boutique" },
   { id: "campaigns", icon: "🚀", label: "Marketing & Pub" },
   { id: "publish", icon: "➕", label: "Publier une annonce", isLink: true, href: "/publier" },
-  { id: "credits", icon: "🎟️", label: "Mes Crédits & Boosts" },
-  { id: "purchases", icon: "🛒", label: "Historique d'achats" },
-  { id: "showroom", icon: "🏪", label: "Ma Boutique" },
+  { id: "activity", icon: "📊", label: "Mon Activité", section: "Espace Freelancer" },
+  { id: "clients", icon: "👥", label: "Clients" },
+  { id: "projects", icon: "📁", label: "Projets" },
+  { id: "quotes", icon: "📄", label: "Devis" },
+  { id: "invoices", icon: "🧾", label: "Factures" },
   { id: "favorites", icon: "❤", label: "Mes Favoris", section: "Interactions" },
   { id: "notifications", icon: "🔔", label: "Notifications" },
   { id: "messages", icon: "💬", label: "Messages" },
   { id: "reviews", icon: "⭐", label: "Avis reçus" },
   { id: "alerts", icon: "📣", label: "Gérer mes alertes" },
+  { id: "credits", icon: "💎", label: "Crédits & Boosts", section: "Achats" },
+  { id: "purchases", icon: "🛒", label: "Historique d'achats" },
   { id: "profile", icon: "👤", label: "Mon profil", section: "Paramètres" },
   { id: "security", icon: "🔒", label: "Sécurité & Vie privée" },
   { id: "faq", icon: "❓", label: "FAQ" },
@@ -2491,6 +2502,13 @@ export default function Dashboard() {
           </div>
         )}
 
+
+        {/* ESPACE FREELANCER — Mon Activité · Clients · Projets · Devis · Factures */}
+        {PRO_PANELS.includes(panel) && (
+          <div className="animate-fadeUp">
+            <MonActivite panel={panel as any} toast={show} goTo={handlePanelChange} />
+          </div>
+        )}
 
         {panel === "alerts" && (
           <div className="animate-fadeUp max-w-[800px] mx-auto">

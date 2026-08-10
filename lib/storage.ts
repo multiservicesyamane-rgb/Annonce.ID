@@ -187,3 +187,43 @@ export async function uploadVideo(file: File): Promise<string> {
   const { data } = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }
+
+/* ------------------------------------------------------------------ */
+/* DOCUMENTS — pièces jointes des projets de l'espace freelance        */
+/* ------------------------------------------------------------------ */
+
+const DOC_BUCKET = "pro-docs";
+export const MAX_DOC_BYTES = 10 * 1024 * 1024; // 10 Mo
+
+/**
+ * Envoie un document de projet (contrat, brief, livrable) vers le bucket
+ * `pro-docs`. Upload direct navigateur → Storage, pour la même raison que les
+ * vidéos : les fonctions serveur Netlify plafonnent à ~6 Mo de corps.
+ *
+ * Le bucket est public en lecture (chemin aléatoire, donc URL non devinable) :
+ * le professionnel peut partager le lien à son client sans expiration.
+ */
+export async function uploadProDocument(file: File): Promise<{ name: string; url: string; size: number }> {
+  if (!file) throw new Error("Aucun fichier sélectionné.");
+  if (file.size > MAX_DOC_BYTES) throw new Error("Fichier trop lourd (max 10 Mo).");
+
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("Connexion requise pour joindre un document.");
+
+  // Nom d'origine conservé pour l'affichage, jamais pour le chemin : un nom de
+  // fichier accentué ou espacé casse l'URL de stockage.
+  const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8);
+  const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from(DOC_BUCKET)
+    .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+  if (error) throw new Error(error.message || "Envoi du document impossible.");
+
+  const { data } = supabase.storage.from(DOC_BUCKET).getPublicUrl(path);
+  return { name: file.name.slice(0, 160), url: data.publicUrl, size: file.size };
+}
