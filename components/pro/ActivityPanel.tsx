@@ -7,7 +7,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatFcfa, formatFcfaShort, timeAgo, formatDate } from "@/lib/pro";
 import { apiGet, card, Kpi, Empty, MigrationNotice, type ProEvent, type Toast } from "./ui";
-import BusinessSettings from "./BusinessSettings";
 
 type Stats = {
   needsMigration?: boolean;
@@ -26,7 +25,6 @@ type Stats = {
 export default function ActivityPanel({ goTo, toast }: { goTo: (panel: string) => void; toast: Toast }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,15 +41,16 @@ export default function ActivityPanel({ goTo, toast }: { goTo: (panel: string) =
   const { revenue, clients, projects, quotes, invoices, performance, evolution, transactions, attention, events } = stats;
   const isEmpty = clients.total === 0 && quotes.total === 0 && invoices.total === 0;
 
-  const settingsNode = settingsOpen ? (
-    <BusinessSettings toast={toast} onClose={() => setSettingsOpen(false)} />
-  ) : null;
+  // Le profil d'entreprise est désormais un écran à part (panneau "business"),
+  // plus une fenêtre : il porte l'identité, le modèle de document, la signature
+  // et le cachet — trop pour une boîte de dialogue.
+  const settingsNode = null;
 
   if (isEmpty) {
     return (
       <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {settingsNode}
-        <Head onSettings={() => setSettingsOpen(true)} />
+        <Head onSettings={() => goTo("business")} />
         <Empty
           icon="📊"
           title="Votre activité démarre ici"
@@ -66,7 +65,7 @@ export default function ActivityPanel({ goTo, toast }: { goTo: (panel: string) =
   return (
     <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
       {settingsNode}
-      <Head onSettings={() => setSettingsOpen(true)} />
+      <Head onSettings={() => goTo("business")} />
 
       {/* ---- Chiffre d'affaires ---- */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

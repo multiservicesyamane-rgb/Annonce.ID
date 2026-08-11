@@ -25,13 +25,13 @@ import ImageCropperModal from "./ImageCropperModal";
 import ChatInterface from "./ChatInterface";
 import MarketingPanel from "./MarketingPanel";
 import MonActivite from "./MonActivite";
-import BusinessSettings from "./pro/BusinessSettings";
+import BusinessProfile from "./pro/BusinessProfile";
 type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "notifications" | "reviews" | "alerts" | "profile" | "faq" | "security"
   // Espace Freelancer
-  | "activity" | "clients" | "projects" | "quotes" | "invoices";
+  | "activity" | "clients" | "projects" | "quotes" | "invoices" | "business";
 
 // Panneaux servis par le module freelance (components/MonActivite.tsx).
-const PRO_PANELS: Panel[] = ["activity", "clients", "projects", "quotes", "invoices"];
+const PRO_PANELS: Panel[] = ["activity", "clients", "projects", "quotes", "invoices", "business"];
 
 // Affiche l'URL publique de la boutique sans casser l'hydratation.
 // `window.location.origin` n'existe pas au rendu serveur : l'afficher
@@ -48,8 +48,6 @@ function BoutiqueUrl({ userId }: { userId: string }) {
 type NavItem = {
   id: string; icon: string; label: string; section?: string; badge?: number;
   isLink?: boolean; href?: string;
-  /** Ouvre une fenêtre au lieu de changer de panneau. */
-  action?: "business";
   /** N'apparaît que si l'espace pro est activé. */
   proOnly?: boolean;
 };
@@ -87,15 +85,14 @@ const NAV_ADS: NavItem[] = [
 
 const NAV_PRO: NavItem[] = [
   { id: "activity", icon: "📊", label: "Mon Activité", section: "Pilotage" },
-  // Raison sociale, NINEA, coordonnées de règlement : l'en-tête de toute pièce
-  // comptable. C'était une fenêtre enfouie dans Mon Activité, que personne ne
-  // trouvait — d'où des factures sans identité. Elle est désormais dans le menu.
-  { id: "business", icon: "🏢", label: "Mon entreprise", action: "business" },
   { id: "clients", icon: "👥", label: "Clients", section: "Gestion" },
   { id: "projects", icon: "📁", label: "Projets" },
   { id: "quotes", icon: "📄", label: "Devis" },
   { id: "invoices", icon: "🧾", label: "Factures" },
-  { id: "messages", icon: "💬", label: "Messages", section: "Compte" },
+  // Profil d'entreprise : identité, modèle de document, signature et cachet.
+  // Sa place est dans les réglages, pas au milieu des écrans de travail.
+  { id: "business", icon: "🏢", label: "Profil entreprise", section: "Paramètres" },
+  { id: "messages", icon: "💬", label: "Messages" },
   { id: "profile", icon: "👤", label: "Mon profil" },
   { id: "security", icon: "🔒", label: "Sécurité & Vie privée" },
 ];
@@ -165,7 +162,6 @@ export default function Dashboard() {
   const [proActivated, setProActivated] = useState(false);
   const [proCounts, setProCounts] = useState({ clients: 0, quotes: 0, invoices: 0 });
   const [activating, setActivating] = useState(false);
-  const [businessOpen, setBusinessOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -738,9 +734,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden dark:bg-dark-900 lg:flex-row">
-      {/* « Mon entreprise » : ouvrable depuis le menu pro, plus seulement
-          depuis l'intérieur de Mon Activité. */}
-      {businessOpen && <BusinessSettings toast={show} onClose={() => setBusinessOpen(false)} />}
 
       {/* Mobile top bar */}
       <div className="flex min-h-[60px] items-center justify-between border-b border-gray-100 bg-white px-3 py-2 dark:border-dark-border dark:bg-dark-900 lg:hidden">
@@ -876,14 +869,7 @@ export default function Dashboard() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (n.action === "business") {
-                      setBusinessOpen(true);
-                      setIsMobileMenuOpen(false);
-                      return;
-                    }
-                    handlePanelChange(n.id);
-                  }}
+                  onClick={() => handlePanelChange(n.id)}
                   aria-current={panel === n.id ? "page" : undefined}
                   className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-left text-[.87rem] transition ${panel === n.id ? "border-green bg-green/[.06] font-semibold text-green" : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
                     }`}
@@ -2775,9 +2761,17 @@ export default function Dashboard() {
 
 
         {/* ESPACE FREELANCER — Mon Activité · Clients · Projets · Devis · Factures */}
-        {PRO_PANELS.includes(panel) && (
+        {PRO_PANELS.includes(panel) && panel !== "business" && (
           <div className="animate-fadeUp">
             <MonActivite panel={panel as any} toast={show} goTo={handlePanelChange} />
+          </div>
+        )}
+
+        {/* Profil d'entreprise : servi à part, il ne relève pas du flux de
+            travail mais des réglages. */}
+        {panel === "business" && (
+          <div className="animate-fadeUp">
+            <BusinessProfile toast={show} />
           </div>
         )}
 

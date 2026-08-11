@@ -49,9 +49,24 @@ export type PrintParty = {
   address?: string | null;
   tax_id?: string | null;
   logo?: string | null;
+  /* Réglés dans « Profil entreprise » — émetteur seulement. */
+  signature?: string | null;
+  stamp?: string | null;
+  signature_label?: string | null;
+  template?: string | null;
+  accent?: string | null;
 };
 
-const ACCENT = "#4F46E5";
+const ACCENT_DEFAULT = "#4F46E5";
+
+/** Couleur de chaque modèle — mêmes clés que la contrainte SQL. */
+const TEMPLATE_ACCENT: Record<string, string> = {
+  classique: "#4F46E5",
+  moderne: "#0891B2",
+  bande: "#047857",
+  epure: "#111827",
+  officiel: "#92400E",
+};
 const INK = "#111827";
 const MUTED = "#6B7280";
 const LINE = "#E5E7EB";
@@ -131,6 +146,14 @@ export default function PrintableDocument({
   const detailed = doc.discount > 0 || doc.tax_rate > 0;
   // Rubriques figées dans la pièce : seules les actives et non vides sortent.
   const sections = visibleSections(doc.sections);
+
+  // Couleur du document : accent choisi, sinon celle du modèle, sinon le
+  // défaut. Écrite en dur dans les styles — jamais une classe de thème — pour
+  // que le papier sorte identique en mode clair comme en sombre.
+  const ACCENT =
+    seller.accent
+    || TEMPLATE_ACCENT[seller.template || ""]
+    || ACCENT_DEFAULT;
 
   return (
     <>
@@ -393,21 +416,47 @@ export default function PrintableDocument({
               </section>
             )}
 
-            {/* ================= Bon pour accord (devis) ================= */}
-            {isQuote && (
+            {/* ================= Signatures =================
+                Sur un devis, le client doit pouvoir signer : on lui garde un
+                emplacement vierge. Sur une facture, seul l'émetteur signe. */}
+            {(isQuote || seller.signature || seller.stamp) && (
               <section
                 className="doc-avoid mt-7 flex flex-col gap-6 pt-5 text-[.8rem] sm:flex-row sm:justify-between"
                 style={{ borderTop: `1px solid ${LINE}` }}
               >
-                <div>
-                  <div className="font-bold">Bon pour accord</div>
-                  <div style={{ color: MUTED }}>Date et signature du client</div>
-                  <div className="mt-12 w-[190px]" style={{ borderBottom: `1px solid #9CA3AF` }} />
-                </div>
-                <div className="sm:text-right">
+                {isQuote && (
+                  <div>
+                    <div className="font-bold">Bon pour accord</div>
+                    <div style={{ color: MUTED }}>Date et signature du client</div>
+                    <div className="mt-12 w-[190px]" style={{ borderBottom: `1px solid #9CA3AF` }} />
+                  </div>
+                )}
+
+                <div className={isQuote ? "sm:text-right" : "sm:ml-auto sm:text-right"}>
                   <div className="font-bold">{seller.company || seller.name}</div>
-                  <div style={{ color: MUTED }}>Le prestataire</div>
-                  <div className="mt-12 w-[190px] sm:ml-auto" style={{ borderBottom: `1px solid #9CA3AF` }} />
+                  <div style={{ color: MUTED }}>{seller.signature_label || "Le prestataire"}</div>
+
+                  {seller.signature || seller.stamp ? (
+                    // Signature et cachet se chevauchent légèrement, comme sur
+                    // un document réellement tamponné.
+                    <div className="relative mt-2 flex h-[86px] items-end justify-start sm:justify-end">
+                      {seller.signature && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={seller.signature} alt="Signature" className="h-[62px] object-contain" />
+                      )}
+                      {seller.stamp && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={seller.stamp}
+                          alt="Cachet"
+                          className="h-[78px] w-[78px] object-contain"
+                          style={{ marginLeft: seller.signature ? "-18px" : 0, opacity: 0.92 }}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-12 w-[190px] sm:ml-auto" style={{ borderBottom: `1px solid #9CA3AF` }} />
+                  )}
                 </div>
               </section>
             )}

@@ -35,8 +35,14 @@ async function fetchSeller(sb: ReturnType<typeof admin>, userId: string): Promis
     email: settings?.email || null,
     address: settings?.address || profile?.location || profile?.city || null,
     tax_id: settings?.tax_id || null,
-    // À défaut de logo dédié, l'avatar de la boutique tient lieu d'en-tête.
-    logo: profile?.avatar_url || null,
+    // Logo professionnel s'il est réglé ; sinon l'avatar de la boutique
+    // d'annonces tient lieu d'en-tête, faute de mieux.
+    logo: settings?.logo_url || profile?.avatar_url || null,
+    signature: settings?.signature_url || null,
+    stamp: settings?.stamp_url || null,
+    signature_label: settings?.signature_label || null,
+    template: settings?.doc_template || null,
+    accent: settings?.doc_accent || null,
   };
 }
 

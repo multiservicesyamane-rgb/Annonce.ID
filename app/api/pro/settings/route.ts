@@ -4,6 +4,41 @@ import { sanitizeSections } from "@/lib/pro";
 
 export const dynamic = "force-dynamic";
 
+/** Colonnes apportées par MIGRATION_ESPACE_PRO.sql, à retirer si elle n'a pas tourné. */
+const NEW_COLUMNS = [
+  "quote_sections", "logo_url", "signature_url", "stamp_url",
+  "doc_template", "doc_accent", "signature_label",
+] as const;
+
+/** Thèmes autorisés — identiques à la contrainte SQL. */
+const DOC_TEMPLATES = ["classique", "moderne", "bande", "epure", "officiel"];
+const docTemplate = (v: unknown) => {
+  const s = txt(v, 20).toLowerCase();
+  return DOC_TEMPLATES.includes(s) ? s : "classique";
+};
+
+/** Couleur d'accent : hexadécimal strict, sinon rien. Cette valeur finit dans
+ *  un attribut de style du document ; une chaîne libre y serait injectée. */
+const hexColor = (v: unknown) => {
+  const s = txt(v, 7);
+  return /^#[0-9A-Fa-f]{6}$/.test(s) ? s : null;
+};
+
+/**
+ * URL d'un fichier déposé (logo, signature, cachet).
+ *
+ * N'accepte QUE le stockage du projet. Sans ce filtre, un logo pointant vers
+ * un domaine tiers serait embarqué dans chaque facture envoyée à un client :
+ * le tiers verrait passer les ouvertures de documents, et pourrait changer
+ * l'image après coup sur une pièce déjà transmise.
+ */
+const assetUrl = (v: unknown) => {
+  const s = txt(v, 700);
+  if (!s) return null;
+  const base = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
+  return base && s.startsWith(`${base}/storage/v1/object/public/pro-docs/`) ? s : null;
+};
+
 // Identité professionnelle : ce qui figure en en-tête des devis et factures.
 // Une seule ligne par compte, créée à la première sauvegarde.
 export async function POST(req: Request) {
@@ -82,11 +117,16 @@ export async function POST(req: Request) {
         updated_at: new Date().toISOString(),
       } as Record<string, unknown>;
 
-      // Rubriques de devis : envoyées uniquement par l'écran qui les édite.
-      // Absentes du corps, elles ne doivent pas être écrasées par un simple
-      // enregistrement de l'identité professionnelle.
-      if (body?.quote_sections !== undefined) {
-        payload.quote_sections = sanitizeSections(body.quote_sections);
+      // Champs apportés par MIGRATION_ESPACE_PRO.sql. Chacun n'est écrit que
+      // s'il est présent dans le corps : l'écran d'identité et celui des
+      // rubriques enregistrent séparément, et aucun ne doit effacer le travail
+      // de l'autre en envoyant un champ vide qu'il n'édite pas.
+      if (body?.quote_sections !== undefined) payload.quote_sections = sanitizeSections(body.quote_sections);
+      if (body?.doc_template !== undefined) payload.doc_template = docTemplate(body.doc_template);
+      if (body?.doc_accent !== undefined) payload.doc_accent = hexColor(body.doc_accent);
+      if (body?.signature_label !== undefined) payload.signature_label = txt(body.signature_label, 120) || null;
+      for (const k of ["logo_url", "signature_url", "stamp_url"] as const) {
+        if (body?.[k] !== undefined) payload[k] = assetUrl(body[k]);
       }
 
       // `upsert` sur la clé primaire : une seule ligne par professionnel, qu'elle
@@ -94,13 +134,14 @@ export async function POST(req: Request) {
       let { data, error } = await sb
         .from("pro_settings").upsert(payload, { onConflict: "user_id" }).select("*").single();
 
-      // Colonne `quote_sections` pas encore créée : plutôt que de faire échouer
-      // tout l'enregistrement — y compris l'identité professionnelle, qui n'a
-      // rien demandé — on réessaie sans elle et on signale ce qui n'a pas pu
-      // être conservé.
+      // Migration pas encore exécutée : plutôt que de faire échouer tout
+      // l'enregistrement — y compris l'identité professionnelle, qui n'a rien
+      // demandé — on réessaie sans les colonnes récentes et on signale ce qui
+      // n'a pas pu être conservé.
       let sectionsSkipped = false;
-      if (error && isMissingColumn(error) && "quote_sections" in payload) {
-        const { quote_sections: _drop, ...legacy } = payload;
+      if (error && isMissingColumn(error)) {
+        const legacy = { ...payload };
+        for (const k of NEW_COLUMNS) delete legacy[k];
         ({ data, error } = await sb
           .from("pro_settings").upsert(legacy, { onConflict: "user_id" }).select("*").single());
         sectionsSkipped = !error;
@@ -116,7 +157,7 @@ export async function POST(req: Request) {
         return NextResponse.json({
           ok: true,
           settings: data,
-          warning: "Rubriques non enregistrées : exécutez database/MIGRATION_QUOTE_SECTIONS.sql dans Supabase.",
+          warning: "Réglages partiellement enregistrés : exécutez database/MIGRATION_ESPACE_PRO.sql dans Supabase.",
         });
       }
       return NextResponse.json({ ok: true, settings: data });
