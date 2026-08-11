@@ -117,6 +117,11 @@ alter table pro_quotes add column if not exists refused_at  timestamptz;
 alter table pro_quotes add column if not exists version     smallint not null default 1;
 alter table pro_quotes add column if not exists updated_at  timestamptz not null default now();
 
+-- Reprise des devis anterieurs : leur `total` valait le HT, la colonne
+-- `subtotal` vient d'etre creee a 0. Sans ce report, leur recapitulatif
+-- afficherait un sous-total nul en face d'un total non nul.
+update pro_quotes set subtotal = total where subtotal = 0 and total > 0;
+
 create index if not exists idx_pro_quotes_user    on pro_quotes (user_id);
 create index if not exists idx_pro_quotes_client  on pro_quotes (client_id);
 create index if not exists idx_pro_quotes_project on pro_quotes (project_id);
