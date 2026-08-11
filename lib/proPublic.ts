@@ -20,6 +20,8 @@ function admin() {
 async function fetchSeller(sb: ReturnType<typeof admin>, userId: string): Promise<PrintParty> {
   if (!sb) return { name: "Votre prestataire" };
 
+  // `pro_settings` peut ne pas exister si la migration n'a pas encore tourné :
+  // on retombe alors sur le seul profil, sans faire échouer le document.
   const [{ data: profile }, settingsRes] = await Promise.all([
     sb.from("profiles").select("full_name, avatar_url, phone, city, location, is_verified").eq("id", userId).maybeSingle(),
     sb.from("pro_settings").select("*").eq("user_id", userId).maybeSingle(),
@@ -33,6 +35,8 @@ async function fetchSeller(sb: ReturnType<typeof admin>, userId: string): Promis
     email: settings?.email || null,
     address: settings?.address || profile?.location || profile?.city || null,
     tax_id: settings?.tax_id || null,
+    // À défaut de logo dédié, l'avatar de la boutique tient lieu d'en-tête.
+    logo: profile?.avatar_url || null,
   };
 }
 

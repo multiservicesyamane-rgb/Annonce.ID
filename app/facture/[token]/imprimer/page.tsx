@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchPublicInvoice } from "@/lib/proPublic";
+import { effectiveInvoiceStatus } from "@/lib/pro";
 import PrintableDocument from "@/components/pro/PrintableDocument";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,8 @@ export default async function FacturePrintPage({ params }: { params: { token: st
         issue_date: invoice.issue_date,
         due_date: invoice.due_date,
         terms: terms || null,
-        status: invoice.status,
+        // Statut réel : « en retard » se déduit de l'échéance et de l'encaissé.
+        status: effectiveInvoiceStatus(invoice),
       }}
       seller={seller}
       client={party}

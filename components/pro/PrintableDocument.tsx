@@ -1,4 +1,4 @@
-import { formatFcfa, formatDate, type QuoteItem } from "@/lib/pro";
+import { formatFcfa, formatDate, amountInWords, type QuoteItem } from "@/lib/pro";
 import PrintTrigger from "./PrintTrigger";
 
 /**
@@ -8,6 +8,13 @@ import PrintTrigger from "./PrintTrigger";
  * « Imprimer → Enregistrer au format PDF », y compris sur Android. C'est aussi
  * la seule voie viable ici, les fonctions serveur Netlify étant trop limitées
  * pour embarquer un moteur de rendu.
+ *
+ * Deux mises en page pour un seul balisage :
+ *   • écran étroit → chaque prestation devient un bloc lisible au pouce ;
+ *   • écran large ET impression → un vrai tableau aligné.
+ * Le basculement est purement CSS (voir SHEET_CSS) : le HTML reste un tableau
+ * sémantique, et l'impression retrouve toujours sa grille quelle que soit la
+ * taille de l'écran depuis lequel on imprime.
  *
  * Les couleurs sont écrites en dur, jamais en classes de thème : ce document
  * doit sortir identique sur papier, que le site soit en clair ou en sombre.
@@ -39,199 +46,340 @@ export type PrintParty = {
   email?: string | null;
   address?: string | null;
   tax_id?: string | null;
+  logo?: string | null;
 };
+
+const ACCENT = "#4F46E5";
+const INK = "#111827";
+const MUTED = "#6B7280";
+const LINE = "#E5E7EB";
+
+/** Cartouche d'état, imprimé en couleur d'encre pour rester lisible en N&B. */
+const STAMPS: Record<string, { label: string; color: string; bg: string }> = {
+  paid: { label: "PAYÉE", color: "#047857", bg: "#ECFDF5" },
+  partial: { label: "PARTIELLEMENT PAYÉE", color: "#1D4ED8", bg: "#EFF6FF" },
+  late: { label: "EN RETARD", color: "#B91C1C", bg: "#FEF2F2" },
+  cancelled: { label: "ANNULÉE", color: "#6B7280", bg: "#F3F4F6" },
+  accepted: { label: "ACCEPTÉ", color: "#047857", bg: "#ECFDF5" },
+  refused: { label: "REFUSÉ", color: "#B91C1C", bg: "#FEF2F2" },
+  expired: { label: "EXPIRÉ", color: "#6B7280", bg: "#F3F4F6" },
+};
+
+const SHEET_CSS = `
+  .doc-page { background:#F3F4F6; min-height:100vh; }
+  .doc-sheet { background:#fff; color:${INK}; }
+  .doc-sheet, .doc-sheet * { color-scheme: light; }
+
+  /* ---- Prestations : blocs sur mobile, tableau dès 640px ---- */
+  .doc-items { width:100%; border-collapse:collapse; }
+  .doc-items thead { display:none; }
+  .doc-items tr { display:block; padding:.7rem 0; border-bottom:1px solid ${LINE}; }
+  .doc-items td { display:flex; justify-content:space-between; gap:1rem; padding:.15rem 0; font-size:.84rem; }
+  .doc-items td::before {
+    content: attr(data-label);
+    color:${MUTED};
+    font-size:.75rem;
+    flex:0 0 auto;
+  }
+  .doc-items td.doc-designation { display:block; font-weight:600; font-size:.9rem; padding-bottom:.3rem; }
+  .doc-items td.doc-designation::before { content:none; }
+
+  @media (min-width: 640px) {
+    .doc-items thead { display:table-header-group; }
+    .doc-items tr { display:table-row; padding:0; }
+    .doc-items td { display:table-cell; padding:.6rem .5rem; vertical-align:top; }
+    .doc-items td::before { content:none; }
+    .doc-items td.doc-designation { display:table-cell; padding:.6rem .5rem; font-size:.84rem; }
+    .doc-items .doc-num { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .doc-items .doc-qty { text-align:center; }
+  }
+
+  /* ---- Impression : on force la grille, quel que soit l'écran d'origine ---- */
+  @page { size: A4; margin: 14mm; }
+  @media print {
+    .no-print { display:none !important; }
+    body, .doc-page { background:#fff !important; min-height:0 !important; padding:0 !important; }
+    .doc-sheet {
+      box-shadow:none !important; border:0 !important; border-radius:0 !important;
+      margin:0 !important; padding:0 !important; max-width:none !important; width:100% !important;
+    }
+    .doc-items thead { display:table-header-group; }
+    .doc-items tr { display:table-row; padding:0; break-inside:avoid; }
+    .doc-items td { display:table-cell; padding:.45rem .5rem; vertical-align:top; }
+    .doc-items td::before { content:none; }
+    .doc-items td.doc-designation { display:table-cell; padding:.45rem .5rem; font-size:.82rem; }
+    .doc-items .doc-num { text-align:right; font-variant-numeric:tabular-nums; }
+    .doc-items .doc-qty { text-align:center; }
+    .doc-avoid { break-inside:avoid; }
+  }
+`;
 
 export default function PrintableDocument({
   doc, seller, client,
 }: { doc: PrintDoc; seller: PrintParty; client: PrintParty | null }) {
   const isQuote = doc.kind === "devis";
   const label = isQuote ? "DEVIS" : "FACTURE";
-  const remaining = Math.max(0, doc.total - (doc.paid_amount || 0));
+  const paid = doc.paid_amount || 0;
+  const remaining = Math.max(0, doc.total - paid);
+  const stamp = STAMPS[doc.status];
+  const detailed = doc.discount > 0 || doc.tax_rate > 0;
 
   return (
     <>
-      {/* Feuille de style dédiée : elle neutralise le thème du site et cadre la
-          page A4. Chargée uniquement sur ces deux routes. */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-            .doc-sheet { background:#fff; color:#111827; }
-            .doc-sheet * { color-scheme: light; }
-            @page { size: A4; margin: 14mm; }
-            @media print {
-              .no-print { display: none !important; }
-              body { background:#fff !important; }
-              .doc-sheet { box-shadow:none !important; border:0 !important; margin:0 !important; padding:0 !important; max-width:none !important; }
-              .doc-table thead { display: table-header-group; }
-              .doc-row { break-inside: avoid; }
-            }
-          `,
-        }}
-      />
+      <style dangerouslySetInnerHTML={{ __html: SHEET_CSS }} />
 
-      <div className="mx-auto max-w-[820px] px-4 py-6">
-        <PrintTrigger kind={doc.kind} />
+      <div className="doc-page px-3 py-4 sm:px-5 sm:py-8">
+        <div className="mx-auto max-w-[820px]">
+          <PrintTrigger kind={doc.kind} />
 
-        <div className="doc-sheet mx-auto rounded-2xl border border-gray-200 p-8 shadow-sm sm:p-10">
-          {/* ---- En-tête ---- */}
-          <div className="flex flex-wrap items-start justify-between gap-6 border-b-2 border-gray-900 pb-5">
-            <div className="min-w-0">
-              <div className="text-[1.05rem] font-extrabold leading-tight">
-                {seller.company || seller.name}
+          <article
+            className="doc-sheet overflow-hidden rounded-2xl px-5 py-7 shadow-lg sm:px-10 sm:py-9"
+            style={{ boxShadow: "0 10px 40px rgba(17,24,39,.08)" }}
+          >
+            {/* ================= En-tête ================= */}
+            <header className="doc-avoid">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                {/* Émetteur */}
+                <div className="flex min-w-0 items-start gap-3">
+                  {seller.logo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={seller.logo}
+                      alt=""
+                      className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                      style={{ border: `1px solid ${LINE}` }}
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-[1.05rem] font-extrabold leading-tight sm:text-[1.15rem]">
+                      {seller.company || seller.name}
+                    </div>
+                    {seller.company && seller.name && (
+                      <div className="text-[.82rem]" style={{ color: MUTED }}>{seller.name}</div>
+                    )}
+                    <div className="mt-1.5 space-y-0.5 text-[.78rem] leading-relaxed" style={{ color: MUTED }}>
+                      {seller.address && <div>{seller.address}</div>}
+                      {seller.phone && <div>Tél. {seller.phone}</div>}
+                      {seller.email && <div className="break-all">{seller.email}</div>}
+                      {seller.tax_id && <div>NINEA {seller.tax_id}</div>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Identité du document */}
+                <div className="shrink-0 sm:text-right">
+                  <div
+                    className="text-[1.7rem] font-extrabold leading-none tracking-tight sm:text-[2rem]"
+                    style={{ color: ACCENT }}
+                  >
+                    {label}
+                  </div>
+                  {doc.number && (
+                    <div className="mt-1 font-mono text-[.9rem] font-bold tracking-wide">{doc.number}</div>
+                  )}
+                  <div className="mt-2 space-y-0.5 text-[.78rem] leading-relaxed" style={{ color: MUTED }}>
+                    {doc.issue_date && <div>Émis le {formatDate(doc.issue_date)}</div>}
+                    {isQuote && doc.valid_until && <div>Valable jusqu&apos;au {formatDate(doc.valid_until)}</div>}
+                    {!isQuote && doc.due_date && (
+                      <div className="font-bold" style={{ color: INK }}>
+                        Échéance : {formatDate(doc.due_date)}
+                      </div>
+                    )}
+                  </div>
+                  {stamp && (
+                    <div
+                      className="mt-2.5 inline-block rounded-md px-2.5 py-1 text-[.68rem] font-extrabold tracking-widest"
+                      style={{ color: stamp.color, background: stamp.bg, border: `1px solid ${stamp.color}33` }}
+                    >
+                      {stamp.label}
+                    </div>
+                  )}
+                </div>
               </div>
-              {seller.company && seller.name && (
-                <div className="text-[.82rem] text-gray-600">{seller.name}</div>
+
+              <div className="mt-5 h-[3px] rounded-full" style={{ background: ACCENT }} />
+            </header>
+
+            {/* ================= Objet et destinataire ================= */}
+            <section className="doc-avoid mt-6 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <Caption>Objet</Caption>
+                <p className="mt-1 text-[1rem] font-bold leading-snug">{doc.title}</p>
+              </div>
+
+              {client && (
+                <div
+                  className="w-full rounded-xl p-4 sm:w-[280px] sm:shrink-0"
+                  style={{ background: "#F9FAFB", border: `1px solid ${LINE}` }}
+                >
+                  <Caption>{isQuote ? "Destinataire" : "Facturé à"}</Caption>
+                  <div className="mt-1 text-[.92rem] font-bold leading-snug">
+                    {client.company || client.name}
+                  </div>
+                  {client.company && client.name && (
+                    <div className="text-[.8rem]" style={{ color: MUTED }}>{client.name}</div>
+                  )}
+                  <div className="mt-1 space-y-0.5 text-[.78rem] leading-relaxed" style={{ color: MUTED }}>
+                    {client.address && <div>{client.address}</div>}
+                    {client.phone && <div>{client.phone}</div>}
+                    {client.email && <div className="break-all">{client.email}</div>}
+                    {client.tax_id && <div>NINEA {client.tax_id}</div>}
+                  </div>
+                </div>
               )}
-              <div className="mt-1.5 text-[.8rem] leading-relaxed text-gray-600">
-                {seller.phone && <div>Tél. {seller.phone}</div>}
-                {seller.email && <div>{seller.email}</div>}
-                {seller.address && <div>{seller.address}</div>}
-                {seller.tax_id && <div>NINEA {seller.tax_id}</div>}
-              </div>
-            </div>
+            </section>
 
-            <div className="text-right">
-              <div className="text-[1.6rem] font-extrabold tracking-tight">{label}</div>
-              {doc.number && <div className="font-mono text-[.9rem] font-bold text-gray-700">{doc.number}</div>}
-              <div className="mt-1.5 text-[.8rem] leading-relaxed text-gray-600">
-                {doc.issue_date && <div>Émis le {formatDate(doc.issue_date)}</div>}
-                {isQuote && doc.valid_until && <div>Valable jusqu&apos;au {formatDate(doc.valid_until)}</div>}
-                {!isQuote && doc.due_date && (
-                  <div className="font-bold text-gray-900">Échéance : {formatDate(doc.due_date)}</div>
+            {/* ================= Prestations ================= */}
+            <section className="mt-6">
+              <table className="doc-items">
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${INK}` }}>
+                    <th className="px-2 pb-2 text-left text-[.7rem] font-bold uppercase tracking-wider">Désignation</th>
+                    <th className="w-[64px] px-2 pb-2 text-center text-[.7rem] font-bold uppercase tracking-wider">Qté</th>
+                    <th className="w-[120px] px-2 pb-2 text-right text-[.7rem] font-bold uppercase tracking-wider">P.U.</th>
+                    <th className="w-[130px] px-2 pb-2 text-right text-[.7rem] font-bold uppercase tracking-wider">Montant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(doc.items || []).map((it, i) => (
+                    <tr key={i} style={{ borderBottom: `1px solid ${LINE}` }}>
+                      <td className="doc-designation">{it.label}</td>
+                      <td className="doc-qty" data-label="Quantité">{it.qty}</td>
+                      <td className="doc-num" data-label="Prix unitaire">
+                        {it.unit_price.toLocaleString("fr-FR")}
+                      </td>
+                      <td className="doc-num font-semibold" data-label="Montant">
+                        {(it.qty * it.unit_price).toLocaleString("fr-FR")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+
+            {/* ================= Totaux ================= */}
+            <section className="doc-avoid mt-5 flex justify-end">
+              <div className="w-full sm:w-[330px]">
+                {detailed && (
+                  <>
+                    <TotalLine label="Sous-total HT" value={formatFcfa(doc.subtotal)} />
+                    {doc.discount > 0 && <TotalLine label="Remise" value={`− ${formatFcfa(doc.discount)}`} />}
+                    {doc.tax_rate > 0 && (
+                      <>
+                        <TotalLine label="Base imposable" value={formatFcfa(doc.subtotal - doc.discount)} />
+                        <TotalLine label={`TVA ${doc.tax_rate} %`} value={formatFcfa(doc.tax_amount)} />
+                      </>
+                    )}
+                  </>
+                )}
+
+                <div
+                  className="mt-2 flex items-baseline justify-between gap-3 rounded-lg px-3 py-2.5"
+                  style={{ background: ACCENT, color: "#fff" }}
+                >
+                  <span className="text-[.82rem] font-extrabold tracking-wide">
+                    {doc.tax_rate > 0 ? "TOTAL TTC" : "TOTAL"}
+                  </span>
+                  <span className="font-mono text-[1.1rem] font-extrabold tabular-nums">
+                    {formatFcfa(doc.total)}
+                  </span>
+                </div>
+
+                {!isQuote && paid > 0 && (
+                  <div className="mt-2">
+                    <TotalLine label="Déjà réglé" value={`− ${formatFcfa(paid)}`} />
+                    <div
+                      className="mt-1 flex items-baseline justify-between gap-3 pt-2"
+                      style={{ borderTop: `1px solid ${LINE}` }}
+                    >
+                      <span className="text-[.82rem] font-extrabold">RESTE À PAYER</span>
+                      <span
+                        className="font-mono text-[1.05rem] font-extrabold tabular-nums"
+                        style={{ color: remaining > 0 ? "#B91C1C" : "#047857" }}
+                      >
+                        {formatFcfa(remaining)}
+                      </span>
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
+            </section>
 
-          {/* ---- Destinataire ---- */}
-          <div className="mt-6 flex flex-wrap justify-between gap-6">
-            <div>
-              <div className="text-[.68rem] font-bold uppercase tracking-widest text-gray-500">Objet</div>
-              <div className="mt-1 text-[.98rem] font-bold">{doc.title}</div>
-            </div>
-            {client && (
-              <div className="min-w-[220px] rounded-xl bg-gray-50 p-4">
-                <div className="text-[.68rem] font-bold uppercase tracking-widest text-gray-500">
-                  {isQuote ? "Destinataire" : "Facturé à"}
-                </div>
-                <div className="mt-1 text-[.9rem] font-bold">
-                  {client.company || client.name}
-                </div>
-                {client.company && client.name && (
-                  <div className="text-[.8rem] text-gray-600">{client.name}</div>
+            {/* Montant en toutes lettres : protège le chiffre contre l'altération. */}
+            <p
+              className="doc-avoid mt-5 rounded-lg px-3.5 py-2.5 text-[.8rem] leading-relaxed"
+              style={{ background: "#F9FAFB", border: `1px solid ${LINE}` }}
+            >
+              <span style={{ color: MUTED }}>
+                {isQuote ? "Devis arrêté à la somme de " : "Facture arrêtée à la somme de "}
+              </span>
+              <span className="font-semibold">{amountInWords(doc.total)} francs CFA</span>
+              <span style={{ color: MUTED }}>.</span>
+            </p>
+
+            {/* ================= Mentions ================= */}
+            {(doc.terms || doc.note) && (
+              <section
+                className="doc-avoid mt-6 space-y-4 pt-5 text-[.82rem] leading-relaxed"
+                style={{ borderTop: `1px solid ${LINE}` }}
+              >
+                {doc.terms && (
+                  <div>
+                    <Caption>Conditions de paiement</Caption>
+                    <p className="mt-1 whitespace-pre-line">{doc.terms}</p>
+                  </div>
                 )}
-                <div className="mt-1 text-[.8rem] leading-relaxed text-gray-600">
-                  {client.address && <div>{client.address}</div>}
-                  {client.phone && <div>{client.phone}</div>}
-                  {client.email && <div>{client.email}</div>}
-                  {client.tax_id && <div>NINEA {client.tax_id}</div>}
-                </div>
-              </div>
+                {doc.note && (
+                  <div>
+                    <Caption>Note</Caption>
+                    <p className="mt-1 whitespace-pre-line" style={{ color: MUTED }}>{doc.note}</p>
+                  </div>
+                )}
+              </section>
             )}
-          </div>
 
-          {/* ---- Lignes ---- */}
-          <table className="doc-table mt-6 w-full border-collapse text-[.86rem]">
-            <thead>
-              <tr className="border-b-2 border-gray-300 text-left">
-                <th className="pb-2 font-bold">Désignation</th>
-                <th className="w-[70px] pb-2 text-center font-bold">Qté</th>
-                <th className="w-[120px] pb-2 text-right font-bold">P.U.</th>
-                <th className="w-[130px] pb-2 text-right font-bold">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(doc.items || []).map((it, i) => (
-                <tr key={i} className="doc-row border-b border-gray-200">
-                  <td className="py-2.5 pr-3">{it.label}</td>
-                  <td className="py-2.5 text-center tabular-nums">{it.qty}</td>
-                  <td className="py-2.5 text-right tabular-nums">{it.unit_price.toLocaleString("fr-FR")}</td>
-                  <td className="py-2.5 text-right font-semibold tabular-nums">
-                    {(it.qty * it.unit_price).toLocaleString("fr-FR")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* ---- Totaux ---- */}
-          <div className="mt-5 flex justify-end">
-            <div className="w-full max-w-[320px]">
-              <TotalLine label="Sous-total HT" value={formatFcfa(doc.subtotal)} />
-              {doc.discount > 0 && <TotalLine label="Remise" value={`− ${formatFcfa(doc.discount)}`} />}
-              {doc.tax_rate > 0 && (
-                <>
-                  <TotalLine label="Base imposable" value={formatFcfa(doc.subtotal - doc.discount)} />
-                  <TotalLine label={`TVA ${doc.tax_rate} %`} value={formatFcfa(doc.tax_amount)} />
-                </>
-              )}
-              <div className="mt-1.5 flex items-baseline justify-between border-t-2 border-gray-900 pt-2.5">
-                <span className="text-[.9rem] font-extrabold">
-                  {doc.tax_rate > 0 ? "TOTAL TTC" : "TOTAL"}
-                </span>
-                <span className="font-mono text-[1.15rem] font-extrabold tabular-nums">{formatFcfa(doc.total)}</span>
-              </div>
-
-              {!isQuote && (doc.paid_amount || 0) > 0 && (
-                <>
-                  <TotalLine label="Déjà réglé" value={`− ${formatFcfa(doc.paid_amount || 0)}`} />
-                  <div className="mt-1 flex items-baseline justify-between border-t border-gray-300 pt-2">
-                    <span className="text-[.86rem] font-extrabold">RESTE À PAYER</span>
-                    <span className="font-mono text-[1rem] font-extrabold tabular-nums">{formatFcfa(remaining)}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* ---- Mentions ---- */}
-          {(doc.terms || doc.note) && (
-            <div className="mt-7 border-t border-gray-200 pt-4 text-[.82rem] leading-relaxed text-gray-700">
-              {doc.terms && (
-                <div className="mb-3">
-                  <div className="text-[.68rem] font-bold uppercase tracking-widest text-gray-500">
-                    Conditions de paiement
-                  </div>
-                  <p className="mt-1 whitespace-pre-line">{doc.terms}</p>
-                </div>
-              )}
-              {doc.note && (
+            {/* ================= Bon pour accord (devis) ================= */}
+            {isQuote && (
+              <section
+                className="doc-avoid mt-7 flex flex-col gap-6 pt-5 text-[.8rem] sm:flex-row sm:justify-between"
+                style={{ borderTop: `1px solid ${LINE}` }}
+              >
                 <div>
-                  <div className="text-[.68rem] font-bold uppercase tracking-widest text-gray-500">Note</div>
-                  <p className="mt-1 whitespace-pre-line">{doc.note}</p>
+                  <div className="font-bold">Bon pour accord</div>
+                  <div style={{ color: MUTED }}>Date et signature du client</div>
+                  <div className="mt-12 w-[190px]" style={{ borderBottom: `1px solid #9CA3AF` }} />
                 </div>
-              )}
-            </div>
-          )}
+                <div className="sm:text-right">
+                  <div className="font-bold">{seller.company || seller.name}</div>
+                  <div style={{ color: MUTED }}>Le prestataire</div>
+                  <div className="mt-12 w-[190px] sm:ml-auto" style={{ borderBottom: `1px solid #9CA3AF` }} />
+                </div>
+              </section>
+            )}
 
-          {/* ---- Bon pour accord (devis papier) ---- */}
-          {isQuote && (
-            <div className="mt-8 flex flex-wrap justify-between gap-6 border-t border-gray-200 pt-5 text-[.8rem]">
-              <div>
-                <div className="font-bold">Bon pour accord</div>
-                <div className="text-gray-500">Date et signature du client</div>
-                <div className="mt-10 w-[200px] border-b border-gray-400" />
-              </div>
-              <div className="text-right text-gray-500">
-                <div className="font-bold text-gray-700">{seller.company || seller.name}</div>
-                <div className="mt-10 w-[200px] border-b border-gray-400" />
-              </div>
-            </div>
-          )}
-
-          <p className="mt-8 text-center text-[.7rem] text-gray-400">
-            Document généré sur wanteermako.com — Espace Freelancer
-          </p>
+            <footer className="mt-8 text-center text-[.68rem]" style={{ color: "#9CA3AF" }}>
+              {doc.number ? `${label.toLowerCase()} ${doc.number} · ` : ""}
+              document généré sur wanteermako.com — Espace Freelancer
+            </footer>
+          </article>
         </div>
       </div>
     </>
   );
 }
 
+function Caption({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[.65rem] font-bold uppercase tracking-[.14em]" style={{ color: MUTED }}>
+      {children}
+    </div>
+  );
+}
+
 function TotalLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1 text-[.84rem]">
-      <span className="text-gray-600">{label}</span>
+    <div className="flex items-center justify-between gap-3 py-1 text-[.83rem]">
+      <span style={{ color: MUTED }}>{label}</span>
       <span className="font-mono font-semibold tabular-nums">{value}</span>
     </div>
   );

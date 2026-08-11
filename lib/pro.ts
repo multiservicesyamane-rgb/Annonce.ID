@@ -207,6 +207,69 @@ export function formatFcfaShort(n: number | null | undefined): string {
   return v.toLocaleString("fr-FR");
 }
 
+/* ---- Montant en toutes lettres (mention attendue sur une facture) ---- */
+
+const WORD_UNITS = [
+  "zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf",
+  "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize",
+  "dix-sept", "dix-huit", "dix-neuf",
+];
+const WORD_TENS = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante", "soixante", "quatre-vingt", "quatre-vingt"];
+
+/** 0-99 — gère les irrégularités du français (71, 80, 91…). */
+function wordsBelow100(n: number): string {
+  if (n < 20) return WORD_UNITS[n];
+  const t = Math.floor(n / 10);
+  const u = n % 10;
+  // 70-79 et 90-99 se construisent sur 60 et 80 + une unité de 10 à 19.
+  if (t === 7 || t === 9) {
+    if (t === 7 && u === 1) return "soixante-et-onze";
+    return `${WORD_TENS[t]}-${WORD_UNITS[10 + u]}`;
+  }
+  if (u === 0) return t === 8 ? "quatre-vingts" : WORD_TENS[t];
+  if (u === 1 && t !== 8) return `${WORD_TENS[t]}-et-un`;
+  return `${WORD_TENS[t]}-${WORD_UNITS[u]}`;
+}
+
+/** 0-999 — « cent » reste invariable quand il est suivi d'un nombre. */
+function wordsBelow1000(n: number): string {
+  if (n < 100) return wordsBelow100(n);
+  const h = Math.floor(n / 100);
+  const r = n % 100;
+  if (r === 0) return h === 1 ? "cent" : `${WORD_UNITS[h]} cents`;
+  const head = h === 1 ? "cent" : `${WORD_UNITS[h]} cent`;
+  return `${head} ${wordsBelow100(r)}`;
+}
+
+/**
+ * « quinze mille » — la mention « Arrêtée à la somme de… » qui figure sur toute
+ * facture sérieuse, et qui protège contre l'altération du montant en chiffres.
+ */
+export function amountInWords(n: number | null | undefined): string {
+  const v = Math.max(0, Math.round(Number(n) || 0));
+  if (v === 0) return "zéro";
+
+  const parts: string[] = [];
+  let rest = v;
+
+  const scales: { value: number; singular: string; plural: string }[] = [
+    { value: 1_000_000_000, singular: "un milliard", plural: "milliards" },
+    { value: 1_000_000, singular: "un million", plural: "millions" },
+    { value: 1_000, singular: "mille", plural: "mille" },
+  ];
+
+  for (const s of scales) {
+    const count = Math.floor(rest / s.value);
+    if (count === 0) continue;
+    if (count === 1) parts.push(s.singular);
+    else parts.push(`${wordsBelow1000(count)} ${s.plural}`);
+    rest %= s.value;
+  }
+
+  if (rest > 0) parts.push(wordsBelow1000(rest));
+  return parts.join(" ");
+}
+
 export function formatDate(d: string | null | undefined): string {
   if (!d) return "—";
   const date = new Date(d);

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchPublicQuote } from "@/lib/proPublic";
+import { effectiveQuoteStatus } from "@/lib/pro";
 import PrintableDocument from "@/components/pro/PrintableDocument";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,8 @@ export default async function DevisPrintPage({ params }: { params: { token: stri
         valid_until: quote.valid_until,
         terms: quote.terms,
         note: quote.note,
-        status: quote.status,
+        // Statut réel : « expiré » se déduit de la date, pas de la colonne.
+        status: effectiveQuoteStatus(quote),
       }}
       seller={seller}
       client={party}

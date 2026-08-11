@@ -9,29 +9,40 @@ import { useEffect, useState } from "react";
  * `window.print()` au chargement s'exécute souvent avant que la mise en page
  * soit stabilisée et sort un document tronqué. On laisse donc l'utilisateur
  * appuyer, une fois la page visiblement prête.
+ *
+ * Barre collante en haut : sur un document long consulté au téléphone, le
+ * bouton reste atteignable sans remonter.
  */
 export default function PrintTrigger({ kind }: { kind: "devis" | "facture" }) {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
 
   return (
-    <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm dark:border-dark-border dark:bg-dark-800">
-      <p className="text-[.82rem] text-gray-600 dark:text-gray-300">
-        Pour obtenir un PDF : <b>Imprimer</b> → destination <b>« Enregistrer au format PDF »</b>.
-      </p>
-      <div className="flex gap-2">
+    <div className="no-print sticky top-2 z-10 mb-4 rounded-xl bg-white/95 p-2.5 shadow-md backdrop-blur sm:mb-5 sm:p-3">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => window.history.back()}
-          className="rounded-xl border border-gray-200 px-4 py-2 text-[.82rem] font-semibold text-gray-600 transition hover:bg-gray-50 dark:border-white/15 dark:text-gray-300 dark:hover:bg-white/5"
+          aria-label="Retour"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[1rem] text-gray-500 transition hover:bg-gray-100"
         >
-          Retour
+          ‹
         </button>
+
+        <p className="hidden min-w-0 flex-1 text-[.8rem] leading-snug text-gray-500 sm:block">
+          Aperçu du {kind}. Pour un PDF : <b className="text-gray-700">Imprimer</b> → destination{" "}
+          <b className="text-gray-700">« Enregistrer au format PDF »</b>.
+        </p>
+        <p className="min-w-0 flex-1 text-[.78rem] leading-snug text-gray-500 sm:hidden">
+          Aperçu du {kind}
+        </p>
+
         <button
           onClick={() => window.print()}
           disabled={!ready}
-          className="btn btn-green px-5 py-2 text-[.83rem] font-extrabold disabled:opacity-50"
+          className="shrink-0 rounded-lg px-4 py-2 text-[.83rem] font-extrabold text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
+          style={{ background: "#4F46E5" }}
         >
-          🖨️ Imprimer / PDF
+          🖨️ <span className="hidden sm:inline">Imprimer / </span>PDF
         </button>
       </div>
     </div>
