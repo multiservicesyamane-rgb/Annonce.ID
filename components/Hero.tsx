@@ -1,22 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import SearchBar from "./SearchBar";
-import type { MapPoint } from "@/lib/geo";
 
-// Leaflet manipule `window` : chargement client uniquement, et hors du bundle
-// initial pour ne pas retarder l'affichage du hero (LCP).
-const ListingsMap = dynamic(() => import("./ListingsMap"), {
-  ssr: false,
-  // Mêmes hauteurs que la carte réelle (en-tête + carte + légende) : la place
-  // est réservée dès le premier rendu, donc aucun décalage (CLS).
-  // Hauteurs identiques à celles de la carte réelle → place réservée dès le
-  // premier rendu, donc aucun décalage visuel (CLS) quand Leaflet arrive.
-  loading: () => <div className="h-[420px] bg-[#0D1420] sm:h-[440px] md:h-[500px]" />,
-});
-
-export default function Hero({ points = [] }: { points?: MapPoint[] }) {
+// La carte des annonces vit désormais sous « Annonces Récentes »
+// (voir components/HomeMapSection.tsx).
+export default function Hero() {
   return (
     <section className="hero-shell w-full bg-[#0A0E14] dark:bg-[#0A0E14] pb-0 pt-0 md:pb-3 md:pt-1.5 px-2 md:px-4 transition-colors">
       <div className="mx-auto max-w-[1000px]">
@@ -56,9 +45,8 @@ export default function Hero({ points = [] }: { points?: MapPoint[] }) {
               </div>
             </div>
 
-            {/* Recherche + Vendre. Quand la carte est présente, ces actions sont
-                posées SUR la carte (voir plus bas) : on évite le doublon. */}
-            <div className={`${points.length > 0 ? "hidden" : "flex"} flex-col sm:flex-row items-center gap-2 w-full md:w-auto shrink-0 mt-1.5 md:mt-0`}>
+            {/* Recherche + Vendre */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto shrink-0 mt-1.5 md:mt-0">
               <Link
                 href="/publier"
                 className="group relative w-full sm:w-auto inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-green-500 via-[#F5A623] to-[#FFD166] px-5 py-2.5 text-[0.85rem] font-extrabold text-white shadow-[0_8px_24px_-6px_rgba(245,166,35,0.55)] transition-all hover:scale-[1.04] hover:shadow-[0_10px_30px_-6px_rgba(245,166,35,0.7)] shrink-0"
@@ -73,29 +61,6 @@ export default function Hero({ points = [] }: { points?: MapPoint[] }) {
           </div>
 
         </div>
-
-        {/* Carte des annonces, pleine largeur, avec la recherche posée dessus */}
-        {points.length > 0 && (
-          <div className="relative mt-2 overflow-hidden rounded-[16px] border border-white/10 md:mt-3 md:rounded-[20px]">
-            <ListingsMap points={points} />
-
-            {/* Recherche en surimpression. z-[1100] : au-dessus des contrôles
-                Leaflet (z-1000) et des bulles (z-700). */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-[1100] p-2.5 sm:p-3">
-              <div className="pointer-events-auto mx-auto flex w-full max-w-[560px] flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="flex-1 rounded-xl bg-white/95 shadow-lg backdrop-blur-sm dark:bg-[#0D1420]/95">
-                  <SearchBar variant="hero" />
-                </div>
-                <Link
-                  href="/publier"
-                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-green-500 via-[#F5A623] to-[#FFD166] px-4 py-2.5 text-[0.82rem] font-extrabold text-white shadow-lg transition-transform hover:scale-[1.03]"
-                >
-                  💰 Vendre
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </section>
   );

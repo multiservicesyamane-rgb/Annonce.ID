@@ -6,6 +6,7 @@ import AdBanner from "@/components/AdBanner";
 import AdSensePlaceholder from "@/components/AdSensePlaceholder";
 import AdCard from "@/components/AdCard";
 import HomeRecent from "@/components/HomeRecent";
+import HomeMapSection from "@/components/HomeMapSection";
 import { getFeaturedListings, getPremiumListings, getRecentListings } from "@/lib/homeSections";
 import { createClient } from "@supabase/supabase-js";
 import { buildMapPoints } from "@/lib/geo";
@@ -72,7 +73,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero points={mapPoints} />
+      <Hero />
 
       {/* Bandeau "À la Une" + Premium (déduplication par id), cliquable */}
       <FeaturedSlider listings={[...uneList, ...premList].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)} />
@@ -200,6 +201,22 @@ export default async function HomePage() {
         <HomeRecent initialListings={formattedListings} />
       </ScrollReveal>
 
+      {/* CARTE DES ANNONCES — sous les annonces récentes */}
+      {mapPoints.length > 0 && (
+        <ScrollReveal className="wrap py-3 md:py-6" delay={50}>
+          <div className="mb-3 md:mb-5 flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-gray-100 dark:border-dark-border pb-2 md:pb-3">
+            <div>
+              <h2 className="font-display text-[1.2rem] md:text-[1.4rem] font-bold text-gray-900 dark:text-white">
+                Les annonces sur la carte 🗺️
+              </h2>
+              <p className="text-[.85rem] text-gray-500 mt-1">Trouvez ce qui se vend près de chez vous</p>
+            </div>
+          </div>
+
+          <HomeMapSection points={mapPoints} />
+        </ScrollReveal>
+      )}
+
       {/* Bande publicitaire — sous les produits récents */}
       <ScrollReveal className="wrap py-3" delay={120}>
         <AdBanner
@@ -277,6 +294,64 @@ export default async function HomePage() {
           </div>
         </ScrollReveal>
       )}
+
+      {/* ESPACE FREELANCER — placé après les boutiques : même public, les
+          professionnels. Le site ne sert pas qu'à vendre des objets, il outille
+          aussi ceux qui vendent des prestations. */}
+      <ScrollReveal className="wrap py-3 md:py-6">
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/10 dark:bg-[#111722]">
+          <div className="grid gap-0 md:grid-cols-[1.15fr_1fr]">
+            <div className="p-5 sm:p-7">
+              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-neon-gold/15 px-2.5 py-0.5 text-[.6rem] font-black uppercase tracking-wider text-gold-dark dark:text-neon-gold">
+                💼 Freelances &amp; prestataires
+              </div>
+              <h2 className="font-display text-[1.35rem] sm:text-[1.7rem] font-black leading-tight text-gray-900 dark:text-white">
+                Vos devis et factures,{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-neon-gold">
+                  gratuitement
+                </span>
+              </h2>
+              <p className="mt-2 text-[.88rem] leading-relaxed text-gray-600 dark:text-gray-400">
+                Créez un devis en deux minutes, envoyez-le par WhatsApp. Votre client
+                l&apos;accepte depuis son téléphone, <b>sans créer de compte</b> — et la facture
+                se génère toute seule.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link
+                  href="/dashboard?panel=activity"
+                  className="rounded-xl bg-green px-5 py-2.5 text-[.86rem] font-black text-white shadow-md transition hover:scale-[1.03]"
+                >
+                  Ouvrir mon espace pro →
+                </Link>
+                <Link
+                  href="/comment-ca-marche"
+                  className="rounded-xl border border-gray-200 px-4 py-2.5 text-[.84rem] font-bold text-gray-600 transition hover:border-green/50 hover:text-green dark:border-white/15 dark:text-gray-300"
+                >
+                  En savoir plus
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 border-t border-gray-100 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/[.03] sm:p-6 md:border-l md:border-t-0">
+              {[
+                { icon: "📄", title: "Devis", sub: "Acceptés en un clic" },
+                { icon: "🧾", title: "Factures", sub: "Numérotation automatique" },
+                { icon: "👥", title: "Clients", sub: "Fiches et historique" },
+                { icon: "📊", title: "Suivi", sub: "Encaissé et impayés" },
+              ].map((f) => (
+                <div
+                  key={f.title}
+                  className="rounded-xl border border-gray-100 bg-white p-3 dark:border-white/10 dark:bg-[#161B22]"
+                >
+                  <div className="text-[1.15rem]">{f.icon}</div>
+                  <div className="mt-1 text-[.84rem] font-extrabold text-gray-900 dark:text-white">{f.title}</div>
+                  <div className="text-[.7rem] leading-snug text-gray-500 dark:text-gray-400">{f.sub}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </ScrollReveal>
 
       {/* BANNER PUBLIER */}
       <ScrollReveal className="wrap py-2 md:py-4">

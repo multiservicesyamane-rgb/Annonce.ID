@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { formatFcfa, formatDate, QUOTE_LABELS, effectiveQuoteStatus, type QuoteItem } from "@/lib/pro";
+import {
+  formatFcfa, formatDate, QUOTE_LABELS, effectiveQuoteStatus, visibleSections, type QuoteItem,
+} from "@/lib/pro";
 import { fetchPublicQuote } from "@/lib/proPublic";
 import QuoteActions from "@/components/QuoteActions";
 
@@ -32,6 +34,7 @@ export default async function DevisPublicPage({ params }: { params: { token: str
   if (!found) notFound();
 
   const { quote, client, seller, profile } = found;
+  const sections = visibleSections(quote.sections);
   const items: QuoteItem[] = Array.isArray(quote.items) ? quote.items : [];
   const status = effectiveQuoteStatus(quote);
 
@@ -136,6 +139,34 @@ export default async function DevisPublicPage({ params }: { params: { token: str
             {quote.note}
           </p>
         )}
+
+        {/* Rubriques du devis : déroulé de la mission, conditions, modalités
+            de paiement. C'est ce qui rassure le client juste avant d'accepter,
+            donc elles se lisent AVANT les boutons de décision. */}
+        {sections.map((s) => (
+          <div
+            key={s.key}
+            className="mt-3 rounded-xl border border-gray-100 bg-gray-50 p-3.5 dark:border-white/10 dark:bg-black/20"
+          >
+            <div className="flex items-center gap-1.5 text-[.68rem] font-bold uppercase tracking-wide text-gray-400">
+              {s.icon && <span aria-hidden="true">{s.icon}</span>}
+              <span>{s.title}</span>
+            </div>
+            <div className="mt-2 flex flex-col gap-2">
+              {s.items.map((it, i) => (
+                <div key={i} className="text-[.82rem] leading-relaxed">
+                  {it.label && (
+                    <span className="font-bold text-gray-800 dark:text-gray-100">{it.label}</span>
+                  )}
+                  {it.label && it.body && <span className="text-gray-400"> — </span>}
+                  {it.body && (
+                    <span className="whitespace-pre-line text-gray-600 dark:text-gray-300">{it.body}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
 
         <QuoteActions
           token={params.token}

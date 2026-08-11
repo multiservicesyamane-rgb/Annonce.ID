@@ -49,7 +49,7 @@ export default function ActivityPanel({ goTo, toast }: { goTo: (panel: string) =
 
   if (isEmpty) {
     return (
-      <div className="mx-auto max-w-[980px]">
+      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {settingsNode}
         <Head onSettings={() => setSettingsOpen(true)} />
         <Empty
@@ -64,7 +64,7 @@ export default function ActivityPanel({ goTo, toast }: { goTo: (panel: string) =
   }
 
   return (
-    <div className="mx-auto max-w-[980px]">
+    <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
       {settingsNode}
       <Head onSettings={() => setSettingsOpen(true)} />
 
@@ -154,7 +154,7 @@ export default function ActivityPanel({ goTo, toast }: { goTo: (panel: string) =
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-4">
           <RevenueChart data={evolution} />
 

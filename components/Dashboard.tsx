@@ -25,6 +25,7 @@ import ImageCropperModal from "./ImageCropperModal";
 import ChatInterface from "./ChatInterface";
 import MarketingPanel from "./MarketingPanel";
 import MonActivite from "./MonActivite";
+import BusinessSettings from "./pro/BusinessSettings";
 type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "notifications" | "reviews" | "alerts" | "profile" | "faq" | "security"
   // Espace Freelancer
   | "activity" | "clients" | "projects" | "quotes" | "invoices";
@@ -32,18 +33,46 @@ type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroo
 // Panneaux servis par le module freelance (components/MonActivite.tsx).
 const PRO_PANELS: Panel[] = ["activity", "clients", "projects", "quotes", "invoices"];
 
-const NAV: { id: string; icon: string; label: string; section?: string; badge?: number; isLink?: boolean; href?: string }[] = [
+// Affiche l'URL publique de la boutique sans casser l'hydratation.
+// `window.location.origin` n'existe pas au rendu serveur : l'afficher
+// directement produit un HTML serveur ("boutique/xxx") différent du HTML
+// client ("http://localhost:3000/boutique/xxx"), que React signale en erreur.
+// On rend donc le chemin relatif au premier passage (identique des deux côtés),
+// puis on complète l'origine une fois monté dans le navigateur.
+function BoutiqueUrl({ userId }: { userId: string }) {
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
+  return <>{`${origin}/boutique/${userId}`}</>;
+}
+
+type NavItem = {
+  id: string; icon: string; label: string; section?: string; badge?: number;
+  isLink?: boolean; href?: string;
+  /** Ouvre une fenêtre au lieu de changer de panneau. */
+  action?: "business";
+  /** N'apparaît que si l'espace pro est activé. */
+  proOnly?: boolean;
+};
+
+/**
+ * Le tableau de bord sert DEUX métiers distincts : vendre des annonces, et
+ * piloter une activité de freelance. Les empiler dans un seul menu donnait
+ * 21 entrées, dont 5 que l'immense majorité des vendeurs n'ouvrira jamais.
+ *
+ * Chaque mode a donc son menu. On bascule par le sélecteur en tête de barre
+ * latérale, et le mode pro n'est proposé qu'aux comptes qui l'ont activé.
+ */
+const NAV_ADS: NavItem[] = [
   { id: "overview", icon: "📊", label: "Vue d’ensemble", section: "Principal" },
   { id: "stats", icon: "📈", label: "Statistiques" },
   { id: "ads", icon: "📋", label: "Mes annonces", section: "Vente" },
   { id: "showroom", icon: "🏪", label: "Ma Boutique" },
   { id: "campaigns", icon: "🚀", label: "Marketing & Pub" },
   { id: "publish", icon: "➕", label: "Publier une annonce", isLink: true, href: "/publier" },
-  { id: "activity", icon: "📊", label: "Mon Activité", section: "Espace Freelancer" },
-  { id: "clients", icon: "👥", label: "Clients" },
-  { id: "projects", icon: "📁", label: "Projets" },
-  { id: "quotes", icon: "📄", label: "Devis" },
-  { id: "invoices", icon: "🧾", label: "Factures" },
+  // Passerelle vers l'espace pro, juste après « Publier ». Réservée aux comptes
+  // qui l'ont activé : sinon elle réintroduirait dans le menu « annonces »
+  // exactement ce qu'on en a sorti.
+  { id: "activity", icon: "💼", label: "Mon Activité pro", proOnly: true },
   { id: "favorites", icon: "❤", label: "Mes Favoris", section: "Interactions" },
   { id: "notifications", icon: "🔔", label: "Notifications" },
   { id: "messages", icon: "💬", label: "Messages" },
@@ -55,6 +84,52 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
   { id: "security", icon: "🔒", label: "Sécurité & Vie privée" },
   { id: "faq", icon: "❓", label: "FAQ" },
 ];
+
+const NAV_PRO: NavItem[] = [
+  { id: "activity", icon: "📊", label: "Mon Activité", section: "Pilotage" },
+  // Raison sociale, NINEA, coordonnées de règlement : l'en-tête de toute pièce
+  // comptable. C'était une fenêtre enfouie dans Mon Activité, que personne ne
+  // trouvait — d'où des factures sans identité. Elle est désormais dans le menu.
+  { id: "business", icon: "🏢", label: "Mon entreprise", action: "business" },
+  { id: "clients", icon: "👥", label: "Clients", section: "Gestion" },
+  { id: "projects", icon: "📁", label: "Projets" },
+  { id: "quotes", icon: "📄", label: "Devis" },
+  { id: "invoices", icon: "🧾", label: "Factures" },
+  { id: "messages", icon: "💬", label: "Messages", section: "Compte" },
+  { id: "profile", icon: "👤", label: "Mon profil" },
+  { id: "security", icon: "🔒", label: "Sécurité & Vie privée" },
+];
+
+/** Toutes les entrées confondues : sert à valider un ?panel= reçu par URL. */
+const ALL_NAV: NavItem[] = [...NAV_ADS, ...NAV_PRO];
+
+/**
+ * Panneaux présents dans les DEUX menus sans appartenir au module pro :
+ * messages, profil, sécurité.
+ *
+ * L'exclusion de PRO_PANELS est indispensable. « Mon Activité » figure aussi
+ * dans le menu annonces comme passerelle ; sans ce filtre il passait pour
+ * neutre, et le bouton « Pro » — qui ouvre justement ce panneau — ne
+ * basculait donc jamais de mode.
+ */
+const SHARED_PANELS = new Set(
+  NAV_PRO
+    .filter((p) => NAV_ADS.some((a) => a.id === p.id))
+    .map((p) => p.id)
+    .filter((id) => !PRO_PANELS.includes(id as Panel)),
+);
+
+/**
+ * Mode à adopter pour un panneau donné.
+ *
+ * Un panneau partagé ne fait PAS basculer : ouvrir « Messages » depuis
+ * l'espace pro doit y laisser l'utilisateur, sinon le menu changerait sous
+ * ses yeux sans qu'il ait rien demandé.
+ */
+function modeForPanel(id: string, current: "ads" | "pro"): "ads" | "pro" {
+  if (SHARED_PANELS.has(id)) return current;
+  return PRO_PANELS.includes(id as Panel) ? "pro" : "ads";
+}
 
 const CHART = [120, 95, 210, 180, 340, 290, 400, 380, 320, 450, 510, 480, 390, 560];
 
@@ -76,10 +151,21 @@ export default function Dashboard() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const requestedPanel = searchParams.get("panel");
-  const initialPanel = requestedPanel && NAV.some((item) => !item.isLink && item.id === requestedPanel)
+  const initialPanel = requestedPanel && ALL_NAV.some((item) => !item.isLink && item.id === requestedPanel)
     ? requestedPanel as Panel
     : "overview";
   const [panel, setPanel] = useState<Panel>(initialPanel);
+
+  // Mode courant. Un lien direct vers un panneau pro (?panel=invoices, une
+  // notification, un favori du navigateur) doit ouvrir le bon menu : le mode
+  // se déduit donc du panneau demandé, jamais l'inverse.
+  const [mode, setMode] = useState<"ads" | "pro">(
+    PRO_PANELS.includes(initialPanel as Panel) ? "pro" : "ads",
+  );
+  const [proActivated, setProActivated] = useState(false);
+  const [proCounts, setProCounts] = useState({ clients: 0, quotes: 0, invoices: 0 });
+  const [activating, setActivating] = useState(false);
+  const [businessOpen, setBusinessOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -174,12 +260,62 @@ export default function Dashboard() {
   };
 
   const handlePanelChange = (id: string) => {
-    const isKnownPanel = NAV.some((item) => !item.isLink && item.id === id);
+    const isKnownPanel = ALL_NAV.some((item) => !item.isLink && item.id === id);
     if (!isKnownPanel) return;
     setPanel(id as Panel);
+    // Le mode suit le panneau : ouvrir « Factures » depuis un raccourci bascule
+    // en mode pro, sans quoi le menu affiché ne contiendrait pas l'entrée
+    // active — l'utilisateur ne saurait plus où il se trouve.
+    setMode((cur) => modeForPanel(id, cur));
     setIsMobileMenuOpen(false);
     router.replace("/dashboard?panel=" + encodeURIComponent(id), { scroll: false });
   };
+
+  /** Bascule de mode : on atterrit sur l'écran d'accueil du mode choisi. */
+  const switchMode = (next: "ads" | "pro") => {
+    if (next === mode) return;
+    handlePanelChange(next === "pro" ? "activity" : "overview");
+  };
+
+  /** Active l'espace pro, puis y entre. */
+  async function activatePro() {
+    setActivating(true);
+    try {
+      const r = await fetch("/api/pro/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "activate" }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { show(d?.error || "Activation impossible."); return; }
+      setProActivated(true);
+      handlePanelChange("activity");
+      show("✓ Espace pro activé");
+    } finally {
+      setActivating(false);
+    }
+  }
+
+  // L'espace pro est-il activé ? Requête volontairement légère (comptages sans
+  // corps de réponse). Si elle échoue, on n'affiche pas le mode pro : mieux
+  // vaut une entrée manquante qu'un menu qui mène à des écrans vides.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/pro/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "status" }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (cancelled) return;
+        if (d?.activated) setProActivated(true);
+        if (d?.counts) setProCounts(d.counts);
+      } catch { /* espace pro simplement non proposé */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Bannière "cadeau de lancement" : visible tant que l'utilisateur ne l'a pas fermée
   useEffect(() => {
@@ -194,8 +330,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     const nextPanel = searchParams.get("panel");
-    if (nextPanel && NAV.some((item) => !item.isLink && item.id === nextPanel)) {
+    if (nextPanel && ALL_NAV.some((item) => !item.isLink && item.id === nextPanel)) {
       setPanel(nextPanel as Panel);
+      // Navigation arrière/avant du navigateur : le menu doit suivre le
+      // panneau restauré, sinon on se retrouve en mode « annonces » devant un
+      // écran de factures.
+      setMode((cur) => modeForPanel(nextPanel, cur));
     }
   }, [searchParams]);
 
@@ -598,6 +738,10 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden dark:bg-dark-900 lg:flex-row">
+      {/* « Mon entreprise » : ouvrable depuis le menu pro, plus seulement
+          depuis l'intérieur de Mon Activité. */}
+      {businessOpen && <BusinessSettings toast={show} onClose={() => setBusinessOpen(false)} />}
+
       {/* Mobile top bar */}
       <div className="flex min-h-[60px] items-center justify-between border-b border-gray-100 bg-white px-3 py-2 dark:border-dark-border dark:bg-dark-900 lg:hidden">
         <Link href="/" aria-label={"Accueil " + BRAND.name} className="flex min-w-0 items-center gap-2">
@@ -664,8 +808,62 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+        {/* Sélecteur de mode : deux métiers, deux menus. Affiché seulement
+            quand l'espace pro est activé — sinon un simple appel à l'action. */}
+        <div className="mx-3 mb-1">
+          {proActivated ? (
+            <div
+              role="tablist"
+              aria-label="Choisir l'espace"
+              className="flex gap-1 rounded-[12px] bg-gray-100 p-1 dark:bg-white/[.06]"
+            >
+              {/* Libellés courts : la barre latérale ne fait que 220 px sur
+                  ordinateur, soit ~92 px par bouton. « Mes annonces » y sortait
+                  tronqué en « Mes annon… ». L'icône porte le sens, le mot le
+                  précise, et `title` donne l'intitulé complet au survol. */}
+              {([
+                { id: "ads", icon: "🛒", label: "Annonces", full: "Mes annonces" },
+                { id: "pro", icon: "💼", label: "Pro", full: "Mon activité pro" },
+              ] as const).map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="tab"
+                  title={m.full}
+                  aria-selected={mode === m.id}
+                  onClick={() => switchMode(m.id)}
+                  className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[9px] px-1.5 py-2 text-[.74rem] font-bold transition ${
+                    mode === m.id
+                      ? "bg-white text-green shadow-sm dark:bg-dark-900"
+                      : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                  }`}
+                >
+                  <span aria-hidden="true" className="shrink-0">{m.icon}</span>
+                  <span className="truncate">{m.label}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={activatePro}
+              disabled={activating}
+              className="w-full rounded-[12px] border border-dashed border-green/40 px-3 py-2.5 text-left transition hover:border-green hover:bg-green/5 disabled:opacity-50"
+            >
+              <span className="block text-[.76rem] font-bold text-green">
+                {activating ? "Activation…" : "💼 Activer mon espace pro"}
+              </span>
+              <span className="mt-0.5 block text-[.66rem] leading-snug text-gray-500 dark:text-gray-400">
+                Devis, factures et clients — si vous facturez des prestations.
+              </span>
+            </button>
+          )}
+        </div>
+
         <div className="flex-1 overflow-y-auto">
-          {NAV.map((n) => (
+          {(mode === "pro" ? NAV_PRO : NAV_ADS)
+            .filter((n) => !n.proOnly || proActivated)
+            .map((n) => (
             <div key={n.id}>
               {n.section && <div className="px-5 pb-1 pt-4 text-[.66rem] font-bold uppercase tracking-widest text-gray-300 dark:text-white/40">{n.section}</div>}
               {n.isLink ? (
@@ -678,7 +876,14 @@ export default function Dashboard() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => handlePanelChange(n.id)}
+                  onClick={() => {
+                    if (n.action === "business") {
+                      setBusinessOpen(true);
+                      setIsMobileMenuOpen(false);
+                      return;
+                    }
+                    handlePanelChange(n.id);
+                  }}
                   aria-current={panel === n.id ? "page" : undefined}
                   className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-left text-[.87rem] transition ${panel === n.id ? "border-green bg-green/[.06] font-semibold text-green" : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
                     }`}
@@ -755,6 +960,72 @@ export default function Dashboard() {
               <KpiGrad gradient="bg-g5" icon="❤️" label="Favoris reçus" value={receivedFavsCount} />
               <KpiGrad gradient="bg-g4" icon="🗂️" label="Annonces totales" value={ads.length} />
             </div>
+
+            {/* Espace pro — point d'entrée depuis l'accueil du tableau de bord.
+                Le module vit derrière un sélecteur de mode : sans ce rappel ici,
+                un vendeur qui facture des prestations pourrait ne jamais
+                découvrir qu'il existe. */}
+            {proActivated ? (
+              <div className="mb-4 rounded-[16px] border border-gray-100 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-[#161B22] sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-green/10 text-[1.1rem]">💼</span>
+                    <div className="min-w-0">
+                      <div className="font-display text-[.98rem] font-extrabold text-gray-900 dark:text-white">
+                        Mon activité pro
+                      </div>
+                      <div className="text-[.75rem] text-gray-500 dark:text-gray-400">
+                        {proCounts.quotes} devis · {proCounts.invoices} facture{proCounts.invoices > 1 ? "s" : ""} · {proCounts.clients} client{proCounts.clients > 1 ? "s" : ""}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handlePanelChange("activity")}
+                    className="shrink-0 rounded-lg bg-green px-4 py-2 text-[.8rem] font-bold text-white transition hover:opacity-90"
+                  >
+                    Ouvrir →
+                  </button>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {([
+                    { id: "quotes", icon: "📄", label: "Devis" },
+                    { id: "invoices", icon: "🧾", label: "Factures" },
+                    { id: "clients", icon: "👥", label: "Clients" },
+                  ] as const).map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => handlePanelChange(s.id)}
+                      className="flex items-center justify-center gap-1.5 rounded-lg bg-gray-50 px-2 py-2 text-[.76rem] font-bold text-gray-600 transition hover:bg-green/10 hover:text-green dark:bg-white/5 dark:text-gray-300"
+                    >
+                      <span aria-hidden="true">{s.icon}</span>
+                      <span className="truncate">{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4 flex flex-col gap-3 rounded-[16px] border border-dashed border-green/40 bg-green/[.04] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-green/10 text-[1.1rem]">💼</span>
+                  <div className="min-w-0">
+                    <div className="font-display text-[.95rem] font-extrabold text-gray-900 dark:text-white">
+                      Vous facturez des prestations ?
+                    </div>
+                    <p className="mt-0.5 text-[.78rem] leading-relaxed text-gray-500 dark:text-gray-400">
+                      Devis, factures et suivi client, au même endroit que vos annonces.
+                      Votre client accepte par WhatsApp, sans créer de compte.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={activatePro}
+                  disabled={activating}
+                  className="shrink-0 rounded-lg bg-green px-5 py-2.5 text-[.82rem] font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                >
+                  {activating ? "Activation…" : "Activer mon espace pro"}
+                </button>
+              </div>
+            )}
 
             {/* Outils : Assistant IA + Parrainage + Réseaux (zone secondaire, compacte) */}
             <div className="mb-4 grid gap-4 lg:grid-cols-2">
@@ -1940,7 +2211,7 @@ export default function Dashboard() {
                   </button>
                   <div className="flex items-center gap-2 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-border px-3 py-1.5 rounded-xl shadow-sm">
                     <span className="text-xs font-semibold text-gray-500 hidden sm:inline">
-                      {typeof window !== 'undefined' ? `${window.location.origin}/boutique/${user?.id || ''}` : `boutique/${user?.id || ''}`}
+                      <BoutiqueUrl userId={user?.id || ''} />
                     </span>
                     <span className="text-xs font-semibold text-gray-500 sm:hidden">Lien</span>
                     <button

@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin, type SupabaseClient } from "@supabase/supabase-js";
+import { DEFAULT_QUOTE_SECTIONS, sanitizeSections, type QuoteSection } from "@/lib/pro";
 
 export const txt = (v: unknown, max = 160) => String(v ?? "").trim().slice(0, max);
 
@@ -155,4 +156,35 @@ export async function nextDocumentNumber(
   const table = prefix === "DEV" ? "pro_quotes" : "pro_invoices";
   const { count } = await sb.from(table).select("id", { count: "exact", head: true }).eq("user_id", userId);
   return `${prefix}-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(3, "0")}`;
+}
+
+/**
+ * Rubriques de devis du professionnel, prêtes à être recopiées dans une pièce.
+ *
+ * Retombe sur les rubriques par défaut tant qu'il n'a rien réglé : un premier
+ * devis part ainsi avec des conditions professionnelles, sans l'avoir obligé
+ * à traverser un assistant avant de pouvoir travailler.
+ *
+ * Ne lève jamais : la colonne peut ne pas exister (migration non exécutée),
+ * et une rubrique manquante ne doit pas empêcher de créer un devis.
+ */
+export async function defaultQuoteSections(
+  sb: SupabaseClient,
+  userId: string,
+): Promise<QuoteSection[]> {
+  try {
+    const { data, error } = await sb
+      .from("pro_settings")
+      .select("quote_sections")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) return DEFAULT_QUOTE_SECTIONS;
+
+    const saved = sanitizeSections(data?.quote_sections);
+    // Tableau vide = jamais réglé (valeur par défaut de la colonne), et non
+    // « tout désactivé » : dans ce cas on propose nos rubriques.
+    return saved.length > 0 ? saved.filter((s) => s.enabled) : DEFAULT_QUOTE_SECTIONS.filter((s) => s.enabled);
+  } catch {
+    return DEFAULT_QUOTE_SECTIONS.filter((s) => s.enabled);
+  }
 }

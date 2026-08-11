@@ -9,11 +9,22 @@ import { formatFcfa, type QuoteItem } from "@/lib/pro";
 
 /* ============================ Styles ============================ */
 
+/* Trois niveaux de profondeur — la hiérarchie vient de l'élévation, pas d'un
+   empilement d'ombres : `card` pour le contenu courant, `cardRaised` pour les
+   pièces qui doivent capter le regard (totaux, dialogues). */
 export const card =
-  "rounded-2xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 shadow-sm";
+  "rounded-2xl border border-gray-200/80 dark:border-dark-border bg-white dark:bg-dark-800 shadow-[0_1px_2px_rgba(16,24,40,.04)]";
+export const cardRaised =
+  "rounded-2xl border border-gray-200/70 dark:border-dark-border bg-white dark:bg-dark-800 shadow-[0_12px_32px_-12px_rgba(16,24,40,.18)]";
 export const input =
-  "w-full rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-900 px-3.5 py-2.5 text-[.88rem] text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition focus:border-green focus:ring-2 focus:ring-green/15";
-export const lbl = "mb-1.5 block text-[.72rem] font-bold text-gray-600 dark:text-gray-400";
+  "w-full rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-900 px-3.5 py-2.5 text-[.88rem] text-gray-900 dark:text-white placeholder:text-gray-400 outline-none transition-[border-color,box-shadow] focus:border-green focus:ring-4 focus:ring-green/12";
+export const lbl =
+  "mb-1.5 block text-[.7rem] font-bold uppercase tracking-[.04em] text-gray-500 dark:text-gray-400";
+
+/** Colonne latérale des formulaires : le récapitulatif suit le défilement sur
+    grand écran, pour que le total et le bouton restent sous les yeux même avec
+    une longue liste de prestations. */
+export const stickyAside = "flex flex-col gap-4 lg:sticky lg:top-4 lg:self-start";
 
 export const CLIENT_STYLE: Record<string, string> = {
   prospect: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
@@ -178,10 +189,12 @@ export function PageHead({
   title: string; count?: string; action?: string; onAction?: () => void; children?: React.ReactNode;
 }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-gray-100 pb-4 dark:border-white/[.06]">
       <div>
-        <h1 className="font-display text-[1.5rem] font-extrabold tracking-tight text-gray-900 dark:text-white">{title}</h1>
-        {count && <p className="mt-0.5 text-[.82rem] text-gray-500 dark:text-gray-400">{count}</p>}
+        <h1 className="font-display text-[1.5rem] font-extrabold leading-none tracking-tight text-gray-900 dark:text-white sm:text-[1.7rem]">
+          {title}
+        </h1>
+        {count && <p className="mt-1.5 text-[.82rem] text-gray-500 dark:text-gray-400">{count}</p>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {children}
@@ -212,9 +225,13 @@ export function Section({
 }: { icon: string; title: string; children: React.ReactNode; aside?: React.ReactNode }) {
   return (
     <div className={`${card} p-4 sm:p-5`}>
-      <div className="mb-3.5 flex items-center gap-2.5">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-green/10 text-[.9rem]">{icon}</span>
-        <h3 className="flex-1 font-display text-[.95rem] font-extrabold text-gray-900 dark:text-white">{title}</h3>
+      <div className="-mx-4 mb-4 flex items-center gap-2.5 border-b border-gray-100 px-4 pb-3 dark:border-white/[.06] sm:-mx-5 sm:px-5">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-green/10 text-[.9rem] ring-1 ring-inset ring-green/15">
+          {icon}
+        </span>
+        <h3 className="flex-1 font-display text-[.95rem] font-extrabold tracking-tight text-gray-900 dark:text-white">
+          {title}
+        </h3>
         {aside}
       </div>
       {children}
@@ -293,17 +310,32 @@ export function Kpi({
     : tone === "red" ? "text-red-600 dark:text-red-400"
     : tone === "blue" ? "text-blue-600 dark:text-blue-400"
     : "text-gray-900 dark:text-white";
+  // Filet de couleur en tête de carte : lecture du ton au coup d'œil, sans
+  // teinter tout le fond (qui écraserait la valeur, seule chose à lire).
+  const bar =
+    tone === "green" ? "bg-green"
+    : tone === "amber" ? "bg-amber-500"
+    : tone === "red" ? "bg-brand-red"
+    : tone === "blue" ? "bg-blue-500"
+    : "bg-gray-300 dark:bg-white/20";
   const Tag: any = onClick ? "button" : "div";
   return (
     <Tag
       onClick={onClick}
-      className={`${card} p-3.5 text-left ${onClick ? "transition hover:border-green/40 hover:shadow" : ""}`}
+      className={`${card} group relative overflow-hidden p-3.5 text-left ${
+        onClick ? "transition-[transform,box-shadow,border-color] hover:-translate-y-0.5 hover:border-green/40 hover:shadow-[0_10px_24px_-12px_rgba(99,102,241,.45)]" : ""
+      }`}
     >
-      <div className="text-[.68rem] font-bold uppercase tracking-wide text-gray-400">{label}</div>
-      <div className={`mt-1 font-mono font-extrabold tabular-nums ${small ? "text-[.95rem]" : "text-[1.35rem]"} ${color}`}>
+      <span className={`absolute inset-x-0 top-0 h-[3px] ${bar}`} />
+      <div className="mt-1 text-[.66rem] font-bold uppercase tracking-[.06em] text-gray-400">{label}</div>
+      <div
+        className={`mt-1.5 font-mono font-extrabold leading-none tabular-nums ${
+          small ? "text-[.95rem]" : "text-[1.4rem] sm:text-[1.5rem]"
+        } ${color}`}
+      >
         {value}
       </div>
-      {sub && <div className="mt-0.5 text-[.7rem] text-gray-500">{sub}</div>}
+      {sub && <div className="mt-1.5 text-[.7rem] text-gray-500">{sub}</div>}
     </Tag>
   );
 }
@@ -415,7 +447,7 @@ export function ItemsEditor({
 
   return (
     <>
-      <div className="hidden gap-2 px-1 pb-1 text-[.68rem] font-bold uppercase tracking-wide text-gray-400 sm:flex">
+      <div className="hidden gap-2 px-1 pb-2 text-[.66rem] font-bold uppercase tracking-[.06em] text-gray-400 sm:flex">
         <span className="flex-1">Désignation</span>
         <span className="w-[70px] text-center">Qté</span>
         <span className="w-[120px] text-right">Prix unitaire</span>
@@ -423,11 +455,11 @@ export function ItemsEditor({
         <span className="w-9" />
       </div>
 
-      <div className="flex flex-col gap-3 sm:gap-2">
+      <div className="flex flex-col gap-3 sm:gap-1">
         {items.map((it, i) => (
           <div
             key={i}
-            className="flex flex-col gap-2 rounded-xl border border-gray-100 p-2.5 dark:border-white/10 sm:flex-row sm:items-center sm:gap-2 sm:rounded-none sm:border-0 sm:p-0"
+            className="flex flex-col gap-2 rounded-xl border border-gray-100 p-2.5 transition-colors dark:border-white/10 sm:flex-row sm:items-center sm:gap-2 sm:border-0 sm:p-1 sm:hover:bg-gray-50 sm:dark:hover:bg-white/[.03]"
           >
             <input
               className={`${input} w-full sm:flex-1`}
@@ -455,7 +487,7 @@ export function ItemsEditor({
                   onChange={(e) => patch(i, "unit_price", Number(e.target.value.replace(/\D/g, "")) || 0)}
                 />
               </label>
-              <span className="hidden w-[110px] shrink-0 text-right font-mono text-[.82rem] font-bold tabular-nums text-gray-700 dark:text-gray-200 sm:block">
+              <span className="hidden w-[110px] shrink-0 text-right font-mono text-[.84rem] font-extrabold tabular-nums text-gray-900 dark:text-white sm:block">
                 {((it.qty || 0) * (it.unit_price || 0)).toLocaleString("fr-FR")}
               </span>
               <button
@@ -474,10 +506,58 @@ export function ItemsEditor({
       <button
         type="button"
         onClick={() => setItems([...items, { label: "", qty: 1, unit_price: 0 }])}
-        className="mt-2.5 rounded-lg border border-dashed border-green/40 px-3 py-2 text-[.8rem] font-bold text-green transition hover:bg-green/5"
+        className="mt-3 w-full rounded-xl border border-dashed border-green/40 px-3 py-2.5 text-[.8rem] font-bold text-green transition hover:border-green hover:bg-green/5 sm:w-auto"
       >
         + Ajouter une ligne
       </button>
+    </>
+  );
+}
+
+/**
+ * Barre d'action fixe en bas d'écran, sur mobile uniquement.
+ *
+ * Sur un formulaire de devis à dix prestations, le bouton d'enregistrement se
+ * retrouvait à des écrans de défilement du champ qu'on vient de remplir. Ici
+ * il reste sous le pouce, avec le total à côté : on voit ce qu'on valide.
+ *
+ * Positionnée AU-DESSUS de la navigation basse du site (`BottomNav`, ~60 px,
+ * z-800) : la recouvrir supprimerait le seul moyen de quitter la page.
+ * Sur ordinateur elle disparaît — la colonne latérale collante fait déjà ce
+ * travail (voir `stickyAside`).
+ */
+export function MobileActionBar({
+  label, onAction, busy, total,
+}: { label: string; onAction: () => void; busy?: boolean; total?: number }) {
+  return (
+    <>
+      {/* Cale : sans elle, le dernier champ du formulaire finit masqué. */}
+      <div aria-hidden="true" className="h-[92px] lg:hidden" />
+
+      <div
+        className="fixed inset-x-0 z-[790] border-t border-gray-200 bg-white/95 px-3 py-2.5 shadow-[0_-4px_20px_rgba(0,0,0,.07)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0A0E14]/95 lg:hidden"
+        style={{ bottom: "calc(60px + env(safe-area-inset-bottom))" }}
+      >
+        <div className="flex items-center gap-3">
+          {total !== undefined && (
+            <div className="min-w-0 flex-1">
+              <div className="text-[.62rem] font-bold uppercase tracking-wide text-gray-400">Total</div>
+              <div className="truncate font-mono text-[1.05rem] font-extrabold tabular-nums text-gray-900 dark:text-white">
+                {formatFcfa(total)}
+              </div>
+            </div>
+          )}
+          <button
+            onClick={onAction}
+            disabled={busy}
+            className={`shrink-0 rounded-xl bg-green px-5 py-3 text-[.86rem] font-extrabold text-white shadow-md transition active:scale-[.98] disabled:opacity-50 ${
+              total === undefined ? "w-full" : ""
+            }`}
+          >
+            {busy ? "…" : label}
+          </button>
+        </div>
+      </div>
     </>
   );
 }
@@ -489,9 +569,12 @@ export function TotalsBox({
   subtotal: number; discount: number; taxRate: number; taxAmount: number; total: number; title?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-green/25 bg-green/5 p-4">
-      <div className="text-[.68rem] font-bold uppercase tracking-wider text-green">{title}</div>
-      <div className="mt-2.5 flex flex-col gap-1.5 text-[.8rem]">
+    <div className="overflow-hidden rounded-2xl border border-green/25 bg-gradient-to-b from-green/[.07] to-green/[.02] shadow-[0_10px_28px_-16px_rgba(99,102,241,.5)] dark:from-green/[.12] dark:to-transparent">
+      <div className="border-b border-green/15 px-4 py-2.5 text-[.66rem] font-bold uppercase tracking-[.08em] text-green">
+        {title}
+      </div>
+
+      <div className="flex flex-col gap-1.5 px-4 pt-3.5 text-[.8rem]">
         <Row label="Sous-total HT" value={formatFcfa(subtotal)} />
         {discount > 0 && <Row label="Remise" value={`− ${formatFcfa(discount)}`} tone="red" />}
         {taxRate > 0 && (
@@ -501,12 +584,13 @@ export function TotalsBox({
           </>
         )}
       </div>
-      <div className="mt-2.5 border-t border-green/20 pt-2.5">
-        <div className="flex items-baseline justify-between">
-          <span className="text-[.78rem] font-bold text-gray-700 dark:text-gray-200">
+
+      <div className="mt-3 border-t border-green/20 px-4 py-3.5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <span className="text-[.75rem] font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
             {taxRate > 0 ? "Total TTC" : "Total"}
           </span>
-          <span className="font-mono text-[1.35rem] font-extrabold tabular-nums text-gray-900 dark:text-white">
+          <span className="font-mono text-[1.55rem] font-extrabold leading-none tabular-nums text-gray-900 dark:text-white">
             {formatFcfa(total)}
           </span>
         </div>
@@ -543,7 +627,7 @@ export function useConfirm() {
     return (
       <div className="fixed inset-0 z-[120] grid place-items-center bg-black/50 p-4" onClick={() => setPending(null)}>
         <div
-          className={`${card} w-full max-w-[380px] p-5 text-center`}
+          className={`${cardRaised} w-full max-w-[380px] p-5 text-center`}
           onClick={(e) => e.stopPropagation()}
         >
           <p className="text-[.9rem] font-semibold text-gray-900 dark:text-white">{pending.label}</p>

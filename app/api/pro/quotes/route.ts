@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { sanitizeItems, computeTotals, publicToken } from "@/lib/pro";
 import {
-  proContext, txt, num, dateOrNull, isMissingTable,
-  logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber,
+  proContext, txt, num, dateOrNull, isMissingTable, isMissingColumn,
+  logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, defaultQuoteSections,
 } from "@/lib/proServer";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +70,12 @@ export async function POST(req: Request) {
 
       const t = computeTotals(items, num(body?.discount), Number(body?.tax_rate) || 0);
 
+      // Rubriques figées dans la pièce. On les RECOPIE depuis les réglages du
+      // professionnel plutôt que de les référencer : sans cela, retoucher ses
+      // conditions par défaut réécrirait le contenu de devis déjà envoyés et
+      // acceptés — un document engagé ne change pas après coup.
+      const sections = await defaultQuoteSections(sb, userId);
+
       const payload = {
         user_id: userId,
         client_id: clientId,
@@ -88,9 +94,18 @@ export async function POST(req: Request) {
         terms: txt(body?.terms, 1000) || null,
         public_token: publicToken(),
         version: 1,
+        sections,
       };
 
-      const { data, error } = await sb.from("pro_quotes").insert(payload).select("*").single();
+      let { data, error } = await sb.from("pro_quotes").insert(payload).select("*").single();
+
+      // Migration des rubriques pas encore exécutée : on réessaie sans elles
+      // plutôt que d'empêcher la création d'un devis pour une colonne
+      // décorative.
+      if (error && isMissingColumn(error)) {
+        const { sections: _drop, ...legacy } = payload;
+        ({ data, error } = await sb.from("pro_quotes").insert(legacy).select("*").single());
+      }
       if (error) return NextResponse.json({ error: error.message || "Création impossible." }, { status: 500 });
 
       await logEvent(sb, userId, "quote", data.id, "created", `Devis ${data.number} créé — ${title}`);

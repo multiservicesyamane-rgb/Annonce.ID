@@ -8,6 +8,20 @@ export type QuoteItem = { label: string; qty: number; unit_price: number };
 export type Task = { label: string; done: boolean };
 export type ProDocument = { name: string; url: string; size?: number };
 
+/**
+ * Rubrique réutilisable d'un devis (déroulé de la mission, conditions,
+ * modalités de paiement…). Réglée une fois dans « Mes devis par défaut »,
+ * puis RECOPIÉE dans chaque devis créé — jamais référencée, sinon modifier
+ * ses conditions réécrirait des devis déjà envoyés et acceptés.
+ */
+export type QuoteSection = {
+  key: string;
+  title: string;
+  icon: string;
+  enabled: boolean;
+  items: { label: string; body: string }[];
+};
+
 /* ============================ Statuts ============================ */
 
 export const CLIENT_STATUSES = ["prospect", "active", "inactive"] as const;
@@ -113,6 +127,107 @@ export function quoteTotal(items: QuoteItem[]): number {
 }
 
 /** Nettoie et borne les lignes reçues du client (anti-abus + cohérence). */
+/* ==================== Rubriques de devis ==================== */
+
+/**
+ * Rubriques proposées au premier réglage. Elles sont PRÉ-REMPLIES d'exemples
+ * réalistes : un champ vide reste vide, un exemple se corrige en dix secondes.
+ *
+ * Le contenu est calibré pour le Sénégal, pas décalqué d'un modèle européen :
+ * avance à la commande (usage courant ici), Wave et Orange Money en premier,
+ * montants en FCFA, et une mention sur la TVA puisque la plupart des solos
+ * ne sont pas assujettis.
+ */
+export const DEFAULT_QUOTE_SECTIONS: QuoteSection[] = [
+  {
+    key: "processus",
+    title: "Déroulé de la mission",
+    icon: "🧭",
+    enabled: true,
+    items: [
+      { label: "1. Cadrage", body: "Un échange pour comprendre votre besoin, votre cible et vos délais." },
+      { label: "2. Proposition", body: "Je vous soumets une première version pour validation." },
+      { label: "3. Ajustements", body: "Vous me faites vos retours, j'affine jusqu'à votre accord." },
+      { label: "4. Livraison", body: "Vous recevez les fichiers finaux dans les formats convenus." },
+    ],
+  },
+  {
+    key: "profil",
+    title: "À propos de moi",
+    icon: "👤",
+    enabled: true,
+    items: [
+      { label: "Mon parcours", body: "Présentez en deux phrases votre expérience et votre spécialité." },
+      { label: "Références", body: "Citez deux ou trois clients ou projets marquants." },
+    ],
+  },
+  {
+    key: "conditions",
+    title: "Conditions",
+    icon: "🛡️",
+    enabled: true,
+    items: [
+      { label: "Propriété des fichiers", body: "La propriété est transférée au client après paiement intégral." },
+      { label: "Révisions incluses", body: "2 séries de retouches sont comprises. Au-delà, chaque série est facturée 15 000 FCFA." },
+      { label: "Délais", body: "Les délais courent à compter de la réception de l'avance et de tous les éléments nécessaires." },
+    ],
+  },
+  {
+    key: "paiement",
+    title: "Modalités de paiement",
+    icon: "💰",
+    enabled: true,
+    items: [
+      { label: "Avance", body: "50 % à la commande, le solde à la livraison." },
+      { label: "Moyens acceptés", body: "Wave, Orange Money, Free Money ou virement bancaire." },
+      { label: "Validité du devis", body: "Ce devis est valable 30 jours à compter de sa date d'émission." },
+    ],
+  },
+  {
+    key: "faq",
+    title: "Questions fréquentes",
+    icon: "❓",
+    enabled: false,
+    items: [
+      { label: "Puis-je modifier le projet en cours de route ?", body: "Oui. Tout ajout hors du périmètre fait l'objet d'un devis complémentaire." },
+      { label: "Que se passe-t-il si j'annule ?", body: "L'avance couvre le travail déjà réalisé et reste acquise." },
+    ],
+  },
+];
+
+/**
+ * Rubriques assainies : le contenu vient du navigateur, donc rien n'est cru.
+ * Les bornes correspondent à celles de la base (8 rubriques max) et à ce
+ * qu'un document imprimé peut absorber sans devenir illisible.
+ */
+export function sanitizeSections(raw: unknown): QuoteSection[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, 8)
+    .map((s: any, i: number) => ({
+      // Une clé stable est nécessaire pour retrouver une rubrique d'un
+      // enregistrement à l'autre ; à défaut on en fabrique une.
+      key: String(s?.key ?? `section-${i}`).trim().slice(0, 40) || `section-${i}`,
+      title: String(s?.title ?? "").trim().slice(0, 80),
+      icon: String(s?.icon ?? "•").trim().slice(0, 8) || "•",
+      enabled: s?.enabled !== false,
+      items: (Array.isArray(s?.items) ? s.items : [])
+        .slice(0, 12)
+        .map((it: any) => ({
+          label: String(it?.label ?? "").trim().slice(0, 120),
+          body: String(it?.body ?? "").trim().slice(0, 800),
+        }))
+        // Une entrée sans titre ET sans texte n'apporte rien au document.
+        .filter((it: { label: string; body: string }) => it.label || it.body),
+    }))
+    .filter((s) => s.title && s.items.length > 0);
+}
+
+/** Rubriques réellement imprimables : actives et non vides. */
+export function visibleSections(raw: unknown): QuoteSection[] {
+  return sanitizeSections(raw).filter((s) => s.enabled);
+}
+
 export function sanitizeItems(raw: unknown): QuoteItem[] {
   if (!Array.isArray(raw)) return [];
   return raw

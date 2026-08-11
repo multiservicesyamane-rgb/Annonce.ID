@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchPublicQuote } from "@/lib/proPublic";
 import { effectiveQuoteStatus } from "@/lib/pro";
+import { publicBase } from "@/lib/proServer";
+import { qrSvg } from "@/lib/qr";
 import PrintableDocument from "@/components/pro/PrintableDocument";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +20,11 @@ export default async function DevisPrintPage({ params }: { params: { token: stri
 
   const { quote, seller, party } = found;
 
+  const publicUrl = `${publicBase()}/devis/${params.token}`;
+
   return (
     <PrintableDocument
+      qr={{ svg: qrSvg(publicUrl), caption: "Scannez pour consulter et accepter ce devis en ligne." }}
       doc={{
         kind: "devis",
         number: quote.number,
@@ -36,6 +41,7 @@ export default async function DevisPrintPage({ params }: { params: { token: stri
         valid_until: quote.valid_until,
         terms: quote.terms,
         note: quote.note,
+        sections: quote.sections,
         // Statut réel : « expiré » se déduit de la date, pas de la colonne.
         status: effectiveQuoteStatus(quote),
       }}

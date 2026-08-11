@@ -171,7 +171,7 @@ export default function ProjectsPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   if (view === "form") {
     const autoProgress = progressFromTasks(tasks);
     return (
-      <div className="mx-auto max-w-[980px]">
+      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
         <Crumb
           onBack={() => { setView("list"); setEditing(null); }}
@@ -179,7 +179,7 @@ export default function ProjectsPanel({ toast, goTo }: { toast: Toast; goTo: (p:
           current={editing ? `Modifier ${editing.name}` : "Nouveau projet"}
         />
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex flex-col gap-4">
             <Section icon="📁" title="La mission">
               <div className="grid gap-3">
@@ -291,11 +291,11 @@ export default function ProjectsPanel({ toast, goTo }: { toast: Toast; goTo: (p:
     const docs = Array.isArray(p.documents) ? p.documents : [];
 
     return (
-      <div className="mx-auto max-w-[980px]">
+      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
         <Crumb onBack={() => setView("list")} parent="Projets" current={p.name} />
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex flex-col gap-4">
             <div className={`${card} p-4 sm:p-5`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -524,7 +524,7 @@ export default function ProjectsPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   };
 
   return (
-    <div className="mx-auto max-w-[980px]">
+    <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
       {confirmNode}
       <PageHead
         title="Projets"

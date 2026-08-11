@@ -1,4 +1,4 @@
-import { formatFcfa, formatDate, amountInWords, type QuoteItem } from "@/lib/pro";
+import { formatFcfa, formatDate, amountInWords, visibleSections, type QuoteItem } from "@/lib/pro";
 import PrintTrigger from "./PrintTrigger";
 
 /**
@@ -37,6 +37,8 @@ export type PrintDoc = {
   terms?: string | null;
   note?: string | null;
   status: string;
+  /** Rubriques recopiées dans la pièce à sa création (voir lib/pro.ts). */
+  sections?: unknown;
 };
 
 export type PrintParty = {
@@ -115,14 +117,20 @@ const SHEET_CSS = `
 `;
 
 export default function PrintableDocument({
-  doc, seller, client,
-}: { doc: PrintDoc; seller: PrintParty; client: PrintParty | null }) {
+  doc, seller, client, qr,
+}: {
+  doc: PrintDoc; seller: PrintParty; client: PrintParty | null;
+  /** SVG inline (voir lib/qr.ts) menant à la page publique de la pièce. */
+  qr?: { svg: string; caption: string } | null;
+}) {
   const isQuote = doc.kind === "devis";
   const label = isQuote ? "DEVIS" : "FACTURE";
   const paid = doc.paid_amount || 0;
   const remaining = Math.max(0, doc.total - paid);
   const stamp = STAMPS[doc.status];
   const detailed = doc.discount > 0 || doc.tax_rate > 0;
+  // Rubriques figées dans la pièce : seules les actives et non vides sortent.
+  const sections = visibleSections(doc.sections);
 
   return (
     <>
@@ -192,6 +200,24 @@ export default function PrintableDocument({
                       style={{ color: stamp.color, background: stamp.bg, border: `1px solid ${stamp.color}33` }}
                     >
                       {stamp.label}
+                    </div>
+                  )}
+
+                  {/* QR vers la page publique : le destinataire vérifie la pièce
+                      depuis le papier, sans avoir à ressaisir un lien. */}
+                  {qr && (
+                    <div className="mt-3 flex items-center gap-2.5 sm:justify-end">
+                      <div
+                        className="h-[68px] w-[68px] shrink-0 overflow-hidden rounded-md bg-white p-[3px]"
+                        style={{ border: `1px solid ${LINE}` }}
+                        dangerouslySetInnerHTML={{ __html: qr.svg }}
+                      />
+                      <div
+                        className="max-w-[110px] text-left text-[.62rem] leading-snug sm:text-right"
+                        style={{ color: MUTED }}
+                      >
+                        {qr.caption}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -335,6 +361,35 @@ export default function PrintableDocument({
                     <p className="mt-1 whitespace-pre-line" style={{ color: MUTED }}>{doc.note}</p>
                   </div>
                 )}
+              </section>
+            )}
+
+            {/* ================= Rubriques réutilisables =================
+                Déroulé de la mission, conditions, modalités de paiement…
+                Réglées une fois par le professionnel, recopiées dans la pièce
+                à sa création (donc figées : retoucher ses réglages ne modifie
+                pas un devis déjà envoyé). */}
+            {sections.length > 0 && (
+              <section
+                className="mt-6 pt-5"
+                style={{ borderTop: `1px solid ${LINE}` }}
+              >
+                {sections.map((s) => (
+                  <div key={s.key} className="doc-avoid mb-5 last:mb-0">
+                    <Caption>{s.icon ? `${s.icon} ${s.title}` : s.title}</Caption>
+                    <div className="mt-2 space-y-2">
+                      {s.items.map((it, i) => (
+                        <div key={i} className="text-[.82rem] leading-relaxed">
+                          {it.label && <span className="font-bold">{it.label}</span>}
+                          {it.label && it.body && <span style={{ color: MUTED }}> — </span>}
+                          {it.body && (
+                            <span className="whitespace-pre-line" style={{ color: MUTED }}>{it.body}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </section>
             )}
 

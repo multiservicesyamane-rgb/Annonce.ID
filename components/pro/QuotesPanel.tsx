@@ -12,10 +12,11 @@ import {
 } from "@/lib/pro";
 import {
   api, card, input, lbl, Badge, Crumb, Empty, F, FilterBar, ItemsEditor, Kpi,
-  MigrationNotice, MoneyField, PageHead, Section, Select, Tip, TotalsBox, useConfirm,
+  MigrationNotice, MobileActionBar, MoneyField, PageHead, Section, Select, stickyAside, Tip, TotalsBox, useConfirm,
   QUOTE_STYLE,
   type Client, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
+import QuoteSectionsEditor from "./QuoteSectionsEditor";
 
 type Detail = { quote: Quote; events: ProEvent[]; invoice: { id: string; number: string; status: string; total: number } | null };
 
@@ -28,6 +29,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   const [busy, setBusy] = useState(false);
 
   const [view, setView] = useState<"list" | "form" | "detail">("list");
+  const [sectionsOpen, setSectionsOpen] = useState(false);
   const [editing, setEditing] = useState<Quote | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
 
@@ -241,7 +243,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   /* ===== Formulaire ===== */
   if (view === "form") {
     return (
-      <div className="mx-auto max-w-[980px]">
+      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
         <Crumb
           onBack={() => { setView("list"); setEditing(null); }}
@@ -258,7 +260,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
             onCta={() => goTo("clients")}
           />
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="flex flex-col gap-4">
               <Section icon="🧾" title="Informations">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -337,7 +339,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
               </Section>
             </div>
 
-            <div className="flex flex-col gap-4">
+            <div className={stickyAside}>
               <TotalsBox
                 subtotal={totals.subtotal}
                 discount={totals.discount}
@@ -365,14 +367,22 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
                 </div>
               )}
 
+              {/* Sur mobile, l'action vit dans la barre fixe du bas. */}
               <button
                 onClick={save}
                 disabled={busy}
-                className="btn btn-green w-full py-3 text-[.88rem] font-extrabold disabled:opacity-50"
+                className="btn btn-green hidden w-full py-3 text-[.88rem] font-extrabold disabled:opacity-50 lg:block"
               >
                 {busy ? "Enregistrement…" : editing ? "Enregistrer" : "Créer le devis"}
               </button>
             </div>
+
+            <MobileActionBar
+              label={editing ? "Enregistrer" : "Créer le devis"}
+              onAction={save}
+              busy={busy}
+              total={totals.total}
+            />
           </div>
         )}
       </div>
@@ -387,11 +397,11 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
     const versions = detail.events.filter((e) => e.kind === "revised");
 
     return (
-      <div className="mx-auto max-w-[980px]">
+      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
         <Crumb onBack={() => setView("list")} parent="Devis" current={q.number || q.title} />
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex flex-col gap-4">
             <div className={`${card} p-4 sm:p-5`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -567,14 +577,22 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   };
 
   return (
-    <div className="mx-auto max-w-[980px]">
+    <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
       {confirmNode}
+      {sectionsOpen && <QuoteSectionsEditor toast={toast} onClose={() => setSectionsOpen(false)} />}
       <PageHead
         title="Devis"
         count={`${quotes.length} devis · ${counts.pending} en attente`}
         action="+ Nouveau devis"
         onAction={openNew}
-      />
+      >
+        <button
+          onClick={() => setSectionsOpen(true)}
+          className="shrink-0 rounded-xl border border-gray-200 px-3.5 py-2.5 text-[.82rem] font-bold text-gray-600 transition hover:border-green/50 hover:text-green dark:border-dark-border dark:text-gray-300"
+        >
+          ⚙️ Mes devis par défaut
+        </button>
+      </PageHead>
 
       {quotes.length === 0 ? (
         <Empty

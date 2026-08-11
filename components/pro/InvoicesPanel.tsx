@@ -12,8 +12,8 @@ import {
   type QuoteItem,
 } from "@/lib/pro";
 import {
-  api, card, input, lbl, Badge, Crumb, Empty, F, FilterBar, ItemsEditor, Kpi,
-  MigrationNotice, MoneyField, PageHead, Progress, Section, Select, TotalsBox, useConfirm,
+  api, card, cardRaised, input, lbl, Badge, Crumb, Empty, F, FilterBar, ItemsEditor, Kpi,
+  MigrationNotice, MobileActionBar, MoneyField, PageHead, Progress, Section, Select, stickyAside, TotalsBox, useConfirm,
   INVOICE_STYLE,
   type Client, type Invoice, type Payment, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
@@ -290,7 +290,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   /* ===== Formulaire ===== */
   if (view === "form") {
     return (
-      <div className="mx-auto max-w-[980px]">
+      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
         <Crumb
           onBack={() => { setView("list"); setEditing(null); }}
@@ -307,7 +307,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
             onCta={() => goTo("clients")}
           />
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="flex flex-col gap-4">
               <Section icon="🧾" title="Informations">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -377,7 +377,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
               </Section>
             </div>
 
-            <div className="flex flex-col gap-4">
+            <div className={stickyAside}>
               <TotalsBox
                 subtotal={totals.subtotal}
                 discount={totals.discount}
@@ -386,14 +386,22 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
                 total={totals.total}
                 title="Total à facturer"
               />
+              {/* Sur mobile, l'action vit dans la barre fixe du bas. */}
               <button
                 onClick={save}
                 disabled={busy}
-                className="btn btn-green w-full py-3 text-[.88rem] font-extrabold disabled:opacity-50"
+                className="btn btn-green hidden w-full py-3 text-[.88rem] font-extrabold disabled:opacity-50 lg:block"
               >
                 {busy ? "Enregistrement…" : editing ? "Enregistrer" : "Créer la facture"}
               </button>
             </div>
+
+            <MobileActionBar
+              label={editing ? "Enregistrer" : "Créer la facture"}
+              onAction={save}
+              busy={busy}
+              total={totals.total}
+            />
           </div>
         )}
       </div>
@@ -409,7 +417,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
     const pct = inv.total > 0 ? Math.round(((inv.paid_amount || 0) / inv.total) * 100) : 0;
 
     return (
-      <div className="mx-auto max-w-[980px]">
+      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
         {payFor && (
           <PaymentDialog
@@ -422,7 +430,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
         )}
         <Crumb onBack={() => setView("list")} parent="Factures" current={inv.number || inv.title} />
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex flex-col gap-4">
             <div className={`${card} p-4 sm:p-5`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -610,7 +618,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   };
 
   return (
-    <div className="mx-auto max-w-[980px]">
+    <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
       {confirmNode}
       {payFor && (
         <PaymentDialog
@@ -802,7 +810,7 @@ function PaymentDialog({
 
   return (
     <div className="fixed inset-0 z-[120] grid place-items-center bg-black/50 p-4" onClick={onClose}>
-      <div className={`${card} w-full max-w-[420px] p-5`} onClick={(e) => e.stopPropagation()}>
+      <div className={`${cardRaised} w-full max-w-[420px] p-5`} onClick={(e) => e.stopPropagation()}>
         <h3 className="font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white">
           Enregistrer un paiement
         </h3>

@@ -177,7 +177,7 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
   /* ===== Formulaire ===== */
   if (view === "form") {
     return (
-      <div className="mx-auto max-w-[980px]">
+      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
         <Crumb
           onBack={() => { setView("list"); setEditing(null); }}
@@ -185,7 +185,7 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
           current={editing ? `Modifier ${editing.company || editing.name}` : "Ajouter un client"}
         />
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex flex-col gap-4">
             <Section icon="👤" title="Identité du client">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -318,11 +318,11 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
     const outstanding = Math.max(0, totalInvoiced - totalPaid);
 
     return (
-      <div className="mx-auto max-w-[980px]">
+      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
         <Crumb onBack={() => setView("list")} parent="Clients" current={c.company || c.name} />
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex flex-col gap-4">
             {/* En-tête */}
             <div className={`${card} p-4 sm:p-5`}>
@@ -513,7 +513,7 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
   };
 
   return (
-    <div className="mx-auto max-w-[980px]">
+    <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
       {confirmNode}
       <PageHead
         title="Clients"
