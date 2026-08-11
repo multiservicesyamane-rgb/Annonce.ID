@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient as createAdmin, type SupabaseClient } from "@supabase/supabase-js";
 import { createNotification } from "@/lib/notifications";
-import { sanitizeItems, computeTotals, publicToken, documentNumber, formatFcfa } from "@/lib/pro";
+import { sanitizeItems, computeTotals, publicToken, formatFcfa } from "@/lib/pro";
+import { nextDocumentNumber } from "@/lib/proServer";
 
 export const dynamic = "force-dynamic";
 
@@ -66,9 +67,7 @@ async function convertAcceptedQuote(sb: SupabaseClient, quote: any) {
 
     const items = sanitizeItems(quote.items);
     const t = computeTotals(items, Number(quote.discount) || 0, Number(quote.tax_rate) || 0);
-
-    const { count } = await sb
-      .from("pro_invoices").select("id", { count: "exact", head: true }).eq("user_id", quote.user_id);
+    const number = await nextDocumentNumber(sb, quote.user_id, "FAC");
 
     const due = new Date();
     due.setDate(due.getDate() + 30);
@@ -80,7 +79,7 @@ async function convertAcceptedQuote(sb: SupabaseClient, quote: any) {
         client_id: quote.client_id,
         project_id: projectId,
         quote_id: quote.id,
-        number: documentNumber("FAC", count || 0),
+        number,
         title: quote.title,
         items,
         subtotal: t.subtotal,

@@ -57,8 +57,8 @@ export async function fetchPublicQuote(token: string) {
   const { data } = await sb.from("pro_quotes").select("*").eq("public_token", token).maybeSingle();
   if (!data) return null;
 
-  // Client rattaché en seconde requête : une jointure imbriquée exigerait une
-  // clé étrangère déclarée côté base.
+  // Client rattaché en seconde requête, pour ne charger que les champs utiles
+  // à l'affichage du document.
   let client: any = null;
   if (data.client_id) {
     const { data: c } = await sb

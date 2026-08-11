@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { sanitizeItems, computeTotals, publicToken, documentNumber, formatFcfa, waNumber } from "@/lib/pro";
+import { sanitizeItems, computeTotals, publicToken, formatFcfa, waNumber } from "@/lib/pro";
 import {
   proContext, txt, num, dateOrNull, isMissingTable,
-  logEvent, attachClients, ownsRow, publicBase,
+  logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber,
 } from "@/lib/proServer";
 
 export const dynamic = "force-dynamic";
@@ -110,15 +110,12 @@ export async function POST(req: Request) {
 
       const t = computeTotals(items, discount, taxRate);
 
-      const { count } = await sb
-        .from("pro_invoices").select("id", { count: "exact", head: true }).eq("user_id", userId);
-
       const payload = {
         user_id: userId,
         client_id: clientId,
         project_id: projectId,
         quote_id: fromQuoteId || null,
-        number: documentNumber("FAC", count || 0),
+        number: await nextDocumentNumber(sb, userId, "FAC"),
         title,
         items,
         subtotal: t.subtotal,

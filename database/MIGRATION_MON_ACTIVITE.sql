@@ -75,6 +75,16 @@ alter table pro_projects drop constraint if exists pro_projects_progress_chk;
 alter table pro_projects add  constraint pro_projects_progress_chk
   check (progress >= 0 and progress <= 100);
 
+-- Un budget negatif n'a pas de sens : la base le refuse, pas seulement l'API.
+alter table pro_projects drop constraint if exists pro_projects_budget_chk;
+alter table pro_projects add  constraint pro_projects_budget_chk
+  check (budget >= 0);
+
+-- Une livraison ne peut pas precede le demarrage.
+alter table pro_projects drop constraint if exists pro_projects_dates_chk;
+alter table pro_projects add  constraint pro_projects_dates_chk
+  check (start_date is null or due_date is null or due_date >= start_date);
+
 -- ============================================================
 -- 3) DEVIS
 -- ============================================================
@@ -159,6 +169,23 @@ alter table pro_invoices drop constraint if exists pro_invoices_status_chk;
 alter table pro_invoices add  constraint pro_invoices_status_chk
   check (status in ('draft', 'sent', 'partial', 'paid', 'late', 'cancelled'));
 
+-- Coherence comptable garantie par la base, pas seulement par l'API :
+-- aucun montant negatif, une remise qui n'excede pas le sous-total, et un
+-- encaisse qui ne depasse jamais le total facture.
+alter table pro_invoices drop constraint if exists pro_invoices_amounts_chk;
+alter table pro_invoices add  constraint pro_invoices_amounts_chk
+  check (
+    subtotal    >= 0 and
+    discount    >= 0 and discount <= subtotal and
+    tax_amount  >= 0 and
+    total       >= 0 and
+    paid_amount >= 0 and paid_amount <= total
+  );
+
+alter table pro_invoices drop constraint if exists pro_invoices_tax_rate_chk;
+alter table pro_invoices add  constraint pro_invoices_tax_rate_chk
+  check (tax_rate >= 0 and tax_rate <= 100);
+
 -- ============================================================
 -- 5) PAIEMENTS (encaissements, y compris partiels)
 -- ============================================================
@@ -175,6 +202,12 @@ create table if not exists pro_payments (
 
 create index if not exists idx_pro_payments_user    on pro_payments (user_id);
 create index if not exists idx_pro_payments_invoice on pro_payments (invoice_id);
+
+-- Un encaissement vaut forcement quelque chose : un montant nul ou negatif
+-- fausserait le total encaisse recalcule a chaque mouvement.
+alter table pro_payments drop constraint if exists pro_payments_amount_chk;
+alter table pro_payments add  constraint pro_payments_amount_chk
+  check (amount > 0);
 
 -- ============================================================
 -- 6) IDENTITE PROFESSIONNELLE (en-tete des devis et factures)
@@ -215,7 +248,174 @@ create index if not exists idx_pro_events_user   on pro_events (user_id, created
 create index if not exists idx_pro_events_entity on pro_events (entity, entity_id);
 
 -- ============================================================
--- 8) SECURITE (RLS) : chaque professionnel ne voit que ses donnees.
+-- 8) CLES ETRANGERES
+--
+-- Declarees ici, une fois toutes les tables creees. Elles apportent trois
+-- choses que l'API seule ne peut pas garantir :
+--   1. la suppression d'un compte emporte toutes ses donnees (cascade) ;
+--   2. supprimer un client ou un projet ne laisse pas de facture pointant
+--      dans le vide : la reference passe a NULL, la piece comptable survit ;
+--   3. supprimer une facture emporte ses paiements (cascade), meme si la
+--      suppression vient d'une console SQL et pas de l'application.
+--
+-- Elles permettent aussi a PostgREST de faire des jointures imbriquees, ce
+-- que l'absence de cle etrangere interdisait jusqu'ici.
+--
+-- Le menage prealable evite l'echec de l'ALTER si des lignes orphelines
+-- existent deja (cas d'une base ou la version legere a tourne).
+-- ============================================================
+
+update pro_projects  set client_id  = null where client_id  is not null and client_id  not in (select id from pro_clients);
+update pro_quotes    set client_id  = null where client_id  is not null and client_id  not in (select id from pro_clients);
+update pro_quotes    set project_id = null where project_id is not null and project_id not in (select id from pro_projects);
+update pro_invoices  set client_id  = null where client_id  is not null and client_id  not in (select id from pro_clients);
+update pro_invoices  set project_id = null where project_id is not null and project_id not in (select id from pro_projects);
+update pro_invoices  set quote_id   = null where quote_id   is not null and quote_id   not in (select id from pro_quotes);
+delete from pro_payments where invoice_id not in (select id from pro_invoices);
+
+-- Proprietaire : la disparition du compte emporte tout.
+alter table pro_clients  drop constraint if exists pro_clients_user_fk;
+alter table pro_clients  add  constraint pro_clients_user_fk
+  foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table pro_projects drop constraint if exists pro_projects_user_fk;
+alter table pro_projects add  constraint pro_projects_user_fk
+  foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table pro_quotes   drop constraint if exists pro_quotes_user_fk;
+alter table pro_quotes   add  constraint pro_quotes_user_fk
+  foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table pro_invoices drop constraint if exists pro_invoices_user_fk;
+alter table pro_invoices add  constraint pro_invoices_user_fk
+  foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table pro_payments drop constraint if exists pro_payments_user_fk;
+alter table pro_payments add  constraint pro_payments_user_fk
+  foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table pro_settings drop constraint if exists pro_settings_user_fk;
+alter table pro_settings add  constraint pro_settings_user_fk
+  foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table pro_events   drop constraint if exists pro_events_user_fk;
+alter table pro_events   add  constraint pro_events_user_fk
+  foreign key (user_id) references auth.users(id) on delete cascade;
+
+-- Rattachements : on detache, on ne detruit jamais une piece comptable.
+alter table pro_projects drop constraint if exists pro_projects_client_fk;
+alter table pro_projects add  constraint pro_projects_client_fk
+  foreign key (client_id) references pro_clients(id) on delete set null;
+
+alter table pro_quotes   drop constraint if exists pro_quotes_client_fk;
+alter table pro_quotes   add  constraint pro_quotes_client_fk
+  foreign key (client_id) references pro_clients(id) on delete set null;
+
+alter table pro_quotes   drop constraint if exists pro_quotes_project_fk;
+alter table pro_quotes   add  constraint pro_quotes_project_fk
+  foreign key (project_id) references pro_projects(id) on delete set null;
+
+alter table pro_invoices drop constraint if exists pro_invoices_client_fk;
+alter table pro_invoices add  constraint pro_invoices_client_fk
+  foreign key (client_id) references pro_clients(id) on delete set null;
+
+alter table pro_invoices drop constraint if exists pro_invoices_project_fk;
+alter table pro_invoices add  constraint pro_invoices_project_fk
+  foreign key (project_id) references pro_projects(id) on delete set null;
+
+alter table pro_invoices drop constraint if exists pro_invoices_quote_fk;
+alter table pro_invoices add  constraint pro_invoices_quote_fk
+  foreign key (quote_id) references pro_quotes(id) on delete set null;
+
+-- Les paiements n'existent que par leur facture.
+alter table pro_payments drop constraint if exists pro_payments_invoice_fk;
+alter table pro_payments add  constraint pro_payments_invoice_fk
+  foreign key (invoice_id) references pro_invoices(id) on delete cascade;
+
+-- ============================================================
+-- 9) NUMEROTATION DES PIECES (DEV-2026-001, FAC-2026-001...)
+--
+-- Un compteur par (professionnel, prefixe, annee), incremente de facon
+-- atomique. Compter les lignes existantes ne convenait pas : supprimer une
+-- facture faisait REUTILISER son numero par la suivante, et deux creations
+-- simultanees obtenaient le meme. Un numero de piece comptable ne doit
+-- jamais servir deux fois.
+-- ============================================================
+create table if not exists pro_counters (
+  user_id uuid    not null,
+  prefix  text    not null,
+  year    smallint not null,
+  value   integer not null default 0,
+  primary key (user_id, prefix, year)
+);
+
+alter table pro_counters drop constraint if exists pro_counters_user_fk;
+alter table pro_counters add  constraint pro_counters_user_fk
+  foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table pro_counters enable row level security;
+-- Aucune policy : cette table n'est manipulee que par la fonction ci-dessous,
+-- appelee avec la cle service_role. Elle reste invisible du navigateur.
+
+create or replace function pro_next_number(p_user uuid, p_prefix text)
+returns text
+language plpgsql
+as $$
+declare
+  y smallint := extract(year from current_date)::smallint;
+  v integer;
+begin
+  -- ON CONFLICT DO UPDATE verrouille la ligne : deux appels concurrents sont
+  -- serialises et obtiennent deux numeros differents.
+  insert into pro_counters (user_id, prefix, year, value)
+  values (p_user, p_prefix, y, 1)
+  on conflict (user_id, prefix, year)
+    do update set value = pro_counters.value + 1
+  returning value into v;
+
+  return p_prefix || '-' || y || '-' || lpad(v::text, 3, '0');
+end;
+$$;
+
+-- La fonction prend l'identifiant du professionnel en parametre : exposee via
+-- PostgREST, n'importe quel compte connecte pourrait la reappeler sur le
+-- compteur d'un autre et faire sauter sa numerotation. Seule la cle
+-- service_role, utilisee par les routes /api/pro/*, doit pouvoir l'appeler.
+revoke all on function pro_next_number(uuid, text) from public;
+revoke all on function pro_next_number(uuid, text) from anon;
+revoke all on function pro_next_number(uuid, text) from authenticated;
+grant  execute on function pro_next_number(uuid, text) to service_role;
+
+-- Amorcage : si des devis ou factures existent deja (version legere), le
+-- compteur repart de leur plus grand numero de l'annee en cours. Sans cela il
+-- redemarrerait a 001 et entrerait en collision avec les pieces existantes.
+-- `greatest(value, ...)` rend l'instruction rejouable sans jamais reculer.
+insert into pro_counters (user_id, prefix, year, value)
+select
+  user_id,
+  'DEV',
+  extract(year from current_date)::smallint,
+  max(coalesce(nullif(regexp_replace(number, '^.*-', ''), ''), '0')::integer)
+from pro_quotes
+where number ~ ('^DEV-' || extract(year from current_date)::text || '-\d+$')
+group by user_id
+on conflict (user_id, prefix, year)
+  do update set value = greatest(pro_counters.value, excluded.value);
+
+insert into pro_counters (user_id, prefix, year, value)
+select
+  user_id,
+  'FAC',
+  extract(year from current_date)::smallint,
+  max(coalesce(nullif(regexp_replace(number, '^.*-', ''), ''), '0')::integer)
+from pro_invoices
+where number ~ ('^FAC-' || extract(year from current_date)::text || '-\d+$')
+group by user_id
+on conflict (user_id, prefix, year)
+  do update set value = greatest(pro_counters.value, excluded.value);
+
+-- ============================================================
+-- 10) SECURITE (RLS) : chaque professionnel ne voit que ses donnees.
 -- Les pages publiques (devis/facture par lien a jeton) passent par la cle
 -- service_role, qui contourne RLS : aucune policy publique n'est ouverte ici.
 -- ============================================================
@@ -318,7 +518,7 @@ create policy pro_events_insert_own on pro_events
   for insert to authenticated with check (auth.uid() = user_id);
 
 -- ============================================================
--- 9) STOCKAGE des documents de projet (contrats, briefs, livrables)
+-- 11) STOCKAGE des documents de projet (contrats, briefs, livrables)
 --
 -- Bucket PUBLIC en lecture, comme les photos et videos du site : le chemin
 -- contient un segment aleatoire, donc l'URL n'est pas devinable. C'est ce qui
@@ -376,6 +576,6 @@ create policy "pro-docs user delete" on storage.objects
   );
 
 -- ============================================================
--- 9) Rafraichit le cache de l'API (sinon les tables restent invisibles)
+-- 12) Rafraichit le cache de l'API (sinon les tables restent invisibles)
 -- ============================================================
 notify pgrst, 'reload schema';

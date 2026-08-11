@@ -158,7 +158,9 @@ export async function POST(req: Request) {
       const id = txt(body?.id, 60);
       if (!id) return NextResponse.json({ error: "Projet requis." }, { status: 400 });
       // Les devis et factures liés survivent au projet : on ne perd pas de trace
-      // comptable, on détache seulement.
+      // comptable, on détache seulement. La clé étrangère `on delete set null`
+      // fait la même chose, mais on ne s'y fie pas : la migration peut ne pas
+      // encore être passée sur cette base.
       await sb.from("pro_quotes").update({ project_id: null }).eq("project_id", id).eq("user_id", userId);
       await sb.from("pro_invoices").update({ project_id: null }).eq("project_id", id).eq("user_id", userId);
       const { error } = await sb.from("pro_projects").delete().eq("id", id).eq("user_id", userId);

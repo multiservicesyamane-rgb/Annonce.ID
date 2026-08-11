@@ -91,8 +91,15 @@ export async function logEvent(
   }
 }
 
-/** Rattache les clients à une liste de documents (pas de jointure imbriquée :
- *  elle exigerait une clé étrangère déclarée côté base). */
+/**
+ * Rattache les clients à une liste de documents.
+ *
+ * Une seule requête supplémentaire, quel que soit le nombre de documents. La
+ * jointure imbriquée de PostgREST serait possible depuis que les clés
+ * étrangères sont déclarées, mais elle échouerait en bloc si la migration
+ * n'était pas encore passée — ici, l'absence de clients rend simplement
+ * `pro_clients` null, et l'écran continue de s'afficher.
+ */
 export async function attachClients<T extends { client_id?: string | null }>(
   sb: SupabaseClient,
   rows: T[],
@@ -123,4 +130,29 @@ export async function ownsRow(
 /** Base publique des liens partagés (devis, factures). */
 export function publicBase(): string {
   return process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com";
+}
+
+/**
+ * Numéro de pièce suivant : DEV-2026-014 / FAC-2026-007.
+ *
+ * Délégué à la fonction SQL `pro_next_number`, qui incrémente un compteur par
+ * (professionnel, préfixe, année) de façon atomique. Compter les lignes
+ * existantes ne convenait pas : supprimer une facture faisait RÉUTILISER son
+ * numéro, et deux créations simultanées obtenaient le même — inacceptable pour
+ * une pièce comptable.
+ *
+ * Repli sur le comptage si la fonction n'existe pas encore (migration non
+ * exécutée) : mieux vaut un numéro imparfait qu'un blocage de la création.
+ */
+export async function nextDocumentNumber(
+  sb: SupabaseClient,
+  userId: string,
+  prefix: "DEV" | "FAC",
+): Promise<string> {
+  const { data, error } = await sb.rpc("pro_next_number", { p_user: userId, p_prefix: prefix });
+  if (!error && typeof data === "string" && data) return data;
+
+  const table = prefix === "DEV" ? "pro_quotes" : "pro_invoices";
+  const { count } = await sb.from(table).select("id", { count: "exact", head: true }).eq("user_id", userId);
+  return `${prefix}-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(3, "0")}`;
 }

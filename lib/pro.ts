@@ -187,10 +187,9 @@ export function publicToken(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Numérotation lisible : DEV-2026-014 / FAC-2026-007. */
-export function documentNumber(prefix: "DEV" | "FAC", count: number): string {
-  return `${prefix}-${new Date().getFullYear()}-${String(count + 1).padStart(3, "0")}`;
-}
+// La numérotation des pièces (DEV-2026-014 / FAC-2026-007) vit côté serveur :
+// voir `nextDocumentNumber` dans lib/proServer.ts, qui s'appuie sur un compteur
+// SQL atomique. Elle ne peut pas se calculer depuis le navigateur.
 
 /* ============================ Formatage ============================ */
 
