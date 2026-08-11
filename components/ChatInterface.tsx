@@ -301,9 +301,20 @@ export default function ChatInterface() {
   };
 
   const handleSendLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const content = `Localisation GPS partagée\nLat: ${position.coords.latitude.toFixed(4)}, Lng: ${position.coords.longitude.toFixed(4)}`;
+    if (!navigator.geolocation) {
+      alert("La géolocalisation n'est pas supportée par ce navigateur.");
+      return;
+    }
+    // La géoloc n'est autorisée qu'en contexte sécurisé (https ou localhost).
+    if (typeof window !== "undefined" && window.isSecureContext === false) {
+      alert("La localisation nécessite une connexion sécurisée. Ouvrez le site en https:// (pas http).");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const content = `Localisation GPS partagée\nLat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
         const newMessage: Message = {
           id: Date.now().toString(),
           senderId: "me",
@@ -312,7 +323,7 @@ export default function ChatInterface() {
           time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
         };
         setMessages(prev => [...prev, newMessage]);
-        
+
         supabase.auth.getSession().then(({ data: sessionData }) => {
           if (sessionData.session) {
             supabase.from("messages").insert([{
@@ -324,10 +335,21 @@ export default function ChatInterface() {
             }]).then();
           }
         });
-      }, (err) => alert("Impossible d'accéder à la position GPS."));
-    } else {
-      alert("La géolocalisation n'est pas supportée par ce navigateur.");
-    }
+      },
+      (err) => {
+        // Message d'erreur explicite : on dit POURQUOI ça a échoué.
+        const reason =
+          err.code === err.PERMISSION_DENIED
+            ? "Accès refusé. Autorisez la localisation pour ce site (icône cadenas de la barre d'adresse) puis réessayez."
+            : err.code === err.POSITION_UNAVAILABLE
+              ? "Position indisponible. Vérifiez que la localisation/GPS est activée sur l'appareil."
+              : err.code === err.TIMEOUT
+                ? "La localisation a mis trop de temps à répondre. Réessayez, idéalement près d'une fenêtre ou dehors."
+                : "Impossible d'accéder à la position GPS.";
+        alert(reason);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   };
 
   return (
@@ -441,12 +463,23 @@ export default function ChatInterface() {
               }
 
               if (msg.type === "location") {
+                // Rend la localisation CLIQUABLE : on reconstruit l'URL Google Maps
+                // à partir des coordonnées du message (compatible anciens messages).
+                const coordsLine = msg.content?.split("\n")[1] || "";
+                const coordsMatch = coordsLine.match(/Lat:\s*(-?\d+(?:\.\d+)?),\s*Lng:\s*(-?\d+(?:\.\d+)?)/);
+                const mapUrl = coordsMatch ? `https://www.google.com/maps?q=${coordsMatch[1]},${coordsMatch[2]}` : undefined;
                 return (
                   <div key={msg.id} className={`${bubbleClasses}`}>
                     <div className={`${bubbleBg} p-1.5`}>
-                      <div className="relative rounded-xl overflow-hidden aspect-video min-w-[240px] bg-gray-100 dark:bg-dark-900 border border-black/5 flex flex-col justify-end p-3">
+                      <a
+                        href={mapUrl || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => { if (!mapUrl) e.preventDefault(); }}
+                        className={`relative rounded-xl overflow-hidden aspect-video min-w-[240px] bg-gray-100 dark:bg-dark-900 border border-black/5 flex flex-col justify-end p-3 ${mapUrl ? "cursor-pointer hover:opacity-95 transition" : ""}`}
+                      >
                         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(0,0,0,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.2)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
-                        
+
                         <div className="absolute top-[30%] left-[50%] translate-x-[-50%] flex flex-col items-center">
                           <div className="w-8 h-8 bg-brand-red rounded-full flex items-center justify-center shadow-lg border-2 border-white">
                             <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
@@ -456,8 +489,11 @@ export default function ChatInterface() {
                         <div className={`relative z-10 mt-auto p-2 rounded-lg ${isMe ? "bg-green-600/90" : "bg-white/90 dark:bg-dark-800/90"} backdrop-blur-sm`}>
                           <h4 className={`font-bold text-[.85rem] leading-tight ${isMe ? "text-white" : "text-gray-900 dark:text-white"}`}>{msg.content?.split("\n")[0]}</h4>
                           <p className={`text-[.75rem] ${isMe ? "text-green-50" : "text-gray-500"}`}>{msg.content?.split("\n")[1]}</p>
+                          {mapUrl && (
+                            <p className={`text-[.7rem] font-semibold mt-0.5 ${isMe ? "text-white" : "text-brand-red"}`}>Ouvrir dans Google Maps →</p>
+                          )}
                         </div>
-                      </div>
+                      </a>
                     </div>
                   </div>
                 );
