@@ -49,7 +49,12 @@ function clearSupabaseAuthCookies(response: NextResponse, request: NextRequest, 
 
   const authCookiePrefix = `sb-${projectRef}-auth-token`
   request.cookies.getAll().forEach(({ name }) => {
-    if (name.startsWith(authCookiePrefix)) {
+    // NE JAMAIS toucher au vérificateur PKCE. Il s'appelle
+    // `sb-<ref>-auth-token-code-verifier`, donc il commence par le préfixe
+    // ci-dessus — et le supprimer ici cassait la connexion Google : purger une
+    // session périmée détruisait au passage la connexion EN COURS, et l'échange
+    // du code échouait sur « code verifier not found in storage ».
+    if (name.startsWith(authCookiePrefix) && !name.endsWith('-code-verifier')) {
       response.cookies.delete(name)
       // Efface aussi la variante partagée entre sous-domaines (domaine explicite).
       if (cookieDomain) {
@@ -73,6 +78,19 @@ function isInvalidSessionError(error: unknown) {
 
 export async function middleware(request: NextRequest) {
   const originalPathname = request.nextUrl.pathname
+
+  // Retour d'un fournisseur d'identité (Google) ou d'un lien email : on passe
+  // sans rien faire.
+  //
+  // La route /auth/callback échange elle-même le code contre une session et
+  // pose les cookies qui vont bien. Laisser le middleware appeler getUser()
+  // ici déclenche un rafraîchissement de jeton EN PLEIN échange PKCE : au
+  // mieux il réécrit les cookies sous le nez de la route, au pire il conclut
+  // que la session est invalide et purge les cookies d'authentification.
+  // Dans les deux cas la connexion échoue sans raison visible.
+  if (originalPathname.startsWith('/auth/')) {
+    return NextResponse.next()
+  }
 
   // Mode maintenance : redirige le public vers /maintenance (admin/API/auth exemptés).
   if (!isMaintenanceExempt(originalPathname) && (await isMaintenanceOn(request))) {
