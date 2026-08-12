@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   formatFcfa, formatDate, timeAgo, computeTotals, waNumber, daysUntil,
-  QUOTE_LABELS, TAX_RATES, effectiveQuoteStatus, quoteIsOpen,
+  QUOTE_LABELS, TAX_RATES, effectiveQuoteStatus, quoteIsOpen, canChargeTax,
   type QuoteItem,
 } from "@/lib/pro";
 import {
@@ -41,6 +41,8 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   const [items, setItems] = useState<QuoteItem[]>([{ label: "", qty: 1, unit_price: 0 }]);
   const [discount, setDiscount] = useState(0);
   const [taxRate, setTaxRate] = useState(0);
+  // Droit de facturer la TVA, lu depuis le profil d'entreprise.
+  const [taxAllowed, setTaxAllowed] = useState(true);
 
   const { ask, confirmNode } = useConfirm();
 
@@ -59,6 +61,18 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Statut de l'entreprise : conditionne la disponibilité de la TVA.
+  useEffect(() => {
+    let off = false;
+    api("settings", { action: "get" }).then(({ data }) => {
+      if (off) return;
+      const st = data?.settings?.business_status;
+      // Colonne absente (migration non passée) : on ne bride rien.
+      if (st !== undefined) setTaxAllowed(canChargeTax(st));
+    });
+    return () => { off = true; };
+  }, []);
 
   const withStatus = useMemo(
     () => quotes.map((q) => ({ ...q, status: effectiveQuoteStatus(q) })),
@@ -298,21 +312,35 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
                   <div>
                     <span className={lbl}>TVA</span>
                     <div className="flex gap-2">
-                      {TAX_RATES.map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setTaxRate(r)}
-                          className={`flex-1 rounded-xl border px-3 py-2.5 text-[.83rem] font-bold transition ${
-                            taxRate === r
-                              ? "border-green bg-green text-white"
-                              : "border-gray-200 text-gray-600 hover:border-green/50 dark:border-dark-border dark:text-gray-300"
-                          }`}
-                        >
-                          {r === 0 ? "Non assujetti" : `${r} %`}
-                        </button>
-                      ))}
+                      {TAX_RATES.map((r) => {
+                        // Sans NINEA, pas de TVA : le bouton reste visible mais
+                        // inerte, avec l'explication juste dessous. Le masquer
+                        // laisserait croire à un bug.
+                        const blocked = r > 0 && !taxAllowed;
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            disabled={blocked}
+                            onClick={() => setTaxRate(r)}
+                            className={`flex-1 rounded-xl border px-3 py-2.5 text-[.83rem] font-bold transition ${
+                              taxRate === r
+                                ? "border-green bg-green text-white"
+                                : blocked
+                                  ? "cursor-not-allowed border-gray-200 text-gray-300 dark:border-dark-border dark:text-gray-600"
+                                  : "border-gray-200 text-gray-600 hover:border-green/50 dark:border-dark-border dark:text-gray-300"
+                            }`}
+                          >
+                            {r === 0 ? "Non assujetti" : `${r} %`}
+                          </button>
+                        );
+                      })}
                     </div>
+                    {!taxAllowed && (
+                      <p className="mt-1.5 text-[.72rem] text-gray-500 dark:text-gray-400">
+                        TVA indisponible sans NINEA — réglable dans « Profil entreprise ».
+                      </p>
+                    )}
                     <p className="mt-1 text-[.7rem] text-gray-400">
                       La TVA sénégalaise est de 18 %. Laissez « Non assujetti » si vous ne la facturez pas.
                     </p>

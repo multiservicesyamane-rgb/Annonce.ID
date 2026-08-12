@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin, type SupabaseClient } from "@supabase/supabase-js";
-import { DEFAULT_QUOTE_SECTIONS, sanitizeSections, type QuoteSection } from "@/lib/pro";
+import { DEFAULT_QUOTE_SECTIONS, sanitizeSections, canChargeTax, type QuoteSection } from "@/lib/pro";
 
 export const txt = (v: unknown, max = 160) => String(v ?? "").trim().slice(0, max);
 
@@ -186,5 +186,32 @@ export async function defaultQuoteSections(
     return saved.length > 0 ? saved.filter((s) => s.enabled) : DEFAULT_QUOTE_SECTIONS.filter((s) => s.enabled);
   } catch {
     return DEFAULT_QUOTE_SECTIONS.filter((s) => s.enabled);
+  }
+}
+
+/**
+ * Le professionnel peut-il facturer de la TVA ?
+ *
+ * Une grande partie des prestataires travaille sans NINEA : ils facturent
+ * normalement, mais ne collectent pas de TVA. La regle est verifiee ici, au
+ * plus pres de l'ecriture, et pas seulement dans l'ecran de saisie — sans
+ * quoi un appel direct a l'API suffirait a produire une piece portant une
+ * taxe que l'emetteur n'a pas le droit de percevoir.
+ *
+ * Distinction importante entre « interdit » et « pas encore connu » : tant
+ * que MIGRATION_ESPACE_PRO.sql n'a pas tourne, la colonne `business_status`
+ * n'existe pas. Repondre « non » dans ce cas remettrait silencieusement a
+ * zero la TVA de comptes qui l'utilisent deja legitimement. On preserve donc
+ * le comportement actuel jusqu'a ce que le statut soit reellement lisible.
+ */
+export async function taxAllowed(sb: SupabaseClient, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await sb
+      .from("pro_settings").select("business_status").eq("user_id", userId).maybeSingle();
+    // Statut illisible : on ne peut pas trancher, on ne casse rien.
+    if (error) return !isMissingColumn(error) ? false : true;
+    return canChargeTax(data?.business_status);
+  } catch {
+    return true;
   }
 }

@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   formatFcfa, formatDate, timeAgo, computeTotals, waNumber, daysUntil,
-  INVOICE_LABELS, PAYMENT_METHODS, TAX_RATES, effectiveInvoiceStatus,
+  INVOICE_LABELS, PAYMENT_METHODS, TAX_RATES, effectiveInvoiceStatus, canChargeTax,
   type QuoteItem,
 } from "@/lib/pro";
 import {
@@ -41,6 +41,8 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   const [items, setItems] = useState<QuoteItem[]>([{ label: "", qty: 1, unit_price: 0 }]);
   const [discount, setDiscount] = useState(0);
   const [taxRate, setTaxRate] = useState(0);
+  // Droit de facturer la TVA, lu depuis le profil d'entreprise.
+  const [taxAllowed, setTaxAllowed] = useState(true);
 
   // Saisie d'un encaissement
   const [payFor, setPayFor] = useState<Invoice | null>(null);
@@ -64,6 +66,18 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Statut de l'entreprise : conditionne la disponibilité de la TVA.
+  useEffect(() => {
+    let off = false;
+    api("settings", { action: "get" }).then(({ data }) => {
+      if (off) return;
+      const st = data?.settings?.business_status;
+      // Colonne absente (migration non passée) : on ne bride rien.
+      if (st !== undefined) setTaxAllowed(canChargeTax(st));
+    });
+    return () => { off = true; };
+  }, []);
 
   const withStatus = useMemo(
     () => invoices.map((i) => ({ ...i, status: effectiveInvoiceStatus(i) })),
@@ -348,21 +362,35 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
                   <div>
                     <span className={lbl}>TVA</span>
                     <div className="flex gap-2">
-                      {TAX_RATES.map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setTaxRate(r)}
-                          className={`flex-1 rounded-xl border px-3 py-2.5 text-[.83rem] font-bold transition ${
-                            taxRate === r
-                              ? "border-green bg-green text-white"
-                              : "border-gray-200 text-gray-600 hover:border-green/50 dark:border-dark-border dark:text-gray-300"
-                          }`}
-                        >
-                          {r === 0 ? "Non assujetti" : `${r} %`}
-                        </button>
-                      ))}
+                      {TAX_RATES.map((r) => {
+                        // Sans NINEA, pas de TVA : le bouton reste visible mais
+                        // inerte, avec l'explication juste dessous. Le masquer
+                        // laisserait croire à un bug.
+                        const blocked = r > 0 && !taxAllowed;
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            disabled={blocked}
+                            onClick={() => setTaxRate(r)}
+                            className={`flex-1 rounded-xl border px-3 py-2.5 text-[.83rem] font-bold transition ${
+                              taxRate === r
+                                ? "border-green bg-green text-white"
+                                : blocked
+                                  ? "cursor-not-allowed border-gray-200 text-gray-300 dark:border-dark-border dark:text-gray-600"
+                                  : "border-gray-200 text-gray-600 hover:border-green/50 dark:border-dark-border dark:text-gray-300"
+                            }`}
+                          >
+                            {r === 0 ? "Non assujetti" : `${r} %`}
+                          </button>
+                        );
+                      })}
                     </div>
+                    {!taxAllowed && (
+                      <p className="mt-1.5 text-[.72rem] text-gray-500 dark:text-gray-400">
+                        TVA indisponible sans NINEA — réglable dans « Profil entreprise ».
+                      </p>
+                    )}
                   </div>
                 </div>
               </Section>

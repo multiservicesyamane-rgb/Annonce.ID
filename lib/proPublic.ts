@@ -34,7 +34,11 @@ async function fetchSeller(sb: ReturnType<typeof admin>, userId: string): Promis
     phone: settings?.phone || profile?.phone || null,
     email: settings?.email || null,
     address: settings?.address || profile?.location || profile?.city || null,
-    tax_id: settings?.tax_id || null,
+    // NINEA seulement si le compte se declare immatricule : imprimer un
+    // numero saisi puis abandonne serait une fausse mention.
+    tax_id: settings?.business_status === "formel" ? settings?.tax_id || null : null,
+    status: settings?.business_status === "formel" ? "formel" : "informel",
+    doc_title: settings?.invoice_title || null,
     // Logo professionnel s'il est réglé ; sinon l'avatar de la boutique
     // d'annonces tient lieu d'en-tête, faute de mieux.
     logo: settings?.logo_url || profile?.avatar_url || null,

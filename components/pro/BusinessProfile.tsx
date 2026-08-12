@@ -9,7 +9,7 @@
 // sociale ni NINEA. C'est désormais un écran à part entière, dans les réglages.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { TAX_RATES } from "@/lib/pro";
+import { TAX_RATES, canChargeTax, INVOICE_TITLES, type BusinessStatus } from "@/lib/pro";
 import { createClient } from "@/lib/supabase/client";
 import { api, card, input, lbl, F, PageHead, Section, stickyAside, type Toast } from "./ui";
 
@@ -30,6 +30,8 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
   const [form, setForm] = useState<Record<string, string>>({});
   const [taxRate, setTaxRate] = useState(0);
   const [template, setTemplate] = useState("classique");
+  const [status, setStatus] = useState<BusinessStatus>("informel");
+  const [docTitle, setDocTitle] = useState("FACTURE");
   const [accent, setAccent] = useState<string | null>(null);
   const [assets, setAssets] = useState<Record<Asset, string | null>>({
     logo_url: null, signature_url: null, stamp_url: null,
@@ -56,6 +58,8 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
         });
         setTaxRate(Number(s.default_tax_rate) || 0);
         setTemplate(s.doc_template || "classique");
+        setStatus(s.business_status === "formel" ? "formel" : "informel");
+        setDocTitle(s.invoice_title || "FACTURE");
         setAccent(s.doc_accent || null);
         setAssets({
           logo_url: s.logo_url || null,
@@ -104,6 +108,8 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
       action: "save",
       ...form,
       default_tax_rate: taxRate,
+      business_status: status,
+      invoice_title: docTitle,
       doc_template: template,
       doc_accent: accent,
       ...assets,
@@ -124,6 +130,51 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-4">
+          <Section icon="📋" title="Votre situation">
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {([
+                {
+                  id: "informel" as const,
+                  title: "Je n'ai pas encore de papiers",
+                  sub: "Vous facturez normalement, sans TVA.",
+                },
+                {
+                  id: "formel" as const,
+                  title: "J'ai un NINEA / RCCM",
+                  sub: "Numéro imprimé, TVA disponible.",
+                },
+              ]).map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => {
+                    setStatus(o.id);
+                    // Repasser en informel remet la TVA à zéro : la garder
+                    // afficherait un taux que le serveur refusera d'écrire.
+                    if (o.id === "informel") setTaxRate(0);
+                  }}
+                  className={`rounded-xl border p-3.5 text-left transition ${
+                    status === o.id
+                      ? "border-green bg-green/5 ring-2 ring-green/20"
+                      : "border-gray-200 hover:border-green/40 dark:border-dark-border"
+                  }`}
+                >
+                  <span className="block text-[.85rem] font-extrabold text-gray-900 dark:text-white">{o.title}</span>
+                  <span className="mt-0.5 block text-[.72rem] leading-snug text-gray-500 dark:text-gray-400">{o.sub}</span>
+                </button>
+              ))}
+            </div>
+
+            {status === "informel" && (
+              <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-[.76rem] leading-relaxed text-gray-600 dark:border-dark-border dark:bg-white/5 dark:text-gray-300">
+                Vous gardez <b>toutes les fonctions</b> : devis, factures, clients, projets, relances,
+                signature. Seule la TVA est indisponible — on ne collecte pas une taxe sans être
+                immatriculé. Vos clients entreprises réclameront un NINEA pour justifier leur
+                dépense : c&apos;est souvent la seule raison d&apos;en demander un.
+              </div>
+            )}
+          </Section>
+
           <Section icon="🏢" title="Identité">
             <div className="grid gap-3 sm:grid-cols-2">
               <F
@@ -133,7 +184,9 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
                 ph="Ex : YAMANE TECH"
                 hint="Laissez vide pour utiliser votre nom de profil."
               />
-              <F l="NINEA / RCCM" v={form.tax_id} set={(v) => setForm({ ...form, tax_id: v })} ph="Ex : 005812345 2A2" />
+              {status === "formel" && (
+                <F l="NINEA / RCCM" v={form.tax_id} set={(v) => setForm({ ...form, tax_id: v })} ph="Ex : 005812345 2A2" />
+              )}
               <F l="Téléphone professionnel" v={form.phone} set={(v) => setForm({ ...form, phone: v })} ph="+221 77 000 00 00" />
               <F l="Email professionnel" v={form.email} set={(v) => setForm({ ...form, email: v })} ph="contact@monentreprise.sn" />
               <div className="sm:col-span-2">
@@ -259,23 +312,57 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
           <Section icon="⚙️" title="Valeurs par défaut">
             <div className="flex flex-col gap-3">
               <div>
-                <span className={lbl}>TVA appliquée par défaut</span>
+                <span className={lbl}>Intitulé de vos pièces</span>
                 <div className="flex gap-2">
-                  {TAX_RATES.map((r) => (
+                  {INVOICE_TITLES.map((t) => (
                     <button
-                      key={r}
+                      key={t}
                       type="button"
-                      onClick={() => setTaxRate(r)}
+                      onClick={() => setDocTitle(t)}
                       className={`flex-1 rounded-xl border px-3 py-2.5 text-[.83rem] font-bold transition ${
-                        taxRate === r
+                        docTitle === t
                           ? "border-green bg-green text-white"
                           : "border-gray-200 text-gray-600 hover:border-green/50 dark:border-dark-border dark:text-gray-300"
                       }`}
                     >
-                      {r === 0 ? "Non assujetti" : `${r} %`}
+                      {t}
                     </button>
                   ))}
                 </div>
+                <p className="mt-1 text-[.7rem] text-gray-400">
+                  Le mot attendu n&apos;est pas le même pour un artisan et pour une société.
+                </p>
+              </div>
+
+              <div>
+                <span className={lbl}>TVA appliquée par défaut</span>
+                <div className="flex gap-2">
+                  {TAX_RATES.map((r) => {
+                    const blocked = r > 0 && !canChargeTax(status);
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        disabled={blocked}
+                        onClick={() => setTaxRate(r)}
+                        className={`flex-1 rounded-xl border px-3 py-2.5 text-[.83rem] font-bold transition ${
+                          taxRate === r
+                            ? "border-green bg-green text-white"
+                            : blocked
+                              ? "cursor-not-allowed border-gray-200 text-gray-300 dark:border-dark-border dark:text-gray-600"
+                              : "border-gray-200 text-gray-600 hover:border-green/50 dark:border-dark-border dark:text-gray-300"
+                        }`}
+                      >
+                        {r === 0 ? "Non assujetti" : `${r} %`}
+                      </button>
+                    );
+                  })}
+                </div>
+                {!canChargeTax(status) && (
+                  <p className="mt-1.5 text-[.72rem] text-gray-500 dark:text-gray-400">
+                    Renseignez un NINEA dans « Votre situation » pour pouvoir facturer la TVA.
+                  </p>
+                )}
               </div>
               <div>
                 <span className={lbl}>Conditions de paiement habituelles</span>

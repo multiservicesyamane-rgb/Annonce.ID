@@ -1,4 +1,7 @@
-import { formatFcfa, formatDate, amountInWords, visibleSections, type QuoteItem } from "@/lib/pro";
+import {
+  formatFcfa, formatDate, amountInWords, visibleSections, invoiceTitle,
+  TAX_EXEMPT_MENTION, type QuoteItem,
+} from "@/lib/pro";
 import PrintTrigger from "./PrintTrigger";
 
 /**
@@ -55,6 +58,10 @@ export type PrintParty = {
   signature_label?: string | null;
   template?: string | null;
   accent?: string | null;
+  /** « formel » = immatriculé (NINEA), « informel » = sans papiers. */
+  status?: string | null;
+  /** Intitulé choisi pour les factures : FACTURE, REÇU ou NOTE. */
+  doc_title?: string | null;
 };
 
 const ACCENT_DEFAULT = "#4F46E5";
@@ -139,7 +146,9 @@ export default function PrintableDocument({
   qr?: { svg: string; caption: string } | null;
 }) {
   const isQuote = doc.kind === "devis";
-  const label = isQuote ? "DEVIS" : "FACTURE";
+  // Un devis reste un devis ; l'intitulé choisi ne concerne que les pièces
+  // de facturation, où « REÇU » ou « NOTE » convient parfois mieux.
+  const label = isQuote ? "DEVIS" : invoiceTitle(seller.doc_title, "FACTURE");
   const paid = doc.paid_amount || 0;
   const remaining = Math.max(0, doc.total - paid);
   const stamp = STAMPS[doc.status];
@@ -360,10 +369,19 @@ export default function PrintableDocument({
               style={{ background: "#F9FAFB", border: `1px solid ${LINE}` }}
             >
               <span style={{ color: MUTED }}>
-                {isQuote ? "Devis arrêté à la somme de " : "Facture arrêtée à la somme de "}
+                {isQuote ? "Devis arrêté à la somme de " : `${label.charAt(0)}${label.slice(1).toLowerCase()} arrêtée à la somme de `}
               </span>
               <span className="font-semibold">{amountInWords(doc.total)} francs CFA</span>
               <span style={{ color: MUTED }}>.</span>
+
+              {/* Régime : une pièce sans TVA doit dire pourquoi, sinon le
+                  client se demande si la taxe a simplement été oubliée. */}
+              {doc.tax_rate === 0 && (
+                <>
+                  <br />
+                  <span style={{ color: MUTED }}>{TAX_EXEMPT_MENTION}</span>
+                </>
+              )}
             </p>
 
             {/* ================= Mentions ================= */}

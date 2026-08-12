@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { sanitizeItems, computeTotals, publicToken, formatFcfa, waNumber } from "@/lib/pro";
 import {
   proContext, txt, num, dateOrNull, isMissingTable,
-  logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber,
+  logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, taxAllowed,
 } from "@/lib/proServer";
 
 export const dynamic = "force-dynamic";
@@ -108,6 +108,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
       }
 
+      // Sans NINEA, pas de TVA : la règle vaut aussi pour un appel direct, et
+      // pour un taux hérité d'un devis converti en facture.
+      if (taxRate > 0 && !(await taxAllowed(sb, userId))) taxRate = 0;
       const t = computeTotals(items, discount, taxRate);
 
       const payload = {
@@ -194,7 +197,8 @@ export async function POST(req: Request) {
         const items = "items" in body ? sanitizeItems(body.items) : sanitizeItems(before.items);
         if (!items.length) return NextResponse.json({ error: "Ajoutez au moins une ligne." }, { status: 400 });
         const disc = "discount" in body ? num(body.discount) : Number(before.discount) || 0;
-        const rate = "tax_rate" in body ? Number(body.tax_rate) || 0 : Number(before.tax_rate) || 0;
+        let rate = "tax_rate" in body ? Number(body.tax_rate) || 0 : Number(before.tax_rate) || 0;
+        if (rate > 0 && !(await taxAllowed(sb, userId))) rate = 0;
         const t = computeTotals(items, disc, rate);
         patch.items = items;
         patch.subtotal = t.subtotal;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { proContext, txt, isMissingTable, isMissingColumn } from "@/lib/proServer";
-import { sanitizeSections } from "@/lib/pro";
+import { sanitizeSections, businessStatus, canChargeTax, invoiceTitle } from "@/lib/pro";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 const NEW_COLUMNS = [
   "quote_sections", "logo_url", "signature_url", "stamp_url",
   "doc_template", "doc_accent", "signature_label",
+  "business_status", "invoice_title",
 ] as const;
 
 /** Thèmes autorisés — identiques à la contrainte SQL. */
@@ -103,7 +104,24 @@ export async function POST(req: Request) {
     }
 
     if (action === "save") {
-      const rate = Math.min(100, Math.max(0, Number(body?.default_tax_rate) || 0));
+      let rate = Math.min(100, Math.max(0, Number(body?.default_tax_rate) || 0));
+
+      // Sans NINEA, pas de TVA. Appliqué ici et pas seulement dans l'écran :
+      // un appel direct à l'API suffirait sinon à contourner la règle, et la
+      // contrainte SQL rejetterait l'écriture avec un message incompréhensible.
+      //
+      // Le statut envoyé prime ; à défaut on lit celui déjà enregistré. Tant
+      // que la migration n'a pas tourné, la colonne n'existe pas : on laisse
+      // alors le taux tel quel plutôt que de remettre à zéro la TVA de comptes
+      // qui l'utilisent déjà légitimement.
+      if (body?.business_status !== undefined) {
+        if (!canChargeTax(businessStatus(body.business_status))) rate = 0;
+      } else if (rate > 0) {
+        const statusRow = await sb
+          .from("pro_settings").select("business_status").eq("user_id", userId).maybeSingle();
+        const known = !statusRow.error || !isMissingColumn(statusRow.error);
+        if (known && !canChargeTax(statusRow.data?.business_status)) rate = 0;
+      }
       const payload = {
         user_id: userId,
         business_name: txt(body?.business_name, 200) || null,
@@ -125,6 +143,15 @@ export async function POST(req: Request) {
       if (body?.doc_template !== undefined) payload.doc_template = docTemplate(body.doc_template);
       if (body?.doc_accent !== undefined) payload.doc_accent = hexColor(body.doc_accent);
       if (body?.signature_label !== undefined) payload.signature_label = txt(body.signature_label, 120) || null;
+      if (body?.invoice_title !== undefined) payload.invoice_title = invoiceTitle(body.invoice_title);
+
+      // Statut et TVA sont liés : sans NINEA on ne collecte pas de TVA. La
+      // regle est appliquee ICI et pas seulement dans l'ecran, sinon un appel
+      // direct a l'API suffirait a la contourner - et la contrainte SQL
+      // rejetterait l'ecriture avec un message incomprehensible.
+      if (body?.business_status !== undefined) {
+        payload.business_status = businessStatus(body.business_status);
+      }
       for (const k of ["logo_url", "signature_url", "stamp_url"] as const) {
         if (body?.[k] !== undefined) payload[k] = assetUrl(body[k]);
       }

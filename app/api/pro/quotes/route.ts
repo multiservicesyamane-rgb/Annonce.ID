@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { sanitizeItems, computeTotals, publicToken } from "@/lib/pro";
 import {
   proContext, txt, num, dateOrNull, isMissingTable, isMissingColumn,
-  logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, defaultQuoteSections,
+  logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, defaultQuoteSections, taxAllowed,
 } from "@/lib/proServer";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +68,10 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
       }
 
-      const t = computeTotals(items, num(body?.discount), Number(body?.tax_rate) || 0);
+      // Sans NINEA, pas de TVA : la regle vaut aussi pour un appel direct.
+      const askedRate = Number(body?.tax_rate) || 0;
+      const rate = askedRate > 0 && !(await taxAllowed(sb, userId)) ? 0 : askedRate;
+      const t = computeTotals(items, num(body?.discount), rate);
 
       // Rubriques figées dans la pièce. On les RECOPIE depuis les réglages du
       // professionnel plutôt que de les référencer : sans cela, retoucher ses
@@ -155,7 +158,8 @@ export async function POST(req: Request) {
         const items = "items" in body ? sanitizeItems(body.items) : sanitizeItems(before.items);
         if (!items.length) return NextResponse.json({ error: "Ajoutez au moins une ligne." }, { status: 400 });
         const discount = "discount" in body ? num(body.discount) : Number(before.discount) || 0;
-        const rate = "tax_rate" in body ? Number(body.tax_rate) || 0 : Number(before.tax_rate) || 0;
+        let rate = "tax_rate" in body ? Number(body.tax_rate) || 0 : Number(before.tax_rate) || 0;
+        if (rate > 0 && !(await taxAllowed(sb, userId))) rate = 0;
         const t = computeTotals(items, discount, rate);
         patch.items = items;
         patch.subtotal = t.subtotal;

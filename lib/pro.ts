@@ -127,6 +127,40 @@ export function quoteTotal(items: QuoteItem[]): number {
 }
 
 /** Nettoie et borne les lignes reçues du client (anti-abus + cohérence). */
+/* ==================== Statut de l'entreprise ==================== */
+
+/**
+ * Formel (NINEA / RCCM) ou informel. Une grande partie des prestataires
+ * travaille sans papiers : les DEUX doivent pouvoir facturer.
+ *
+ * Le statut ne retire aucune fonction — devis, factures, clients, projets,
+ * relances, signature restent identiques. Il ajuste seulement ce qui figure
+ * sur le document, et empêche une seule chose : collecter une TVA qu'on n'a
+ * pas le droit de percevoir.
+ */
+export type BusinessStatus = "informel" | "formel";
+
+export const businessStatus = (v: unknown): BusinessStatus =>
+  v === "formel" ? "formel" : "informel";
+
+/** La TVA suppose d'être assujetti, donc immatriculé. */
+export const canChargeTax = (status: unknown): boolean => businessStatus(status) === "formel";
+
+/** Intitulés de pièce proposés — le mot attendu diffère selon le métier. */
+export const INVOICE_TITLES = ["FACTURE", "REÇU", "NOTE"] as const;
+
+export const invoiceTitle = (v: unknown, fallback = "FACTURE"): string => {
+  const s = String(v ?? "").trim().toUpperCase();
+  return (INVOICE_TITLES as readonly string[]).includes(s) ? s : fallback;
+};
+
+/**
+ * Mention de régime imprimée sous les totaux quand aucune TVA n'est appliquée.
+ * Formulation neutre : elle constate l'absence de TVA sans invoquer un article
+ * de loi que nous ne sommes pas en mesure de vérifier.
+ */
+export const TAX_EXEMPT_MENTION = "TVA non applicable.";
+
 /* ==================== Rubriques de devis ==================== */
 
 /**

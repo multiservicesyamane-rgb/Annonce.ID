@@ -37,6 +37,38 @@ alter table pro_settings add column if not exists doc_accent   text;
 -- sans indiquer QUI signe.
 alter table pro_settings add column if not exists signature_label text;
 
+-- ------------------------------------------------------------
+-- 1 bis) STATUT DE L'ENTREPRISE — formel ou informel
+--
+-- Une grande partie des prestataires travaille sans NINEA ni RCCM. Les DEUX
+-- doivent pouvoir facturer : le statut ne retire aucune fonction, il ajuste
+-- seulement ce qui figure sur le papier.
+--
+--   informel : pas de ligne NINEA, TVA impossible (on ne collecte pas une
+--              taxe qu'on n'a pas le droit de percevoir), mention de regime.
+--   formel   : NINEA imprime, TVA disponible.
+--
+-- Defaut 'informel' : c'est le cas le plus frequent, et le plus prudent —
+-- un compte qui n'a rien renseigne ne doit pas se retrouver a facturer de
+-- la TVA sans le savoir.
+-- ------------------------------------------------------------
+alter table pro_settings add column if not exists business_status text not null default 'informel';
+
+alter table pro_settings drop constraint if exists pro_settings_business_status_chk;
+alter table pro_settings add  constraint pro_settings_business_status_chk
+  check (business_status in ('informel', 'formel'));
+
+-- Intitule des pieces : « FACTURE », « RECU », « NOTE »... Le mot attendu
+-- n'est pas le meme pour un artisan et pour une societe.
+alter table pro_settings add column if not exists invoice_title text;
+
+-- Coherence garantie par la base, pas seulement par l'ecran : sans NINEA,
+-- pas de TVA par defaut. Un script ou une console SQL ne doit pas pouvoir
+-- creer la situation que l'interface interdit.
+alter table pro_settings drop constraint if exists pro_settings_tva_needs_ninea_chk;
+alter table pro_settings add  constraint pro_settings_tva_needs_ninea_chk
+  check (default_tax_rate = 0 or business_status = 'formel');
+
 -- Themes autorises : la base refuse une valeur inventee, sinon le document
 -- retomberait silencieusement sur un rendu par defaut sans que personne ne
 -- comprenne pourquoi.
