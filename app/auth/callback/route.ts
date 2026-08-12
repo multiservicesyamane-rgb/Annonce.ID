@@ -45,8 +45,29 @@ export async function GET(request: Request) {
     
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (error) {
-      console.error('[auth/callback] exchangeCodeForSession a échoué:', error)
-      return redirectToLogin('callback', `exchange:${error.message}`)
+      // Diagnostic cible : « code verifier not found » ne dit pas SI le cookie
+      // est absent, ou present mais illisible. On journalise donc les NOMS des
+      // cookies recus (jamais les valeurs : ce sont des jetons), l'hote
+      // d'arrivee et le domaine de cookie calcule — les trois causes possibles.
+      const names = cookieStore.getAll().map((c) => c.name)
+      const projectRef = (() => {
+        try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0] } catch { return '' }
+      })()
+      const hasVerifier = names.some((n) => n.endsWith('-code-verifier'))
+
+      console.error('[auth/callback] exchangeCodeForSession a échoué:', error.message, {
+        hote: request.headers.get('host'),
+        domaineCookie: cookieDomain || '(hote seul)',
+        verificateurPresent: hasVerifier,
+        cookiesSupabase: names.filter((n) => n.startsWith(`sb-${projectRef}`)),
+        nbCookies: names.length,
+      })
+
+      // `v0` : aucun cookie de vérificateur n'est arrivé jusqu'ici — le flux a
+      // commencé sur un autre hôte, ou le cookie n'a jamais été écrit.
+      // `v1` : il est là mais l'échange échoue quand même (code déjà consommé,
+      // ou vérificateur d'une tentative précédente).
+      return redirectToLogin('callback', `exchange[v${hasVerifier ? 1 : 0}]:${error.message}`)
     }
 
     return NextResponse.redirect(new URL(next, origin))
