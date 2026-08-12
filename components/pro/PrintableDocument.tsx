@@ -66,14 +66,43 @@ export type PrintParty = {
 
 const ACCENT_DEFAULT = "#4F46E5";
 
-/** Couleur de chaque modèle — mêmes clés que la contrainte SQL. */
-const TEMPLATE_ACCENT: Record<string, string> = {
-  classique: "#4F46E5",
-  moderne: "#0891B2",
-  bande: "#047857",
-  epure: "#111827",
-  officiel: "#92400E",
+/**
+ * Les cinq modèles de document.
+ *
+ * Ce ne sont PAS cinq nuances d'un même document : chacun change la structure
+ * de l'en-tête, la présence d'aplats et le traitement des totaux. Un modèle
+ * qui ne ferait varier qu'une couleur n'en serait pas un.
+ *
+ *   accent   couleur par défaut, écrasée par le choix du professionnel
+ *   header   "rule" filet sous l'en-tête · "band" bandeau plein ·
+ *            "frame" en-tête encadré · "plain" aucun ornement
+ *   tinted   bloc destinataire et totaux légèrement teintés de l'accent
+ *   solid    bandeau du total en aplat de couleur (sinon simple filet)
+ *   caps     intitulés de colonnes en capitales espacées
+ */
+type TemplateSpec = {
+  accent: string;
+  header: "rule" | "band" | "frame" | "plain";
+  tinted: boolean;
+  solid: boolean;
+  caps: boolean;
 };
+
+const TEMPLATES: Record<string, TemplateSpec> = {
+  // Sobre et sûr : un filet de couleur, des aplats discrets. Le défaut.
+  classique: { accent: "#4F46E5", header: "rule", tinted: true, solid: true, caps: false },
+  // Titre en couleur, blocs doux, colonnes en capitales — style agence.
+  moderne: { accent: "#0891B2", header: "rule", tinted: true, solid: true, caps: true },
+  // Bandeau plein en tête : le plus affirmé, très lisible en noir et blanc.
+  bande: { accent: "#047857", header: "band", tinted: false, solid: true, caps: true },
+  // Minimaliste : aucun aplat, tout à l'encre. Économe à l'impression.
+  epure: { accent: "#111827", header: "plain", tinted: false, solid: false, caps: false },
+  // Encadré, mentions serrées : l'allure d'une pièce administrative.
+  officiel: { accent: "#92400E", header: "frame", tinted: false, solid: false, caps: true },
+};
+
+const templateSpec = (id?: string | null): TemplateSpec =>
+  TEMPLATES[id || ""] || TEMPLATES.classique;
 const INK = "#111827";
 const MUTED = "#6B7280";
 const LINE = "#E5E7EB";
@@ -93,6 +122,15 @@ const SHEET_CSS = `
   .doc-page { background:#F3F4F6; min-height:100vh; }
   .doc-sheet { background:#fff; color:${INK}; }
   .doc-sheet, .doc-sheet * { color-scheme: light; }
+
+  /* Les navigateurs suppriment les aplats à l'impression pour économiser
+     l'encre. Sur les modèles à bandeau ou à total plein, cela effacerait le
+     fond en laissant le texte blanc sur blanc — donc illisible. On force donc
+     le rendu des couleurs pour ces éléments précis, et eux seuls. */
+  .doc-fill {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 
   /* ---- Prestations : blocs sur mobile, tableau dès 640px ---- */
   .doc-items { width:100%; border-collapse:collapse; }
@@ -135,6 +173,9 @@ const SHEET_CSS = `
     .doc-items .doc-num { text-align:right; font-variant-numeric:tabular-nums; }
     .doc-items .doc-qty { text-align:center; }
     .doc-avoid { break-inside:avoid; }
+    /* La feuille perd son padding a l'impression : les marges negatives du
+       bandeau le pousseraient hors de la page. On le remet a plat. */
+    .doc-band { margin:0 0 1.2rem 0 !important; padding:1rem 1.1rem !important; }
   }
 `;
 
@@ -159,10 +200,14 @@ export default function PrintableDocument({
   // Couleur du document : accent choisi, sinon celle du modèle, sinon le
   // défaut. Écrite en dur dans les styles — jamais une classe de thème — pour
   // que le papier sorte identique en mode clair comme en sombre.
-  const ACCENT =
-    seller.accent
-    || TEMPLATE_ACCENT[seller.template || ""]
-    || ACCENT_DEFAULT;
+  const tpl = templateSpec(seller.template);
+  const ACCENT = seller.accent || tpl.accent || ACCENT_DEFAULT;
+
+  // Sur bandeau plein, l'en-tête s'écrit en blanc sur la couleur ; ailleurs à
+  // l'encre sur le papier.
+  const onBand = tpl.header === "band";
+  const headTint = tpl.tinted ? `${ACCENT}0D` : "#F9FAFB"; // 0D ≈ 5 % d'opacité
+  const headCaps = tpl.caps ? "tracking-[.12em]" : "tracking-wider";
 
   return (
     <>
@@ -176,8 +221,23 @@ export default function PrintableDocument({
             className="doc-sheet overflow-hidden rounded-2xl px-5 py-7 shadow-lg sm:px-10 sm:py-9"
             style={{ boxShadow: "0 10px 40px rgba(17,24,39,.08)" }}
           >
-            {/* ================= En-tête ================= */}
-            <header className="doc-avoid">
+            {/* ================= En-tête =================
+                Cinq traitements distincts : filet, bandeau plein, encadré ou
+                rien. Le balisage reste identique — seuls l'habillage et les
+                couleurs changent, pour que l'impression et la version mobile
+                se comportent pareil quel que soit le modèle. */}
+            <header
+              className={`doc-avoid ${onBand ? "doc-fill doc-band -mx-5 -mt-7 mb-6 px-5 pb-5 pt-7 sm:-mx-10 sm:-mt-9 sm:px-10 sm:pb-6 sm:pt-9" : ""} ${
+                tpl.header === "frame" ? "rounded-lg p-4 sm:p-5" : ""
+              }`}
+              style={
+                onBand
+                  ? { background: ACCENT, color: "#fff" }
+                  : tpl.header === "frame"
+                    ? { border: `1.5px solid ${ACCENT}` }
+                    : undefined
+              }
+            >
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 {/* Émetteur */}
                 <div className="flex min-w-0 items-start gap-3">
@@ -195,9 +255,12 @@ export default function PrintableDocument({
                       {seller.company || seller.name}
                     </div>
                     {seller.company && seller.name && (
-                      <div className="text-[.82rem]" style={{ color: MUTED }}>{seller.name}</div>
+                      <div className="text-[.82rem]" style={{ color: onBand ? "#FFFFFFCC" : MUTED }}>{seller.name}</div>
                     )}
-                    <div className="mt-1.5 space-y-0.5 text-[.78rem] leading-relaxed" style={{ color: MUTED }}>
+                    <div
+                      className="mt-1.5 space-y-0.5 text-[.78rem] leading-relaxed"
+                      style={{ color: onBand ? "#FFFFFFCC" : MUTED }}
+                    >
                       {seller.address && <div>{seller.address}</div>}
                       {seller.phone && <div>Tél. {seller.phone}</div>}
                       {seller.email && <div className="break-all">{seller.email}</div>}
@@ -210,18 +273,21 @@ export default function PrintableDocument({
                 <div className="shrink-0 sm:text-right">
                   <div
                     className="text-[1.7rem] font-extrabold leading-none tracking-tight sm:text-[2rem]"
-                    style={{ color: ACCENT }}
+                    style={{ color: onBand ? "#fff" : tpl.header === "plain" ? INK : ACCENT }}
                   >
                     {label}
                   </div>
                   {doc.number && (
                     <div className="mt-1 font-mono text-[.9rem] font-bold tracking-wide">{doc.number}</div>
                   )}
-                  <div className="mt-2 space-y-0.5 text-[.78rem] leading-relaxed" style={{ color: MUTED }}>
+                  <div
+                    className="mt-2 space-y-0.5 text-[.78rem] leading-relaxed"
+                    style={{ color: onBand ? "#FFFFFFCC" : MUTED }}
+                  >
                     {doc.issue_date && <div>Émis le {formatDate(doc.issue_date)}</div>}
                     {isQuote && doc.valid_until && <div>Valable jusqu&apos;au {formatDate(doc.valid_until)}</div>}
                     {!isQuote && doc.due_date && (
-                      <div className="font-bold" style={{ color: INK }}>
+                      <div className="font-bold" style={{ color: onBand ? "#fff" : INK }}>
                         Échéance : {formatDate(doc.due_date)}
                       </div>
                     )}
@@ -246,7 +312,7 @@ export default function PrintableDocument({
                       />
                       <div
                         className="max-w-[110px] text-left text-[.62rem] leading-snug sm:text-right"
-                        style={{ color: MUTED }}
+                        style={{ color: onBand ? "#FFFFFFCC" : MUTED }}
                       >
                         {qr.caption}
                       </div>
@@ -255,7 +321,14 @@ export default function PrintableDocument({
                 </div>
               </div>
 
-              <div className="mt-5 h-[3px] rounded-full" style={{ background: ACCENT }} />
+              {tpl.header === "rule" && (
+                <div className="mt-5 h-[3px] rounded-full" style={{ background: ACCENT }} />
+              )}
+              {/* Épuré : un simple cheveu, pas d'aplat — moins d'encre, plus
+                  de calme. */}
+              {tpl.header === "plain" && (
+                <div className="mt-5 h-px" style={{ background: LINE }} />
+              )}
             </header>
 
             {/* ================= Objet et destinataire ================= */}
@@ -268,7 +341,7 @@ export default function PrintableDocument({
               {client && (
                 <div
                   className="w-full rounded-xl p-4 sm:w-[280px] sm:shrink-0"
-                  style={{ background: "#F9FAFB", border: `1px solid ${LINE}` }}
+                  style={{ background: headTint, border: `1px solid ${tpl.tinted ? `${ACCENT}33` : LINE}` }}
                 >
                   <Caption>{isQuote ? "Destinataire" : "Facturé à"}</Caption>
                   <div className="mt-1 text-[.92rem] font-bold leading-snug">
@@ -292,10 +365,10 @@ export default function PrintableDocument({
               <table className="doc-items">
                 <thead>
                   <tr style={{ borderBottom: `2px solid ${INK}` }}>
-                    <th className="px-2 pb-2 text-left text-[.7rem] font-bold uppercase tracking-wider">Désignation</th>
-                    <th className="w-[64px] px-2 pb-2 text-center text-[.7rem] font-bold uppercase tracking-wider">Qté</th>
-                    <th className="w-[120px] px-2 pb-2 text-right text-[.7rem] font-bold uppercase tracking-wider">P.U.</th>
-                    <th className="w-[130px] px-2 pb-2 text-right text-[.7rem] font-bold uppercase tracking-wider">Montant</th>
+                    <th className={`px-2 pb-2 text-left text-[.7rem] font-bold uppercase ${headCaps}`}>Désignation</th>
+                    <th className={`w-[64px] px-2 pb-2 text-center text-[.7rem] font-bold uppercase ${headCaps}`}>Qté</th>
+                    <th className={`w-[120px] px-2 pb-2 text-right text-[.7rem] font-bold uppercase ${headCaps}`}>P.U.</th>
+                    <th className={`w-[130px] px-2 pb-2 text-right text-[.7rem] font-bold uppercase ${headCaps}`}>Montant</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -331,9 +404,16 @@ export default function PrintableDocument({
                   </>
                 )}
 
+                {/* Total : aplat de couleur sur les modèles affirmés, simple
+                    encadré sur les modèles sobres — mêmes informations, deux
+                    intensités. */}
                 <div
-                  className="mt-2 flex items-baseline justify-between gap-3 rounded-lg px-3 py-2.5"
-                  style={{ background: ACCENT, color: "#fff" }}
+                  className={`mt-2 flex items-baseline justify-between gap-3 rounded-lg px-3 py-2.5 ${tpl.solid ? "doc-fill" : ""}`}
+                  style={
+                    tpl.solid
+                      ? { background: ACCENT, color: "#fff" }
+                      : { border: `2px solid ${ACCENT}`, color: INK }
+                  }
                 >
                   <span className="text-[.82rem] font-extrabold tracking-wide">
                     {doc.tax_rate > 0 ? "TOTAL TTC" : "TOTAL"}
