@@ -30,6 +30,7 @@ export default function Header() {
     let active = true;
 
     async function loadSession() {
+      if (!supabase) return;
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (!active) return;
       setUser(currentUser);
@@ -65,6 +66,7 @@ export default function Header() {
     }
 
     loadSession();
+    if (!supabase) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       setUser(currentSession?.user || null);
       if (!currentSession?.user) setUnread(0);
