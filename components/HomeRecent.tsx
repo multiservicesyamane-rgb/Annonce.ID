@@ -52,6 +52,7 @@ export default function HomeRecent({ initialListings, categorySlug }: HomeRecent
   const loadingRef = useRef(false);
 
   const fetchPage = useCallback(async (nextOffset: number, nextFilter: string) => {
+    if (!supabase) return [];
     let query = supabase
       .from("listings")
       .select(SELECT_FIELDS)

@@ -42,7 +42,9 @@ export default async function CategoryPage({ params }: Props) {
             <Link href="/" className="text-green hover:text-gold-dark">Accueil</Link> › <b className="text-gray-700">{cat!.name}</b>
           </nav>
         </div>
-        <ListingView initial={[]} title={`${cat!.icon} ${cat!.name}`} subtitle="" />
+        <Suspense fallback={<div className="wrap py-10 text-center">Chargement des annonces...</div>}>
+          <ListingView initial={[]} title={`${cat!.icon} ${cat!.name}`} subtitle="" />
+        </Suspense>
       </>
     );
   }

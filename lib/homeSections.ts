@@ -9,8 +9,9 @@ const HIGHLIGHT_SELECT =
   "id, slug, title, price, price_type, location, image, category, views, created_at";
 
 function getSupabase() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) return null;
   return createClient(supabaseUrl, supabaseKey);
 }
 
@@ -55,6 +56,7 @@ function formatHighlightListing(ad: any): Listing {
 
 export async function getRecentListings(categorySlug?: string) {
   const supabase = getSupabase();
+  if (!supabase) return [];
   let query = supabase
     .from("listings")
     .select(RECENT_SELECT)
@@ -73,6 +75,7 @@ export async function getRecentListings(categorySlug?: string) {
 
 export async function getFeaturedListings(categorySlug?: string) {
   const supabase = getSupabase();
+  if (!supabase) return [];
   let query = supabase
     .from("listings")
     .select(HIGHLIGHT_SELECT)
@@ -92,6 +95,7 @@ export async function getFeaturedListings(categorySlug?: string) {
 
 export async function getPremiumListings(categorySlug?: string) {
   const supabase = getSupabase();
+  if (!supabase) return [];
   let query = supabase
     .from("listings")
     .select(HIGHLIGHT_SELECT)
