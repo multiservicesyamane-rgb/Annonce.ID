@@ -5,14 +5,22 @@ import { createClient } from "@supabase/supabase-js";
 // Retrouve l'annonce par son slug et redirige vers la fiche canonique
 // /annonce/<id>/<slug>. Les routes statiques (/contact, /blog, …) restent
 // prioritaires : seules les URLs inconnues d'un seul segment arrivent ici.
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+
+// Force server-side rendering at request time — this page hits Supabase
+// at runtime so it must never be statically pre-rendered at build time.
+export const dynamic = "force-dynamic";
 
 type Props = { params: { slug: string } };
 
 export default async function ShortLink({ params }: Props) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Env vars are missing at build time — treat as not found rather than crashing.
+  if (!supabaseUrl || !supabaseKey) notFound();
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   const slug = decodeURIComponent(params.slug || "");
   if (!slug) notFound();
 
