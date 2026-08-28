@@ -1,0 +1,2503 @@
+# PRD COMPLET — WANTEERMAKO
+
+## Évolution Marketplace → Marketplace + Services + Gestion d'activité
+
+**Version : 1.0**
+**Statut : Document de cadrage produit**
+**Plateforme : Wanteermako.com**
+**Cible : Web responsive / Mobile-first**
+**Public cible : Acheteurs, vendeurs, prestataires, freelances, artisans, petites entreprises et agences en Afrique de l'Ouest**
+
+---
+
+# 1. VISION PRODUIT
+
+Wanteermako est aujourd'hui une marketplace permettant aux utilisateurs de :
+
+* découvrir des produits ;
+* publier des annonces ;
+* créer une boutique ;
+* vendre directement ;
+* contacter les vendeurs ;
+* utiliser WhatsApp, appel ou messagerie ;
+* recevoir des avis ;
+* booster leurs annonces ;
+* acheter des crédits et services de visibilité.
+
+La prochaine évolution consiste à ajouter une **couche professionnelle de gestion d'activité**, sans transformer Wanteermako en un ERP complexe et sans casser l'expérience marketplace existante.
+
+## Vision cible
+
+> **Wanteermako permet de découvrir, vendre et gérer son activité depuis un seul espace.**
+
+Le parcours complet devient :
+
+**Découvrir → Contacter → Convertir → Réaliser → Facturer → Être payé → Fidéliser**
+
+Pour un vendeur de produit :
+
+**Annonce → Contact → Vente → Avis**
+
+Pour un prestataire :
+
+**Service → Prospect → Devis → Projet → Facture → Paiement → Avis**
+
+---
+
+# 2. PRINCIPES PRODUIT NON NÉGOCIABLES
+
+## 2.1 Ne pas créer un deuxième Wanteermako
+
+Il ne faut PAS créer :
+
+* un dashboard Freelance séparé ;
+* une application Services séparée ;
+* un CRM séparé ;
+* un compte professionnel séparé.
+
+Toutes les fonctionnalités doivent fonctionner dans le compte Wanteermako existant.
+
+---
+
+## 2.2 L'utilisateur ne doit pas voir toutes les fonctionnalités
+
+Wanteermako doit utiliser une logique de **progressive disclosure**.
+
+Un utilisateur qui utilise uniquement la marketplace ne doit pas être confronté à :
+
+* CRM ;
+* projets ;
+* devis ;
+* factures ;
+* documents ;
+* ressources.
+
+Ces fonctionnalités apparaissent lorsqu'elles deviennent pertinentes.
+
+---
+
+## 2.3 Le contexte prime sur le menu
+
+Une fonctionnalité ne devient pas automatiquement un élément du menu principal simplement parce qu'elle existe.
+
+Exemple :
+
+Un contrat doit être accessible depuis un projet ou un devis.
+
+Un formulaire doit être relié aux prospects.
+
+Une facture doit être liée à un client/projet.
+
+Un document doit être accessible depuis son contexte.
+
+---
+
+## 2.4 Mobile-first
+
+L'expérience doit être conçue d'abord pour :
+
+* smartphone ;
+* connexion parfois limitée ;
+* utilisation sur le terrain ;
+* WhatsApp ;
+* actions rapides.
+
+Desktop = espace de productivité.
+
+Mobile = espace d'action rapide.
+
+---
+
+# 3. ARCHITECTURE GLOBALE
+
+Wanteermako doit être organisé autour de 4 grandes expériences :
+
+```text
+WANTEERMAKO
+│
+├── 1. DÉCOUVRIR
+│   ├── Produits
+│   ├── Services
+│   ├── Boutiques
+│   └── Annonces
+│
+├── 2. VENDRE
+│   ├── Mes annonces
+│   ├── Ma boutique
+│   ├── Mes services
+│   └── Marketing
+│
+├── 3. GÉRER
+│   ├── Clients
+│   ├── Projets
+│   ├── Devis
+│   └── Factures
+│
+└── 4. INTERAGIR
+    ├── Messages
+    ├── Avis
+    ├── Notifications
+    └── Support
+```
+
+Les crédits/boosts constituent une couche de monétisation distincte.
+
+---
+
+# 4. ARCHITECTURE DE NAVIGATION
+
+## 4.1 Dashboard actuel à conserver
+
+Le dashboard actuel contient :
+
+### Principal
+
+* Vue d'ensemble
+* Statistiques
+* Mes annonces
+* Marketing & Pub
+* Publier une annonce
+* Crédits & Boosts
+* Historique d'achats
+* Ma Boutique
+
+### Interactions
+
+* Mes Favoris
+* Notifications
+* Messages
+* Avis reçus
+* Gérer mes alertes
+
+### Paramètres
+
+* Mon profil
+* Sécurité & Vie privée
+* FAQ
+* Déconnexion
+
+Cette structure doit être conservée comme base.
+
+---
+
+# 5. NOUVELLE NAVIGATION RECOMMANDÉE
+
+## Desktop
+
+```text
+WANTEERMAKO
+
+PRINCIPAL
+📊 Vue d'ensemble
+📈 Statistiques
+
+VENTE
+📋 Mes annonces
+🏪 Ma boutique
+🚀 Marketing & Pub
+➕ Publier une annonce
+
+MON ACTIVITÉ
+👥 Clients
+📁 Projets
+📄 Devis
+🧾 Factures
+
+INTERACTIONS
+❤️ Mes Favoris
+🔔 Notifications
+💬 Messages
+⭐ Avis reçus
+📣 Mes alertes
+
+────────────────────
+
+💎 Crédits & Boosts
+🛒 Historique d'achats
+
+────────────────────
+
+PARAMÈTRES
+👤 Mon profil
+🔒 Sécurité & Vie privée
+❓ Aide & Support
+
+🚪 Déconnexion
+```
+
+---
+
+# 6. RÈGLE D'AFFICHAGE DE "MON ACTIVITÉ"
+
+La section :
+
+**MON ACTIVITÉ**
+
+ne doit pas nécessairement apparaître pour tous les utilisateurs.
+
+Elle peut être activée lorsque l'utilisateur :
+
+* publie un service ;
+* reçoit une demande de service ;
+* crée un devis ;
+* crée un client ;
+* active son espace professionnel ;
+* choisit "Je propose des services".
+
+### État marketplace simple
+
+```text
+Vue d'ensemble
+Statistiques
+Mes annonces
+Ma boutique
+Marketing
+...
+```
+
+### État vendeur
+
+```text
+Vue d'ensemble
+Mes annonces
+Ma boutique
+...
+```
+
+### État professionnel
+
+```text
+Vue d'ensemble
+Mes annonces
+Ma boutique
+
+MON ACTIVITÉ
+Clients
+Projets
+Devis
+Factures
+```
+
+---
+
+# 7. CRÉATION D'UNE OFFRE
+
+Le concept central doit être **l'offre**.
+
+Une offre peut être :
+
+* produit ;
+* service ;
+* prestation ;
+* offre professionnelle.
+
+L'utilisateur ne doit pas avoir à comprendre l'architecture technique.
+
+## Bouton
+
+```text
++ Publier une annonce
+```
+
+Après clic :
+
+```text
+Que souhaitez-vous publier ?
+
+🛍️ Produit
+Vendre un produit
+
+🛠️ Service
+Proposer une prestation
+
+🏪 Boutique
+Créer ou compléter ma boutique
+
+📣 Offre
+Publier une offre promotionnelle
+```
+
+---
+
+# 8. MODULE PRODUITS
+
+Les produits restent au cœur de la marketplace.
+
+Une fiche produit doit permettre :
+
+* photos ;
+* titre ;
+* description ;
+* prix ;
+* localisation ;
+* disponibilité ;
+* catégorie ;
+* vendeur ;
+* boutique ;
+* WhatsApp ;
+* appel ;
+* message ;
+* favoris ;
+* partage ;
+* signalement.
+
+Le système existant de publication doit être préservé autant que possible.
+
+---
+
+# 9. MODULE SERVICES
+
+## Objectif
+
+Permettre à un utilisateur de publier une prestation exactement comme il publie actuellement une annonce.
+
+Exemples :
+
+* création de logo ;
+* développement web ;
+* photographie ;
+* décoration ;
+* couture ;
+* réparation ;
+* marketing ;
+* conseil ;
+* événementiel ;
+* formation.
+
+## Fiche service
+
+```text
+Titre
+Catégorie
+Description
+Images / portfolio
+Prix à partir de
+Zone desservie
+Disponibilité
+Délai indicatif
+Informations complémentaires
+WhatsApp
+Appel
+Message
+Demander un devis
+```
+
+---
+
+# 10. CATÉGORIE "SERVICES PROFESSIONNELS"
+
+La catégorie Services Professionnels doit devenir une véritable verticale marketplace.
+
+Exemples de sous-catégories :
+
+* Informatique & Digital
+* Design & Création
+* Photo & Vidéo
+* Marketing & Communication
+* BTP & Construction
+* Réparation & Maintenance
+* Beauté & Bien-être
+* Événementiel
+* Conseil & Formation
+* Juridique
+* Transport & Logistique
+* Maison & Services
+
+---
+
+# 11. BOUTIQUE
+
+La boutique devient le profil commercial central du vendeur/prestataire.
+
+## Structure
+
+```text
+Boutique
+│
+├── Présentation
+├── Produits
+├── Services
+├── Portfolio
+├── Avis
+├── Informations
+└── Contact
+```
+
+Un utilisateur peut donc être simultanément :
+
+* vendeur de produits ;
+* prestataire de services.
+
+Il n'a qu'une seule boutique et un seul compte.
+
+---
+
+# 12. PAGE PUBLIQUE BOUTIQUE
+
+Exemple :
+
+```text
+ABC Digital
+
+⭐ 4.8
+📍 Dakar
+
+À propos
+Agence spécialisée en communication digitale.
+
+Produits
+[Produit 1]
+[Produit 2]
+
+Services
+[Création de logo]
+[Site web]
+[Community management]
+
+Portfolio
+
+Avis
+
+[WhatsApp]
+[Message]
+[Demander un devis]
+```
+
+---
+
+# 13. PARCOURS COMMERCIAL SERVICES
+
+Le parcours principal doit être :
+
+```text
+Découverte
+↓
+Service
+↓
+Prestataire
+↓
+Contact
+↓
+Prospect
+↓
+Devis
+↓
+Acceptation
+↓
+Projet
+↓
+Facture
+↓
+Paiement
+↓
+Avis
+```
+
+Le nouveau SaaS intervient après la mise en relation.
+
+Il ne faut pas supprimer l'ADN actuel de Wanteermako :
+
+> contact direct entre acheteur et vendeur/prestataire.
+
+---
+
+# 14. MODULE CLIENTS
+
+Le terme affiché dans l'interface doit être :
+
+**Clients**
+
+et non "CRM".
+
+## Fonctionnalités
+
+* créer un client ;
+* modifier ;
+* supprimer/archiver ;
+* rechercher ;
+* filtrer ;
+* tags ;
+* historique ;
+* notes internes ;
+* projets ;
+* devis ;
+* factures ;
+* coordonnées ;
+* WhatsApp ;
+* email.
+
+## Fiche client
+
+```text
+ABC Studio
+
+Contact
+Jean Dupont
+WhatsApp
+Email
+Site
+
+Tags
+VIP
+Récurrent
+B2B
+
+Projets
+2
+
+Devis
+3
+
+Factures
+4
+
+Total encaissé
+1 250 000 FCFA
+
+Notes internes
+...
+```
+
+---
+
+# 15. FORMULAIRES
+
+Les formulaires ne doivent pas devenir un module isolé.
+
+Ils doivent alimenter directement les prospects.
+
+## Exemple
+
+```text
+Formulaire de brief
+
+Nom
+Entreprise
+WhatsApp
+Email
+Type de projet
+Budget
+Date souhaitée
+Description
+Pièces jointes
+
+[Envoyer]
+```
+
+Soumission :
+
+```text
+Formulaire
+↓
+Prospect
+↓
+Client
+↓
+Devis
+```
+
+## Gestion
+
+```text
+Clients
+├── Clients
+├── Prospects
+└── Formulaires
+```
+
+---
+
+# 16. MODULE DEVIS
+
+Le devis doit être rapide à créer.
+
+## Workflow
+
+```text
+1. Client
+2. Prestations
+3. Conditions
+4. Aperçu
+5. Partage
+```
+
+## Informations
+
+* client ;
+* titre ;
+* description ;
+* lignes ;
+* quantités ;
+* prix ;
+* remise ;
+* taxes si nécessaires ;
+* devise ;
+* conditions ;
+* validité ;
+* paiement ;
+* FAQ ;
+* pièces jointes.
+
+---
+
+# 17. MODÈLES DE DEVIS
+
+L'utilisateur peut définir une configuration réutilisable :
+
+```text
+Conditions par défaut
+50 % à la commande
+50 % à la livraison
+
+Délai
+7 jours
+
+FAQ
+...
+
+Signature
+...
+```
+
+Lors de la création d'un devis, ces données sont préremplies.
+
+---
+
+# 18. DEVIS INTERACTIF
+
+Le devis doit pouvoir être partagé sous forme de page web.
+
+Exemple :
+
+```text
+wanteermako.com/quote/secure-token
+```
+
+Page :
+
+```text
+PROPOSITION COMMERCIALE
+
+Création d'identité visuelle
+
+Objectif
+...
+
+Prestations
+✓ Logo
+✓ Charte graphique
+✓ Supports
+
+Total
+675 000 FCFA
+
+Conditions
+50 % / 50 %
+
+[Accepter le devis]
+[Poser une question]
+```
+
+---
+
+# 19. ÉTATS DU DEVIS
+
+```text
+Brouillon
+↓
+Envoyé
+↓
+Vu
+↓
+Accepté
+```
+
+Branches :
+
+```text
+Refusé
+Expiré
+Annulé
+```
+
+Le système doit enregistrer :
+
+* date de création ;
+* date d'envoi ;
+* date de consultation ;
+* date d'acceptation ;
+* historique des versions.
+
+---
+
+# 20. AUTOMATISATION DEVIS → PROJET
+
+Après acceptation :
+
+```text
+Devis accepté
+
+Créer le projet ?
+
+[Créer le projet]
+```
+
+Le système peut préremplir :
+
+* nom du projet ;
+* client ;
+* budget ;
+* prestations ;
+* délais ;
+* conditions.
+
+---
+
+# 21. MODULE PROJETS
+
+## Création
+
+```text
+Nom
+Client
+Description
+Budget
+Devise
+Date de début
+Date prévue de livraison
+```
+
+Puis création des jalons.
+
+---
+
+# 22. JALONS
+
+Exemple :
+
+```text
+1. Brief
+2. Conception
+3. Validation
+4. Production
+5. Livraison
+```
+
+Chaque jalon possède :
+
+* titre ;
+* description ;
+* date ;
+* statut ;
+* montant éventuel ;
+* fichiers ;
+* commentaires ;
+* validation.
+
+---
+
+# 23. STATUTS PROJET
+
+```text
+À démarrer
+En cours
+En attente client
+En pause
+Terminé
+Annulé
+```
+
+Le statut :
+
+**En attente client**
+
+est particulièrement important.
+
+Il permet d'identifier les projets bloqués par une action du client.
+
+---
+
+# 24. PORTAIL CLIENT
+
+Le client doit pouvoir consulter un projet sans créer de compte.
+
+URL sécurisée :
+
+```text
+wanteermako.com/project/secure-token
+```
+
+Page :
+
+```text
+Projet : Identité visuelle ABC
+
+75 %
+
+✓ Brief
+✓ Direction artistique
+● Corrections
+○ Livraison
+
+Dernière mise à jour
+09 août 2026
+
+[Voir les fichiers]
+[Commenter]
+[Valider le jalon]
+```
+
+---
+
+# 25. SÉCURITÉ DU PORTAIL CLIENT
+
+Ne jamais utiliser un ID séquentiel simple.
+
+Utiliser :
+
+* token aléatoire ;
+* révocation ;
+* expiration optionnelle ;
+* accès limité au projet ;
+* protection contre l'énumération ;
+* possibilité de renforcer par OTP pour les projets sensibles.
+
+---
+
+# 26. MODULE FACTURES
+
+## États
+
+```text
+Brouillon
+Émise
+Envoyée
+Partiellement payée
+Payée
+En retard
+Annulée
+```
+
+## Informations
+
+* numéro ;
+* client ;
+* projet ;
+* lignes ;
+* montant ;
+* devise ;
+* date ;
+* échéance ;
+* montant payé ;
+* montant restant ;
+* méthode de paiement ;
+* notes.
+
+---
+
+# 27. MULTIDEVISES
+
+Devises initiales :
+
+* FCFA ;
+* EUR ;
+* USD.
+
+Le système doit conserver :
+
+```text
+Montant original
+Devise originale
+Taux utilisé
+Date du taux
+Montant converti
+```
+
+Une facture déjà émise ne doit pas être recalculée rétroactivement simplement parce que le taux de change évolue.
+
+---
+
+# 28. PAIEMENTS
+
+Version MVP :
+
+**enregistrement manuel des paiements.**
+
+Méthodes :
+
+* Wave ;
+* Orange Money ;
+* virement ;
+* espèces ;
+* carte ;
+* autre.
+
+Objet :
+
+```text
+Paiement
+├── Facture
+├── Montant
+├── Devise
+├── Date
+├── Méthode
+├── Référence
+└── Note
+```
+
+Les intégrations de paiement automatisées sont prévues ultérieurement.
+
+---
+
+# 29. DOCUMENTS
+
+Les documents doivent être intégrés au contexte.
+
+Ne pas créer une énorme rubrique "Documents" dans la navigation principale.
+
+## Documents possibles
+
+* contrat ;
+* NDA ;
+* conditions de service ;
+* bon de commande ;
+* procès-verbal de livraison ;
+* reçu.
+
+## Accès
+
+Depuis :
+
+```text
+Client → Documents
+Projet → Documents
+Devis → Documents
+Facture → Documents
+```
+
+Les modèles sont accessibles dans :
+
+**Plus d'outils → Modèles**
+
+---
+
+# 30. SUPPORT CLIENT
+
+Le support Wanteermako est une fonctionnalité transverse.
+
+Il ne doit pas être confondu avec les messages entre utilisateurs.
+
+## Menu
+
+```text
+❓ Aide & Support
+```
+
+et non simplement "Support client".
+
+---
+
+# 31. CENTRE D'AIDE
+
+```text
+Comment pouvons-nous vous aider ?
+
+[🔎 Rechercher]
+
+Mon compte
+Publication
+Boutique
+Produits
+Services
+Paiements
+Crédits & Boosts
+Devis & factures
+Projets
+Sécurité
+```
+
+Puis :
+
+**[Contacter le support]**
+
+---
+
+# 32. SUPPORT CONTEXTUEL
+
+Chaque fonctionnalité importante doit pouvoir afficher :
+
+```text
+❓ Besoin d'aide ?
+```
+
+Exemples :
+
+* facture ;
+* crédit ;
+* boost ;
+* annonce ;
+* boutique ;
+* paiement ;
+* projet.
+
+Le ticket doit automatiquement récupérer le contexte lorsque cela est possible.
+
+---
+
+# 33. TICKETS SUPPORT
+
+Objet :
+
+```text
+Ticket
+├── Utilisateur
+├── Catégorie
+├── Objet
+├── Description
+├── Pièces jointes
+├── Statut
+├── Priorité
+├── Date
+└── Historique
+```
+
+Statuts :
+
+```text
+Ouvert
+En cours
+En attente utilisateur
+Résolu
+Fermé
+```
+
+---
+
+# 34. SIGNALER UNE ANNONCE / UN UTILISATEUR
+
+La marketplace doit permettre :
+
+```text
+⋮
+Partager
+Ajouter aux favoris
+🚩 Signaler
+```
+
+Motifs :
+
+* fraude ;
+* contenu interdit ;
+* faux produit ;
+* prix trompeur ;
+* comportement abusif ;
+* autre.
+
+Les signalements alimentent la modération/support.
+
+---
+
+# 35. MESSAGES ≠ SUPPORT
+
+Cette distinction doit être maintenue.
+
+### Messages
+
+```text
+Acheteur ↔ Vendeur
+Client ↔ Prestataire
+```
+
+### Support
+
+```text
+Utilisateur → Wanteermako
+```
+
+---
+
+# 36. CRÉDITS & BOOSTS
+
+Les crédits et boosts sont une couche de monétisation.
+
+Ils doivent être placés en bas du menu.
+
+```text
+────────────────────
+
+💎 Crédits & Boosts
+🛒 Historique d'achats
+```
+
+Ils ne doivent pas être mélangés à :
+
+* Clients ;
+* Projets ;
+* Devis ;
+* Factures.
+
+---
+
+# 37. SOLDE DE CRÉDITS
+
+Exemple :
+
+```text
+💎 Crédits & Boosts
+
+Solde
+250 crédits
+
+[ Acheter des crédits ]
+
+Boosts disponibles
+🚀 Boost annonce
+⭐ Mise en avant
+📍 Boost local
+```
+
+---
+
+# 38. DASHBOARD / VUE D'ENSEMBLE
+
+La page "Vue d'ensemble" reste le dashboard central.
+
+Elle doit être adaptative.
+
+## Pour un vendeur
+
+```text
+Ventes
+Annonces
+Vues
+Contacts
+Avis
+```
+
+## Pour un prestataire
+
+```text
+Revenus encaissés
+Projets actifs
+Devis en attente
+Factures impayées
+Clients actifs
+```
+
+## Pour un vendeur + prestataire
+
+Afficher les deux univers mais de manière compacte.
+
+---
+
+# 39. DASHBOARD ORIENTÉ ACTION
+
+Le dashboard ne doit pas être uniquement statistique.
+
+Priorité :
+
+```text
+Que dois-je faire aujourd'hui ?
+```
+
+Exemple :
+
+```text
+Bonjour 👋
+
+À faire
+
+⚠️ 1 facture en retard
+📄 2 devis en attente
+📁 1 projet en attente de validation
+
+[Relancer]
+[Voir le devis]
+[Voir le projet]
+```
+
+Puis :
+
+```text
+Performance
+
+Revenus
+Projets
+Clients
+Annonces
+```
+
+---
+
+# 40. KPI
+
+## Marketplace
+
+* vues ;
+* contacts ;
+* favoris ;
+* annonces actives ;
+* ventes ;
+* avis.
+
+## Activité professionnelle
+
+* revenus encaissés ;
+* revenus facturés ;
+* revenus prévisionnels ;
+* impayés ;
+* projets actifs ;
+* projets terminés ;
+* clients actifs ;
+* taux d'acceptation des devis.
+
+Important :
+
+**CA prévisionnel ≠ CA facturé ≠ CA encaissé**
+
+---
+
+# 41. NAVIGATION MOBILE
+
+Ne pas reproduire toute la sidebar desktop.
+
+Bottom navigation :
+
+```text
+┌───────────────────────────────┐
+│                               │
+│          CONTENU              │
+│                               │
+├───────────────────────────────┤
+│ 🏠       📁       ＋      💬  │
+│Accueil  Activité  Créer   Msg │
+└───────────────────────────────┘
+```
+
+Le bouton + ouvre :
+
+```text
+Créer
+
+👤 Client
+📋 Annonce
+🛠️ Service
+📄 Devis
+📁 Projet
+🧾 Facture
+```
+
+---
+
+# 42. MENU MOBILE "ACTIVITÉ"
+
+```text
+Mon activité
+
+👥 Clients
+📁 Projets
+📄 Devis
+🧾 Factures
+```
+
+Cela évite d'afficher tous les modules dans la barre principale.
+
+---
+
+# 43. DESIGN SYSTEM
+
+## Couleur principale
+
+Prune :
+
+```text
+#3B1238
+```
+
+## Couleur sombre
+
+```text
+#250B24
+```
+
+## Accent
+
+Ambre :
+
+```text
+#F59E0B
+```
+
+## Succès
+
+```text
+#16A34A
+```
+
+## Erreur
+
+```text
+#DC2626
+```
+
+## Fond
+
+```text
+#F8F7F8
+```
+
+## Texte
+
+```text
+#171317
+```
+
+---
+
+# 44. RÈGLE VISUELLE
+
+Utiliser :
+
+**Prune**
+→ identité / navigation / éléments structurants.
+
+**Ambre**
+→ CTA / boost / attention / action importante.
+
+**Vert**
+→ succès / paiement / validation.
+
+**Rouge**
+→ erreur / retard / problème.
+
+Ne pas utiliser l'ambre partout.
+
+---
+
+# 45. UX — RÈGLE DES 3 NIVEAUX
+
+### Niveau 1
+
+Actions principales :
+
+```text
+Créer
+Voir
+Contacter
+Envoyer
+Payer
+```
+
+### Niveau 2
+
+Actions secondaires :
+
+```text
+Modifier
+Partager
+Dupliquer
+Archiver
+```
+
+### Niveau 3
+
+Actions avancées :
+
+```text
+Paramètres
+Export
+Modèles
+Historique
+```
+
+Les actions de niveau 3 doivent être cachées dans des menus secondaires.
+
+---
+
+# 46. ONBOARDING PROFESSIONNEL
+
+Lorsqu'un utilisateur commence à utiliser les services :
+
+```text
+Développez votre activité avec Wanteermako
+
+Que proposez-vous ?
+
+○ Produits
+○ Services
+○ Produits et services
+```
+
+Puis :
+
+```text
+Quel est votre domaine ?
+
+Design
+Digital
+Mode
+Événementiel
+Commerce
+BTP
+...
+```
+
+Puis :
+
+```text
+Voulez-vous gérer vos clients et prestations ?
+
+[Activer Mon activité]
+```
+
+Le système ne doit pas imposer ce module.
+
+---
+
+# 47. ACTIVATION PROGRESSIVE
+
+Déclencheurs :
+
+### Publication d'un service
+
+Afficher :
+
+> Vous proposez des prestations ? Activez Mon activité pour gérer vos clients et projets.
+
+### Demande de devis
+
+Afficher :
+
+> Créez votre premier devis professionnel.
+
+### Premier devis
+
+Proposer :
+
+> Activez le suivi de projet.
+
+### Projet terminé
+
+Proposer :
+
+> Envoyez votre facture et demandez un avis.
+
+---
+
+# 48. AUTOMATISATIONS
+
+Le système doit connecter les modules.
+
+## Devis accepté
+
+```text
+Devis accepté
+↓
+Créer projet
+↓
+Créer jalons
+↓
+Créer facture d'acompte
+```
+
+## Paiement reçu
+
+```text
+Paiement reçu
+↓
+Mettre à jour facture
+↓
+Mettre à jour dashboard
+↓
+Notifier utilisateur
+```
+
+## Formulaire soumis
+
+```text
+Formulaire
+↓
+Prospect
+↓
+Notification
+↓
+Créer client
+↓
+Créer devis
+```
+
+## Projet terminé
+
+```text
+Projet terminé
+↓
+Demander validation
+↓
+Facture finale
+↓
+Demander avis
+```
+
+---
+
+# 49. NOTIFICATIONS
+
+Événements :
+
+```text
+quote.created
+quote.sent
+quote.viewed
+quote.accepted
+quote.rejected
+
+project.created
+milestone.completed
+milestone.waiting_client
+
+invoice.created
+invoice.sent
+invoice.overdue
+
+payment.received
+
+form.submitted
+
+review.received
+
+support.ticket_created
+support.ticket_updated
+```
+
+Canaux possibles :
+
+* notification interne ;
+* email ;
+* WhatsApp lorsque l'intégration appropriée est disponible.
+
+---
+
+# 50. MODÈLE DE DONNÉES
+
+Architecture conceptuelle :
+
+```text
+User
+│
+└── Workspace
+    │
+    ├── Store
+    │
+    ├── Listing
+    │   ├── Product
+    │   └── Service
+    │
+    ├── Client
+    │   ├── Project
+    │   │   └── Milestone
+    │   │
+    │   ├── Quote
+    │   │   └── QuoteItem
+    │   │
+    │   └── Invoice
+    │       └── Payment
+    │
+    ├── Form
+    │   └── Submission
+    │
+    ├── Document
+    │
+    ├── Review
+    │
+    ├── Notification
+    │
+    └── SupportTicket
+```
+
+---
+
+# 51. WORKSPACE
+
+Le concept `Workspace` doit être prévu dès maintenant.
+
+Même si la majorité des utilisateurs sont seuls :
+
+```text
+Workspace
+├── Owner
+├── Admin
+├── Manager
+└── Member
+```
+
+Cela permettra plus tard de supporter :
+
+* agences ;
+* équipes ;
+* entreprises ;
+* collaborateurs.
+
+---
+
+# 52. PERMISSIONS
+
+Prévoir :
+
+| Fonction           | Owner | Admin |           Member |
+| ------------------ | ----: | ----: | ---------------: |
+| Voir clients       |   Oui |   Oui |              Oui |
+| Modifier clients   |   Oui |   Oui |              Oui |
+| Créer devis        |   Oui |   Oui |              Oui |
+| Créer facture      |   Oui |   Oui | Selon permission |
+| Voir finances      |   Oui |   Oui |              Non |
+| Gérer utilisateurs |   Oui |   Oui |              Non |
+| Paramètres         |   Oui |   Oui |              Non |
+
+Le système de permissions peut être simplifié dans le MVP mais l'architecture doit permettre son extension.
+
+---
+
+# 53. ARCHITECTURE TECHNIQUE
+
+Architecture logique :
+
+```text
+Frontend
+│
+├── Marketplace
+├── Store
+├── Listings
+├── Services
+├── Dashboard
+├── Clients
+├── Projects
+├── Quotes
+├── Invoices
+├── Support
+└── Notifications
+        │
+        ▼
+API / Backend
+│
+├── Auth
+├── Marketplace
+├── Store
+├── CRM
+├── Projects
+├── Quotes
+├── Billing
+├── Payments
+├── Documents
+├── Notifications
+└── Support
+        │
+        ▼
+Database
+```
+
+---
+
+# 54. ARCHITECTURE MODULAIRE
+
+Chaque domaine doit rester découplé.
+
+Exemple :
+
+```text
+QuoteService
+ProjectService
+InvoiceService
+ClientService
+NotificationService
+SupportService
+```
+
+Le système doit permettre d'ajouter plus tard :
+
+```text
+PaymentProvider
+├── Wave
+├── Orange Money
+├── Bank
+└── Other
+```
+
+sans réécrire la logique métier.
+
+---
+
+# 55. SÉCURITÉ
+
+Exigences minimales :
+
+* authentification sécurisée ;
+* contrôle d'accès ;
+* protection des données privées ;
+* tokens non prévisibles ;
+* expiration/révocation des liens publics ;
+* protection contre ID enumeration ;
+* logs d'actions sensibles ;
+* limitation des tentatives ;
+* validation serveur de toutes les données ;
+* séparation des données entre utilisateurs/workspaces.
+
+---
+
+# 56. PORTAILS PUBLICS
+
+Les éléments suivants peuvent être publics :
+
+* boutique ;
+* annonce ;
+* service ;
+* devis partagé ;
+* projet partagé.
+
+Mais chaque type doit avoir des permissions différentes.
+
+Exemple :
+
+```text
+Boutique
+→ public
+
+Annonce
+→ public
+
+Devis
+→ accès par token
+
+Projet
+→ accès par token
+
+Facture
+→ accès sécurisé
+```
+
+---
+
+# 57. SUPPORT & TRUST & SAFETY
+
+Le système doit permettre à l'équipe Wanteermako de gérer :
+
+* tickets ;
+* signalements ;
+* comptes ;
+* annonces ;
+* boutiques ;
+* paiements ;
+* litiges ;
+* contenu abusif.
+
+À terme :
+
+```text
+Admin
+│
+├── Users
+├── Listings
+├── Stores
+├── Reports
+├── Support
+├── Payments
+├── Boosts
+└── Analytics
+```
+
+---
+
+# 58. MVP
+
+Ne pas développer tout le PRD immédiatement.
+
+## Phase 1 — MVP Services & Business
+
+### Obligatoire
+
+* services ;
+* boutique enrichie ;
+* clients ;
+* devis ;
+* projets ;
+* jalons ;
+* portail projet ;
+* factures ;
+* paiements manuels ;
+* dashboard adaptatif ;
+* notifications ;
+* support de base.
+
+### À conserver
+
+* annonces ;
+* boutique ;
+* messages ;
+* avis ;
+* crédits ;
+* boosts.
+
+---
+
+# 59. PHASE 2
+
+Ajouter :
+
+* formulaires ;
+* prospects ;
+* modèles de devis ;
+* modèles de documents ;
+* contrats ;
+* relances ;
+* analytics avancés ;
+* automatisations.
+
+---
+
+# 60. PHASE 3
+
+Ajouter :
+
+* paiements intégrés ;
+* Wave ;
+* Orange Money ;
+* liens de paiement ;
+* rapprochement des paiements ;
+* notifications WhatsApp officielles ;
+* signature électronique si pertinente.
+
+---
+
+# 61. PHASE 4
+
+Ajouter :
+
+* équipes ;
+* rôles avancés ;
+* agences ;
+* multi-utilisateurs ;
+* rapports ;
+* automatisation avancée ;
+* IA.
+
+---
+
+# 62. IA — À NE PAS METTRE DANS LE MVP
+
+Fonctions futures :
+
+### Génération de devis
+
+Utilisateur :
+
+> Création d'un logo pour une marque de cosmétiques, budget 500 000 FCFA.
+
+IA :
+
+> proposition de structure de devis.
+
+### Résumé client
+
+```text
+3 projets
+2 400 000 FCFA générés
+Dernier contact : 12 jours
+```
+
+### Relance intelligente
+
+```text
+La facture #1024 est en retard de 7 jours.
+
+[Préparer une relance]
+```
+
+---
+
+# 63. PRIORISATION MOSCOW
+
+| Fonction                  | Priorité |
+| ------------------------- | -------- |
+| Marketplace existante     | MUST     |
+| Boutique                  | MUST     |
+| Services                  | MUST     |
+| Clients                   | MUST     |
+| Devis                     | MUST     |
+| Projets                   | MUST     |
+| Jalons                    | MUST     |
+| Factures                  | MUST     |
+| Portail client            | MUST     |
+| Support                   | MUST     |
+| Messages                  | MUST     |
+| Avis                      | MUST     |
+| Crédits & Boosts          | MUST     |
+| Formulaires               | SHOULD   |
+| Documents                 | SHOULD   |
+| Contrats                  | SHOULD   |
+| Paiements intégrés        | COULD    |
+| Équipe                    | COULD    |
+| IA                        | LATER    |
+| Marketplace de ressources | LATER    |
+
+---
+
+# 64. ROADMAP
+
+```text
+PHASE 0
+Analyse / UX
+│
+├── Audit existant
+├── Architecture
+├── Design system
+├── Prototypes
+└── Tests utilisateurs
+        ↓
+PHASE 1
+Services
+│
+├── Services
+├── Boutique enrichie
+├── Clients
+├── Devis
+├── Projets
+└── Factures
+        ↓
+PHASE 2
+Automation
+│
+├── Formulaires
+├── Documents
+├── Notifications
+└── Relances
+        ↓
+PHASE 3
+Payments
+│
+├── Wave
+├── Orange Money
+├── Payment links
+└── Reconciliation
+        ↓
+PHASE 4
+Business
+│
+├── Teams
+├── Agencies
+├── Permissions
+└── Analytics
+        ↓
+PHASE 5
+AI
+│
+├── AI quotes
+├── AI assistant
+└── Smart automation
+```
+
+---
+
+# 65. KPI PRODUIT
+
+## Marketplace
+
+* nombre d'annonces ;
+* annonces actives ;
+* vues ;
+* contacts ;
+* favoris ;
+* ventes ;
+* boutiques actives.
+
+## Services
+
+* services publiés ;
+* demandes reçues ;
+* devis envoyés ;
+* devis vus ;
+* devis acceptés ;
+* projets créés ;
+* projets terminés ;
+* factures émises ;
+* paiements enregistrés.
+
+## Business
+
+* utilisateurs activés ;
+* utilisateurs professionnels actifs ;
+* revenus générés ;
+* clients par workspace ;
+* taux de rétention.
+
+---
+
+# 66. NORTH STAR METRIC
+
+La métrique principale recommandée :
+
+> **Nombre de vendeurs/prestataires ayant réalisé au moins une interaction commerciale qualifiée ou transaction par mois via Wanteermako.**
+
+Cette métrique est préférable au simple nombre d'inscriptions.
+
+---
+
+# 67. OBJECTIFS UX
+
+L'utilisateur doit pouvoir :
+
+### Publier
+
+Publier un produit ou service rapidement.
+
+### Contacter
+
+Contacter un vendeur en quelques secondes.
+
+### Convertir
+
+Passer d'un contact à un devis sans friction.
+
+### Gérer
+
+Suivre ses clients et projets sans utiliser plusieurs logiciels.
+
+### Être payé
+
+Créer et suivre ses factures.
+
+### Fidéliser
+
+Conserver l'historique client et recevoir des avis.
+
+---
+
+# 68. GOLDEN PATH
+
+Le parcours prioritaire à optimiser :
+
+```text
+Utilisateur
+↓
+Publie un service
+↓
+Client découvre le service
+↓
+Client contacte
+↓
+Prestataire crée le client
+↓
+Prestataire crée le devis
+↓
+Client consulte
+↓
+Client accepte
+↓
+Wanteermako propose "Créer le projet"
+↓
+Projet créé
+↓
+Jalons créés
+↓
+Client suit le projet
+↓
+Facture d'acompte
+↓
+Paiement enregistré
+↓
+Projet livré
+↓
+Facture finale
+↓
+Avis
+```
+
+Ce parcours doit être testé avant toute fonctionnalité secondaire.
+
+---
+
+# 69. RÈGLE ANTI-SURCHARGE
+
+Avant d'ajouter un nouvel élément au menu, poser trois questions :
+
+### 1.
+
+L'utilisateur utilise-t-il cette fonction régulièrement ?
+
+### 2.
+
+Doit-il y accéder indépendamment des autres fonctionnalités ?
+
+### 3.
+
+Est-elle suffisamment importante pour mériter un espace permanent ?
+
+Si la réponse est non :
+
+→ fonctionnalité contextuelle.
+
+---
+
+# 70. RÈGLE DE CONTEXTE
+
+Exemple :
+
+Ne pas faire :
+
+```text
+Documents
+```
+
+mais :
+
+```text
+Projet
+→ Documents
+```
+
+Ne pas faire :
+
+```text
+Paiements
+```
+
+mais :
+
+```text
+Facture
+→ Paiements
+```
+
+Ne pas faire :
+
+```text
+Formulaires
+```
+
+comme gros module isolé :
+
+```text
+Clients
+→ Prospects
+→ Formulaires
+```
+
+Ne pas faire :
+
+```text
+Contrats
+```
+
+comme menu principal :
+
+```text
+Devis
+→ Générer contrat
+```
+
+---
+
+# 71. EXPÉRIENCE CIBLE
+
+Wanteermako doit donner l'impression suivante :
+
+> "Je n'utilise pas plusieurs outils. Wanteermako comprend mon activité et m'accompagne du premier contact jusqu'au paiement."
+
+Le produit doit masquer la complexité technique.
+
+L'utilisateur ne doit pas penser :
+
+> CRM → ERP → facturation → gestion de projet.
+
+Il doit penser :
+
+> **Client → Devis → Projet → Paiement.**
+
+---
+
+# 72. POSITIONNEMENT
+
+Positionnement recommandé :
+
+> **Wanteermako — La marketplace et l'espace professionnel pour vendre, proposer vos services et gérer votre activité.**
+
+Promesse courte :
+
+> **Trouvez des clients, vendez vos produits et services, gérez vos projets et soyez payé depuis un seul espace.**
+
+---
+
+# 73. CONSIGNES POUR L'ÉQUIPE DE CONCEPTION
+
+Ne pas concevoir les nouvelles fonctionnalités comme un produit séparé.
+
+Le design doit partir de l'interface Wanteermako existante.
+
+Conserver :
+
+* identité visuelle ;
+* navigation ;
+* annonces ;
+* boutiques ;
+* messages ;
+* avis ;
+* crédits ;
+* boosts.
+
+Ajouter progressivement :
+
+* services ;
+* clients ;
+* devis ;
+* projets ;
+* factures ;
+* support.
+
+Créer une continuité visuelle entre marketplace et espace professionnel.
+
+---
+
+# 74. CONSIGNES POUR LE DÉVELOPPEMENT
+
+Avant de développer, réaliser :
+
+1. audit du code existant ;
+2. audit des modèles de données ;
+3. audit des routes ;
+4. audit des composants UI ;
+5. audit des permissions ;
+6. audit du système de notifications ;
+7. audit de la boutique ;
+8. audit des annonces ;
+9. audit du système de crédits/boosts ;
+10. audit du système de messages.
+
+Ne pas réécrire ce qui existe déjà sans nécessité.
+
+Privilégier :
+
+**extension > duplication > réécriture.**
+
+---
+
+# 75. CONSIGNES POUR CLAUDE CODE / AGENT DE DÉVELOPPEMENT
+
+Avant toute modification :
+
+### Étape 1 — Comprendre
+
+Analyser :
+
+* architecture du projet ;
+* framework ;
+* routes ;
+* composants ;
+* API ;
+* base de données ;
+* authentification ;
+* permissions ;
+* design system ;
+* logique marketplace.
+
+### Étape 2 — Cartographier
+
+Créer une carte :
+
+```text
+Existant
+↓
+Ce qui peut être réutilisé
+↓
+Ce qui doit être étendu
+↓
+Ce qui doit être créé
+```
+
+### Étape 3 — Ne pas casser
+
+Aucune nouvelle fonctionnalité ne doit casser :
+
+* publication ;
+* annonces ;
+* boutique ;
+* favoris ;
+* messages ;
+* avis ;
+* crédits ;
+* boosts ;
+* authentification.
+
+### Étape 4 — Développer par module
+
+Ordre recommandé :
+
+```text
+Services
+↓
+Boutique enrichie
+↓
+Clients
+↓
+Devis
+↓
+Projets
+↓
+Factures
+↓
+Dashboard
+↓
+Support
+↓
+Automatisations
+```
+
+---
+
+# 76. CRITÈRES D'ACCEPTATION GÉNÉRAUX
+
+Une fonctionnalité est considérée comme terminée uniquement si :
+
+* elle fonctionne sur mobile ;
+* elle fonctionne sur desktop ;
+* les permissions sont respectées ;
+* les états vides sont conçus ;
+* les erreurs sont gérées ;
+* les chargements sont gérés ;
+* les notifications nécessaires existent ;
+* les données sont persistées ;
+* les liens publics sont sécurisés ;
+* les actions critiques sont journalisées ;
+* aucune fonctionnalité marketplace existante n'est cassée.
+
+---
+
+# 77. ÉTATS UI OBLIGATOIRES
+
+Chaque nouveau module doit prévoir :
+
+### Loading
+
+Skeleton ou état de chargement.
+
+### Empty state
+
+Exemple :
+
+> Vous n'avez pas encore de clients.
+
+CTA :
+
+> * Ajouter un client
+
+### Error state
+
+Message clair + action de récupération.
+
+### Success state
+
+Confirmation claire.
+
+### Mobile state
+
+Interface adaptée.
+
+---
+
+# 78. PRIORITÉ ABSOLUE
+
+Si les ressources sont limitées, ne pas développer 30 fonctionnalités à moitié.
+
+Faire parfaitement le parcours :
+
+```text
+SERVICE
+↓
+CLIENT
+↓
+DEVIS
+↓
+PROJET
+↓
+FACTURE
+↓
+PAIEMENT
+↓
+AVIS
+```
+
+Puis connecter ce parcours à :
+
+```text
+BOUTIQUE
+ANNONCES
+MESSAGES
+WHATSAPP
+```
+
+C'est le cœur du nouveau Wanteermako.
+
+---
+
+# 79. VISION FINALE
+
+L'architecture cible doit pouvoir être résumée ainsi :
+
+```text
+                         WANTEERMAKO
+                              │
+             ┌────────────────┴────────────────┐
+             │                                 │
+        MARKETPLACE                       ESPACE PRO
+             │                                 │
+     ┌───────┼────────┐                ┌───────┼────────┐
+     │       │        │                │       │        │
+  Produits Services Boutiques       Clients Projets Devis
+     │       │        │                              │
+     │       │        │                              ▼
+     │       │        │                          Factures
+     │       │        │                              │
+     └───────┴────────┘                              ▼
+             │                                    Paiement
+             ▼
+         CONTACT
+             │
+             ▼
+         MESSAGES
+             │
+             ▼
+           AVIS
+
+─────────────────────────────────────────────────────
+
+💎 CRÉDITS & BOOSTS
+🛒 HISTORIQUE D'ACHATS
+❓ AIDE & SUPPORT
+```
+
+---
+
+# 80. CONCLUSION PRODUIT
+
+Le nouveau module ne doit pas être présenté comme :
+
+**"Wanteermako ajoute un CRM, un outil de gestion de projet et un logiciel de facturation."**
+
+La bonne vision est :
+
+> **Wanteermako évolue d'une marketplace de mise en relation vers une plateforme complète permettant aux vendeurs et prestataires de transformer une opportunité en activité commerciale.**
+
+La marketplace reste le moteur d'acquisition.
+
+Les boutiques restent la vitrine.
+
+Les annonces restent le contenu commercial.
+
+Les messages restent le canal de contact.
+
+Les crédits et boosts restent le moteur de monétisation.
+
+Et **Mon activité** devient la couche qui permet au professionnel de gérer ce qui se passe après la mise en relation.
+
+Le système final doit rester simple :
+
+**Découvrir → Contacter → Vendre → Gérer → Être payé → Recevoir un avis.**
+
+La complexité doit rester dans l'architecture technique, pas dans l'expérience utilisateur.
