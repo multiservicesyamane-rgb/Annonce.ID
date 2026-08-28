@@ -30,8 +30,23 @@ export default async function CategoryPage({ params }: Props) {
   const cat = categoryBySlug(params.slug);
   if (!cat) notFound();
   
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Variables absentes au build time → page vide mais sans crash
+  if (!supabaseUrl || !supabaseKey) {
+    return (
+      <>
+        <div className="wrap pt-3.5">
+          <nav className="text-[.78rem] text-gray-500">
+            <Link href="/" className="text-green hover:text-gold-dark">Accueil</Link> › <b className="text-gray-700">{cat!.name}</b>
+          </nav>
+        </div>
+        <ListingView initial={[]} title={`${cat!.icon} ${cat!.name}`} subtitle="" />
+      </>
+    );
+  }
+
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   // Fetch real listings from Supabase based on category

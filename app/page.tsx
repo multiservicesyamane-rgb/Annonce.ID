@@ -24,8 +24,18 @@ import RecommendedForYou from "@/components/RecommendedForYou";
 export const revalidate = 30;
 
 export default async function HomePage() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Variables manquantes au build time → on retourne la page sans données dynamiques
+  if (!supabaseUrl || !supabaseKey) {
+    return (
+      <>
+        <Hero />
+      </>
+    );
+  }
+
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   const [formattedListings, une, prem] = await Promise.all([
