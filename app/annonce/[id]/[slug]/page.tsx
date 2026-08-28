@@ -16,10 +16,7 @@ import { detectLanguage } from "@/lib/listingQuality";
 import { categoryBySlug } from "@/lib/constants";
 import { getRootUrl, getSubdomainUrl } from "@/lib/categories";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Pas de client module-level : les env vars ne sont pas disponibles au build time.
 
 // Client admin (service role) — SERVEUR UNIQUEMENT. Sert à retrouver une annonce
 // non active (que la RLS anon ne laisse pas lire) pour la rediriger au lieu d'un 404.
@@ -35,6 +32,11 @@ function adminClient() {
 export const revalidate = 300;
 
 async function fetchAd(idParam: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) return null;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   // UUID check rough regex to prevent invalid input errors in supabase
   if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(idParam)) {
     // Also try as an integer id if it is one (legacy support)

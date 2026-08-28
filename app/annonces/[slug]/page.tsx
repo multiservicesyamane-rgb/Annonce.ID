@@ -4,10 +4,8 @@ import AdCard from "@/components/AdCard";
 import { createClient } from "@supabase/supabase-js";
 import { formatNumber } from "@/lib/utils";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Force server-side rendering — cette page interroge Supabase à la demande
+export const dynamic = "force-dynamic";
 
 // Map common SEO slugs to real DB queries
 const SEO_MAPPING: Record<string, { category: string, location?: string, title: string, desc: string }> = {
@@ -35,7 +33,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SeoLandingPage({ params }: Props) {
   const seo = SEO_MAPPING[params.slug];
-  
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Variables absentes au build time → liste vide sans crash
+  if (!supabaseUrl || !supabaseKey) {
+    const pageTitle = seo ? seo.title : `Annonces ${params.slug.replace(/-/g, " ")}`;
+    const pageDesc = seo ? seo.desc : `Découvrez nos petites annonces gratuites au Sénégal pour : ${params.slug.replace(/-/g, " ")}.`;
+    return (
+      <div className="mx-auto max-w-[1320px] px-4 py-8">
+        <h1 className="font-display text-[2rem] font-black text-green">{pageTitle}</h1>
+        <p className="text-gray-500 mt-2">{pageDesc}</p>
+      </div>
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   // Default query if slug is not explicitly mapped (fallback)
   let query = supabase.from('listings').select('*').eq('status', 'active');
   
