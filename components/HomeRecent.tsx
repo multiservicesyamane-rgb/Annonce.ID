@@ -81,8 +81,8 @@ export default function HomeRecent({ initialListings, categorySlug }: HomeRecent
     try {
       const next = await fetchPage(offset, filter);
       setListings((current) => {
-        const seen = new Set(current.map((ad) => String(ad.id)));
-        const fresh = next.filter((ad) => !seen.has(String(ad.id)));
+        const seen = new Set(current.map((ad: any) => String(ad.id)));
+        const fresh = next.filter((ad: any) => !seen.has(String(ad.id)));
         return [...current, ...fresh];
       });
       setOffset((current) => current + next.length);

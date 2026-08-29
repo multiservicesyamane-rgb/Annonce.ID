@@ -10,7 +10,8 @@ export default function FavorisRedirect() {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data }: { data: any }) => {
+      const user = data?.user;
       if (user) {
         router.replace("/dashboard?panel=favorites");
       } else {

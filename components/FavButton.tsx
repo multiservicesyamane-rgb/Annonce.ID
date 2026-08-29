@@ -41,7 +41,7 @@ export function useFavorites() {
 
         const { data: dbFavs } = await supabase.from('favorites').select('listing_id').eq('user_id', data.session.user.id);
         if (dbFavs) {
-          const dbIds = dbFavs.map(f => String(f.listing_id));
+          const dbIds = (dbFavs as any[]).map((f: any) => String(f.listing_id));
           const merged = Array.from(new Set([...local, ...dbIds]));
           setFavs(merged);
           saveFavs(merged);

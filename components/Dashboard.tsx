@@ -339,7 +339,7 @@ export default function Dashboard() {
     if (typeof window !== 'undefined') {
       // Load real campaigns from Supabase
       try {
-        supabase.from('campagnes_pub').select('*').eq('status', 'active').order('created_at', { ascending: false }).limit(1).then(({ data }) => {
+        supabase.from('campagnes_pub').select('*').eq('status', 'active').order('created_at', { ascending: false }).limit(1).then(({ data }: { data: any }) => {
           if (data && data.length > 0) {
             setActiveCampaign({
               hero: data[0].hero,
@@ -362,12 +362,13 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data }: { data: any }) => {
+      const user = data?.user;
       if (user) {
         setUser(user);
 
         // Fetch user profile from profiles table
-        supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data: profData }) => {
+        supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data: profData }: { data: any }) => {
           const defaultName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || "Ma Boutique";
           if (profData) {
             setProfile(profData);
@@ -389,7 +390,7 @@ export default function Dashboard() {
         });
 
         // Fetch listings
-        supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, category_slug, status, views, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data }) => {
+        supabase.from('listings').select('id, slug, title, price, price_type, location, image, category, category_slug, status, views, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data }: { data: any }) => {
           if (data) {
             const formatted = data.map((d: any) => ({
               ...d,
@@ -401,14 +402,14 @@ export default function Dashboard() {
         });
 
         // Fetch reviews reçus (avis sur le vendeur)
-        supabase.from('reviews').select('rating, comment, created_at, listing_id').eq('seller_id', user.id).order('created_at', { ascending: false }).then(({ data }) => {
+        supabase.from('reviews').select('rating, comment, created_at, listing_id').eq('seller_id', user.id).order('created_at', { ascending: false }).then(({ data }: { data: any }) => {
           if (data) setReviews(data);
         });
 
         // Fetch purchases from DB with fallback to localStorage
-        supabase.from('purchases').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data: dbPurchases }) => {
+        supabase.from('purchases').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).then(({ data: dbPurchases }: { data: any }) => {
           if (dbPurchases && dbPurchases.length > 0) {
-            setPurchases(dbPurchases.map(p => ({
+            setPurchases(dbPurchases.map((p: any) => ({
               id: p.ref_command || p.id,
               date: p.created_at,
               type: p.type,
@@ -430,7 +431,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (user && ads.length > 0) {
       const listingIds = ads.map(a => a.id);
-      supabase.from('favorites').select('id', { count: 'exact', head: true }).in('listing_id', listingIds).then(({ count, error }) => {
+      supabase.from('favorites').select('id', { count: 'exact', head: true }).in('listing_id', listingIds).then(({ count, error }: { count: number | null; error: any }) => {
         if (!error && count !== null) {
           setReceivedFavsCount(count);
         }
@@ -627,7 +628,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (favs.length === 0) { setFavListings([]); return; }
     setLoadingFavs(true);
-    supabase.from('listings').select('id, slug, title, price, location, image, category').in('id', favs).then(({ data }) => {
+    supabase.from('listings').select('id, slug, title, price, location, image, category').in('id', favs).then(({ data }: { data: any }) => {
       if (data) setFavListings(data.map((ad: any) => ({
         id: ad.id, slug: ad.slug, title: ad.title,
         price: ad.price ? `${ad.price} FCFA` : 'Gratuit',

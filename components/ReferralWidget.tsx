@@ -15,7 +15,8 @@ export default function ReferralWidget() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data }: { data: any }) => {
+      const user = data?.user;
       if (!user) return;
       setLink(`${window.location.origin}/inscription?ref=${user.id}`);
       const { data: me } = await supabase.from("profiles").select("referral_points").eq("id", user.id).maybeSingle();

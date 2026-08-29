@@ -84,7 +84,7 @@ export default function ChatInterface() {
             const { data: profiles } = await supabase.from('profiles').select('id, full_name, avatar_url').in('id', realContacts.map(c => c.id));
             if (profiles && profiles.length > 0) {
               const enrichedContacts = realContacts.map(c => {
-                const p = profiles.find(pr => pr.id === c.id);
+                const p = (profiles as any[]).find((pr: any) => pr.id === c.id);
                 if (p) {
                   return { ...c, name: p.full_name || c.name, avatar: p.avatar_url || c.avatar };
                 }
@@ -190,7 +190,7 @@ export default function ChatInterface() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
-        (payload) => {
+        (payload: any) => {
           const newMsg = payload.new as any;
           
           // Vérifier si le message concerne la discussion active
@@ -324,7 +324,7 @@ export default function ChatInterface() {
         };
         setMessages(prev => [...prev, newMessage]);
 
-        supabase.auth.getSession().then(({ data: sessionData }) => {
+        supabase.auth.getSession().then(({ data: sessionData }: { data: any }) => {
           if (sessionData.session) {
             supabase.from("messages").insert([{
               sender_id: sessionData.session.user.id,

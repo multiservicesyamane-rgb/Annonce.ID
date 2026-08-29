@@ -67,7 +67,7 @@ export default function Header() {
 
     loadSession();
     if (!supabase) return;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, currentSession: any) => {
       setUser(currentSession?.user || null);
       if (!currentSession?.user) setUnread(0);
     });

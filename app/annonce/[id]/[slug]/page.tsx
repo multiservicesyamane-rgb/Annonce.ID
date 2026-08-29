@@ -89,6 +89,11 @@ async function fetchAd(idParam: string) {
 }
 
 async function fetchSimilar(category: string, currentId: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) return [];
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   const { data } = await supabase.from('listings')
     .select('id, slug, title, price, location, image, category')
     .eq('category', category)
@@ -445,7 +450,7 @@ export default async function AnnoncePage({ params }: Props) {
         <section className="py-9">
           <h2 className="mb-5 font-display text-[1.25rem] font-bold text-gray-900">Annonces similaires</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {similar.map((s) => (
+            {similar.map((s: any) => (
               <AdCard key={s.id} ad={s as any} />
             ))}
           </div>

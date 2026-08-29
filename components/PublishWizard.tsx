@@ -53,10 +53,11 @@ export default function PublishWizard() {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data }: { data: any }) => {
+      const user = data?.user;
       if (user) {
         setUserEmail(user.email || "");
-        supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
+        supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }: { data: any }) => {
           if (data) {
             setUserProfile(data);
             // Préremplit le numéro (9 derniers chiffres) s'il existe déjà sur le profil
@@ -77,7 +78,7 @@ export default function PublishWizard() {
 
     if (editId) {
       setEditModeId(editId);
-      supabase.from('listings').select('*').eq('id', editId).single().then(({ data }) => {
+      supabase.from('listings').select('*').eq('id', editId).single().then(({ data }: { data: any }) => {
         if (data) {
           setCatSlug(data.category_slug);
           setSubCategory(data.category);

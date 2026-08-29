@@ -47,7 +47,7 @@ export default function AdBanner({
 
   useEffect(() => {
     try {
-      supabase.from('campagnes_pub').select('*').eq('status', 'active').order('created_at', { ascending: false }).limit(1).then(({ data }) => {
+      supabase.from('campagnes_pub').select('*').eq('status', 'active').order('created_at', { ascending: false }).limit(1).then(({ data }: { data: any }) => {
         if (data && data.length > 0) {
           setActiveCampaign({
             hero: data[0].hero,
