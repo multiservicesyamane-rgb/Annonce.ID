@@ -362,6 +362,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    if (!supabase) { setLoadingAds(false); setLoadingProfile(false); return; }
     supabase.auth.getUser().then(({ data }: { data: any }) => {
       const user = data?.user;
       if (user) {
@@ -425,11 +426,11 @@ export default function Dashboard() {
         setLoadingAds(false);
       }
     });
-  }, [supabase.auth]);
+  }, [supabase]);
 
   // Fetch count of favorites received on user's listings
   useEffect(() => {
-    if (user && ads.length > 0) {
+    if (supabase && user && ads.length > 0) {
       const listingIds = ads.map(a => a.id);
       supabase.from('favorites').select('id', { count: 'exact', head: true }).in('listing_id', listingIds).then(({ count, error }: { count: number | null; error: any }) => {
         if (!error && count !== null) {
@@ -627,6 +628,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (favs.length === 0) { setFavListings([]); return; }
+    if (!supabase) return;
     setLoadingFavs(true);
     supabase.from('listings').select('id, slug, title, price, location, image, category').in('id', favs).then(({ data }: { data: any }) => {
       if (data) setFavListings(data.map((ad: any) => ({

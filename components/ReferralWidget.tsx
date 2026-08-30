@@ -15,6 +15,7 @@ export default function ReferralWidget() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (!supabase) return;
     supabase.auth.getUser().then(async ({ data }: { data: any }) => {
       const user = data?.user;
       if (!user) return;

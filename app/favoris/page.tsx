@@ -10,6 +10,10 @@ export default function FavorisRedirect() {
   const supabase = createClient();
 
   useEffect(() => {
+    if (!supabase) {
+      router.replace(getLoginUrl(getCurrentPathWithSearch()));
+      return;
+    }
     supabase.auth.getUser().then(({ data }: { data: any }) => {
       const user = data?.user;
       if (user) {

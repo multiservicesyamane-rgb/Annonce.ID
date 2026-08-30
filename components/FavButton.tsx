@@ -35,6 +35,7 @@ export function useFavorites() {
     setFavs(local);
 
     const checkSession = async () => {
+      if (!supabase) return;
       const { data } = await supabase.auth.getSession();
       if (data.session?.user) {
         setUserId(data.session.user.id);
@@ -69,6 +70,7 @@ export function useFavorites() {
       return next;
     });
 
+    if (!supabase) return;
     const { data } = await supabase.auth.getSession();
     if (data.session?.user) {
       if (favs.includes(strId)) {

@@ -1,0 +1,60 @@
+name: Crons (remplace les Netlify Scheduled Functions)
+
+# Depuis la bascule Netlify -> Vercel : le plan Vercel Hobby limite les Cron
+# Jobs natifs à 2 tâches max, 1x/jour chacune — incompatible avec nos 4
+# tâches (dont certaines toutes les heures ou toutes les 2h). On les
+# reproduit ici via GitHub Actions, gratuit et sans cette limite.
+#
+# Chaque route cible vérifie déjà l'en-tête `Authorization: Bearer
+# <CRON_SECRET>` (voir app/api/campaign/auto-publish et app/api/cron/*).
+# CRON_SECRET doit être ajouté dans GitHub → Settings → Secrets and
+# variables → Actions, avec la même valeur que sur Vercel.
+
+on:
+  schedule:
+    - cron: "0 9,15,21 * * *" # auto-publish : 9h, 15h, 21h UTC (= heure Dakar)
+    - cron: "0 8 * * *"       # prospect-emails : 1x/jour à 8h UTC
+    - cron: "30 5-21/2 * * *" # prospect-harvest : toutes les 2h de 5h30 à 21h30 UTC
+    - cron: "20 * * * *"      # search-alerts : toutes les heures à la minute 20
+  workflow_dispatch: {} # bouton "Run workflow" manuel dans l'onglet Actions, pour tester
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Appelle la route Next.js correspondant à l'horaire déclenché
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: https://www.wanteermako.com
+          FIRED_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          set -e
+
+          call() {
+            path="$1"
+            echo "== POST $SITE_URL$path =="
+            code=$(curl -sS -o /tmp/body.txt -w "%{http_code}" -X POST "$SITE_URL$path" \
+              -H "authorization: Bearer $CRON_SECRET" \
+              -H "content-type: application/json" \
+              -d '{"source":"github-actions"}')
+            echo "HTTP $code : $(cat /tmp/body.txt | head -c 500)"
+            if [ "$code" -ge 400 ]; then
+              echo "::error::$path a répondu $code"
+              exit 1
+            fi
+          }
+
+          case "$FIRED_SCHEDULE" in
+            "0 9,15,21 * * *") call "/api/campaign/auto-publish" ;;
+            "0 8 * * *")       call "/api/cron/prospect-emails" ;;
+            "30 5-21/2 * * *") call "/api/cron/prospect-harvest" ;;
+            "20 * * * *")      call "/api/cron/search-alerts" ;;
+            *)
+              # Déclenchement manuel (workflow_dispatch) : on teste tout.
+              echo "Pas d'horaire programmé détecté (lancement manuel) — appel des 4 routes."
+              call "/api/campaign/auto-publish"
+              call "/api/cron/prospect-emails"
+              call "/api/cron/prospect-harvest"
+              call "/api/cron/search-alerts"
+              ;;
+          esac

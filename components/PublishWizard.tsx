@@ -53,6 +53,7 @@ export default function PublishWizard() {
   const supabase = createClient();
 
   useEffect(() => {
+    if (!supabase) { setLoadingProfile(false); return; }
     supabase.auth.getUser().then(({ data }: { data: any }) => {
       const user = data?.user;
       if (user) {

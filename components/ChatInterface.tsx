@@ -145,6 +145,7 @@ export default function ChatInterface() {
 
   useEffect(() => {
     if (!activeContact) return;
+    if (!supabase) return;
 
     // Réinitialiser les messages lors du changement de contact avant le fetch
     setMessages([]);
@@ -324,6 +325,7 @@ export default function ChatInterface() {
         };
         setMessages(prev => [...prev, newMessage]);
 
+        if (!supabase) return;
         supabase.auth.getSession().then(({ data: sessionData }: { data: any }) => {
           if (sessionData.session) {
             supabase.from("messages").insert([{
