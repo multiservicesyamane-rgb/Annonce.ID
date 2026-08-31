@@ -17,7 +17,6 @@ import {
   QUOTE_STYLE,
   type Client, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
-import QuoteSectionsEditor from "./QuoteSectionsEditor";
 import { PreviewAside, PreviewOverlay } from "./DocPreview";
 import type { PrintDoc, PrintParty } from "./PrintableDocument";
 
@@ -32,7 +31,6 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   const [busy, setBusy] = useState(false);
 
   const [view, setView] = useState<"list" | "form" | "detail">("list");
-  const [sectionsOpen, setSectionsOpen] = useState(false);
   const [editing, setEditing] = useState<Quote | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
 
@@ -667,20 +665,15 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   return (
     <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
       {confirmNode}
-      {sectionsOpen && <QuoteSectionsEditor toast={toast} onClose={() => setSectionsOpen(false)} />}
+      {/* Les rubriques par défaut se règlent dans « Mon entreprise », avec les
+          autres réglages de document : sur cet écran de liste, le bouton
+          concurrençait l'action principale sans jamais servir deux fois. */}
       <PageHead
         title="Devis"
         count={`${quotes.length} devis · ${counts.pending} en attente`}
         action="+ Nouveau devis"
         onAction={openNew}
-      >
-        <button
-          onClick={() => setSectionsOpen(true)}
-          className="shrink-0 rounded-xl border border-gray-200 px-3.5 py-2.5 text-[.82rem] font-bold text-gray-600 transition hover:border-green/50 hover:text-green dark:border-dark-border dark:text-gray-300"
-        >
-          ⚙️ Mes devis par défaut
-        </button>
-      </PageHead>
+      />
 
       {quotes.length === 0 ? (
         <Empty

@@ -15,6 +15,7 @@ import {
 } from "@/lib/pro";
 import { createClient } from "@/lib/supabase/client";
 import { api, card, input, lbl, F, PageHead, Section, stickyAside, type Toast } from "./ui";
+import QuoteSectionsEditor from "./QuoteSectionsEditor";
 
 const ACCENTS = ["#4F46E5", "#0891B2", "#047857", "#B45309", "#B91C1C", "#7C3AED", "#111827"];
 
@@ -130,6 +131,7 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
   const [status, setStatus] = useState<BusinessStatus>("informel");
   const [docTitle, setDocTitle] = useState("FACTURE");
   const [accent, setAccent] = useState<string | null>(null);
+  const [sectionsOpen, setSectionsOpen] = useState(false);
   const [assets, setAssets] = useState<Record<Asset, string | null>>({
     logo_url: null, signature_url: null, stamp_url: null,
   });
@@ -223,6 +225,7 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
 
   return (
     <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
+      {sectionsOpen && <QuoteSectionsEditor toast={toast} onClose={() => setSectionsOpen(false)} />}
       <PageHead title="Profil entreprise" count="Ce qui apparaît sur vos devis et factures" />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -362,6 +365,24 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
                 ))}
               </div>
             </div>
+          </Section>
+
+          {/* Rubriques de devis — déplacées ici depuis l'en-tête de l'écran
+              « Devis » : c'est un réglage, il n'avait rien à faire sur un écran
+              de liste où il concurrençait l'action principale. Tous les
+              réglages qui habillent une pièce vivent désormais au même endroit. */}
+          <Section icon="📑" title="Rubriques de devis">
+            <p className="mb-3 text-[.78rem] leading-relaxed text-gray-500 dark:text-gray-400">
+              Déroulé de la mission, conditions, modalités de paiement… Réglez-les une fois :
+              chaque nouveau devis les reprendra. Les devis <b>déjà envoyés ne changent pas</b>.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSectionsOpen(true)}
+              className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-[.82rem] font-bold text-gray-600 transition hover:border-green/50 hover:text-green dark:border-dark-border dark:text-gray-300 sm:w-auto"
+            >
+              ⚙️ Régler mes rubriques
+            </button>
           </Section>
 
           <Section icon="✍️" title="Signature et cachet">
