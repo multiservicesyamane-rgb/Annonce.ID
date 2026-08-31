@@ -328,13 +328,13 @@ export default async function HomePage() {
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link
-                  href="/dashboard?panel=activity"
+                  href="/mon-activite"
                   className="rounded-xl bg-green px-5 py-2.5 text-[.86rem] font-black text-white shadow-md transition hover:scale-[1.03]"
                 >
                   Ouvrir mon espace pro →
                 </Link>
                 <Link
-                  href="/comment-ca-marche"
+                  href="/espace-pro"
                   className="rounded-xl border border-gray-200 px-4 py-2.5 text-[.84rem] font-bold text-gray-600 transition hover:border-green/50 hover:text-green dark:border-white/15 dark:text-gray-300"
                 >
                   En savoir plus
