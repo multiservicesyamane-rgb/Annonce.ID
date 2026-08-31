@@ -175,7 +175,7 @@ export default function QuoteActions({
         rel="noopener noreferrer"
         className="text-center text-[.78rem] font-bold text-gray-500 underline-offset-2 transition hover:text-green hover:underline"
       >
-        🖨️ Télécharger en PDF
+        ⬇ Télécharger le document
       </a>
 
       {msg && (

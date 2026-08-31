@@ -4,7 +4,7 @@ import { fetchPublicQuote } from "@/lib/proPublic";
 import { effectiveQuoteStatus } from "@/lib/pro";
 import { publicBase } from "@/lib/proServer";
 import { qrSvg } from "@/lib/qr";
-import PrintableDocument from "@/components/pro/PrintableDocument";
+import DocumentPage from "@/components/pro/DocumentPage";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export default async function DevisPrintPage({ params }: { params: { token: stri
   const publicUrl = `${publicBase()}/devis/${params.token}`;
 
   return (
-    <PrintableDocument
+    <DocumentPage
       qr={{ svg: qrSvg(publicUrl), caption: "Scannez pour consulter et accepter ce devis en ligne." }}
       doc={{
         kind: "devis",

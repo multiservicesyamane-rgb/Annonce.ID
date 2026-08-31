@@ -4,7 +4,7 @@ import { fetchPublicInvoice } from "@/lib/proPublic";
 import { effectiveInvoiceStatus } from "@/lib/pro";
 import { publicBase } from "@/lib/proServer";
 import { qrSvg } from "@/lib/qr";
-import PrintableDocument from "@/components/pro/PrintableDocument";
+import DocumentPage from "@/components/pro/DocumentPage";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export default async function FacturePrintPage({ params }: { params: { token: st
   const publicUrl = `${publicBase()}/facture/${params.token}`;
 
   return (
-    <PrintableDocument
+    <DocumentPage
       qr={{ svg: qrSvg(publicUrl), caption: "Scannez pour vérifier et régler cette facture en ligne." }}
       doc={{
         kind: "facture",

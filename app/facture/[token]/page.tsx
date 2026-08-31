@@ -194,7 +194,7 @@ export default async function FacturePublicPage({ params }: { params: { token: s
             rel="noopener noreferrer"
             className="w-full rounded-xl bg-green px-5 py-3 text-center text-[.9rem] font-extrabold text-white shadow-md transition hover:opacity-90"
           >
-            🖨️ Télécharger en PDF
+            ⬇ Télécharger le document
           </a>
           {waHref && (
             <a

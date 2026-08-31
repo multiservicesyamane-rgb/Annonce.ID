@@ -550,7 +550,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
                   </button>
                 ) : null}
                 <button onClick={() => copyLink(q)} className={btnGhost}>🔗 Copier le lien</button>
-                <button onClick={() => openPdf(q)} className={btnGhost}>🖨️ PDF</button>
+                <button onClick={() => openPdf(q)} className={btnGhost}>⬇ Télécharger</button>
                 {status !== "accepted" && (
                   <button onClick={() => openEdit(q)} className={btnGhost}>✏️ Modifier</button>
                 )}
@@ -752,7 +752,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
                       </button>
                     )}
                     <button onClick={() => copyLink(q)} className={btnGhost}>🔗 Lien</button>
-                    <button onClick={() => openPdf(q)} className={btnGhost}>🖨️ PDF</button>
+                    <button onClick={() => openPdf(q)} className={btnGhost}>⬇ Télécharger</button>
                     {q.status === "accepted" && (
                       <button onClick={() => openDetail(q.id)} className={btnGhost}>Voir la suite</button>
                     )}

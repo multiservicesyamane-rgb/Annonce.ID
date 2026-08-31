@@ -580,7 +580,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
                 {(status === "late" || status === "partial" || status === "sent") && (
                   <button onClick={() => remind(inv)} disabled={busy} className={btnGhost}>🔔 Relancer</button>
                 )}
-                <button onClick={() => openPdf(inv)} className={btnGhost}>🖨️ PDF</button>
+                <button onClick={() => openPdf(inv)} className={btnGhost}>⬇ Télécharger</button>
                 {(inv.paid_amount || 0) === 0 && status !== "cancelled" && (
                   <button onClick={() => openEdit(inv)} className={btnGhost}>✏️ Modifier</button>
                 )}
@@ -833,7 +833,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
                           <button onClick={() => remind(inv)} disabled={busy} className={btnGhost}>🔔 Relancer</button>
                         )}
                         <button onClick={() => send(inv)} disabled={busy} className={btnGhost}>💬 Envoyer</button>
-                        <button onClick={() => openPdf(inv)} className={btnGhost}>🖨️ PDF</button>
+                        <button onClick={() => openPdf(inv)} className={btnGhost}>⬇ Télécharger</button>
                       </div>
                     )}
                   </div>

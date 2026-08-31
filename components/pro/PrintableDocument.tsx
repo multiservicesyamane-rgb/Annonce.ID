@@ -2,7 +2,6 @@ import {
   formatFcfa, formatDate, amountInWords, visibleSections, invoiceTitle,
   docTemplate, TAX_EXEMPT_MENTION, type QuoteItem,
 } from "@/lib/pro";
-import PrintTrigger from "./PrintTrigger";
 
 /**
  * Devis ou facture au format papier, prêt à imprimer ou à enregistrer en PDF.
@@ -212,10 +211,13 @@ export default function PrintableDocument({
   /** SVG inline (voir lib/qr.ts) menant à la page publique de la pièce. */
   qr?: { svg: string; caption: string } | null;
   /**
-   * "page" — document servi seul, sur son fond gris, avec la barre d'impression.
+   * "page" — feuille habillée pour l'écran (coins arrondis, ombre,
+   *   rembourrage). Le fond de page et la barre d'actions appartiennent à
+   *   DocumentPage, qui l'enveloppe.
    * "preview" — document nu, destiné à être posé dans une feuille A4 à
-   *   l'échelle pendant la saisie (voir A4Preview) : ni fond de page, ni barre,
-   *   ni rembourrage, la feuille tenant déjà lieu de marge.
+   *   l'échelle (voir A4Preview) : ni ombre ni rembourrage, la feuille tenant
+   *   déjà lieu de marge. Sert à l'aperçu pendant la saisie et à la capture
+   *   du fichier téléchargé.
    */
   mode?: "page" | "preview";
 }) {
@@ -626,16 +628,7 @@ export default function PrintableDocument({
     <>
       <style dangerouslySetInnerHTML={{ __html: SHEET_CSS }} />
 
-      {preview ? (
-        sheet
-      ) : (
-        <div className="doc-page px-3 py-4 sm:px-5 sm:py-8">
-          <div className="mx-auto max-w-[820px]">
-            <PrintTrigger kind={doc.kind} />
-            {sheet}
-          </div>
-        </div>
-      )}
+      {sheet}
     </>
   );
 }
