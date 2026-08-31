@@ -177,15 +177,30 @@ const SHEET_CSS = `
        bandeau le pousseraient hors de la page. On le remet a plat. */
     .doc-band { margin:0 0 1.2rem 0 !important; padding:1rem 1.1rem !important; }
   }
+
+  /* ---- Aperçu à l'écran (A4Preview) ----
+     La feuille A4 fournit déjà la marge de 14 mm : l'article s'y pose sans
+     rembourrage. Le bandeau, calé sur des marges négatives pour déborder de
+     ce rembourrage, doit donc être remis à plat — exactement comme à
+     l'impression, où il se cale sur la marge de page. */
+  .doc-preview .doc-band { margin:0 0 1.2rem 0 !important; padding:1rem 1.1rem !important; }
 `;
 
 export default function PrintableDocument({
-  doc, seller, client, qr,
+  doc, seller, client, qr, mode = "page",
 }: {
   doc: PrintDoc; seller: PrintParty; client: PrintParty | null;
   /** SVG inline (voir lib/qr.ts) menant à la page publique de la pièce. */
   qr?: { svg: string; caption: string } | null;
+  /**
+   * "page" — document servi seul, sur son fond gris, avec la barre d'impression.
+   * "preview" — document nu, destiné à être posé dans une feuille A4 à
+   *   l'échelle pendant la saisie (voir A4Preview) : ni fond de page, ni barre,
+   *   ni rembourrage, la feuille tenant déjà lieu de marge.
+   */
+  mode?: "page" | "preview";
 }) {
+  const preview = mode === "preview";
   const isQuote = doc.kind === "devis";
   // Un devis reste un devis ; l'intitulé choisi ne concerne que les pièces
   // de facturation, où « REÇU » ou « NOTE » convient parfois mieux.
@@ -209,18 +224,15 @@ export default function PrintableDocument({
   const headTint = tpl.tinted ? `${ACCENT}0D` : "#F9FAFB"; // 0D ≈ 5 % d'opacité
   const headCaps = tpl.caps ? "tracking-[.12em]" : "tracking-wider";
 
-  return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: SHEET_CSS }} />
-
-      <div className="doc-page px-3 py-4 sm:px-5 sm:py-8">
-        <div className="mx-auto max-w-[820px]">
-          <PrintTrigger kind={doc.kind} />
-
-          <article
-            className="doc-sheet overflow-hidden rounded-2xl px-5 py-7 shadow-lg sm:px-10 sm:py-9"
-            style={{ boxShadow: "0 10px 40px rgba(17,24,39,.08)" }}
-          >
+  const sheet = (
+    <article
+      className={
+        preview
+          ? "doc-sheet doc-preview"
+          : "doc-sheet overflow-hidden rounded-2xl px-5 py-7 shadow-lg sm:px-10 sm:py-9"
+      }
+      style={preview ? undefined : { boxShadow: "0 10px 40px rgba(17,24,39,.08)" }}
+    >
             {/* ================= En-tête =================
                 Cinq traitements distincts : filet, bandeau plein, encadré ou
                 rien. Le balisage reste identique — seuls l'habillage et les
@@ -563,9 +575,23 @@ export default function PrintableDocument({
               {doc.number ? `${label.toLowerCase()} ${doc.number} · ` : ""}
               document généré sur wanteermako.com — Espace Freelancer
             </footer>
-          </article>
+    </article>
+  );
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: SHEET_CSS }} />
+
+      {preview ? (
+        sheet
+      ) : (
+        <div className="doc-page px-3 py-4 sm:px-5 sm:py-8">
+          <div className="mx-auto max-w-[820px]">
+            <PrintTrigger kind={doc.kind} />
+            {sheet}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

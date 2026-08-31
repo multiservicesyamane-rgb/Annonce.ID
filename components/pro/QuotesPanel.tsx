@@ -8,15 +8,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   formatFcfa, formatDate, timeAgo, computeTotals, waNumber, daysUntil,
   QUOTE_LABELS, TAX_RATES, effectiveQuoteStatus, quoteIsOpen, canChargeTax,
+  sanitizeSections, DEFAULT_QUOTE_SECTIONS,
   type QuoteItem,
 } from "@/lib/pro";
 import {
   api, card, input, lbl, Badge, Crumb, Empty, F, FilterBar, ItemsEditor, Kpi,
-  MigrationNotice, MobileActionBar, MoneyField, PageHead, Section, Select, stickyAside, Tip, TotalsBox, useConfirm,
+  MigrationNotice, MobileActionBar, MoneyField, PageHead, Section, Select, Tip, TotalsBox, useConfirm,
   QUOTE_STYLE,
   type Client, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
 import QuoteSectionsEditor from "./QuoteSectionsEditor";
+import { PreviewAside, PreviewOverlay } from "./DocPreview";
+import type { PrintDoc, PrintParty } from "./PrintableDocument";
 
 type Detail = { quote: Quote; events: ProEvent[]; invoice: { id: string; number: string; status: string; total: number } | null };
 
@@ -43,6 +46,11 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   const [taxRate, setTaxRate] = useState(0);
   // Droit de facturer la TVA, lu depuis le profil d'entreprise.
   const [taxAllowed, setTaxAllowed] = useState(true);
+  // Identité de l'émetteur et rubriques par défaut : de quoi composer
+  // l'aperçu A4 exactement comme le fera la pièce imprimée.
+  const [seller, setSeller] = useState<PrintParty | null>(null);
+  const [proSections, setProSections] = useState<unknown>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const { ask, confirmNode } = useConfirm();
 
@@ -62,7 +70,8 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
 
   useEffect(() => { load(); }, [load]);
 
-  // Statut de l'entreprise : conditionne la disponibilité de la TVA.
+  // Profil d'entreprise : statut (qui conditionne la TVA), en-tête du document
+  // et rubriques par défaut.
   useEffect(() => {
     let off = false;
     api("settings", { action: "get" }).then(({ data }) => {
@@ -70,6 +79,8 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
       const st = data?.settings?.business_status;
       // Colonne absente (migration non passée) : on ne bride rien.
       if (st !== undefined) setTaxAllowed(canChargeTax(st));
+      if (data?.seller) setSeller(data.seller as PrintParty);
+      setProSections(data?.settings?.quote_sections ?? null);
     });
     return () => { off = true; };
   }, []);
@@ -102,7 +113,55 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
     });
   }, [withStatus, query, filter]);
 
-  const totals = computeTotals(items, discount, taxRate);
+  const totals = useMemo(() => computeTotals(items, discount, taxRate), [items, discount, taxRate]);
+
+  /* ------------- Aperçu en direct (colonne de droite / plein écran) -------------
+     On assemble ici la pièce telle qu'elle partirait maintenant. Rien n'est
+     inventé pour l'occasion : ce sont les valeurs du formulaire, passées au
+     composant d'impression. */
+
+  // Rubriques que le serveur recopiera à la création (voir defaultQuoteSections)
+  // : celles du profil si elles existent, les nôtres sinon. Sur un devis déjà
+  // enregistré, ce sont celles figées dans la pièce.
+  const previewSections = useMemo(() => {
+    if (editing) return (editing as unknown as { sections?: unknown }).sections;
+    const saved = sanitizeSections(proSections);
+    return saved.length > 0 ? saved : DEFAULT_QUOTE_SECTIONS;
+  }, [editing, proSections]);
+
+  const previewClient = useMemo<PrintParty | null>(() => {
+    const c = clients.find((x) => x.id === form.client_id);
+    if (!c) return null;
+    return {
+      name: c.name,
+      company: c.billing_name || c.company || null,
+      phone: c.phone,
+      email: c.email,
+      address: c.address || c.city || null,
+      tax_id: c.tax_id,
+    };
+  }, [clients, form.client_id]);
+
+  const previewDoc = useMemo<PrintDoc>(() => ({
+    kind: "devis",
+    number: editing?.number || null,
+    // Un titre vide laisserait un trou dans l'en-tête : on montre l'intitulé
+    // du champ à la place, le temps qu'il soit rempli.
+    title: form.title?.trim() || "Objet du devis",
+    items: items.filter((i) => i.label.trim()),
+    subtotal: totals.subtotal,
+    discount: totals.discount,
+    tax_rate: totals.taxRate,
+    tax_amount: totals.taxAmount,
+    total: totals.total,
+    issue_date: editing?.created_at || new Date().toISOString(),
+    valid_until: form.valid_until || null,
+    terms: form.terms || null,
+    note: form.note || null,
+    sections: previewSections,
+    // Brouillon tant que rien n'est enregistré : pas de cartouche d'état.
+    status: editing ? effectiveQuoteStatus(editing) : "draft",
+  }), [editing, form, items, totals, previewSections]);
 
   /* ---------------- Actions ---------------- */
 
@@ -257,7 +316,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   /* ===== Formulaire ===== */
   if (view === "form") {
     return (
-      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
+      <div className="mx-auto w-full max-w-[980px] lg:max-w-[1280px] xl:max-w-[1560px]">
         {confirmNode}
         <Crumb
           onBack={() => { setView("list"); setEditing(null); }}
@@ -274,7 +333,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
             onCta={() => goTo("clients")}
           />
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(440px,520px)]">
             <div className="flex flex-col gap-4">
               <Section icon="🧾" title="Informations">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -367,16 +426,15 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
               </Section>
             </div>
 
-            <div className={stickyAside}>
-              <TotalsBox
-                subtotal={totals.subtotal}
-                discount={totals.discount}
-                taxRate={totals.taxRate}
-                taxAmount={totals.taxAmount}
-                total={totals.total}
-                title="Total du devis"
-              />
-
+            <PreviewAside
+              doc={previewDoc}
+              seller={seller}
+              client={previewClient}
+              actionLabel={editing ? "Enregistrer" : "Créer le devis"}
+              onAction={save}
+              busy={busy}
+              onExpand={() => setPreviewOpen(true)}
+            >
               {editing && (editing.status === "sent" || editing.status === "viewed") && (
                 <div className="rounded-2xl border border-amber-300/50 bg-amber-50 p-3.5 text-[.78rem] leading-relaxed text-amber-900 dark:border-amber-500/25 dark:bg-amber-500/5 dark:text-amber-200">
                   Ce devis est déjà chez le client. L&apos;enregistrer créera la <b>version {(editing.version || 1) + 1}</b> et
@@ -394,25 +452,27 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
                   </ul>
                 </div>
               )}
-
-              {/* Sur mobile, l'action vit dans la barre fixe du bas. */}
-              <button
-                onClick={save}
-                disabled={busy}
-                className="btn btn-green hidden w-full py-3 text-[.88rem] font-extrabold disabled:opacity-50 lg:block"
-              >
-                {busy ? "Enregistrement…" : editing ? "Enregistrer" : "Créer le devis"}
-              </button>
-            </div>
+            </PreviewAside>
 
             <MobileActionBar
               label={editing ? "Enregistrer" : "Créer le devis"}
               onAction={save}
               busy={busy}
               total={totals.total}
+              onPreview={() => setPreviewOpen(true)}
             />
           </div>
         )}
+
+        {/* Sur téléphone, l'aperçu n'a pas de colonne où vivre : il s'ouvre
+            par-dessus la saisie, à la demande. */}
+        <PreviewOverlay
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          doc={previewDoc}
+          seller={seller}
+          client={previewClient}
+        />
       </div>
     );
   }

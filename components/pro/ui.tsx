@@ -527,8 +527,12 @@ export function ItemsEditor({
  * travail (voir `stickyAside`).
  */
 export function MobileActionBar({
-  label, onAction, busy, total,
-}: { label: string; onAction: () => void; busy?: boolean; total?: number }) {
+  label, onAction, busy, total, onPreview,
+}: {
+  label: string; onAction: () => void; busy?: boolean; total?: number;
+  /** Ouvre l'aperçu A4 plein écran — la colonne d'aperçu n'existe pas ici. */
+  onPreview?: () => void;
+}) {
   return (
     <>
       {/* Cale : sans elle, le dernier champ du formulaire finit masqué. */}
@@ -547,11 +551,19 @@ export function MobileActionBar({
               </div>
             </div>
           )}
+          {onPreview && (
+            <button
+              onClick={onPreview}
+              className="shrink-0 rounded-xl border-[1.5px] border-gray-300 px-3.5 py-3 text-[.82rem] font-bold text-gray-700 transition active:scale-[.98] dark:border-white/20 dark:text-gray-200"
+            >
+              👁 Aperçu
+            </button>
+          )}
           <button
             onClick={onAction}
             disabled={busy}
             className={`shrink-0 rounded-xl bg-green px-5 py-3 text-[.86rem] font-extrabold text-white shadow-md transition active:scale-[.98] disabled:opacity-50 ${
-              total === undefined ? "w-full" : ""
+              total === undefined && !onPreview ? "w-full" : ""
             }`}
           >
             {busy ? "…" : label}

@@ -16,8 +16,14 @@ function admin() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
-/** Identité du prestataire : réglages professionnels, complétés par le profil. */
-async function fetchSeller(sb: ReturnType<typeof admin>, userId: string): Promise<PrintParty> {
+/**
+ * Identité du prestataire : réglages professionnels, complétés par le profil.
+ *
+ * Exportée parce que l'aperçu en direct (colonne de saisie des devis et
+ * factures) doit montrer EXACTEMENT le même en-tête que la pièce imprimée.
+ * Deux constructions parallèles finiraient par diverger.
+ */
+export async function fetchSeller(sb: ReturnType<typeof admin>, userId: string): Promise<PrintParty> {
   if (!sb) return { name: "Votre prestataire" };
 
   // `pro_settings` peut ne pas exister si la migration n'a pas encore tourné :

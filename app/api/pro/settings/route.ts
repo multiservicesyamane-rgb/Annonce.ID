@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { proContext, txt, isMissingTable, isMissingColumn } from "@/lib/proServer";
+import { fetchSeller } from "@/lib/proPublic";
 import { sanitizeSections, businessStatus, canChargeTax, invoiceTitle } from "@/lib/pro";
 
 export const dynamic = "force-dynamic";
@@ -100,7 +101,14 @@ export async function POST(req: Request) {
       const { data, error } = await sb
         .from("pro_settings").select("*").eq("user_id", userId).maybeSingle();
       if (error && isMissingTable(error)) return NextResponse.json({ settings: null, needsMigration: true });
-      return NextResponse.json({ settings: data || null });
+
+      // `seller` est l'en-tête tel qu'il sortira sur le papier — logo, modèle,
+      // couleur, signature, cachet, mentions. Les écrans de devis et de
+      // factures s'en servent pour l'aperçu en direct ; le calculer ici plutôt
+      // que côté navigateur garantit que l'aperçu et l'impression racontent la
+      // même chose (voir fetchSeller dans lib/proPublic.ts).
+      const seller = await fetchSeller(sb, userId);
+      return NextResponse.json({ settings: data || null, seller });
     }
 
     if (action === "save") {

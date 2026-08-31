@@ -13,10 +13,12 @@ import {
 } from "@/lib/pro";
 import {
   api, card, cardRaised, input, lbl, Badge, Crumb, Empty, F, FilterBar, ItemsEditor, Kpi,
-  MigrationNotice, MobileActionBar, MoneyField, PageHead, Progress, Section, Select, stickyAside, TotalsBox, useConfirm,
+  MigrationNotice, MobileActionBar, MoneyField, PageHead, Progress, Section, Select, TotalsBox, useConfirm,
   INVOICE_STYLE,
   type Client, type Invoice, type Payment, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
+import { PreviewAside, PreviewOverlay } from "./DocPreview";
+import type { PrintDoc, PrintParty } from "./PrintableDocument";
 
 type Detail = { invoice: Invoice; payments: Payment[]; events: ProEvent[] };
 
@@ -43,6 +45,9 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   const [taxRate, setTaxRate] = useState(0);
   // Droit de facturer la TVA, lu depuis le profil d'entreprise.
   const [taxAllowed, setTaxAllowed] = useState(true);
+  // En-tête de l'émetteur, pour que l'aperçu A4 soit celui de la vraie pièce.
+  const [seller, setSeller] = useState<PrintParty | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Saisie d'un encaissement
   const [payFor, setPayFor] = useState<Invoice | null>(null);
@@ -67,7 +72,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
 
   useEffect(() => { load(); }, [load]);
 
-  // Statut de l'entreprise : conditionne la disponibilité de la TVA.
+  // Profil d'entreprise : statut (qui conditionne la TVA) et en-tête du document.
   useEffect(() => {
     let off = false;
     api("settings", { action: "get" }).then(({ data }) => {
@@ -75,6 +80,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
       const st = data?.settings?.business_status;
       // Colonne absente (migration non passée) : on ne bride rien.
       if (st !== undefined) setTaxAllowed(canChargeTax(st));
+      if (data?.seller) setSeller(data.seller as PrintParty);
     });
     return () => { off = true; };
   }, []);
@@ -118,7 +124,42 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
     });
   }, [withStatus, query, filter]);
 
-  const totals = computeTotals(items, discount, taxRate);
+  const totals = useMemo(() => computeTotals(items, discount, taxRate), [items, discount, taxRate]);
+
+  /* ------------- Aperçu en direct (colonne de droite / plein écran) -------------
+     La facture telle qu'elle partirait maintenant : mêmes valeurs, même
+     composant que la version imprimée. */
+
+  const previewClient = useMemo<PrintParty | null>(() => {
+    const c = clients.find((x) => x.id === form.client_id);
+    if (!c) return null;
+    return {
+      name: c.name,
+      company: c.billing_name || c.company || null,
+      phone: c.phone,
+      email: c.email,
+      address: c.address || c.city || null,
+      tax_id: c.tax_id,
+    };
+  }, [clients, form.client_id]);
+
+  const previewDoc = useMemo<PrintDoc>(() => ({
+    kind: "facture",
+    number: editing?.number || null,
+    title: form.title?.trim() || "Objet de la facture",
+    items: items.filter((i) => i.label.trim()),
+    subtotal: totals.subtotal,
+    discount: totals.discount,
+    tax_rate: totals.taxRate,
+    tax_amount: totals.taxAmount,
+    total: totals.total,
+    paid_amount: editing?.paid_amount || 0,
+    issue_date: form.issue_date || editing?.issue_date || new Date().toISOString(),
+    due_date: form.due_date || null,
+    terms: form.terms || null,
+    // Brouillon tant que rien n'est enregistré : pas de cartouche d'état.
+    status: editing ? effectiveInvoiceStatus(editing) : "draft",
+  }), [editing, form, items, totals]);
 
   /* ---------------- Actions ---------------- */
 
@@ -304,7 +345,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   /* ===== Formulaire ===== */
   if (view === "form") {
     return (
-      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
+      <div className="mx-auto w-full max-w-[980px] lg:max-w-[1280px] xl:max-w-[1560px]">
         {confirmNode}
         <Crumb
           onBack={() => { setView("list"); setEditing(null); }}
@@ -321,7 +362,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
             onCta={() => goTo("clients")}
           />
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(440px,520px)]">
             <div className="flex flex-col gap-4">
               <Section icon="🧾" title="Informations">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -405,33 +446,35 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
               </Section>
             </div>
 
-            <div className={stickyAside}>
-              <TotalsBox
-                subtotal={totals.subtotal}
-                discount={totals.discount}
-                taxRate={totals.taxRate}
-                taxAmount={totals.taxAmount}
-                total={totals.total}
-                title="Total à facturer"
-              />
-              {/* Sur mobile, l'action vit dans la barre fixe du bas. */}
-              <button
-                onClick={save}
-                disabled={busy}
-                className="btn btn-green hidden w-full py-3 text-[.88rem] font-extrabold disabled:opacity-50 lg:block"
-              >
-                {busy ? "Enregistrement…" : editing ? "Enregistrer" : "Créer la facture"}
-              </button>
-            </div>
+            <PreviewAside
+              doc={previewDoc}
+              seller={seller}
+              client={previewClient}
+              actionLabel={editing ? "Enregistrer" : "Créer la facture"}
+              onAction={save}
+              busy={busy}
+              onExpand={() => setPreviewOpen(true)}
+            />
 
             <MobileActionBar
               label={editing ? "Enregistrer" : "Créer la facture"}
               onAction={save}
               busy={busy}
               total={totals.total}
+              onPreview={() => setPreviewOpen(true)}
             />
           </div>
         )}
+
+        {/* Sur téléphone, l'aperçu n'a pas de colonne où vivre : il s'ouvre
+            par-dessus la saisie, à la demande. */}
+        <PreviewOverlay
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          doc={previewDoc}
+          seller={seller}
+          client={previewClient}
+        />
       </div>
     );
   }
