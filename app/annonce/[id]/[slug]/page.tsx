@@ -14,7 +14,7 @@ import { createClient } from "@supabase/supabase-js";
 import { formatNumber, tidyTitle, buildListingSeoTitle, buildListingSeoDescription, cleanTitleForSeo } from "@/lib/utils";
 import { detectLanguage } from "@/lib/listingQuality";
 import { categoryBySlug } from "@/lib/constants";
-import { getRootUrl, getSubdomainUrl } from "@/lib/categories";
+import { getRootUrl, getCategoryUrl } from "@/lib/categories";
 
 // Pas de client module-level : les env vars ne sont pas disponibles au build time.
 
@@ -182,7 +182,7 @@ export default async function AnnoncePage({ params }: Props) {
   const base = process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com";
   const canonicalUrl = `${base}/annonce/${ad.id}/${ad.slug}`;
   const priceValue = ad.price.replace(/[^0-9]/g, ""); // "" si "Sur devis" / "Gratuit"
-  const categoryUrl = adCategory ? getSubdomainUrl(adCategory) : base;
+  const categoryUrl = adCategory ? getCategoryUrl(adCategory) : base;
   const seoName = cleanTitleForSeo(ad.title);
   const spec = (k: string) => (ad.specs && ad.specs[k] ? String(ad.specs[k]).trim() : "");
   const digits = (s: string) => s.replace(/[^0-9]/g, "");
@@ -260,7 +260,7 @@ export default async function AnnoncePage({ params }: Props) {
       <nav className="py-3.5 text-[.78rem] text-gray-500">
         <Link href={getRootUrl()} className="text-green hover:text-gold-dark">Accueil</Link> ›{" "}
         {adCategory ? (
-          <Link href={getSubdomainUrl(adCategory)} className="text-green hover:text-gold-dark">{ad.category}</Link>
+          <Link href={getCategoryUrl(adCategory)} className="text-green hover:text-gold-dark">{ad.category}</Link>
         ) : (
           <span className="text-green">{ad.category}</span>
         )} ›{" "}

@@ -58,10 +58,16 @@ export function getRootUrl(): string {
   return `https://${ROOT_DOMAIN}`;
 }
 
-export function getSubdomainUrl(category: Category): string {
-  if (USE_LOCAL_SUBDOMAINS) {
-    return `http://${category.subdomainSlug}.${LOCALHOST_DOMAIN}${getLocalPortSuffix()}`;
-  }
-
-  return `https://${category.subdomainSlug}.${ROOT_DOMAIN}`;
+/**
+ * URL d'une catégorie en chemin (/categorie/slug), pas en sous-domaine.
+ *
+ * Les sous-domaines de catégories (vehicules.wanteermako.com…) restent gérés
+ * par le middleware (voir getCategoryBySubdomain) mais ne sont plus liés nulle
+ * part : le DNS wildcard *.wanteermako.com n'existe plus depuis la migration
+ * Netlify → Vercel (qui exigerait de déléguer tout le domaine aux nameservers
+ * Vercel — trop risqué pour le transfert d'e-mail du domaine). Décision du
+ * 31/08/2026 : ne pas restaurer le wildcard, tout faire passer par le chemin.
+ */
+export function getCategoryUrl(category: Category): string {
+  return `${getRootUrl()}/categorie/${category.slug}`;
 }
