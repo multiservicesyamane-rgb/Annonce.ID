@@ -394,7 +394,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
               </Section>
 
               <Section icon="📋" title="Lignes de la facture">
-                <ItemsEditor items={items} setItems={setItems} placeholder="Ex : Prestation réalisée" />
+                <ItemsEditor items={items} setItems={setItems} placeholder="Ex : Prestation réalisée" notify={toast} />
               </Section>
 
               <Section icon="💰" title="Remise et taxes">

@@ -357,7 +357,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
               </Section>
 
               <Section icon="📋" title="Prestations">
-                <ItemsEditor items={items} setItems={setItems} />
+                <ItemsEditor items={items} setItems={setItems} notify={toast} />
               </Section>
 
               <Section icon="💰" title="Remise et taxes">

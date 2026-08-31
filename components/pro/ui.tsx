@@ -5,7 +5,18 @@
 // récurrents : les écrans restent cohérents sans se répéter.
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { formatFcfa, type QuoteItem } from "@/lib/pro";
+
+/**
+ * Catalogue de prestations, chargé à la demande.
+ *
+ * En import direct on créerait un cycle — ui.tsx → CatalogPicker → ui.tsx,
+ * ce dernier ayant besoin de `api` et `input`. Le chargement différé le
+ * dénoue, et accessoirement la fenêtre n'est téléchargée que si on l'ouvre :
+ * autant d'octets épargnés sur un forfait téléphonique.
+ */
+const CatalogPicker = dynamic(() => import("./CatalogPicker"), { ssr: false });
 
 /* ============================ Styles ============================ */
 
@@ -440,10 +451,35 @@ export function FilterBar({
  * côte. Desktop : tout sur une seule ligne.
  */
 export function ItemsEditor({
-  items, setItems, placeholder = "Ex : Création du logo",
-}: { items: QuoteItem[]; setItems: (v: QuoteItem[]) => void; placeholder?: string }) {
+  items, setItems, placeholder = "Ex : Création du logo", notify,
+}: {
+  items: QuoteItem[];
+  setItems: (v: QuoteItem[]) => void;
+  placeholder?: string;
+  /** Retour d'action pour l'enregistrement au catalogue. */
+  notify?: (message: string) => void;
+}) {
   const patch = (i: number, field: keyof QuoteItem, value: string | number) =>
     setItems(items.map((x, j) => (j === i ? { ...x, [field]: value } : x)));
+
+  // Le catalogue est monté ici plutôt que dans chaque panneau : devis et
+  // factures éditent leurs lignes avec ce même composant, ils en héritent donc
+  // sans une ligne de code de plus.
+  const [catalogOpen, setCatalogOpen] = useState(false);
+
+  /**
+   * Pose une prestation du catalogue. Si la dernière ligne est encore vide —
+   * le cas au premier ajout, l'éditeur en ouvrant toujours une — on la remplit
+   * au lieu d'en empiler une seconde et de laisser un trou dans le document.
+   */
+  function addFromCatalog(item: QuoteItem) {
+    const last = items[items.length - 1];
+    if (last && !last.label.trim() && !last.unit_price) {
+      setItems([...items.slice(0, -1), item]);
+      return;
+    }
+    setItems([...items, item]);
+  }
 
   return (
     <>
@@ -503,13 +539,30 @@ export function ItemsEditor({
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={() => setItems([...items, { label: "", qty: 1, unit_price: 0 }])}
-        className="mt-3 w-full rounded-xl border border-dashed border-green/40 px-3 py-2.5 text-[.8rem] font-bold text-green transition hover:border-green hover:bg-green/5 sm:w-auto"
-      >
-        + Ajouter une ligne
-      </button>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          onClick={() => setItems([...items, { label: "", qty: 1, unit_price: 0 }])}
+          className="w-full rounded-xl border border-dashed border-green/40 px-3 py-2.5 text-[.8rem] font-bold text-green transition hover:border-green hover:bg-green/5 sm:w-auto"
+        >
+          + Ajouter une ligne
+        </button>
+        <button
+          type="button"
+          onClick={() => setCatalogOpen(true)}
+          className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[.8rem] font-bold text-gray-600 transition hover:border-green/50 hover:text-green dark:border-dark-border dark:text-gray-300 sm:w-auto"
+        >
+          📚 Mon catalogue
+        </button>
+      </div>
+
+      <CatalogPicker
+        open={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+        onPick={addFromCatalog}
+        currentItems={items}
+        notify={notify}
+      />
     </>
   );
 }
