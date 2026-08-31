@@ -161,7 +161,6 @@ export default function Dashboard() {
   );
   const [proActivated, setProActivated] = useState(false);
   const [proCounts, setProCounts] = useState({ clients: 0, quotes: 0, invoices: 0 });
-  const [activating, setActivating] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -267,30 +266,17 @@ export default function Dashboard() {
     router.replace("/dashboard?panel=" + encodeURIComponent(id), { scroll: false });
   };
 
-  /** Bascule de mode : on atterrit sur l'écran d'accueil du mode choisi. */
+  /**
+   * Bascule de mode. « Pro » n'est plus un panneau interne au tableau de
+   * bord : depuis le 31/08/2026 c'est un service à part (/mon-activite),
+   * pensé pour un public qui a besoin de gros boutons et de rien d'autre.
+   * On y redirige plutôt que de rendre l'ancien panneau « activity ».
+   */
   const switchMode = (next: "ads" | "pro") => {
+    if (next === "pro") { router.push("/mon-activite"); return; }
     if (next === mode) return;
-    handlePanelChange(next === "pro" ? "activity" : "overview");
+    handlePanelChange("overview");
   };
-
-  /** Active l'espace pro, puis y entre. */
-  async function activatePro() {
-    setActivating(true);
-    try {
-      const r = await fetch("/api/pro/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "activate" }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) { show(d?.error || "Activation impossible."); return; }
-      setProActivated(true);
-      handlePanelChange("activity");
-      show("✓ Espace pro activé");
-    } finally {
-      setActivating(false);
-    }
-  }
 
   // L'espace pro est-il activé ? Requête volontairement légère (comptages sans
   // corps de réponse). Si elle échoue, on n'affiche pas le mode pro : mieux
@@ -830,7 +816,9 @@ export default function Dashboard() {
                   onClick={() => switchMode(m.id)}
                   className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[9px] px-1.5 py-2 text-[.74rem] font-bold transition ${
                     mode === m.id
-                      ? "bg-white text-green shadow-sm dark:bg-dark-900"
+                      ? m.id === "pro"
+                        ? "bg-white text-gold-dark shadow-sm dark:bg-dark-900 dark:text-neon-gold"
+                        : "bg-white text-green shadow-sm dark:bg-dark-900"
                       : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
                   }`}
                 >
@@ -840,19 +828,15 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={activatePro}
-              disabled={activating}
-              className="w-full rounded-[12px] border border-dashed border-green/40 px-3 py-2.5 text-left transition hover:border-green hover:bg-green/5 disabled:opacity-50"
+            <Link
+              href="/mon-activite"
+              className="block w-full rounded-[12px] border border-dashed border-green/40 px-3 py-2.5 text-left transition hover:border-green hover:bg-green/5"
             >
-              <span className="block text-[.76rem] font-bold text-green">
-                {activating ? "Activation…" : "💼 Activer mon espace pro"}
-              </span>
+              <span className="block text-[.76rem] font-bold text-green">💼 Activer mon espace pro</span>
               <span className="mt-0.5 block text-[.66rem] leading-snug text-gray-500 dark:text-gray-400">
                 Devis, factures et clients — si vous facturez des prestations.
               </span>
-            </button>
+            </Link>
           )}
         </div>
 
@@ -874,7 +858,14 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => handlePanelChange(n.id)}
                   aria-current={panel === n.id ? "page" : undefined}
-                  className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-left text-[.87rem] transition ${panel === n.id ? "border-green bg-green/[.06] font-semibold text-green" : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
+                  className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-left text-[.87rem] transition ${
+                    panel === n.id
+                      ? mode === "pro"
+                        ? "border-gold bg-gold/[.08] font-semibold text-gold-dark dark:text-neon-gold"
+                        : "border-green bg-green/[.06] font-semibold text-green"
+                      : mode === "pro"
+                        ? "border-transparent text-gray-700 dark:text-white/70 hover:text-gold-dark dark:hover:text-neon-gold"
+                        : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
                     }`}
                 >
                   <span className="w-5 text-center shrink-0">{n.icon}</span>
@@ -898,8 +889,14 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 bg-gray-50 dark:bg-dark-900 px-3 py-4 sm:px-4 sm:py-6 lg:p-8 overflow-y-auto w-full">
+      {/* Content — un liseré doré en tête de zone marque l'espace pro, pour
+          qu'on sache d'un coup d'œil dans quel espace on se trouve (le
+          sélecteur seul se perd facilement une fois qu'on a scrollé). */}
+      <div
+        className={`flex-1 min-w-0 bg-gray-50 dark:bg-dark-900 px-3 py-4 sm:px-4 sm:py-6 lg:p-8 overflow-y-auto w-full ${
+          mode === "pro" ? "border-t-[3px] border-gold lg:border-t-0 lg:border-l-[3px]" : ""
+        }`}
+      >
         {panel === "overview" && (
           <div className="animate-fadeUp w-full min-w-0 max-w-[1000px] mx-auto">
             {/* Hero profil — Compact (Transport Style) */}
@@ -968,12 +965,12 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handlePanelChange("activity")}
+                  <Link
+                    href="/mon-activite"
                     className="shrink-0 rounded-lg bg-green px-4 py-2 text-[.8rem] font-bold text-white transition hover:opacity-90"
                   >
                     Ouvrir →
-                  </button>
+                  </Link>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   {([
@@ -981,14 +978,14 @@ export default function Dashboard() {
                     { id: "invoices", icon: "🧾", label: "Factures" },
                     { id: "clients", icon: "👥", label: "Clients" },
                   ] as const).map((s) => (
-                    <button
+                    <Link
                       key={s.id}
-                      onClick={() => handlePanelChange(s.id)}
+                      href="/mon-activite"
                       className="flex items-center justify-center gap-1.5 rounded-lg bg-gray-50 px-2 py-2 text-[.76rem] font-bold text-gray-600 transition hover:bg-green/10 hover:text-green dark:bg-white/5 dark:text-gray-300"
                     >
                       <span aria-hidden="true">{s.icon}</span>
                       <span className="truncate">{s.label}</span>
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -1006,13 +1003,12 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={activatePro}
-                  disabled={activating}
-                  className="shrink-0 rounded-lg bg-green px-5 py-2.5 text-[.82rem] font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                <Link
+                  href="/mon-activite"
+                  className="shrink-0 rounded-lg bg-green px-5 py-2.5 text-[.82rem] font-bold text-white transition hover:opacity-90"
                 >
-                  {activating ? "Activation…" : "Activer mon espace pro"}
-                </button>
+                  Activer mon espace pro
+                </Link>
               </div>
             )}
 

@@ -6,14 +6,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  formatFcfa, formatDate, timeAgo, waNumber,
-  CLIENT_LABELS, QUOTE_LABELS, INVOICE_LABELS, PROJECT_LABELS, SECTORS,
-  effectiveQuoteStatus, effectiveInvoiceStatus,
+  formatFcfa, waNumber, CLIENT_LABELS, SECTORS, effectiveQuoteStatus,
 } from "@/lib/pro";
 import {
   api, card, input, lbl, Badge, Crumb, Empty, F, FilterBar, MigrationNotice,
-  PageHead, Section, Select, Tip, useConfirm,
-  CLIENT_STYLE, QUOTE_STYLE, INVOICE_STYLE, PROJECT_STYLE,
+  PageHead, Section, Select, useConfirm, CLIENT_STYLE,
   type Client, type Invoice, type Payment, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
 
@@ -40,6 +37,11 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [form, setForm] = useState<Record<string, string>>({});
+  // Les champs avancés (entreprise, facturation, secteur, notes) restent
+  // repliés pour une première saisie — un maçon n'a besoin que d'un nom et
+  // d'un numéro pour envoyer un devis. On les déplie automatiquement en
+  // modification, pour ne jamais cacher une info déjà renseignée.
+  const [showMore, setShowMore] = useState(false);
 
   const { ask, confirmNode } = useConfirm();
 
@@ -84,6 +86,7 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
   function openNew() {
     setEditing(null);
     setForm({ status: "prospect" });
+    setShowMore(false);
     setView("form");
   }
 
@@ -102,6 +105,7 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
       tax_id: c.tax_id || "",
       status: c.status || "prospect",
     });
+    setShowMore(Boolean(c.company || c.email || c.city || c.address || c.sector || c.notes || c.billing_name || c.tax_id));
     setView("form");
   }
 
@@ -149,16 +153,6 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
     load();
   }
 
-  async function setStatus(c: Client, status: string) {
-    setBusy(true);
-    const { ok, data } = await api("clients", { action: "update", id: c.id, status });
-    setBusy(false);
-    if (!ok) return toast("⚠ " + (data.error || "Erreur"));
-    toast(`✓ ${c.company || c.name} — ${CLIENT_LABELS[status]}`);
-    if (detail?.client.id === c.id) setDetail({ ...detail, client: { ...detail.client, status } });
-    load();
-  }
-
   function archive(c: Client) {
     ask(`Archiver « ${c.company || c.name} » ? Ses devis et factures sont conservés.`, async () => {
       const { ok, data } = await api("clients", { action: "delete", id: c.id });
@@ -174,10 +168,12 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
   if (needsMigration) return <MigrationNotice />;
   if (loading) return <div className="py-16 text-center text-gray-400">Chargement…</div>;
 
-  /* ===== Formulaire ===== */
+  /* ===== Formulaire — l'essentiel d'abord (nom + téléphone), le reste
+     replié : la plupart des clients d'un artisan n'ont besoin de rien de
+     plus pour recevoir un devis par WhatsApp. ===== */
   if (view === "form") {
     return (
-      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
+      <div className="mx-auto w-full max-w-[480px]">
         {confirmNode}
         <Crumb
           onBack={() => { setView("list"); setEditing(null); }}
@@ -185,124 +181,103 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
           current={editing ? `Modifier ${editing.company || editing.name}` : "Ajouter un client"}
         />
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="flex flex-col gap-4">
-            <Section icon="👤" title="Identité du client">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {editing ? (
-                  <F l="Nom complet" v={form.name} set={(v) => setForm({ ...form, name: v })} ph="Ex : Mariama Diallo" />
-                ) : (
-                  <>
-                    <F l="Prénom" v={form.firstname} set={(v) => setForm({ ...form, firstname: v })} ph="Ex : Mariama" />
-                    <F l="Nom" v={form.lastname} set={(v) => setForm({ ...form, lastname: v })} ph="Ex : Diallo" />
-                  </>
-                )}
-                <F l="Entreprise / Structure" v={form.company} set={(v) => setForm({ ...form, company: v })} ph="Ex : Tekki Foods" />
-                <F l="Ville / Localisation" v={form.city} set={(v) => setForm({ ...form, city: v })} ph="Ex : Dakar, Plateau" />
-              </div>
-            </Section>
-
-            <Section icon="📞" title="Coordonnées">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <F l="Téléphone (WhatsApp)" v={form.phone} set={(v) => setForm({ ...form, phone: v })} ph="+221 77 000 00 00" />
-                <F l="Adresse email" v={form.email} set={(v) => setForm({ ...form, email: v })} ph="client@entreprise.sn" />
-              </div>
-            </Section>
-
-            <Section icon="🧾" title="Informations de facturation">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <F
-                  l="Raison sociale (sur la facture)"
-                  v={form.billing_name}
-                  set={(v) => setForm({ ...form, billing_name: v })}
-                  ph="Ex : TEKKI FOODS SARL"
-                  hint="Laissez vide pour reprendre le nom de l'entreprise."
-                />
-                <F l="NINEA / RCCM" v={form.tax_id} set={(v) => setForm({ ...form, tax_id: v })} ph="Ex : 005812345 2A2" />
-                <div className="sm:col-span-2">
-                  <F l="Adresse de facturation" v={form.address} set={(v) => setForm({ ...form, address: v })} ph="Ex : 12 rue Carnot, Dakar" />
+        <div className="flex flex-col gap-4">
+          <Section icon="👤" title="Le client">
+            <div className="grid gap-3">
+              {editing ? (
+                <F l="Nom complet" v={form.name} set={(v) => setForm({ ...form, name: v })} ph="Ex : Mariama Diallo" />
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <F l="Prénom" v={form.firstname} set={(v) => setForm({ ...form, firstname: v })} ph="Ex : Mariama" />
+                  <F l="Nom" v={form.lastname} set={(v) => setForm({ ...form, lastname: v })} ph="Ex : Diallo" />
                 </div>
-              </div>
-            </Section>
-
-            <Section icon="🏷️" title="Secteur d'activité">
-              <div className="flex flex-wrap gap-2">
-                {SECTORS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setForm({ ...form, sector: form.sector === s ? "" : s })}
-                    className={`rounded-full border px-3.5 py-1.5 text-[.8rem] font-semibold transition ${
-                      form.sector === s
-                        ? "border-green bg-green text-white"
-                        : "border-gray-200 text-gray-600 hover:border-green/50 dark:border-dark-border dark:text-gray-300"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </Section>
-
-            <Section icon="📝" title="Notes internes">
-              <textarea
-                className={`${input} min-h-[96px] resize-none`}
-                placeholder="Préférences du client, budget habituel, historique…"
-                value={form.notes || ""}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
-              <p className="mt-1.5 text-[.72rem] text-gray-400">Visible par vous seul — jamais montré au client.</p>
-            </Section>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <div className={`${card} p-4`}>
-              <Select
-                l="Statut du client"
-                v={form.status}
-                set={(v) => setForm({ ...form, status: v })}
-                options={[
-                  { value: "prospect", label: "Prospect — pas encore client" },
-                  { value: "active", label: "Actif — relation en cours" },
-                  { value: "inactive", label: "Inactif — dormant" },
-                ]}
-              />
-              <p className="mt-1.5 text-[.72rem] text-gray-400">
-                Un prospect passe automatiquement en « Actif » dès l&apos;envoi d&apos;un devis.
-              </p>
+              )}
+              <F l="Téléphone (WhatsApp)" v={form.phone} set={(v) => setForm({ ...form, phone: v })} ph="+221 77 000 00 00" />
             </div>
+          </Section>
 
-            <div className="rounded-2xl border border-green/25 bg-green/5 p-4">
-              <div className="text-[.68rem] font-bold uppercase tracking-wider text-green">Code de suivi</div>
-              <div className="mt-2 font-mono text-[1.5rem] font-extrabold tracking-widest text-gray-900 dark:text-white">
-                {editing ? editing.tracking_code : "XXX-0000"}
-              </div>
-              <p className="mt-1.5 text-[.76rem] leading-relaxed text-gray-600 dark:text-gray-400">
-                {editing
-                  ? "Ce code identifie le client dans vos échanges."
-                  : "Généré automatiquement à l'enregistrement."}{" "}
-                Il permet à votre client de suivre ses devis <b>sans créer de compte</b>.
-              </p>
-            </div>
-
-            {!editing && (
-              <div className={`${card} p-4`}>
-                <div className="text-[.68rem] font-bold uppercase tracking-wider text-gray-400">Conseils</div>
-                <ul className="mt-2 flex flex-col gap-2.5">
-                  <Tip icon="💬">Renseignez le <b>WhatsApp</b> : c&apos;est par là que partiront les devis, en un clic.</Tip>
-                  <Tip icon="🧾">Le <b>NINEA</b> apparaîtra sur les factures des clients qui le réclament.</Tip>
-                </ul>
-              </div>
-            )}
-
+          {!showMore ? (
             <button
-              onClick={save}
-              disabled={busy}
-              className="btn btn-green w-full py-3 text-[.88rem] font-extrabold disabled:opacity-50"
+              type="button"
+              onClick={() => setShowMore(true)}
+              className="text-[.82rem] font-bold text-green transition hover:underline"
             >
-              {busy ? "Enregistrement…" : editing ? "Enregistrer les modifications" : "Enregistrer le client"}
+              + Ajouter entreprise, adresse, notes…
             </button>
-          </div>
+          ) : (
+            <>
+              <Section icon="🏢" title="Entreprise et facturation (optionnel)">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <F l="Entreprise / Structure" v={form.company} set={(v) => setForm({ ...form, company: v })} ph="Ex : Tekki Foods" />
+                  <F l="Ville" v={form.city} set={(v) => setForm({ ...form, city: v })} ph="Ex : Dakar, Plateau" />
+                  <F l="Adresse email" v={form.email} set={(v) => setForm({ ...form, email: v })} ph="client@entreprise.sn" />
+                  <F l="NINEA / RCCM" v={form.tax_id} set={(v) => setForm({ ...form, tax_id: v })} ph="Ex : 005812345 2A2" />
+                  <div className="sm:col-span-2">
+                    <F
+                      l="Raison sociale (sur la facture)"
+                      v={form.billing_name}
+                      set={(v) => setForm({ ...form, billing_name: v })}
+                      ph="Ex : TEKKI FOODS SARL"
+                      hint="Laissez vide pour reprendre le nom de l'entreprise."
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <F l="Adresse de facturation" v={form.address} set={(v) => setForm({ ...form, address: v })} ph="Ex : 12 rue Carnot, Dakar" />
+                  </div>
+                </div>
+              </Section>
+
+              <Section icon="🏷️" title="Secteur d'activité">
+                <div className="flex flex-wrap gap-2">
+                  {SECTORS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setForm({ ...form, sector: form.sector === s ? "" : s })}
+                      className={`rounded-full border px-3.5 py-1.5 text-[.8rem] font-semibold transition ${
+                        form.sector === s
+                          ? "border-green bg-green text-white"
+                          : "border-gray-200 text-gray-600 hover:border-green/50 dark:border-dark-border dark:text-gray-300"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </Section>
+
+              <Section icon="📝" title="Notes internes">
+                <textarea
+                  className={`${input} min-h-[80px] resize-none`}
+                  placeholder="Préférences du client, budget habituel…"
+                  value={form.notes || ""}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
+                <p className="mt-1.5 text-[.72rem] text-gray-400">Visible par vous seul.</p>
+              </Section>
+
+              <div className={`${card} p-4`}>
+                <Select
+                  l="Statut du client"
+                  v={form.status}
+                  set={(v) => setForm({ ...form, status: v })}
+                  options={[
+                    { value: "prospect", label: "Prospect — pas encore client" },
+                    { value: "active", label: "Actif — relation en cours" },
+                    { value: "inactive", label: "Inactif — dormant" },
+                  ]}
+                />
+              </div>
+            </>
+          )}
+
+          <button
+            onClick={save}
+            disabled={busy}
+            className="btn btn-green w-full py-3.5 text-[.9rem] font-extrabold disabled:opacity-50"
+          >
+            {busy ? "Enregistrement…" : editing ? "Enregistrer" : "Enregistrer le client"}
+          </button>
         </div>
       </div>
     );
@@ -316,36 +291,36 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
       .reduce((s, i) => s + (i.total || 0), 0);
     const totalPaid = detail.payments.reduce((s, p) => s + (p.amount || 0), 0);
     const outstanding = Math.max(0, totalInvoiced - totalPaid);
+    const extraInfo = [c.email, c.city, c.sector, c.billing_name, c.tax_id, c.address].some(Boolean);
 
     return (
-      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
+      <div className="mx-auto w-full max-w-[560px]">
         {confirmNode}
         <Crumb onBack={() => setView("list")} parent="Clients" current={c.company || c.name} />
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="flex flex-col gap-4">
-            {/* En-tête */}
-            <div className={`${card} p-4 sm:p-5`}>
-              <div className="flex items-start gap-3.5">
-                <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-green/15 to-neon-gold/15 text-[1rem] font-extrabold text-green">
-                  {(c.company || c.name).slice(0, 2).toUpperCase()}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-display text-[1.15rem] font-extrabold text-gray-900 dark:text-white">
-                      {c.company || c.name}
-                    </h2>
-                    <Badge cls={CLIENT_STYLE[c.status] || CLIENT_STYLE.prospect}>
-                      {CLIENT_LABELS[c.status] || c.status}
-                    </Badge>
-                  </div>
-                  {c.company && <p className="text-[.82rem] text-gray-500">{c.name}</p>}
-                  <p className="mt-1 font-mono text-[.75rem] font-bold text-gray-500">{c.tracking_code}</p>
+        <div className="flex flex-col gap-4">
+          {/* En-tête — juste l'essentiel pour contacter le client. */}
+          <div className={`${card} p-4 sm:p-5`}>
+            <div className="flex items-start gap-3.5">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-green/15 to-neon-gold/15 text-[1rem] font-extrabold text-green">
+                {(c.company || c.name).slice(0, 2).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="font-display text-[1.15rem] font-extrabold text-gray-900 dark:text-white">
+                    {c.company || c.name}
+                  </h2>
+                  <Badge cls={CLIENT_STYLE[c.status] || CLIENT_STYLE.prospect}>
+                    {CLIENT_LABELS[c.status] || c.status}
+                  </Badge>
                 </div>
+                {c.company && <p className="text-[.82rem] text-gray-500">{c.name}</p>}
+                {c.phone && <p className="mt-0.5 text-[.85rem] text-gray-600 dark:text-gray-300">📞 {c.phone}</p>}
               </div>
+            </div>
 
-              <div className="mt-4 grid gap-2.5 border-t border-gray-100 pt-3.5 text-[.82rem] dark:border-white/10 sm:grid-cols-2">
-                <Info icon="📞" label="Téléphone" value={c.phone} link={c.phone ? `https://wa.me/${waNumber(c.phone)}` : undefined} />
+            {extraInfo && (
+              <div className="mt-3 grid gap-2 border-t border-gray-100 pt-3 text-[.8rem] dark:border-white/10 sm:grid-cols-2">
                 <Info icon="✉️" label="Email" value={c.email} link={c.email ? `mailto:${c.email}` : undefined} />
                 <Info icon="📍" label="Ville" value={c.city} />
                 <Info icon="🏷️" label="Secteur" value={c.sector} />
@@ -353,152 +328,53 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
                 <Info icon="🧾" label="NINEA / RCCM" value={c.tax_id} />
                 {c.address && <div className="sm:col-span-2"><Info icon="🗺️" label="Adresse" value={c.address} /></div>}
               </div>
-
-              <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3.5 dark:border-white/10">
-                <button onClick={() => openEdit(c)} className="btn btn-green px-4 py-2 text-[.8rem] font-bold">
-                  ✏️ Modifier
-                </button>
-                {c.phone && (
-                  <a
-                    href={`https://wa.me/${waNumber(c.phone)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-xl bg-[#25D366] px-4 py-2 text-[.8rem] font-bold text-white transition hover:opacity-90"
-                  >
-                    💬 WhatsApp
-                  </a>
-                )}
-                {c.status !== "active" && (
-                  <button onClick={() => setStatus(c, "active")} disabled={busy} className={btnGhost}>
-                    Marquer actif
-                  </button>
-                )}
-                {c.status !== "inactive" && (
-                  <button onClick={() => setStatus(c, "inactive")} disabled={busy} className={btnGhost}>
-                    Marquer inactif
-                  </button>
-                )}
-                <button onClick={() => archive(c)} className={`${btnGhost} text-brand-red`}>
-                  Archiver
-                </button>
-              </div>
-            </div>
-
-            {c.notes && (
-              <Section icon="📝" title="Notes internes">
-                <p className="whitespace-pre-line text-[.85rem] leading-relaxed text-gray-600 dark:text-gray-300">
-                  {c.notes}
-                </p>
-              </Section>
             )}
 
-            <HistoryList
-              icon="📁"
-              title="Projets"
-              empty="Aucun projet pour ce client."
-              rows={detail.projects.map((p) => ({
-                id: p.id,
-                title: p.name,
-                sub: `${PROJECT_LABELS[p.status] || p.status} · ${p.progress} %`,
-                amount: p.budget,
-                badge: PROJECT_LABELS[p.status] || p.status,
-                cls: PROJECT_STYLE[p.status] || PROJECT_STYLE.planned,
-              }))}
-              onAll={() => goTo("projects")}
-            />
-
-            <HistoryList
-              icon="📄"
-              title="Devis"
-              empty="Aucun devis envoyé à ce client."
-              rows={detail.quotes.map((q) => {
-                const s = effectiveQuoteStatus(q);
-                return {
-                  id: q.id,
-                  title: q.title,
-                  sub: [q.number, formatDate(q.created_at)].filter(Boolean).join(" · "),
-                  amount: q.total,
-                  badge: QUOTE_LABELS[s] || s,
-                  cls: QUOTE_STYLE[s] || QUOTE_STYLE.draft,
-                };
-              })}
-              onAll={() => goTo("quotes")}
-            />
-
-            <HistoryList
-              icon="🧾"
-              title="Factures"
-              empty="Aucune facture pour ce client."
-              rows={detail.invoices.map((i) => {
-                const s = effectiveInvoiceStatus(i);
-                return {
-                  id: i.id,
-                  title: i.title,
-                  sub: [i.number, i.due_date ? `échéance ${formatDate(i.due_date)}` : null].filter(Boolean).join(" · "),
-                  amount: i.total,
-                  badge: INVOICE_LABELS[s] || s,
-                  cls: INVOICE_STYLE[s] || INVOICE_STYLE.draft,
-                };
-              })}
-              onAll={() => goTo("invoices")}
-            />
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <div className="rounded-2xl border border-green/25 bg-green/5 p-4">
-              <div className="text-[.68rem] font-bold uppercase tracking-wider text-green">Suivi des paiements</div>
-              <dl className="mt-2.5 flex flex-col gap-2 text-[.82rem]">
-                <Line label="Total facturé" value={formatFcfa(totalInvoiced)} />
-                <Line label="Encaissé" value={formatFcfa(totalPaid)} tone="green" />
-                <Line label="Reste dû" value={formatFcfa(outstanding)} tone={outstanding > 0 ? "amber" : undefined} />
-              </dl>
-            </div>
-
-            {detail.payments.length > 0 && (
-              <div className={`${card} p-4`}>
-                <h3 className="mb-2.5 font-display text-[.9rem] font-extrabold text-gray-900 dark:text-white">
-                  Historique des paiements
-                </h3>
-                <div className="flex flex-col divide-y divide-gray-100 dark:divide-white/10">
-                  {detail.payments.slice(0, 10).map((p) => (
-                    <div key={p.id} className="flex items-center justify-between gap-2 py-2">
-                      <div className="min-w-0">
-                        <div className="text-[.8rem] font-semibold text-gray-800 dark:text-gray-200">
-                          {p.method || "Paiement"}
-                        </div>
-                        <div className="text-[.7rem] text-gray-400">{formatDate(p.paid_at)}</div>
-                      </div>
-                      <span className="shrink-0 font-mono text-[.83rem] font-extrabold tabular-nums text-green">
-                        + {formatFcfa(p.amount)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className={`${card} p-4`}>
-              <h3 className="mb-2.5 font-display text-[.9rem] font-extrabold text-gray-900 dark:text-white">
-                Historique
-              </h3>
-              {detail.events.length === 0 ? (
-                <p className="py-2 text-[.78rem] text-gray-400">Aucun évènement enregistré.</p>
-              ) : (
-                <ol className="flex flex-col gap-2.5">
-                  {detail.events.map((e) => (
-                    <li key={e.id} className="text-[.76rem] leading-snug">
-                      <div className="text-gray-700 dark:text-gray-300">{e.message}</div>
-                      <div className="text-[.68rem] text-gray-400">{timeAgo(e.created_at)}</div>
-                    </li>
-                  ))}
-                </ol>
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3.5 dark:border-white/10">
+              <button onClick={() => openEdit(c)} className="btn btn-green px-4 py-2 text-[.8rem] font-bold">
+                ✏️ Modifier
+              </button>
+              {c.phone && (
+                <a
+                  href={`https://wa.me/${waNumber(c.phone)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-xl bg-[#25D366] px-4 py-2 text-[.8rem] font-bold text-white transition hover:opacity-90"
+                >
+                  💬 WhatsApp
+                </a>
               )}
+              <button onClick={() => archive(c)} className={`${btnGhost} text-brand-red`}>
+                Archiver
+              </button>
             </div>
-
-            <p className="text-center text-[.7rem] text-gray-400">
-              Client depuis le {formatDate(c.created_at)}
-            </p>
           </div>
+
+          {/* Portefeuille — un chiffre, sans détail à faire défiler. */}
+          <div className="rounded-2xl border border-green/25 bg-green/5 p-4">
+            <div className="text-[.68rem] font-bold uppercase tracking-wider text-green">Suivi des paiements</div>
+            <dl className="mt-2.5 flex flex-col gap-2 text-[.82rem]">
+              <Line label="Total facturé" value={formatFcfa(totalInvoiced)} />
+              <Line label="Encaissé" value={formatFcfa(totalPaid)} tone="green" />
+              <Line label="Reste dû" value={formatFcfa(outstanding)} tone={outstanding > 0 ? "amber" : undefined} />
+            </dl>
+          </div>
+
+          {/* Projets / Devis / Factures — un compteur qui renvoie vers
+              l'écran dédié, plutôt que trois listes empilées à faire défiler. */}
+          <div className="grid grid-cols-3 gap-2.5">
+            <CountTile icon="📁" label="Projets" count={detail.projects.length} onClick={() => goTo("projects")} />
+            <CountTile icon="📄" label="Devis" count={detail.quotes.length} onClick={() => goTo("quotes")} />
+            <CountTile icon="🧾" label="Factures" count={detail.invoices.length} onClick={() => goTo("invoices")} />
+          </div>
+
+          {c.notes && (
+            <Section icon="📝" title="Notes internes">
+              <p className="whitespace-pre-line text-[.85rem] leading-relaxed text-gray-600 dark:text-gray-300">
+                {c.notes}
+              </p>
+            </Section>
+          )}
         </div>
       </div>
     );
@@ -637,44 +513,13 @@ function Line({ label, value, tone }: { label: string; value: string; tone?: "gr
   );
 }
 
-function HistoryList({
-  icon, title, rows, empty, onAll,
-}: {
-  icon: string; title: string; empty: string; onAll: () => void;
-  rows: { id: string; title: string; sub: string; amount: number; badge: string; cls: string }[];
-}) {
+/** Compteur qui renvoie vers l'écran dédié — remplace une liste à faire défiler. */
+function CountTile({ icon, label, count, onClick }: { icon: string; label: string; count: number; onClick: () => void }) {
   return (
-    <Section
-      icon={icon}
-      title={title}
-      aside={
-        rows.length > 0 ? (
-          <button onClick={onAll} className="text-[.75rem] font-bold text-green transition hover:underline">
-            Tout voir
-          </button>
-        ) : undefined
-      }
-    >
-      {rows.length === 0 ? (
-        <p className="py-2 text-[.82rem] text-gray-400">{empty}</p>
-      ) : (
-        <div className="flex flex-col divide-y divide-gray-100 dark:divide-white/10">
-          {rows.slice(0, 6).map((r) => (
-            <div key={r.id} className="flex items-center gap-3 py-2.5">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="truncate text-[.86rem] font-bold text-gray-900 dark:text-white">{r.title}</span>
-                  <Badge cls={r.cls}>{r.badge}</Badge>
-                </div>
-                <div className="truncate text-[.72rem] text-gray-500">{r.sub}</div>
-              </div>
-              <span className="shrink-0 font-mono text-[.85rem] font-extrabold tabular-nums text-gray-900 dark:text-white">
-                {formatFcfa(r.amount)}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </Section>
+    <button onClick={onClick} className={`${card} p-3.5 text-center transition hover:border-green/40 hover:shadow`}>
+      <div className="text-[1.3rem]">{icon}</div>
+      <div className="mt-1 font-mono text-[1.15rem] font-extrabold tabular-nums text-gray-900 dark:text-white">{count}</div>
+      <div className="text-[.7rem] font-semibold text-gray-500">{label}</div>
+    </button>
   );
 }
