@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { proContext, txt, isMissingTable, isMissingColumn } from "@/lib/proServer";
 import { fetchSeller } from "@/lib/proPublic";
-import { sanitizeSections, businessStatus, canChargeTax, invoiceTitle } from "@/lib/pro";
+import { sanitizeSections, businessStatus, canChargeTax, invoiceTitle, docTemplate } from "@/lib/pro";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +12,14 @@ const NEW_COLUMNS = [
   "business_status", "invoice_title",
 ] as const;
 
-/** Thèmes autorisés — identiques à la contrainte SQL. */
-const DOC_TEMPLATES = ["classique", "moderne", "bande", "epure", "officiel"];
-const docTemplate = (v: unknown) => {
-  const s = txt(v, 20).toLowerCase();
-  return DOC_TEMPLATES.includes(s) ? s : "classique";
-};
+/**
+ * Modèle de document. La liste fait autorité dans lib/pro (DOC_TEMPLATES) et
+ * doit rester identique à la contrainte SQL `pro_settings_doc_template_chk`
+ * — voir database/MIGRATION_MODELES_DOCUMENTS.sql. Un identifiant inconnu
+ * retombe sur « classique » plutôt que d'être écrit tel quel : la base le
+ * refuserait avec un message incompréhensible pour l'utilisateur.
+ */
+const docTemplateId = (v: unknown) => docTemplate(txt(v, 20)).id;
 
 /** Couleur d'accent : hexadécimal strict, sinon rien. Cette valeur finit dans
  *  un attribut de style du document ; une chaîne libre y serait injectée. */
@@ -148,7 +150,7 @@ export async function POST(req: Request) {
       // rubriques enregistrent séparément, et aucun ne doit effacer le travail
       // de l'autre en envoyant un champ vide qu'il n'édite pas.
       if (body?.quote_sections !== undefined) payload.quote_sections = sanitizeSections(body.quote_sections);
-      if (body?.doc_template !== undefined) payload.doc_template = docTemplate(body.doc_template);
+      if (body?.doc_template !== undefined) payload.doc_template = docTemplateId(body.doc_template);
       if (body?.doc_accent !== undefined) payload.doc_accent = hexColor(body.doc_accent);
       if (body?.signature_label !== undefined) payload.signature_label = txt(body.signature_label, 120) || null;
       if (body?.invoice_title !== undefined) payload.invoice_title = invoiceTitle(body.invoice_title);

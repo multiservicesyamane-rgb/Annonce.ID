@@ -161,6 +161,129 @@ export const invoiceTitle = (v: unknown, fallback = "FACTURE"): string => {
  */
 export const TAX_EXEMPT_MENTION = "TVA non applicable.";
 
+/* ==================== Modèles de document ==================== */
+
+/**
+ * Les dix modèles de devis et de factures.
+ *
+ * Ce ne sont PAS dix nuances d'un même document : chacun change la structure
+ * de l'en-tête ET le dessin du tableau de facturation. Un modèle qui ne ferait
+ * varier qu'une couleur n'en serait pas un — le professionnel qui en choisit
+ * un doit voir une différence sur le papier.
+ *
+ * Liste unique, volontairement : elle sert à la fois au rendu du document
+ * (PrintableDocument), à l'écran de réglages (BusinessProfile) et à la
+ * validation côté serveur (/api/pro/settings). Une seule source, donc aucune
+ * divergence possible. La contrainte SQL `pro_settings_doc_template_chk` doit
+ * lister exactement ces identifiants — voir
+ * database/MIGRATION_MODELES_DOCUMENTS.sql.
+ */
+export type DocTemplateSpec = {
+  /** Couleur du modèle, écrasée par l'accent choisi par le professionnel. */
+  accent: string;
+  /**
+   * Traitement de l'en-tête :
+   *   rule  filet de couleur dessous · band  bandeau plein · frame  encadré
+   *   plain aucun ornement · side  barre de couleur à gauche
+   *   stack tout centré, à la manière d'un reçu
+   */
+  header: "rule" | "band" | "frame" | "plain" | "side" | "stack";
+  /**
+   * Dessin du tableau de facturation — la pièce maîtresse du document :
+   *   head   cadre de couleur, ligne d'intitulés en aplat plein
+   *   grid   entièrement quadrillé, allure comptable
+   *   zebra  cadre de couleur, une ligne sur deux teintée
+   *   rule   sans cadre, un seul filet épais sous les intitulés
+   */
+  table: "head" | "grid" | "zebra" | "rule";
+  /** Bloc destinataire et totaux légèrement teintés de l'accent. */
+  tinted: boolean;
+  /** Bandeau du total en aplat de couleur (sinon simple encadré). */
+  solid: boolean;
+  /** Intitulés de colonnes en capitales espacées. */
+  caps: boolean;
+};
+
+export type DocTemplate = {
+  id: string;
+  /** Nom montré dans les réglages. */
+  name: string;
+  /** Ce qui distingue ce modèle, en quelques mots. */
+  desc: string;
+  spec: DocTemplateSpec;
+};
+
+export const DOC_TEMPLATES: DocTemplate[] = [
+  {
+    id: "classique",
+    name: "Classique",
+    desc: "Filet de couleur, tableau à en-tête plein. Le défaut.",
+    spec: { accent: "#4F46E5", header: "rule", table: "head", tinted: true, solid: true, caps: false },
+  },
+  {
+    id: "moderne",
+    name: "Moderne",
+    desc: "Colonnes en capitales, lignes alternées. Allure agence.",
+    spec: { accent: "#0891B2", header: "rule", table: "zebra", tinted: true, solid: true, caps: true },
+  },
+  {
+    id: "bande",
+    name: "Bande pleine",
+    desc: "Bandeau de couleur en tête. Le plus affirmé.",
+    spec: { accent: "#047857", header: "band", table: "head", tinted: false, solid: true, caps: true },
+  },
+  {
+    id: "epure",
+    name: "Épuré",
+    desc: "Aucun aplat, un seul filet. Économe en encre.",
+    spec: { accent: "#111827", header: "plain", table: "rule", tinted: false, solid: false, caps: false },
+  },
+  {
+    id: "officiel",
+    name: "Administratif",
+    desc: "En-tête encadré, tableau quadrillé. Ton officiel.",
+    spec: { accent: "#92400E", header: "frame", table: "grid", tinted: false, solid: false, caps: true },
+  },
+  {
+    id: "colonne",
+    name: "Colonne",
+    desc: "Barre de couleur sur le côté, tableau à en-tête plein.",
+    spec: { accent: "#7C3AED", header: "side", table: "head", tinted: true, solid: true, caps: true },
+  },
+  {
+    id: "ardoise",
+    name: "Ardoise",
+    desc: "Bandeau sombre et tableau quadrillé. Très lisible en noir et blanc.",
+    spec: { accent: "#1F2937", header: "band", table: "grid", tinted: false, solid: true, caps: true },
+  },
+  {
+    id: "gestion",
+    name: "Gestion",
+    desc: "Tout quadrillé, chiffres alignés. Pour les longues factures.",
+    spec: { accent: "#0F766E", header: "rule", table: "grid", tinted: true, solid: true, caps: true },
+  },
+  {
+    id: "artisan",
+    name: "Artisan",
+    desc: "En-tête encadré, lignes alternées. Chaleureux et clair.",
+    spec: { accent: "#B45309", header: "frame", table: "zebra", tinted: true, solid: true, caps: false },
+  },
+  {
+    id: "recu",
+    name: "Reçu",
+    desc: "Tout centré, tableau compact. Pour les petites pièces.",
+    spec: { accent: "#BE123C", header: "stack", table: "head", tinted: false, solid: false, caps: true },
+  },
+];
+
+export const DOC_TEMPLATE_IDS = DOC_TEMPLATES.map((t) => t.id);
+
+/** Modèle correspondant à l'identifiant, ou le premier (« classique ») à défaut. */
+export function docTemplate(id: unknown): DocTemplate {
+  const key = String(id ?? "").trim().toLowerCase();
+  return DOC_TEMPLATES.find((t) => t.id === key) || DOC_TEMPLATES[0];
+}
+
 /* ==================== Rubriques de devis ==================== */
 
 /**

@@ -9,20 +9,117 @@
 // sociale ni NINEA. C'est désormais un écran à part entière, dans les réglages.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { TAX_RATES, canChargeTax, INVOICE_TITLES, type BusinessStatus } from "@/lib/pro";
+import {
+  TAX_RATES, canChargeTax, INVOICE_TITLES, DOC_TEMPLATES,
+  type BusinessStatus, type DocTemplate,
+} from "@/lib/pro";
 import { createClient } from "@/lib/supabase/client";
 import { api, card, input, lbl, F, PageHead, Section, stickyAside, type Toast } from "./ui";
 
-/** Modèles de document — mêmes clés que la contrainte SQL. */
-const TEMPLATES: { id: string; name: string; desc: string; accent: string }[] = [
-  { id: "classique", name: "Classique", desc: "Filet de couleur, sobre", accent: "#4F46E5" },
-  { id: "moderne", name: "Moderne", desc: "Titre coloré, blocs doux", accent: "#0891B2" },
-  { id: "bande", name: "Bande pleine", desc: "Bandeau de couleur en tête", accent: "#047857" },
-  { id: "epure", name: "Épuré", desc: "Minimaliste, sans aplat", accent: "#111827" },
-  { id: "officiel", name: "Administratif", desc: "Encadré, style officiel", accent: "#92400E" },
-];
-
 const ACCENTS = ["#4F46E5", "#0891B2", "#047857", "#B45309", "#B91C1C", "#7C3AED", "#111827"];
+
+/**
+ * Vignette d'un modèle : en-tête, tableau de facturation, bandeau de total.
+ *
+ * Elle est dessinée à partir de la MÊME spécification que le document réel
+ * (DOC_TEMPLATES dans lib/pro), pas d'une image ni d'une description : ce que
+ * l'on voit ici ne peut pas cesser de correspondre à ce qui s'imprime. Choisir
+ * un modèle sur dix depuis une liste de noms serait un pari — ici on voit la
+ * différence.
+ */
+function TemplateThumb({ tpl, accent }: { tpl: DocTemplate; accent: string }) {
+  const s = tpl.spec;
+  const tint = `${accent}22`;
+
+  // En-tête : le même vocabulaire que le document (bandeau, filet, encadré,
+  // barre latérale, centré, rien).
+  const head =
+    s.header === "band" ? (
+      <div className="flex h-4 items-center gap-1 px-1.5" style={{ background: accent }}>
+        <span className="h-1 w-4 rounded-sm bg-white/90" />
+        <span className="ml-auto h-1 w-3 rounded-sm bg-white/70" />
+      </div>
+    ) : s.header === "frame" ? (
+      <div className="m-1 flex h-3.5 items-center gap-1 rounded-[2px] px-1" style={{ border: `1px solid ${accent}` }}>
+        <span className="h-1 w-4 rounded-sm bg-gray-400" />
+        <span className="ml-auto h-1 w-3 rounded-sm" style={{ background: accent }} />
+      </div>
+    ) : s.header === "side" ? (
+      <div className="m-1 flex h-3.5 items-center gap-1 pl-1.5" style={{ borderLeft: `2px solid ${accent}` }}>
+        <span className="h-1 w-4 rounded-sm bg-gray-400" />
+        <span className="ml-auto h-1 w-3 rounded-sm" style={{ background: accent }} />
+      </div>
+    ) : s.header === "stack" ? (
+      <div className="flex flex-col items-center gap-0.5 pt-1.5">
+        <span className="h-1 w-6 rounded-sm bg-gray-400" />
+        <span className="h-1 w-4 rounded-sm" style={{ background: accent }} />
+        <span className="mt-0.5 h-[1.5px] w-10" style={{ background: accent }} />
+      </div>
+    ) : (
+      <div className="m-1">
+        <div className="flex items-center gap-1">
+          <span className="h-1 w-4 rounded-sm bg-gray-400" />
+          <span className="ml-auto h-1 w-3 rounded-sm" style={{ background: s.header === "plain" ? "#9CA3AF" : accent }} />
+        </div>
+        <div
+          className="mt-1 w-full"
+          style={{ height: s.header === "plain" ? 1 : 2, background: s.header === "plain" ? "#E5E7EB" : accent }}
+        />
+      </div>
+    );
+
+  // Tableau : c'est lui qui distingue vraiment les modèles entre eux.
+  const framed = s.table !== "rule";
+  const rows = [0, 1, 2];
+
+  return (
+    <span className="block overflow-hidden rounded-[4px] bg-white" style={{ border: "1px solid #E5E7EB" }}>
+      {head}
+
+      <span className="block px-1.5 pb-1.5 pt-1">
+        <span
+          className="block"
+          style={framed ? { border: `1px solid ${accent}` } : undefined}
+        >
+          <span
+            className="flex h-2.5 items-center gap-1 px-1"
+            style={{
+              background: s.table === "head" ? accent : s.table === "rule" ? "transparent" : tint,
+              borderBottom:
+                s.table === "head" ? "none" : `${s.table === "rule" ? 1.5 : 1}px solid ${accent}`,
+            }}
+          >
+            <span className={`h-[2px] w-5 rounded-sm ${s.table === "head" ? "bg-white/90" : "bg-gray-500"}`} />
+            <span className={`ml-auto h-[2px] w-2.5 rounded-sm ${s.table === "head" ? "bg-white/70" : "bg-gray-400"}`} />
+          </span>
+
+          {rows.map((r) => (
+            <span
+              key={r}
+              className="flex h-2.5 items-center gap-1 px-1"
+              style={{
+                background: s.table === "zebra" && r % 2 === 1 ? tint : "transparent",
+                borderBottom: r < 2 ? "1px solid #E5E7EB" : "none",
+              }}
+            >
+              <span className="h-[2px] w-6 rounded-sm bg-gray-300" />
+              {s.table === "grid" && <span className="h-2.5 w-px bg-gray-200" />}
+              <span className="ml-auto h-[2px] w-3 rounded-sm bg-gray-400" />
+            </span>
+          ))}
+        </span>
+
+        {/* Bandeau de total : plein ou simplement encadré. */}
+        <span
+          className="mt-1 flex h-2.5 items-center justify-end rounded-[2px] px-1"
+          style={s.solid ? { background: accent } : { border: `1.5px solid ${accent}` }}
+        >
+          <span className={`h-[2px] w-4 rounded-sm ${s.solid ? "bg-white/90" : "bg-gray-500"}`} />
+        </span>
+      </span>
+    </span>
+  );
+}
 
 type Asset = "logo_url" | "signature_url" | "stamp_url";
 
@@ -122,7 +219,7 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
 
   if (loading) return <div className="py-16 text-center text-gray-400">Chargement…</div>;
 
-  const activeAccent = accent || TEMPLATES.find((t) => t.id === template)?.accent || "#4F46E5";
+  const activeAccent = accent || DOC_TEMPLATES.find((t) => t.id === template)?.spec.accent || "#4F46E5";
 
   return (
     <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
@@ -210,21 +307,31 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
           </Section>
 
           <Section icon="🎨" title="Modèle de document">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-              {TEMPLATES.map((t) => (
+            <p className="mb-3 text-[.78rem] leading-relaxed text-gray-500 dark:text-gray-400">
+              Dix mises en page. Ce qui change n&apos;est pas la couleur mais la structure :
+              l&apos;en-tête, et surtout le dessin du <b className="text-gray-700 dark:text-gray-200">tableau
+              de facturation</b> — le bloc que votre client regarde en premier.
+            </p>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+              {DOC_TEMPLATES.map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => setTemplate(t.id)}
-                  className={`rounded-xl border p-3 text-left transition ${
+                  aria-pressed={template === t.id}
+                  className={`rounded-xl border p-2.5 text-left transition ${
                     template === t.id
                       ? "border-green bg-green/5 ring-2 ring-green/20"
                       : "border-gray-200 hover:border-green/40 dark:border-dark-border"
                   }`}
                 >
-                  <span className="block h-1.5 w-8 rounded-full" style={{ background: accent || t.accent }} />
-                  <span className="mt-2 block text-[.83rem] font-extrabold text-gray-900 dark:text-white">{t.name}</span>
-                  <span className="block text-[.68rem] leading-snug text-gray-500 dark:text-gray-400">{t.desc}</span>
+                  <TemplateThumb tpl={t} accent={accent || t.spec.accent} />
+                  <span className="mt-2 block text-[.82rem] font-extrabold text-gray-900 dark:text-white">
+                    {t.name}
+                  </span>
+                  <span className="block text-[.67rem] leading-snug text-gray-500 dark:text-gray-400">
+                    {t.desc}
+                  </span>
                 </button>
               ))}
             </div>
