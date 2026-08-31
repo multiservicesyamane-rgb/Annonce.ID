@@ -24,14 +24,20 @@ import { useFavorites } from "./FavButton";
 import ImageCropperModal from "./ImageCropperModal";
 import ChatInterface from "./ChatInterface";
 import MarketingPanel from "./MarketingPanel";
-import MonActivite from "./MonActivite";
-import BusinessProfile from "./pro/BusinessProfile";
-type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "notifications" | "reviews" | "alerts" | "profile" | "faq" | "security"
-  // Espace Freelancer
-  | "activity" | "clients" | "projects" | "quotes" | "invoices" | "business";
+type Panel = "overview" | "stats" | "ads" | "campaigns" | "purchases" | "showroom" | "credits" | "favorites" | "messages" | "notifications" | "reviews" | "alerts" | "profile" | "faq" | "security";
 
-// Panneaux servis par le module freelance (components/MonActivite.tsx).
-const PRO_PANELS: Panel[] = ["activity", "clients", "projects", "quotes", "invoices", "business"];
+/**
+ * Panneaux du module freelance, servis ICI jusqu'au 31/08/2026.
+ *
+ * Ils vivent désormais dans /mon-activite, qui a sa propre page d'accueil.
+ * Le tableau de bord les rendait encore en parallèle : deux interfaces pour
+ * la même chose, dont une seule recevait les nouveautés (aperçu A4,
+ * catalogue de prestations, téléchargement du document). Ce qui reste ici
+ * n'est plus qu'une REDIRECTION, pour que les liens déjà dans la nature —
+ * notification archivée, favori du navigateur, message WhatsApp — continuent
+ * d'aboutir au bon écran.
+ */
+const LEGACY_PRO_PANELS = ["activity", "clients", "projects", "quotes", "invoices", "business"];
 
 // Affiche l'URL publique de la boutique sans casser l'hydratation.
 // `window.location.origin` n'existe pas au rendu serveur : l'afficher
@@ -53,24 +59,25 @@ type NavItem = {
 };
 
 /**
- * Le tableau de bord sert DEUX métiers distincts : vendre des annonces, et
- * piloter une activité de freelance. Les empiler dans un seul menu donnait
- * 21 entrées, dont 5 que l'immense majorité des vendeurs n'ouvrira jamais.
+ * Un seul menu : celui des annonces.
  *
- * Chaque mode a donc son menu. On bascule par le sélecteur en tête de barre
- * latérale, et le mode pro n'est proposé qu'aux comptes qui l'ont activé.
+ * Le tableau de bord servait deux métiers derrière un sélecteur de mode, avec
+ * un second menu pour l'activité de freelance. Ce métier-là a sa propre
+ * application depuis le 31/08/2026 (/mon-activite) ; n'en reste ici qu'une
+ * passerelle, comme pour « Publier une annonce ».
  */
-const NAV_ADS: NavItem[] = [
+const NAV: NavItem[] = [
   { id: "overview", icon: "📊", label: "Vue d’ensemble", section: "Principal" },
   { id: "stats", icon: "📈", label: "Statistiques" },
   { id: "ads", icon: "📋", label: "Mes annonces", section: "Vente" },
   { id: "showroom", icon: "🏪", label: "Ma Boutique" },
   { id: "campaigns", icon: "🚀", label: "Marketing & Pub" },
   { id: "publish", icon: "➕", label: "Publier une annonce", isLink: true, href: "/publier" },
-  // Passerelle vers l'espace pro, juste après « Publier ». Réservée aux comptes
-  // qui l'ont activé : sinon elle réintroduirait dans le menu « annonces »
-  // exactement ce qu'on en a sorti.
-  { id: "activity", icon: "💼", label: "Mon Activité pro", proOnly: true },
+  // Passerelle vers l'espace pro, juste après « Publier ». Un LIEN, pas un
+  // panneau : l'entrée ouvrait l'ancienne interface intégrée alors que le
+  // sélecteur de mode, lui, redirigeait déjà vers /mon-activite — deux
+  // chemins pour le même mot, menant à deux écrans différents.
+  { id: "activity", icon: "💼", label: "Mon Activité pro", isLink: true, href: "/mon-activite", proOnly: true },
   { id: "favorites", icon: "❤", label: "Mes Favoris", section: "Interactions" },
   { id: "notifications", icon: "🔔", label: "Notifications" },
   { id: "messages", icon: "💬", label: "Messages" },
@@ -83,50 +90,8 @@ const NAV_ADS: NavItem[] = [
   { id: "faq", icon: "❓", label: "FAQ" },
 ];
 
-const NAV_PRO: NavItem[] = [
-  { id: "activity", icon: "📊", label: "Mon Activité", section: "Pilotage" },
-  { id: "clients", icon: "👥", label: "Clients", section: "Gestion" },
-  { id: "projects", icon: "📁", label: "Projets" },
-  { id: "quotes", icon: "📄", label: "Devis" },
-  { id: "invoices", icon: "🧾", label: "Factures" },
-  // Profil d'entreprise : identité, modèle de document, signature et cachet.
-  // Sa place est dans les réglages, pas au milieu des écrans de travail.
-  { id: "business", icon: "🏢", label: "Profil entreprise", section: "Paramètres" },
-  { id: "messages", icon: "💬", label: "Messages" },
-  { id: "profile", icon: "👤", label: "Mon profil" },
-  { id: "security", icon: "🔒", label: "Sécurité & Vie privée" },
-];
-
-/** Toutes les entrées confondues : sert à valider un ?panel= reçu par URL. */
-const ALL_NAV: NavItem[] = [...NAV_ADS, ...NAV_PRO];
-
-/**
- * Panneaux présents dans les DEUX menus sans appartenir au module pro :
- * messages, profil, sécurité.
- *
- * L'exclusion de PRO_PANELS est indispensable. « Mon Activité » figure aussi
- * dans le menu annonces comme passerelle ; sans ce filtre il passait pour
- * neutre, et le bouton « Pro » — qui ouvre justement ce panneau — ne
- * basculait donc jamais de mode.
- */
-const SHARED_PANELS = new Set(
-  NAV_PRO
-    .filter((p) => NAV_ADS.some((a) => a.id === p.id))
-    .map((p) => p.id)
-    .filter((id) => !PRO_PANELS.includes(id as Panel)),
-);
-
-/**
- * Mode à adopter pour un panneau donné.
- *
- * Un panneau partagé ne fait PAS basculer : ouvrir « Messages » depuis
- * l'espace pro doit y laisser l'utilisateur, sinon le menu changerait sous
- * ses yeux sans qu'il ait rien demandé.
- */
-function modeForPanel(id: string, current: "ads" | "pro"): "ads" | "pro" {
-  if (SHARED_PANELS.has(id)) return current;
-  return PRO_PANELS.includes(id as Panel) ? "pro" : "ads";
-}
+/** Un ?panel= reçu par URL n'est accepté que s'il correspond à une entrée. */
+const isKnownPanel = (id: string) => NAV.some((item) => !item.isLink && item.id === id);
 
 const CHART = [120, 95, 210, 180, 340, 290, 400, 380, 320, 450, 510, 480, 390, 560];
 
@@ -148,17 +113,10 @@ export default function Dashboard() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const requestedPanel = searchParams.get("panel");
-  const initialPanel = requestedPanel && ALL_NAV.some((item) => !item.isLink && item.id === requestedPanel)
+  const initialPanel: Panel = requestedPanel && isKnownPanel(requestedPanel)
     ? requestedPanel as Panel
     : "overview";
   const [panel, setPanel] = useState<Panel>(initialPanel);
-
-  // Mode courant. Un lien direct vers un panneau pro (?panel=invoices, une
-  // notification, un favori du navigateur) doit ouvrir le bon menu : le mode
-  // se déduit donc du panneau demandé, jamais l'inverse.
-  const [mode, setMode] = useState<"ads" | "pro">(
-    PRO_PANELS.includes(initialPanel as Panel) ? "pro" : "ads",
-  );
   const [proActivated, setProActivated] = useState(false);
   const [proCounts, setProCounts] = useState({ clients: 0, quotes: 0, invoices: 0 });
   const [toast, setToast] = useState<string | null>(null);
@@ -255,27 +213,10 @@ export default function Dashboard() {
   };
 
   const handlePanelChange = (id: string) => {
-    const isKnownPanel = ALL_NAV.some((item) => !item.isLink && item.id === id);
-    if (!isKnownPanel) return;
+    if (!isKnownPanel(id)) return;
     setPanel(id as Panel);
-    // Le mode suit le panneau : ouvrir « Factures » depuis un raccourci bascule
-    // en mode pro, sans quoi le menu affiché ne contiendrait pas l'entrée
-    // active — l'utilisateur ne saurait plus où il se trouve.
-    setMode((cur) => modeForPanel(id, cur));
     setIsMobileMenuOpen(false);
     router.replace("/dashboard?panel=" + encodeURIComponent(id), { scroll: false });
-  };
-
-  /**
-   * Bascule de mode. « Pro » n'est plus un panneau interne au tableau de
-   * bord : depuis le 31/08/2026 c'est un service à part (/mon-activite),
-   * pensé pour un public qui a besoin de gros boutons et de rien d'autre.
-   * On y redirige plutôt que de rendre l'ancien panneau « activity ».
-   */
-  const switchMode = (next: "ads" | "pro") => {
-    if (next === "pro") { router.push("/mon-activite"); return; }
-    if (next === mode) return;
-    handlePanelChange("overview");
   };
 
   // L'espace pro est-il activé ? Requête volontairement légère (comptages sans
@@ -312,14 +253,17 @@ export default function Dashboard() {
 
   useEffect(() => {
     const nextPanel = searchParams.get("panel");
-    if (nextPanel && ALL_NAV.some((item) => !item.isLink && item.id === nextPanel)) {
-      setPanel(nextPanel as Panel);
-      // Navigation arrière/avant du navigateur : le menu doit suivre le
-      // panneau restauré, sinon on se retrouve en mode « annonces » devant un
-      // écran de factures.
-      setMode((cur) => modeForPanel(nextPanel, cur));
+    if (!nextPanel) return;
+    // Ancien lien vers le module freelance (?panel=quotes, ?panel=invoices…) :
+    // on l'envoie sur l'application qui le sert vraiment plutôt que d'afficher
+    // « Vue d'ensemble » sans explication. `replace` pour que le retour arrière
+    // ne repasse pas par cette URL morte.
+    if (LEGACY_PRO_PANELS.includes(nextPanel)) {
+      router.replace("/mon-activite");
+      return;
     }
-  }, [searchParams]);
+    if (isKnownPanel(nextPanel)) setPanel(nextPanel as Panel);
+  }, [searchParams, router]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -790,43 +734,20 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-        {/* Sélecteur de mode : deux métiers, deux menus. Affiché seulement
-            quand l'espace pro est activé — sinon un simple appel à l'action. */}
+        {/* Passerelle vers l'espace pro. Ce n'est plus un sélecteur de mode :
+            il n'y a plus qu'un menu ici, et l'activité de freelance a sa
+            propre application. Le compte qui l'a activée y va d'un lien, les
+            autres lisent à quoi elle sert. */}
         <div className="mx-3 mb-1">
           {proActivated ? (
-            <div
-              role="tablist"
-              aria-label="Choisir l'espace"
-              className="flex gap-1 rounded-[12px] bg-gray-100 p-1 dark:bg-white/[.06]"
+            <Link
+              href="/mon-activite"
+              className="flex items-center gap-2 rounded-[12px] bg-gray-100 px-3 py-2.5 text-[.76rem] font-bold text-gold-dark transition hover:bg-gold/10 dark:bg-white/[.06] dark:text-neon-gold dark:hover:bg-gold/10"
             >
-              {/* Libellés courts : la barre latérale ne fait que 220 px sur
-                  ordinateur, soit ~92 px par bouton. « Mes annonces » y sortait
-                  tronqué en « Mes annon… ». L'icône porte le sens, le mot le
-                  précise, et `title` donne l'intitulé complet au survol. */}
-              {([
-                { id: "ads", icon: "🛒", label: "Annonces", full: "Mes annonces" },
-                { id: "pro", icon: "💼", label: "Pro", full: "Mon activité pro" },
-              ] as const).map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  role="tab"
-                  title={m.full}
-                  aria-selected={mode === m.id}
-                  onClick={() => switchMode(m.id)}
-                  className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[9px] px-1.5 py-2 text-[.74rem] font-bold transition ${
-                    mode === m.id
-                      ? m.id === "pro"
-                        ? "bg-white text-gold-dark shadow-sm dark:bg-dark-900 dark:text-neon-gold"
-                        : "bg-white text-green shadow-sm dark:bg-dark-900"
-                      : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-                  }`}
-                >
-                  <span aria-hidden="true" className="shrink-0">{m.icon}</span>
-                  <span className="truncate">{m.label}</span>
-                </button>
-              ))}
-            </div>
+              <span aria-hidden="true" className="shrink-0">💼</span>
+              <span className="truncate">Mon activité pro</span>
+              <span aria-hidden="true" className="ml-auto shrink-0 opacity-60">→</span>
+            </Link>
           ) : (
             <Link
               href="/mon-activite"
@@ -841,7 +762,7 @@ export default function Dashboard() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {(mode === "pro" ? NAV_PRO : NAV_ADS)
+          {NAV
             .filter((n) => !n.proOnly || proActivated)
             .map((n) => (
             <div key={n.id}>
@@ -860,12 +781,8 @@ export default function Dashboard() {
                   aria-current={panel === n.id ? "page" : undefined}
                   className={`flex w-full items-center gap-2.5 border-l-[3px] px-5 py-2.5 text-left text-[.87rem] transition ${
                     panel === n.id
-                      ? mode === "pro"
-                        ? "border-gold bg-gold/[.08] font-semibold text-gold-dark dark:text-neon-gold"
-                        : "border-green bg-green/[.06] font-semibold text-green"
-                      : mode === "pro"
-                        ? "border-transparent text-gray-700 dark:text-white/70 hover:text-gold-dark dark:hover:text-neon-gold"
-                        : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
+                      ? "border-green bg-green/[.06] font-semibold text-green"
+                      : "border-transparent text-gray-700 dark:text-white/70 hover:text-green"
                     }`}
                 >
                   <span className="w-5 text-center shrink-0">{n.icon}</span>
@@ -889,14 +806,8 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* Content — un liseré doré en tête de zone marque l'espace pro, pour
-          qu'on sache d'un coup d'œil dans quel espace on se trouve (le
-          sélecteur seul se perd facilement une fois qu'on a scrollé). */}
-      <div
-        className={`flex-1 min-w-0 bg-gray-50 dark:bg-dark-900 px-3 py-4 sm:px-4 sm:py-6 lg:p-8 overflow-y-auto w-full ${
-          mode === "pro" ? "border-t-[3px] border-gold lg:border-t-0 lg:border-l-[3px]" : ""
-        }`}
-      >
+      {/* Content */}
+      <div className="flex-1 min-w-0 bg-gray-50 dark:bg-dark-900 px-3 py-4 sm:px-4 sm:py-6 lg:p-8 overflow-y-auto w-full">
         {panel === "overview" && (
           <div className="animate-fadeUp w-full min-w-0 max-w-[1000px] mx-auto">
             {/* Hero profil — Compact (Transport Style) */}
@@ -948,8 +859,8 @@ export default function Dashboard() {
             </div>
 
             {/* Espace pro — point d'entrée depuis l'accueil du tableau de bord.
-                Le module vit derrière un sélecteur de mode : sans ce rappel ici,
-                un vendeur qui facture des prestations pourrait ne jamais
+                Le module est une application à part : sans ce rappel ici, un
+                vendeur qui facture des prestations pourrait ne jamais
                 découvrir qu'il existe. */}
             {proActivated ? (
               <div className="mb-4 rounded-[16px] border border-gray-100 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-[#161B22] sm:p-5">
@@ -2759,20 +2670,8 @@ export default function Dashboard() {
         )}
 
 
-        {/* ESPACE FREELANCER — Mon Activité · Clients · Projets · Devis · Factures */}
-        {PRO_PANELS.includes(panel) && panel !== "business" && (
-          <div className="animate-fadeUp">
-            <MonActivite panel={panel as any} toast={show} goTo={handlePanelChange} />
-          </div>
-        )}
-
-        {/* Profil d'entreprise : servi à part, il ne relève pas du flux de
-            travail mais des réglages. */}
-        {panel === "business" && (
-          <div className="animate-fadeUp">
-            <BusinessProfile toast={show} />
-          </div>
-        )}
+        {/* L'ESPACE FREELANCER n'est plus rendu ici : voir /mon-activite et
+            la redirection de LEGACY_PRO_PANELS en tête de fichier. */}
 
         {panel === "alerts" && (
           <div className="animate-fadeUp max-w-[800px] mx-auto">

@@ -31,6 +31,9 @@ const TILES: { id: Screen; icon: string; label: string; grad: string; accent: st
   { id: "business", icon: "🏢", label: "Mon entreprise", grad: "from-gray-100 to-gray-200 dark:from-white/10 dark:to-white/5", accent: "text-gray-600 dark:text-gray-300", glow: "shadow-[0_10px_28px_-10px_rgba(0,0,0,0.18)]" },
 ];
 
+/** Écrans ouvrables directement par l'URL — voir `?ecran=` plus bas. */
+const SCREEN_IDS: Screen[] = ["quotes", "invoices", "clients", "activity", "projects", "business"];
+
 const TITLES: Record<Screen, string> = {
   home: "Mon Activité",
   quotes: "Devis",
@@ -69,6 +72,23 @@ export default function MonActivitePage() {
   }
 
   useEffect(() => { loadStatus(); }, []);
+
+  /**
+   * Écran demandé par l'URL : `/mon-activite?ecran=invoices`.
+   *
+   * Sans lui, la notification « ✅ Devis accepté — facture prête » déposerait
+   * le professionnel sur l'accueil, à lui de retrouver la pièce.
+   *
+   * Lu depuis `window` et non par `useSearchParams`, qui imposerait
+   * d'envelopper toute la page dans un `<Suspense>` pour un paramètre
+   * facultatif — le même piège avait déjà cassé un build (commit 290e748).
+   */
+  useEffect(() => {
+    try {
+      const asked = new URLSearchParams(window.location.search).get("ecran");
+      if (asked && SCREEN_IDS.includes(asked as Screen)) setScreen(asked as Screen);
+    } catch { /* URL exotique : on reste sur l'accueil */ }
+  }, []);
 
   async function activate() {
     setActivating(true);

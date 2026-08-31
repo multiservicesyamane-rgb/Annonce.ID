@@ -15,6 +15,7 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
     "next": "14.2.15",
     "qrcode-generator": "^2.0.4",

@@ -14,6 +14,9 @@ export default function robots(): MetadataRoute.Robots {
         // Zones privées / techniques (aucune valeur SEO)
         "/yamanetech",
         "/dashboard",
+        // L'application de gestion (devis/factures) : rien d'indexable, tout
+        // est derrière la connexion. Sa vitrine publique est /espace-pro.
+        "/mon-activite",
         "/connexion",
         "/inscription",
         "/favoris",

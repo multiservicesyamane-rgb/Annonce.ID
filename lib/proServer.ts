@@ -44,6 +44,25 @@ export function isMissingColumn(error: { message?: string } | null): boolean {
   return /Could not find the '.*' column/i.test(m) || /column .* does not exist/i.test(m);
 }
 
+/**
+ * L'écriture a-t-elle été refusée par une contrainte `check` donnée ?
+ *
+ * Cas concret : le code propose dix modèles de document depuis le 31/08/2026,
+ * mais `pro_settings_doc_template_chk` n'en connaît que cinq tant que
+ * `database/MIGRATION_MODELES_DOCUMENTS.sql` n'a pas tourné. Sans ce test,
+ * l'utilisateur qui choisit « Ardoise » reçoit le message brut de Postgres —
+ * illisible, et qui ne dit pas quoi faire.
+ *
+ * On lit `code` (23514) autant que le nom de la contrainte : PostgREST place
+ * le premier dans `code`, le second dans `message` ou `details` selon les
+ * versions.
+ */
+export function isCheckViolation(error: unknown, constraint: string): boolean {
+  const e = (error || {}) as { code?: string; message?: string; details?: string };
+  const text = `${e.message || ""} ${e.details || ""}`;
+  return (e.code === "23514" || /violates check constraint/i.test(text)) && text.includes(constraint);
+}
+
 export type ProContext = { sb: SupabaseClient; userId: string };
 
 /**

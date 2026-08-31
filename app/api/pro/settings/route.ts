@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { proContext, txt, isMissingTable, isMissingColumn } from "@/lib/proServer";
+import { proContext, txt, isMissingTable, isMissingColumn, isCheckViolation } from "@/lib/proServer";
 import { fetchSeller } from "@/lib/proPublic";
 import { sanitizeSections, businessStatus, canChargeTax, invoiceTitle, docTemplate } from "@/lib/pro";
 
@@ -184,6 +184,21 @@ export async function POST(req: Request) {
         sectionsSkipped = !error;
       }
 
+      // Modèle refusé par la base : les cinq modèles ajoutés le 31/08/2026
+      // (colonne, ardoise, gestion, artisan, reçu) ne passent qu'une fois
+      // MIGRATION_MODELES_DOCUMENTS.sql exécutée. On enregistre alors TOUT LE
+      // RESTE — identité, coordonnées, signature, mentions — et on dit
+      // précisément ce qui manque, plutôt que de perdre la saisie entière sur
+      // un choix de mise en page.
+      let templateSkipped = false;
+      if (error && isCheckViolation(error, "doc_template")) {
+        const withoutTemplate = { ...payload };
+        delete withoutTemplate.doc_template;
+        ({ data, error } = await sb
+          .from("pro_settings").upsert(withoutTemplate, { onConflict: "user_id" }).select("*").single());
+        templateSkipped = !error;
+      }
+
       if (error) {
         if (isMissingTable(error)) {
           return NextResponse.json({ error: "Table des réglages absente.", needsMigration: true }, { status: 400 });
@@ -195,6 +210,15 @@ export async function POST(req: Request) {
           ok: true,
           settings: data,
           warning: "Réglages partiellement enregistrés : exécutez database/MIGRATION_ESPACE_PRO.sql dans Supabase.",
+        });
+      }
+      if (templateSkipped) {
+        return NextResponse.json({
+          ok: true,
+          settings: data,
+          warning:
+            "Tout est enregistré sauf le modèle de document : ce modèle demande " +
+            "database/MIGRATION_MODELES_DOCUMENTS.sql, à exécuter dans Supabase.",
         });
       }
       return NextResponse.json({ ok: true, settings: data });

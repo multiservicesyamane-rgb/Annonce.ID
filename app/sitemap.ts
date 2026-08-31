@@ -21,6 +21,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/aide",
     "/securite",
     "/comment-ca-marche",
+    // Landing de l'espace pro (devis/factures). C'est la seule page publique
+    // du module : /mon-activite est l'application elle-même, réservée aux
+    // comptes connectés, et n'a donc rien à faire dans un sitemap.
+    "/espace-pro",
     "/contact",
     "/publicite",
     "/cgu",

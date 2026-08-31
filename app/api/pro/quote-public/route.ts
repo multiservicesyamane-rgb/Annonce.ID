@@ -141,7 +141,7 @@ export async function POST(req: Request) {
           type: "new_listing",
           title: "👀 Devis consulté",
           body: `Votre client a ouvert « ${quote.title} ».`,
-          url: "/dashboard?panel=quotes",
+          url: "/mon-activite?ecran=quotes",
         }).catch(() => {});
         await logEvent(sb, quote.user_id, "quote", quote.id, "viewed", `Devis ${quote.number || ""} consulté par le client`);
       }
@@ -191,7 +191,7 @@ export async function POST(req: Request) {
         body:
           `Votre client a accepté « ${quote.title} » (${formatFcfa(quote.total)}).` +
           (invoice ? ` Facture ${invoice.number} prête.` : ""),
-        url: invoice ? "/dashboard?panel=invoices" : "/dashboard?panel=quotes",
+        url: invoice ? "/mon-activite?ecran=invoices" : "/mon-activite?ecran=quotes",
       }).catch(() => {});
 
       return NextResponse.json({ ok: true });
@@ -213,7 +213,7 @@ export async function POST(req: Request) {
         type: "new_listing",
         title: "Devis refusé",
         body: `Votre client a refusé « ${quote.title} ».`,
-        url: "/dashboard?panel=quotes",
+        url: "/mon-activite?ecran=quotes",
       }).catch(() => {});
       return NextResponse.json({ ok: true });
     }

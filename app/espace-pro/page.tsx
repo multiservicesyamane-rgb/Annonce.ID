@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import ScrollReveal from "@/components/ScrollReveal";
+import { DOC_TEMPLATES } from "@/lib/pro";
 
 export const metadata: Metadata = {
   title: "Espace Pro — Devis & factures gratuits | Wanteermako",
@@ -30,63 +31,77 @@ const FEATURES = [
   { icon: "📄", title: "Devis", desc: "Rubriques réutilisables, acceptés en un clic" },
   { icon: "🧾", title: "Factures", desc: "Numérotation automatique, jamais deux fois le même numéro" },
   { icon: "💰", title: "Paiements", desc: "Encaissé, en attente, retards — calculés en direct" },
+  { icon: "🗂️", title: "Catalogue de prestations", desc: "Vos lignes habituelles, ajoutées à un devis en deux tapes" },
+  { icon: "👁️", title: "Aperçu en direct", desc: "La feuille A4 se dessine pendant que vous saisissez" },
+  { icon: "⬇️", title: "PDF téléchargeable", desc: "Un vrai PDF au format A4, prêt à envoyer ou à imprimer" },
   { icon: "🏢", title: "Profil entreprise", desc: "Logo, signature, cachet — statut formel ou informel" },
   { icon: "📱", title: "QR code", desc: "Sur chaque pièce, pour vérifier son authenticité" },
 ] as const;
 
-type Tpl = { id: string; name: string; desc: string; accent: string; header: "rule" | "band" | "frame" | "plain"; caps?: boolean };
-
-const TEMPLATES: Tpl[] = [
-  { id: "classique", name: "Classique", desc: "Filet de couleur, sobre", accent: "#4F46E5", header: "rule" },
-  { id: "moderne", name: "Moderne", desc: "Titre coloré, blocs doux", accent: "#0891B2", header: "rule", caps: true },
-  { id: "bande", name: "Bande pleine", desc: "Bandeau de couleur en tête", accent: "#047857", header: "band" },
-  { id: "epure", name: "Épuré", desc: "Minimaliste, sans aplat", accent: "#111827", header: "plain" },
-  { id: "officiel", name: "Administratif", desc: "Encadré, style officiel", accent: "#92400E", header: "frame" },
-];
+/**
+ * Vignettes des modèles.
+ *
+ * La liste vient de `DOC_TEMPLATES` (lib/pro), celle-là même que lisent le
+ * profil d'entreprise et le document imprimé. Elle était recopiée ici : la
+ * page a donc continué d'annoncer cinq modèles alors que le produit en
+ * proposait dix.
+ */
+type Tpl = (typeof DOC_TEMPLATES)[number];
 
 function TemplateSwatch({ t }: { t: Tpl }) {
-  const lineCls = t.caps ? "tracking-[.1em] uppercase" : "";
+  const { accent, header, caps } = t.spec;
+  const lineCls = caps ? "tracking-[.1em] uppercase" : "";
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-[#0B1120]">
-      <div className="aspect-[3/4] w-full overflow-hidden rounded-lg border border-gray-100 bg-white dark:border-white/10">
-        {t.header === "band" ? (
-          <div className="flex h-9 items-center px-3" style={{ background: t.accent }}>
-            <div className="h-1.5 w-14 rounded-full bg-white/70" />
-          </div>
-        ) : t.header === "frame" ? (
-          <div className="m-2 rounded-md p-2" style={{ border: `1.5px solid ${t.accent}` }}>
-            <div className={`h-1.5 w-16 rounded-full ${lineCls}`} style={{ background: t.accent }} />
-          </div>
-        ) : (
-          <div className="px-3 pt-3">
-            <div
-              className={`h-1.5 w-16 rounded-full ${lineCls}`}
-              style={{ background: t.header === "plain" ? "#111827" : t.accent }}
-            />
-            {t.header === "rule" && <div className="mt-1.5 h-[2px] w-full" style={{ background: t.accent }} />}
-          </div>
+      <div className="relative flex aspect-[3/4] w-full flex-col overflow-hidden rounded-lg border border-gray-100 bg-white dark:border-white/10">
+        {/* Barre latérale du modèle « Colonne » : elle court sur toute la
+            hauteur, d'où sa position absolue et le décalage du contenu. */}
+        {header === "side" && (
+          <span className="absolute inset-y-0 left-0 w-2" style={{ background: accent }} aria-hidden="true" />
         )}
 
-        <div className="space-y-1.5 px-3 pt-3">
-          <div className="h-1 w-full rounded-full bg-gray-100 dark:bg-white/10" />
-          <div className="h-1 w-4/5 rounded-full bg-gray-100 dark:bg-white/10" />
-          <div className="h-1 w-full rounded-full bg-gray-100 dark:bg-white/10" />
-        </div>
+        <div className={header === "side" ? "pl-3" : ""}>
+          {header === "band" ? (
+            <div className="flex h-9 items-center px-3" style={{ background: accent }}>
+              <div className="h-1.5 w-14 rounded-full bg-white/70" />
+            </div>
+          ) : header === "frame" ? (
+            <div className="m-2 rounded-md p-2" style={{ border: `1.5px solid ${accent}` }}>
+              <div className={`h-1.5 w-16 rounded-full ${lineCls}`} style={{ background: accent }} />
+            </div>
+          ) : header === "stack" ? (
+            <div className="flex flex-col items-center gap-1.5 px-3 pt-4">
+              <div className="h-1.5 w-14 rounded-full" style={{ background: accent }} />
+              <div className="h-1 w-9 rounded-full bg-gray-200 dark:bg-white/15" />
+            </div>
+          ) : (
+            <div className="px-3 pt-3">
+              <div
+                className={`h-1.5 w-16 rounded-full ${lineCls}`}
+                style={{ background: header === "plain" ? "#111827" : accent }}
+              />
+              {header === "rule" && <div className="mt-1.5 h-[2px] w-full" style={{ background: accent }} />}
+            </div>
+          )}
 
-        <div className="px-3 pt-4">
-          <div
-            className="ml-auto h-3 w-16 rounded-sm"
-            style={
-              t.id === "epure"
-                ? { border: `1.5px solid ${t.accent}` }
-                : { background: `${t.accent}1A` }
-            }
-          />
+          <div className={`space-y-1.5 px-3 pt-3 ${header === "stack" ? "mx-auto w-3/4" : ""}`}>
+            <div className="h-1 w-full rounded-full bg-gray-100 dark:bg-white/10" />
+            <div className="h-1 w-4/5 rounded-full bg-gray-100 dark:bg-white/10" />
+            <div className="h-1 w-full rounded-full bg-gray-100 dark:bg-white/10" />
+          </div>
+
+          {/* Bandeau du total : plein quand le modèle l'est, encadré sinon. */}
+          <div className="px-3 pt-4">
+            <div
+              className={`h-3 w-16 rounded-sm ${header === "stack" ? "mx-auto" : "ml-auto"}`}
+              style={t.spec.solid ? { background: `${accent}1A` } : { border: `1.5px solid ${accent}` }}
+            />
+          </div>
         </div>
       </div>
       <div className="mt-2 text-center">
         <p className="text-[.8rem] font-bold text-gray-900 dark:text-white">{t.name}</p>
-        <p className="text-[.7rem] text-gray-500 dark:text-gray-400">{t.desc}</p>
+        <p className="text-[.7rem] leading-snug text-gray-500 dark:text-gray-400">{t.desc}</p>
       </div>
     </div>
   );
@@ -164,13 +179,13 @@ export default function EspaceProPage() {
       <div id="modeles" className="mt-16 scroll-mt-24 md:mt-24">
         <ScrollReveal delay={100}>
           <h2 className="text-center font-display text-[1.5rem] font-bold text-gray-900 dark:text-white md:text-[1.8rem]">
-            Cinq mises en page, un seul document
+            {DOC_TEMPLATES.length} mises en page, un seul document
           </h2>
           <p className="mx-auto mt-2 max-w-lg text-center text-[.9rem] text-gray-600 dark:text-gray-400">
             Choisissez le style qui correspond à votre activité — vos couleurs, votre logo, votre cachet.
           </p>
           <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {TEMPLATES.map((t) => (
+            {DOC_TEMPLATES.map((t) => (
               <TemplateSwatch key={t.id} t={t} />
             ))}
           </div>
