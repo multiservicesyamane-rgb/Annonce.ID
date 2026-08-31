@@ -50,6 +50,16 @@ function getLocalPortSuffix(): string {
   return LOCAL_PORT ? `:${LOCAL_PORT}` : "";
 }
 
+/**
+ * Origine du site telle que le build la voit.
+ *
+ * ⚠️ NE JAMAIS s'en servir dans un href de navigation interne : si
+ * NEXT_PUBLIC_USE_LOCAL_SUBDOMAINS=1 traîne dans l'environnement (c'est le cas
+ * de .env.local, et ça peut avoir été recopié dans les variables Vercel), elle
+ * vaut http://localhost:3001 — donc un téléphone qui ouvre le site en LAN ou en
+ * prod se retrouve renvoyé sur *son propre* localhost. Pour naviguer, utiliser
+ * les chemins relatifs (getCategoryPath) ; pour le SEO, getPublicSiteUrl().
+ */
 export function getRootUrl(): string {
   if (USE_LOCAL_SUBDOMAINS) {
     return `http://${LOCALHOST_DOMAIN}${getLocalPortSuffix()}`;
@@ -59,7 +69,21 @@ export function getRootUrl(): string {
 }
 
 /**
- * URL d'une catégorie en chemin (/categorie/slug), pas en sous-domaine.
+ * Origine publique absolue — pour le SEO uniquement (JSON-LD, sitemap,
+ * metadata canoniques). Ne retombe jamais sur localhost, même en dev, sinon
+ * on publierait des URLs canoniques inutilisables.
+ */
+export function getPublicSiteUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "";
+  const host = normalizeDomain(raw);
+  if (host && host !== LOCALHOST_DOMAIN) return `https://${host}`;
+  return `https://${ROOT_DOMAIN}`;
+}
+
+/**
+ * Chemin d'une catégorie — à utiliser pour TOUTE navigation interne
+ * (<Link href>, router.push). Relatif = indépendant du domaine, donc valide
+ * en local, en preview, en prod et depuis un téléphone sur le réseau local.
  *
  * Les sous-domaines de catégories (vehicules.wanteermako.com…) restent gérés
  * par le middleware (voir getCategoryBySubdomain) mais ne sont plus liés nulle
@@ -68,6 +92,11 @@ export function getRootUrl(): string {
  * Vercel — trop risqué pour le transfert d'e-mail du domaine). Décision du
  * 31/08/2026 : ne pas restaurer le wildcard, tout faire passer par le chemin.
  */
+export function getCategoryPath(category: Category): string {
+  return `/categorie/${category.slug}`;
+}
+
+/** URL absolue d'une catégorie — SEO uniquement (voir getCategoryPath). */
 export function getCategoryUrl(category: Category): string {
-  return `${getRootUrl()}/categorie/${category.slug}`;
+  return `${getPublicSiteUrl()}${getCategoryPath(category)}`;
 }

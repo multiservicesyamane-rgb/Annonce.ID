@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { COUNTRIES, categoryBySlug } from "@/lib/constants";
-import { getCategoryUrl } from "@/lib/categories";
+import { getCategoryPath } from "@/lib/categories";
 
 /** Footer sombre + SÉLECTEUR 27 PAYS en bas (exigence du brief). */
 export default function Footer() {
@@ -90,5 +90,5 @@ function FooterCategoryLink({ slug, children }: { slug: string; children: React.
   const category = categoryBySlug(slug);
   if (!category) return null;
 
-  return <FooterLink href={getCategoryUrl(category)}>{children}</FooterLink>;
+  return <FooterLink href={getCategoryPath(category)}>{children}</FooterLink>;
 }

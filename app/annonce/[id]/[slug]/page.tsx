@@ -14,7 +14,7 @@ import { createClient } from "@supabase/supabase-js";
 import { formatNumber, tidyTitle, buildListingSeoTitle, buildListingSeoDescription, cleanTitleForSeo } from "@/lib/utils";
 import { detectLanguage } from "@/lib/listingQuality";
 import { categoryBySlug } from "@/lib/constants";
-import { getRootUrl, getCategoryUrl } from "@/lib/categories";
+import { getCategoryPath, getCategoryUrl } from "@/lib/categories";
 
 // Pas de client module-level : les env vars ne sont pas disponibles au build time.
 
@@ -258,9 +258,9 @@ export default async function AnnoncePage({ params }: Props) {
 
       {/* Breadcrumb */}
       <nav className="py-3.5 text-[.78rem] text-gray-500">
-        <Link href={getRootUrl()} className="text-green hover:text-gold-dark">Accueil</Link> ›{" "}
+        <Link href="/" className="text-green hover:text-gold-dark">Accueil</Link> ›{" "}
         {adCategory ? (
-          <Link href={getCategoryUrl(adCategory)} className="text-green hover:text-gold-dark">{ad.category}</Link>
+          <Link href={getCategoryPath(adCategory)} className="text-green hover:text-gold-dark">{ad.category}</Link>
         ) : (
           <span className="text-green">{ad.category}</span>
         )} ›{" "}

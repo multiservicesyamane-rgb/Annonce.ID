@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import { CATEGORIES, type Category } from "@/lib/constants";
-import { getRootUrl, getCategoryUrl } from "@/lib/categories";
+import { getCategoryPath } from "@/lib/categories";
 
 export default function CategoryCarousel() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -30,7 +30,7 @@ export default function CategoryCarousel() {
     >
       {displayCats.map((c, i) => {
         const isGold = i % 2 === 0;
-        const href = c.slug === "tous" ? `${getRootUrl()}/recherche` : getCategoryUrl(c);
+        const href = c.slug === "tous" ? "/recherche" : getCategoryPath(c);
         return (
           <Link
             key={`${c.slug}-${i}`}
