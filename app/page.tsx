@@ -78,8 +78,10 @@ export default async function HomePage() {
     (a: any, b: any) => (bCountMap[b.id] || 0) - (bCountMap[a.id] || 0),
   );
   const boutiques = activeSellers.slice(0, 8);
-  // Avatars pour la preuve sociale (petits ronds), sans aucun chiffre.
-  const sellerAvatars = activeSellers.slice(0, 12);
+  // Avatars pour la preuve sociale. Cinq suffisent : au-dela, la pile se
+  // deroule en bandeau et perd l'effet « groupe » qui fait tout son interet.
+  const sellerAvatars = activeSellers.slice(0, 5);
+  const sellerOverflow = Math.max(0, activeSellers.length - sellerAvatars.length);
 
   return (
     <>
@@ -88,31 +90,53 @@ export default async function HomePage() {
       {/* Bandeau "À la Une" + Premium (déduplication par id), cliquable */}
       <FeaturedSlider listings={[...uneList, ...premList].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)} />
 
-      {/* Preuve sociale : petits ronds (photos vendeurs), SANS aucun chiffre.
-          On réintroduira des compteurs quand la plateforme aura du volume. */}
+      {/* Preuve sociale.
+          Deux partis pris, contre le bandeau pleine largeur d'avant :
+          — une carte COMPACTE et centrée. Etalée sur toute la largeur, la
+            douzaine de ronds se dispersait et ne disait plus « un groupe ».
+          — une pile serrée de cinq visages, puis « +N ». C'est la forme que
+            prennent ces bandeaux partout, et elle tient sur un téléphone.
+          Toujours AUCUN chiffre de fréquentation ni note : la table `reviews`
+          est vide et la plateforme démarre. Une note inventée se voit, et elle
+          coûte plus cher en confiance qu'elle n'en rapporte. */}
       {sellerAvatars.length > 0 && (
-        <section className="wrap pt-3 pb-1">
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-800 px-4 py-3 md:py-4 shadow-sm">
-            <div className="flex -space-x-2.5">
+        <section className="wrap flex justify-center pt-3 pb-1">
+          <div className="inline-flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-sm dark:border-dark-border dark:bg-dark-800 md:gap-4 md:px-5 md:py-3">
+            <div className="flex -space-x-2.5 md:-space-x-3">
               {sellerAvatars.map((s: any, i: number) => (
                 <div
                   key={s.id}
-                  className="h-8 w-8 md:h-10 md:w-10 rounded-full border-2 border-white dark:border-dark-800 overflow-hidden bg-gray-100 dark:bg-dark-700 shadow-sm"
+                  className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-100 ring-2 ring-white dark:bg-dark-700 dark:ring-dark-800 md:h-11 md:w-11"
                   style={{ zIndex: sellerAvatars.length - i }}
                 >
                   {s.avatar_url ? (
                     <img src={s.avatar_url} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[.6rem] md:text-[.72rem] font-bold text-gray-500 dark:text-gray-300">
+                    <div className="flex h-full w-full items-center justify-center text-[.65rem] font-bold text-gray-500 dark:text-gray-300 md:text-[.78rem]">
                       {(s.full_name || 'V').slice(0, 2).toUpperCase()}
                     </div>
                   )}
                 </div>
               ))}
+              {sellerOverflow > 0 && (
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[.62rem] font-extrabold text-white ring-2 ring-white dark:bg-white/15 dark:ring-dark-800 md:h-11 md:w-11 md:text-[.74rem]"
+                  style={{ zIndex: 0 }}
+                >
+                  +{sellerOverflow}
+                </div>
+              )}
             </div>
-            <span className="text-[.72rem] md:text-[.9rem] font-semibold text-gray-600 dark:text-gray-300">
-              Des vendeurs de confiance sur Wanteermako
-            </span>
+
+            <div className="min-w-0 leading-tight">
+              <div className="flex items-center gap-1.5 text-[.82rem] font-extrabold text-gray-900 dark:text-white md:text-[.95rem]">
+                <span className="text-gold-dark dark:text-neon-gold" aria-hidden="true">🛡</span>
+                Des vendeurs vérifiés
+              </div>
+              <div className="mt-0.5 text-[.7rem] font-semibold text-gray-500 dark:text-gray-400 md:text-[.8rem]">
+                Contact direct · 0 % de commission
+              </div>
+            </div>
           </div>
         </section>
       )}
