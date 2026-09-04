@@ -49,7 +49,9 @@ export function PreviewAside({
   children?: React.ReactNode;
 }) {
   return (
-    <aside className="hidden lg:sticky lg:top-4 lg:flex lg:flex-col lg:gap-3 lg:self-start">
+    // top-20 : dégage les 64 px de la barre collante de /mon-activite, sinon
+    // le haut de la feuille A4 disparaît dessous au défilement.
+    <aside className="hidden lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-3 lg:self-start">
       <div className="flex items-center gap-3 rounded-2xl border border-gray-200/80 bg-white px-3.5 py-2.5 dark:border-dark-border dark:bg-dark-800">
         <div className="min-w-0 flex-1">
           <div className="text-[.62rem] font-bold uppercase tracking-wide text-gray-400">
@@ -95,8 +97,18 @@ export function PreviewAside({
    du formulaire ; sur ordinateur c'est la loupe de la colonne de droite. */
 
 export function PreviewOverlay({
-  open, onClose, doc, seller, client,
-}: Common & { open: boolean; onClose: () => void }) {
+  open, onClose, doc, seller, client, note, onDownload,
+}: Common & {
+  open: boolean;
+  onClose: () => void;
+  /**
+   * Phrase sous la feuille. Par défaut le rappel de l'éditeur (« pas encore
+   * enregistré ») — faux dès qu'on consulte une pièce déjà émise, d'où le prop.
+   */
+  note?: React.ReactNode;
+  /** Ajoute « Télécharger le PDF » : n'a de sens que sur une pièce enregistrée. */
+  onDownload?: () => void;
+}) {
   // Le fond ne doit pas défiler derrière l'aperçu.
   useEffect(() => {
     if (!open) return;
@@ -126,13 +138,25 @@ export function PreviewOverlay({
           ‹
         </button>
         <div className="min-w-0 flex-1">
-          <div className="text-[.85rem] font-extrabold text-gray-900 dark:text-white">
-            Aperçu {doc.kind === "devis" ? "du devis" : "de la facture"}
+          {/* Une pièce enregistrée porte un numéro : on l'annonce par son nom
+              plutôt que par « Aperçu », qui ne vaut que pour un brouillon. */}
+          <div className="truncate text-[.85rem] font-extrabold text-gray-900 dark:text-white">
+            {doc.number
+              ? `${doc.kind === "devis" ? "Devis" : "Facture"} ${doc.number}`
+              : `Aperçu ${doc.kind === "devis" ? "du devis" : "de la facture"}`}
           </div>
           <div className="text-[.68rem] text-gray-500 dark:text-gray-400">
-            Format A4 — tel que votre client le recevra
+            Format A4 — tel que votre client le reçoit
           </div>
         </div>
+        {onDownload && (
+          <button
+            onClick={onDownload}
+            className="shrink-0 rounded-xl border-[1.5px] border-gray-300 px-3 py-2 text-[.78rem] font-bold text-gray-700 transition active:scale-[.98] dark:border-white/20 dark:text-gray-200"
+          >
+            ⬇ <span className="hidden sm:inline">Télécharger le </span>PDF
+          </button>
+        )}
         <div className="shrink-0 text-right">
           <div className="text-[.58rem] font-bold uppercase tracking-wide text-gray-400">Total</div>
           <div className="font-mono text-[.9rem] font-extrabold tabular-nums text-gray-900 dark:text-white">
@@ -147,8 +171,7 @@ export function PreviewOverlay({
         <div className="mx-auto w-full max-w-[794px]">
           <Sheet doc={doc} seller={seller} client={client} />
           <p className="mt-3 text-center text-[.7rem] leading-relaxed text-gray-500 dark:text-gray-400">
-            Le document n&apos;est pas encore enregistré. Fermez cet aperçu pour
-            continuer la saisie.
+            {note ?? "Le document n'est pas encore enregistré. Fermez cet aperçu pour continuer la saisie."}
           </p>
         </div>
       </div>

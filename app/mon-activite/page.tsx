@@ -23,23 +23,23 @@ import { MigrationNotice } from "@/components/pro/ui";
 type Screen = "home" | ProPanel | "business";
 
 const TILES: { id: Screen; icon: string; label: string; grad: string; accent: string; glow: string }[] = [
+  { id: "clients", icon: "👥", label: "Clients", grad: "from-[#FEF3DC] to-[#FDE4B0] dark:from-[#F59E0B]/25 dark:to-[#F59E0B]/10", accent: "text-gold-dark dark:text-neon-gold", glow: "shadow-[0_10px_28px_-10px_rgba(212,137,26,0.45)]" },
   { id: "quotes", icon: "📄", label: "Devis", grad: "from-[#EEF2FF] to-[#E0E7FF] dark:from-[#4F46E5]/25 dark:to-[#4F46E5]/10", accent: "text-[#4F46E5] dark:text-[#A5B4FC]", glow: "shadow-[0_10px_28px_-10px_rgba(79,70,229,0.45)]" },
   { id: "invoices", icon: "🧾", label: "Factures", grad: "from-[#ECFDF5] to-[#D1FAE5] dark:from-[#047857]/25 dark:to-[#047857]/10", accent: "text-[#047857] dark:text-[#6EE7B7]", glow: "shadow-[0_10px_28px_-10px_rgba(4,120,87,0.4)]" },
-  { id: "clients", icon: "👥", label: "Clients", grad: "from-[#FEF3DC] to-[#FDE4B0] dark:from-[#F59E0B]/25 dark:to-[#F59E0B]/10", accent: "text-gold-dark dark:text-neon-gold", glow: "shadow-[0_10px_28px_-10px_rgba(212,137,26,0.45)]" },
-  { id: "activity", icon: "📊", label: "Activité", grad: "from-[#ECFEFF] to-[#CFFAFE] dark:from-[#0891B2]/25 dark:to-[#0891B2]/10", accent: "text-[#0891B2] dark:text-[#67E8F9]", glow: "shadow-[0_10px_28px_-10px_rgba(8,145,178,0.4)]" },
   { id: "projects", icon: "🗂️", label: "Projets", grad: "from-[#F5F3FF] to-[#EDE4FF] dark:from-[#7C3AED]/25 dark:to-[#7C3AED]/10", accent: "text-[#7C3AED] dark:text-[#C4B5FD]", glow: "shadow-[0_10px_28px_-10px_rgba(124,58,237,0.4)]" },
+  { id: "activity", icon: "📊", label: "Tableau de bord", grad: "from-[#ECFEFF] to-[#CFFAFE] dark:from-[#0891B2]/25 dark:to-[#0891B2]/10", accent: "text-[#0891B2] dark:text-[#67E8F9]", glow: "shadow-[0_10px_28px_-10px_rgba(8,145,178,0.4)]" },
   { id: "business", icon: "🏢", label: "Mon entreprise", grad: "from-gray-100 to-gray-200 dark:from-white/10 dark:to-white/5", accent: "text-gray-600 dark:text-gray-300", glow: "shadow-[0_10px_28px_-10px_rgba(0,0,0,0.18)]" },
 ];
 
 /** Écrans ouvrables directement par l'URL — voir `?ecran=` plus bas. */
-const SCREEN_IDS: Screen[] = ["quotes", "invoices", "clients", "activity", "projects", "business"];
+const SCREEN_IDS: Screen[] = ["clients", "quotes", "invoices", "projects", "activity", "business"];
 
 const TITLES: Record<Screen, string> = {
   home: "Mon Activité",
   quotes: "Devis",
   invoices: "Factures",
   clients: "Clients",
-  activity: "Activité",
+  activity: "Tableau de bord",
   projects: "Projets",
   business: "Mon entreprise",
 };
@@ -49,6 +49,7 @@ export default function MonActivitePage() {
   const [activating, setActivating] = useState(false);
   const [screen, setScreen] = useState<Screen>("home");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [focusId, setFocusId] = useState<string | undefined>(undefined);
 
   const toast = (m: string) => {
     setToastMsg(m);
@@ -105,18 +106,36 @@ export default function MonActivitePage() {
     }
   }
 
-  const goTo = (id: string) => setScreen(id as Screen);
+  // Le second argument désigne la pièce à ouvrir directement sur l'écran visé
+  // — c'est ce qui rend cliquable « FAC-2026-019 en retard » du tableau de bord.
+  const goTo = (id: string, focus?: string) => {
+    setFocusId(focus);
+    setScreen(id as Screen);
+  };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-gray-50 dark:bg-dark-900">
+    // min-h-screen et non 100vh−64px : depuis que SiteShell traite
+    // /mon-activite comme un parcours autonome, il n'y a plus d'en-tête public
+    // de 64 px à déduire.
+    <div className="min-h-screen bg-gray-50 dark:bg-dark-900">
       {/* Barre du haut — minimale à dessein : une flèche pour revenir à
-          l'accueil de l'appli, jamais plus d'un niveau de navigation. */}
-      <div className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-gray-100 bg-white px-4 dark:border-dark-border dark:bg-dark-900">
+          l'accueil de l'appli, jamais plus d'un niveau de navigation.
+          z-30 : elle doit passer devant les cartes, jamais l'inverse. */}
+      <div className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-gray-100 bg-white px-4 dark:border-dark-border dark:bg-dark-900">
         {screen === "home" ? (
           <>
-            <img src="/logo-full.jpg" alt={BRAND.name} className="h-9 w-auto rounded-[6px] object-contain" />
-            <span className="font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white">Mon Activité</span>
-            <Link href="/dashboard" className="ml-auto text-[.8rem] font-semibold text-gray-400 hover:text-green">
+            {/* Le logo est la seule porte de sortie vers le site public :
+                l'appli n'affiche plus l'en-tête du site. */}
+            <Link href="/" aria-label={`Retour sur ${BRAND.name}`} className="shrink-0">
+              <img src="/logo-full.jpg" alt={BRAND.name} className="h-9 w-auto rounded-[6px] object-contain" />
+            </Link>
+            <span className="truncate font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white">
+              Mon Activité
+            </span>
+            <Link
+              href="/dashboard"
+              className="ml-auto shrink-0 text-[.8rem] font-semibold text-gray-400 hover:text-green"
+            >
               Mes annonces
             </Link>
           </>
@@ -124,13 +143,15 @@ export default function MonActivitePage() {
           <>
             <button
               type="button"
-              onClick={() => setScreen("home")}
+              onClick={() => { setFocusId(undefined); setScreen("home"); }}
               aria-label="Retour à l'accueil"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-[1.3rem] text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10"
+              className="-ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[1.3rem] text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10"
             >
               ‹
             </button>
-            <span className="font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white">{TITLES[screen]}</span>
+            <span className="truncate font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white">
+              {TITLES[screen]}
+            </span>
           </>
         )}
       </div>
@@ -186,7 +207,7 @@ export default function MonActivitePage() {
         )}
 
         {state === "ready" && screen !== "home" && screen !== "business" && (
-          <MonActivite panel={screen as ProPanel} toast={toast} goTo={goTo} />
+          <MonActivite panel={screen as ProPanel} toast={toast} goTo={goTo} focusId={focusId} />
         )}
 
         {state === "ready" && screen === "business" && <BusinessProfile toast={toast} />}

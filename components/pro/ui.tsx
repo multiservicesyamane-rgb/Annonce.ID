@@ -35,7 +35,10 @@ export const lbl =
 /** Colonne latérale des formulaires : le récapitulatif suit le défilement sur
     grand écran, pour que le total et le bouton restent sous les yeux même avec
     une longue liste de prestations. */
-export const stickyAside = "flex flex-col gap-4 lg:sticky lg:top-4 lg:self-start";
+// top-20 et non top-4 : la barre du haut de /mon-activite est collante et
+// haute de 64 px. À top-4 la colonne venait se glisser DESSOUS au défilement,
+// et on perdait le haut de l'aperçu.
+export const stickyAside = "flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start";
 
 export const CLIENT_STYLE: Record<string, string> = {
   prospect: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
@@ -174,6 +177,15 @@ export type ProEvent = {
 
 export type Toast = (m: string) => void;
 
+/**
+ * Navigation entre écrans du module.
+ *
+ * `focusId` ouvre directement la pièce concernée. Sans lui, « FAC-2026-019 en
+ * retard » déposait le professionnel sur la liste complète des factures, à lui
+ * de retrouver la ligne qu'il venait pourtant de désigner du doigt.
+ */
+export type GoTo = (panel: string, focusId?: string) => void;
+
 /* ============================ Réseau ============================ */
 
 export async function api(resource: string, payload: Record<string, unknown>) {
@@ -194,27 +206,43 @@ export async function apiGet(resource: string) {
 
 /* ============================ Mise en page ============================ */
 
+/**
+ * Ligne de tête d'un écran : le décompte à gauche, l'action principale à
+ * droite.
+ *
+ * Le titre n'est plus affiché : la barre collante de /mon-activite le porte
+ * déjà, et le répéter en 1,7 rem juste en dessous mangeait un tiers d'un écran
+ * de téléphone avant le moindre contenu. Il reste dans le DOM en `sr-only`,
+ * pour que la page garde un h1 et que les lecteurs d'écran l'annoncent.
+ */
 export function PageHead({
   title, count, action, onAction, children,
 }: {
   title: string; count?: string; action?: string; onAction?: () => void; children?: React.ReactNode;
 }) {
+  const hasRow = !!(count || action || children);
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-gray-100 pb-4 dark:border-white/[.06]">
-      <div>
-        <h1 className="font-display text-[1.5rem] font-extrabold leading-none tracking-tight text-gray-900 dark:text-white sm:text-[1.7rem]">
-          {title}
-        </h1>
-        {count && <p className="mt-1.5 text-[.82rem] text-gray-500 dark:text-gray-400">{count}</p>}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {children}
-        {action && (
-          <button onClick={onAction} className="btn btn-green shrink-0 px-5 py-2.5 text-[.85rem] font-extrabold">
-            {action}
-          </button>
-        )}
-      </div>
+    <div
+      className={
+        hasRow
+          ? "mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-gray-100 pb-3 dark:border-white/[.06]"
+          : ""
+      }
+    >
+      <h1 className="sr-only">{title}</h1>
+      {hasRow && (
+        <>
+          <p className="min-w-0 text-[.82rem] text-gray-500 dark:text-gray-400">{count}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {children}
+            {action && (
+              <button onClick={onAction} className="btn btn-green shrink-0 px-5 py-2.5 text-[.85rem] font-extrabold">
+                {action}
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -589,11 +617,14 @@ export function MobileActionBar({
   return (
     <>
       {/* Cale : sans elle, le dernier champ du formulaire finit masqué. */}
-      <div aria-hidden="true" className="h-[92px] lg:hidden" />
+      <div aria-hidden="true" className="h-[84px] lg:hidden" />
 
+      {/* Collée au bas de l'écran. Elle laissait auparavant 60 px sous elle
+          pour la navigation basse du site — mais /mon-activite est un parcours
+          autonome, sans cette navigation : la barre flottait dans le vide. */}
       <div
         className="fixed inset-x-0 z-[790] border-t border-gray-200 bg-white/95 px-3 py-2.5 shadow-[0_-4px_20px_rgba(0,0,0,.07)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0A0E14]/95 lg:hidden"
-        style={{ bottom: "calc(60px + env(safe-area-inset-bottom))" }}
+        style={{ bottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="flex items-center gap-3">
           {total !== undefined && (

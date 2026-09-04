@@ -16,6 +16,7 @@ import ClientsPanel from "./pro/ClientsPanel";
 import ProjectsPanel from "./pro/ProjectsPanel";
 import QuotesPanel from "./pro/QuotesPanel";
 import InvoicesPanel from "./pro/InvoicesPanel";
+import type { GoTo } from "./pro/ui";
 
 export type ProPanel = "activity" | "clients" | "projects" | "quotes" | "invoices";
 
@@ -23,10 +24,13 @@ export default function MonActivite({
   panel,
   toast,
   goTo,
+  focusId,
 }: {
   panel: ProPanel;
   toast: (m: string) => void;
-  goTo: (panel: string) => void;
+  goTo: GoTo;
+  /** Pièce à ouvrir d'emblée sur l'écran demandé (devis ou facture). */
+  focusId?: string;
 }) {
   switch (panel) {
     case "activity":
@@ -36,9 +40,9 @@ export default function MonActivite({
     case "projects":
       return <ProjectsPanel toast={toast} goTo={goTo} />;
     case "quotes":
-      return <QuotesPanel toast={toast} goTo={goTo} />;
+      return <QuotesPanel toast={toast} goTo={goTo} focusId={focusId} />;
     case "invoices":
-      return <InvoicesPanel toast={toast} goTo={goTo} />;
+      return <InvoicesPanel toast={toast} goTo={goTo} focusId={focusId} />;
     default:
       return null;
   }
