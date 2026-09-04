@@ -236,6 +236,20 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Statut invalide." }, { status: 400 });
       }
 
+      // Un devis accepté est un engagement, et il a déjà donné sa facture.
+      // Sans ce contrôle, le repasser en « brouillon » puis appeler « update »
+      // contournait en deux requêtes le verrou posé plus haut : on pouvait
+      // réécrire les lignes d'un devis signé, voire déjà facturé et encaissé.
+      const { data: before } = await sb
+        .from("pro_quotes").select("status").eq("id", id).eq("user_id", userId).maybeSingle();
+      if (!before) return NextResponse.json({ error: "Devis introuvable." }, { status: 404 });
+      if (before.status === "accepted") {
+        return NextResponse.json(
+          { error: "Ce devis est accepté : son statut ne peut plus changer." },
+          { status: 409 },
+        );
+      }
+
       const stamp: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
       if (status === "accepted") stamp.accepted_at = new Date().toISOString();
       if (status === "refused") stamp.refused_at = new Date().toISOString();

@@ -15,14 +15,14 @@ import {
   api, card, input, lbl, Badge, Crumb, Empty, F, FilterBar, ItemsEditor, Kpi,
   MigrationNotice, MobileActionBar, MoneyField, PageHead, Section, Select, Tip, TotalsBox, useConfirm,
   QUOTE_STYLE,
-  type Client, type ProEvent, type Project, type Quote, type Toast,
+  type Client, type GoTo, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
 import { PreviewAside, PreviewOverlay } from "./DocPreview";
 import type { PrintDoc, PrintParty } from "./PrintableDocument";
 
 type Detail = { quote: Quote; events: ProEvent[]; invoice: { id: string; number: string; status: string; total: number } | null };
 
-export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: string) => void }) {
+export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; goTo: GoTo; focusId?: string }) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -49,6 +49,8 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   const [seller, setSeller] = useState<PrintParty | null>(null);
   const [proSections, setProSections] = useState<unknown>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Devis déjà émis qu'on regarde. Voir `viewerNode` plus bas.
+  const [viewing, setViewing] = useState<Quote | null>(null);
 
   const { ask, confirmNode } = useConfirm();
 
@@ -67,6 +69,15 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Pièce désignée depuis le tableau de bord : on l'ouvre d'emblée plutôt que
+  // de déposer le professionnel devant la liste entière.
+  useEffect(() => {
+    if (focusId) openDetail(focusId);
+    // openDetail dépend de l'état courant mais n'a pas à relancer l'ouverture :
+    // seul un nouveau focusId doit le faire.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId]);
 
   // Profil d'entreprise : statut (qui conditionne la TVA), en-tête du document
   // et rubriques par défaut.
@@ -160,6 +171,56 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
     // Brouillon tant que rien n'est enregistré : pas de cartouche d'état.
     status: editing ? effectiveQuoteStatus(editing) : "draft",
   }), [editing, form, items, totals, previewSections]);
+
+  /* ------------- Voir un devis déjà émis -------------
+     Même manque que sur les factures : la fiche montrait les données du devis,
+     jamais le devis. Le seul chemin vers la feuille s'appelait « Télécharger ».
+     On rouvre ici la même feuille A4 que l'aperçu de saisie et que l'impression,
+     à partir de la pièce enregistrée. */
+
+  const partyOf = (c?: Partial<Client> | null): PrintParty | null =>
+    c
+      ? {
+          name: c.name || "",
+          company: c.billing_name || c.company || null,
+          phone: c.phone || null,
+          email: c.email || null,
+          address: c.address || c.city || null,
+          tax_id: c.tax_id || null,
+        }
+      : null;
+
+  const docOf = (q: Quote): PrintDoc => ({
+    kind: "devis",
+    number: q.number,
+    title: q.title,
+    items: Array.isArray(q.items) ? q.items : [],
+    subtotal: q.subtotal || q.total,
+    discount: q.discount || 0,
+    tax_rate: Number(q.tax_rate) || 0,
+    tax_amount: q.tax_amount || 0,
+    total: q.total,
+    issue_date: q.created_at,
+    valid_until: q.valid_until,
+    terms: q.terms,
+    note: q.note,
+    // Les rubriques figées dans la pièce, pas celles du profil : un devis
+    // ancien doit se relire tel qu'il est parti.
+    sections: (q as unknown as { sections?: unknown }).sections,
+    status: effectiveQuoteStatus(q),
+  });
+
+  const viewerNode = viewing ? (
+    <PreviewOverlay
+      open
+      onClose={() => setViewing(null)}
+      doc={docOf(viewing)}
+      seller={seller}
+      client={partyOf(viewing.pro_clients)}
+      onDownload={() => openPdf(viewing)}
+      note="Devis enregistré. « Télécharger le PDF » produit exactement cette feuille."
+    />
+  ) : null;
 
   /* ---------------- Actions ---------------- */
 
@@ -485,6 +546,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
     return (
       <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
+        {viewerNode}
         <Crumb onBack={() => setView("list")} parent="Devis" current={q.number || q.title} />
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -549,6 +611,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
                     {q.sent_at ? "↻ Renvoyer sur WhatsApp" : "💬 Envoyer sur WhatsApp"}
                   </button>
                 ) : null}
+                <button onClick={() => setViewing(q)} className={btnGhost}>👁 Voir le devis</button>
                 <button onClick={() => copyLink(q)} className={btnGhost}>🔗 Copier le lien</button>
                 <button onClick={() => openPdf(q)} className={btnGhost}>⬇ Télécharger</button>
                 {status !== "accepted" && (
@@ -573,6 +636,15 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
                   <button onClick={() => remove(q)} className={`${btnGhost} text-brand-red`}>Supprimer</button>
                 )}
               </div>
+
+              {/* « Modifier » et « Supprimer » s'effacent à l'acceptation. La
+                  règle est bonne, son silence ne l'est pas. */}
+              {status === "accepted" && (
+                <p className="mt-3 rounded-xl bg-gray-50 px-3 py-2 text-[.78rem] font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-300">
+                  🔒 Devis accepté : c&apos;est l&apos;engagement pris avec votre client, il ne peut plus être
+                  modifié ni supprimé. Pour changer quelque chose, créez un nouveau devis.
+                </p>
+              )}
             </div>
 
             <Section icon="📋" title="Prestations">
@@ -665,6 +737,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
   return (
     <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
       {confirmNode}
+      {viewerNode}
       {/* Les rubriques par défaut se règlent dans « Mon entreprise », avec les
           autres réglages de document : sur cet écran de liste, le bouton
           concurrençait l'action principale sans jamais servir deux fois. */}
@@ -751,6 +824,7 @@ export default function QuotesPanel({ toast, goTo }: { toast: Toast; goTo: (p: s
                         {q.sent_at ? "↻ Renvoyer sur WhatsApp" : "💬 Envoyer sur WhatsApp"}
                       </button>
                     )}
+                    <button onClick={() => setViewing(q)} className={btnGhost}>👁 Voir</button>
                     <button onClick={() => copyLink(q)} className={btnGhost}>🔗 Lien</button>
                     <button onClick={() => openPdf(q)} className={btnGhost}>⬇ Télécharger</button>
                     {q.status === "accepted" && (

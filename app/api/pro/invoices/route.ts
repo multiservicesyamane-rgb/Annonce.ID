@@ -279,6 +279,20 @@ export async function POST(req: Request) {
     if (action === "cancel") {
       const id = txt(body?.id, 60);
       if (!id) return NextResponse.json({ error: "Facture requise." }, { status: 400 });
+      // Même règle que pour la modification et la suppression : une facture qui
+      // a reçu de l'argent est figée. L'annuler la sortait du chiffre d'affaires
+      // alors que son encaissement, lui, restait compté — « facturé 0, encaissé
+      // 50 000 » n'a aucun sens. Pour corriger une erreur, retirer d'abord le
+      // paiement : la facture redevient alors modifiable et annulable.
+      const { data: before } = await sb
+        .from("pro_invoices").select("paid_amount").eq("id", id).eq("user_id", userId).maybeSingle();
+      if (!before) return NextResponse.json({ error: "Facture introuvable." }, { status: 404 });
+      if (Number(before.paid_amount) > 0) {
+        return NextResponse.json(
+          { error: "Cette facture a reçu un paiement : supprimez d'abord l'encaissement pour pouvoir l'annuler." },
+          { status: 409 },
+        );
+      }
       const { data, error } = await sb
         .from("pro_invoices")
         .update({ status: "cancelled", updated_at: new Date().toISOString() })

@@ -15,14 +15,14 @@ import {
   api, card, cardRaised, input, lbl, Badge, Crumb, Empty, F, FilterBar, ItemsEditor, Kpi,
   MigrationNotice, MobileActionBar, MoneyField, PageHead, Progress, Section, Select, TotalsBox, useConfirm,
   INVOICE_STYLE,
-  type Client, type Invoice, type Payment, type ProEvent, type Project, type Quote, type Toast,
+  type Client, type GoTo, type Invoice, type Payment, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
 import { PreviewAside, PreviewOverlay } from "./DocPreview";
 import type { PrintDoc, PrintParty } from "./PrintableDocument";
 
 type Detail = { invoice: Invoice; payments: Payment[]; events: ProEvent[] };
 
-export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p: string) => void }) {
+export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; goTo: GoTo; focusId?: string }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -48,6 +48,8 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   // En-tête de l'émetteur, pour que l'aperçu A4 soit celui de la vraie pièce.
   const [seller, setSeller] = useState<PrintParty | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Pièce déjà émise qu'on regarde. Voir `viewerNode` plus bas.
+  const [viewing, setViewing] = useState<Invoice | null>(null);
 
   // Saisie d'un encaissement
   const [payFor, setPayFor] = useState<Invoice | null>(null);
@@ -72,6 +74,15 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
 
   useEffect(() => { load(); }, [load]);
 
+  // Pièce désignée depuis le tableau de bord : on l'ouvre d'emblée plutôt que
+  // de déposer le professionnel devant la liste entière.
+  useEffect(() => {
+    if (focusId) openDetail(focusId);
+    // openDetail dépend de l'état courant mais n'a pas à relancer l'ouverture :
+    // seul un nouveau focusId doit le faire.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId]);
+
   // Profil d'entreprise : statut (qui conditionne la TVA) et en-tête du document.
   useEffect(() => {
     let off = false;
@@ -93,7 +104,10 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   const stats = useMemo(() => {
     const billable = withStatus.filter((i) => i.status !== "draft" && i.status !== "cancelled");
     const billed = billable.reduce((s, i) => s + (i.total || 0), 0);
-    const cashed = withStatus.reduce((s, i) => s + (i.paid_amount || 0), 0);
+    // Sur le même périmètre que « facturé » : compter l'encaissement d'une
+    // facture annulée en face d'un chiffre d'affaires qui l'exclut donnait un
+    // « reste à encaisser » faux.
+    const cashed = billable.reduce((s, i) => s + (i.paid_amount || 0), 0);
     const unpaid = billable.filter((i) => i.status !== "paid");
     const overdue = unpaid.filter((i) => i.status === "late");
     return {
@@ -160,6 +174,56 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
     // Brouillon tant que rien n'est enregistré : pas de cartouche d'état.
     status: editing ? effectiveInvoiceStatus(editing) : "draft",
   }), [editing, form, items, totals]);
+
+  /* ------------- Voir une facture déjà émise -------------
+     Le détail d'une facture montrait ses DONNÉES — lignes, échéance, historique
+     des paiements — mais jamais la facture elle-même. Or c'est le document qui
+     compte : c'est lui que le client reçoit, et c'est lui qu'on veut relire
+     avant de l'envoyer. Le seul chemin existant s'appelait « ⬇ Télécharger »,
+     ce qui annonce un fichier, pas une lecture.
+     On rouvre donc la feuille A4 — le même composant que l'aperçu de saisie et
+     que la version imprimée — à partir de la pièce enregistrée. */
+
+  const partyOf = (c?: Partial<Client> | null): PrintParty | null =>
+    c
+      ? {
+          name: c.name || "",
+          company: c.billing_name || c.company || null,
+          phone: c.phone || null,
+          email: c.email || null,
+          address: c.address || c.city || null,
+          tax_id: c.tax_id || null,
+        }
+      : null;
+
+  const docOf = (inv: Invoice): PrintDoc => ({
+    kind: "facture",
+    number: inv.number,
+    title: inv.title,
+    items: Array.isArray(inv.items) ? inv.items : [],
+    subtotal: inv.subtotal || inv.total,
+    discount: inv.discount || 0,
+    tax_rate: Number(inv.tax_rate) || 0,
+    tax_amount: inv.tax_amount || 0,
+    total: inv.total,
+    paid_amount: inv.paid_amount || 0,
+    issue_date: inv.issue_date,
+    due_date: inv.due_date,
+    terms: inv.terms,
+    status: effectiveInvoiceStatus(inv),
+  });
+
+  const viewerNode = viewing ? (
+    <PreviewOverlay
+      open
+      onClose={() => setViewing(null)}
+      doc={docOf(viewing)}
+      seller={seller}
+      client={partyOf(viewing.pro_clients)}
+      onDownload={() => openPdf(viewing)}
+      note="Facture enregistrée. « Télécharger le PDF » produit exactement cette feuille."
+    />
+  ) : null;
 
   /* ---------------- Actions ---------------- */
 
@@ -332,6 +396,19 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
     window.open(`/facture/${inv.public_token}/imprimer`, "_blank", "noopener");
   }
 
+  /**
+   * Lien public de la facture, tel que le client le reçoit.
+   *
+   * Il n'existait que par « Envoyer », qui part directement sur WhatsApp — et
+   * ne copiait le lien QUE si le client n'avait pas de numéro. Impossible donc
+   * d'envoyer une facture par e-mail, SMS ou Messenger. Les devis avaient déjà
+   * ce bouton ; les factures ne l'avaient pas.
+   */
+  async function copyLink(inv: Invoice) {
+    await navigator.clipboard?.writeText(`${window.location.origin}/facture/${inv.public_token}`).catch(() => {});
+    toast("✓ Lien de la facture copié");
+  }
+
   /* ---------------- Rendu ---------------- */
 
   if (needsMigration) return <MigrationNotice what="Table des factures à créer" />;
@@ -490,6 +567,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
     return (
       <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
+        {viewerNode}
         {payFor && (
           <PaymentDialog
             key={payFor.id}
@@ -580,17 +658,29 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
                 {(status === "late" || status === "partial" || status === "sent") && (
                   <button onClick={() => remind(inv)} disabled={busy} className={btnGhost}>🔔 Relancer</button>
                 )}
+                <button onClick={() => setViewing(inv)} className={btnGhost}>👁 Voir la facture</button>
+                <button onClick={() => copyLink(inv)} className={btnGhost}>🔗 Copier le lien</button>
                 <button onClick={() => openPdf(inv)} className={btnGhost}>⬇ Télécharger</button>
                 {(inv.paid_amount || 0) === 0 && status !== "cancelled" && (
                   <button onClick={() => openEdit(inv)} className={btnGhost}>✏️ Modifier</button>
                 )}
-                {status !== "cancelled" && (
+                {status !== "cancelled" && (inv.paid_amount || 0) === 0 && (
                   <button onClick={() => cancel(inv)} className={btnGhost}>Annuler la facture</button>
                 )}
                 {(inv.paid_amount || 0) === 0 && (
                   <button onClick={() => remove(inv)} className={`${btnGhost} text-brand-red`}>Supprimer</button>
                 )}
               </div>
+
+              {/* Trois boutons disparaissent d'un coup dès le premier
+                  encaissement. Sans un mot d'explication, on croit à une panne
+                  plutôt qu'à une règle — et on cherche le bouton ailleurs. */}
+              {(inv.paid_amount || 0) > 0 && status !== "cancelled" && (
+                <p className="mt-3 rounded-xl bg-gray-50 px-3 py-2 text-[.78rem] font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-300">
+                  🔒 Facture encaissée : elle ne peut plus être modifiée, annulée ni supprimée.
+                  Pour corriger une erreur, supprimez d&apos;abord le paiement dans l&apos;historique ci-dessous.
+                </p>
+              )}
             </div>
 
             <Section icon="📋" title="Détail">
@@ -691,6 +781,7 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
   return (
     <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
       {confirmNode}
+      {viewerNode}
       {payFor && (
         <PaymentDialog
           invoice={payFor}
@@ -832,7 +923,9 @@ export default function InvoicesPanel({ toast, goTo }: { toast: Toast; goTo: (p:
                         {(inv.status === "late" || inv.status === "partial") && (
                           <button onClick={() => remind(inv)} disabled={busy} className={btnGhost}>🔔 Relancer</button>
                         )}
+                        <button onClick={() => setViewing(inv)} className={btnGhost}>👁 Voir</button>
                         <button onClick={() => send(inv)} disabled={busy} className={btnGhost}>💬 Envoyer</button>
+                        <button onClick={() => copyLink(inv)} className={btnGhost}>🔗 Lien</button>
                         <button onClick={() => openPdf(inv)} className={btnGhost}>⬇ Télécharger</button>
                       </div>
                     )}

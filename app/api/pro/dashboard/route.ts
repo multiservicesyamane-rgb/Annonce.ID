@@ -73,8 +73,17 @@ export async function GET() {
       .filter((i: any) => String(new Date(i.issue_date || i.created_at).getFullYear()) === thisYear)
       .reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
 
-    const cashedTotal = payments.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
-    const cashedMonth = payments
+    // Le chiffre d'affaires exclut les factures annulées : l'encaissé doit les
+    // exclure aussi, sans quoi « en attente » se retrouve négatif et rabote à
+    // zéro, en cachant l'incohérence. L'historique des transactions, lui, garde
+    // tout : un paiement reçu reste un fait, même si la facture a été annulée.
+    const cancelledInvoiceIds = new Set(
+      invoices.filter((i: any) => i.status === "cancelled").map((i: any) => i.id),
+    );
+    const cashedPayments = payments.filter((p: any) => !cancelledInvoiceIds.has(p.invoice_id));
+
+    const cashedTotal = cashedPayments.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+    const cashedMonth = cashedPayments
       .filter((p: any) => monthKey(p.paid_at) === thisMonth)
       .reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
     const pendingRevenue = Math.max(0, revenueTotal - cashedTotal);
@@ -131,7 +140,7 @@ export async function GET() {
       billedByMonth[k] = (billedByMonth[k] || 0) + (Number(i.total) || 0);
     }
     const cashedByMonth: Record<string, number> = {};
-    for (const p of payments) {
+    for (const p of cashedPayments) {
       const k = monthKey(p.paid_at);
       cashedByMonth[k] = (cashedByMonth[k] || 0) + (Number(p.amount) || 0);
     }
