@@ -180,42 +180,50 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
   async function handleGoogleAuth() {
     setNotice({ tone: "info", text: "Ouverture de la connexion Google..." });
     setOauthLoading(true);
+    try {
 
-    // On ne laisse PAS la librairie rediriger elle-même : elle part chez Google
-    // sans vérifier que le vérificateur PKCE a bien été écrit. S'il ne l'est
-    // pas (cookies bloqués, navigation privée stricte, stockage plein), on ne
-    // le découvre qu'au retour, sous la forme d'une erreur incompréhensible
-    // « code verifier not found ». On préfère l'attraper avant le départ.
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: getCallbackUrl(), skipBrowserRedirect: true },
-    });
+      // On ne laisse PAS la librairie rediriger elle-même : elle part chez Google
+      // sans vérifier que le vérificateur PKCE a bien été écrit. S'il ne l'est
+      // pas (cookies bloqués, navigation privée stricte, stockage plein), on ne
+      // le découvre qu'au retour, sous la forme d'une erreur incompréhensible
+      // « code verifier not found ». On préfère l'attraper avant le départ.
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: getCallbackUrl(), skipBrowserRedirect: true },
+      });
 
-    if (error || !data?.url) {
+      if (error || !data?.url) {
+        setNotice({ tone: "error", text: authErrorMessage(error) });
+        setOauthLoading(false);
+        return;
+      }
+
+      // Le vérificateur est un cookie posé à l'instant par la librairie. Absent,
+      // l'échange échouera forcément au retour : autant le dire tout de suite,
+      // avec une consigne utile.
+      const hasVerifier = document.cookie
+        .split(";")
+        .some((c) => c.trim().split("=")[0].endsWith("-code-verifier"));
+
+      if (!hasVerifier) {
+        setNotice({
+          tone: "error",
+          text:
+            "Votre navigateur bloque les cookies nécessaires à la connexion. " +
+            "Autorisez les cookies pour ce site, puis réessayez.",
+        });
+        setOauthLoading(false);
+        return;
+      }
+
+      window.location.assign(data.url);
+    } catch (error) {
+      // Client Supabase absent, reseau coupe, stockage inaccessible : sans ce
+      // filet, l'exception remontait sans etre rattrapee et le bouton restait
+      // desactive. On rend la main, avec une phrase qui dit quoi faire.
       setNotice({ tone: "error", text: authErrorMessage(error) });
       setOauthLoading(false);
-      return;
     }
-
-    // Le vérificateur est un cookie posé à l'instant par la librairie. Absent,
-    // l'échange échouera forcément au retour : autant le dire tout de suite,
-    // avec une consigne utile.
-    const hasVerifier = document.cookie
-      .split(";")
-      .some((c) => c.trim().split("=")[0].endsWith("-code-verifier"));
-
-    if (!hasVerifier) {
-      setNotice({
-        tone: "error",
-        text:
-          "Votre navigateur bloque les cookies nécessaires à la connexion. " +
-          "Autorisez les cookies pour ce site, puis réessayez.",
-      });
-      setOauthLoading(false);
-      return;
-    }
-
-    window.location.assign(data.url);
   }
 
   async function handlePasswordReset() {
