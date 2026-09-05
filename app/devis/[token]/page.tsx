@@ -18,8 +18,8 @@ const STATUS_CLS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300",
   sent: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
   viewed: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  accepted: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  refused: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  accepted: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
+  refused: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
   expired: "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300",
 };
 
@@ -44,7 +44,7 @@ export default async function DevisPublicPage({ params }: { params: { token: str
   const taxRate = Number(quote.tax_rate) || 0;
 
   return (
-    <div className="mx-auto max-w-[620px] px-4 py-6">
+    <div className="mx-auto max-w-[620px] px-4 pb-28 pt-6 sm:pb-6">
       {/* Prestataire */}
       <div className="mb-4 flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-dark-800">
         {profile?.avatar_url && (
@@ -119,7 +119,7 @@ export default async function DevisPublicPage({ params }: { params: { token: str
                 </div>
               )}
             </div>
-            <div className="font-mono text-[1.15rem] font-extrabold tabular-nums text-green">
+            <div className="font-mono text-[1.15rem] font-extrabold tabular-nums text-gray-900 dark:text-white">
               {formatFcfa(quote.total)}
             </div>
           </div>
@@ -173,6 +173,7 @@ export default async function DevisPublicPage({ params }: { params: { token: str
           status={status}
           sellerPhone={seller.phone || ""}
           title={quote.title}
+          total={formatFcfa(quote.total)}
         />
       </div>
 

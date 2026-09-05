@@ -18,8 +18,8 @@ const STATUS_CLS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300",
   sent: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
   partial: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  paid: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  late: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  paid: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
+  late: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
   cancelled: "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400",
 };
 
@@ -133,7 +133,7 @@ export default async function FacturePublicPage({ params }: { params: { token: s
                 <span className="font-bold text-gray-900 dark:text-white">Reste à payer</span>
                 <span
                   className={`font-mono text-[1.05rem] font-extrabold tabular-nums ${
-                    remaining > 0 ? "text-amber-600 dark:text-amber-400" : "text-green"
+                    remaining > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"
                   }`}
                 >
                   {formatFcfa(remaining)}
@@ -144,10 +144,10 @@ export default async function FacturePublicPage({ params }: { params: { token: s
         </div>
 
         {status === "paid" && (
-          <div className="mt-3 rounded-xl border border-green-200 bg-green-50 p-3.5 text-center dark:border-green-500/25 dark:bg-green-900/15">
-            <div className="text-[1.3rem]">✅</div>
-            <div className="mt-0.5 font-extrabold text-green-800 dark:text-green-300">Facture réglée</div>
-            <p className="text-[.8rem] text-green-700 dark:text-green-400">Merci ! Rien ne reste à payer.</p>
+          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-center dark:border-emerald-500/25 dark:bg-emerald-900/15">
+            <div className="text-[1.3rem]" aria-hidden="true">✅</div>
+            <div className="mt-0.5 font-extrabold text-emerald-800 dark:text-emerald-300">Facture réglée</div>
+            <p className="text-[.8rem] text-emerald-700 dark:text-emerald-400">Merci ! Rien ne reste à payer.</p>
           </div>
         )}
 
@@ -180,7 +180,7 @@ export default async function FacturePublicPage({ params }: { params: { token: s
                   <span className="text-gray-600 dark:text-gray-300">
                     {p.method || "Paiement"} · {formatDate(p.paid_at)}
                   </span>
-                  <span className="font-mono font-bold tabular-nums text-green">{formatFcfa(p.amount)}</span>
+                  <span className="font-mono font-bold tabular-nums text-emerald-700 dark:text-emerald-400">{formatFcfa(p.amount)}</span>
                 </div>
               ))}
             </div>
