@@ -16,6 +16,57 @@ function admin() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
+/* ===================== Chiffres publics du module pro ===================== */
+
+/**
+ * Seuil d'affichage. En dessous, la page d'accueil ne montre AUCUN chiffre.
+ *
+ * Seul le MONTANT est publie. Le nombre de professionnels, encore a un
+ * chiffre, annoncait au visiteur que la plateforme demarre tout juste — soit
+ * l'inverse de l'effet recherche. Le compte reste calcule ici, pour le back-
+ * office et pour le jour ou il vaudra la peine d'etre montre.
+ *
+ * Le jour ou les chiffres deviennent vrais, ils apparaissent seuls : il n'y a
+ * rien a rebrancher.
+ */
+export const SEUIL_FACTURE = 1_000_000;
+
+export type ProStats = { pros: number; documents: number; facture: number };
+
+/**
+ * Renvoie les chiffres du module, ou null tant que les seuils ne sont pas
+ * franchis. Les tables pro_* etant sous RLS stricte, la lecture passe par la
+ * service_role — cote serveur uniquement, la cle ne quitte jamais le serveur.
+ *
+ * Conventions identiques au tableau de bord du professionnel : le montant
+ * facture exclut les brouillons et les annulees.
+ */
+export async function getProStats(): Promise<ProStats | null> {
+  const sb = admin();
+  if (!sb) return null;
+  try {
+    const [pros, devis, factures] = await Promise.all([
+      sb.from("pro_settings").select("user_id", { count: "exact", head: true }),
+      sb.from("pro_quotes").select("id", { count: "exact", head: true }).neq("status", "draft"),
+      sb.from("pro_invoices").select("total, status").neq("status", "draft").neq("status", "cancelled").limit(20000),
+    ]);
+    if (pros.error || devis.error || factures.error) return null;
+
+    const facture = (factures.data || []).reduce((t, f: any) => t + (Number(f.total) || 0), 0);
+    if (facture < SEUIL_FACTURE) return null;
+
+    return {
+      pros: pros.count || 0,
+      documents: (devis.count || 0) + (factures.data?.length || 0),
+      facture,
+    };
+  } catch {
+    // Un chiffre est un confort : il ne doit jamais empecher l'accueil de
+    // s'afficher.
+    return null;
+  }
+}
+
 /**
  * Identité du prestataire : réglages professionnels, complétés par le profil.
  *

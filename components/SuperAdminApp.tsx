@@ -19,6 +19,7 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
   { id: "ambassadeurs", icon: "🤝", label: "Ambassadeurs" },
   { id: "offres", icon: "💎", label: "Offres commerciales" },
   { id: "moderation", icon: "🛡️", label: "Modération", section: "Plateforme" },
+  { id: "pro", icon: "🧾", label: "Espace Pro" },
   { id: "import", icon: "🛒", label: "Import Produits" },
   { id: "users", icon: "👥", label: "Utilisateurs" },
   { id: "encaissement", icon: "💵", label: "Encaissement (espèces)" },
@@ -436,6 +437,7 @@ export default function SuperAdminApp() {
             {page === "ambassadeurs" && <Ambassadeurs T={T} ambassadors={ambassadors} />}
             {page === "offres" && <Offres T={T} />}
             {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
+            {page === "pro" && <EspacePro T={T} />}
             {page === "import" && <ImportProduits T={T} reload={loadAllData} profiles={profiles} />}
             {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
             {page === "encaissement" && <Encaissement profiles={profiles} allListings={allListings} T={T} reload={loadAllData} />}
@@ -2871,6 +2873,286 @@ function Encaissement({ profiles, allListings, T, reload }: { profiles: any[]; a
         </Card>
       </div>
     </>
+  );
+}
+
+/**
+ * Espace Pro — ce que font les professionnels sur le module devis/factures.
+ *
+ * Chargement a la demande et non avec le tableau de bord general : ces huit
+ * tables ne servent qu'ici, les tirer a chaque ouverture du back-office
+ * ralentirait tous les autres ecrans pour rien.
+ *
+ * Les chiffres suivent les memes conventions que /api/pro/dashboard — chiffre
+ * d'affaires hors brouillons et annulees, encaisse hors factures annulees —
+ * pour que l'admin et le professionnel lisent la meme chose.
+ */
+const PRO_STATUT_DEVIS: Record<string, string> = {
+  draft: "Brouillon", sent: "Envoye", viewed: "Consulte",
+  accepted: "Accepte", refused: "Refuse", expired: "Expire",
+};
+const PRO_STATUT_FACTURE: Record<string, string> = {
+  draft: "Brouillon", sent: "Envoyee", partial: "Partielle",
+  paid: "Payee", late: "En retard", cancelled: "Annulee",
+};
+const PRO_PILL: Record<string, string> = {
+  accepted: "bg-emerald-500/15 text-emerald-300",
+  paid: "bg-emerald-500/15 text-emerald-300",
+  sent: "bg-blue-500/15 text-blue-300",
+  viewed: "bg-blue-500/15 text-blue-300",
+  partial: "bg-amber-500/15 text-amber-300",
+  late: "bg-red-500/15 text-red-300",
+  refused: "bg-red-500/15 text-red-300",
+  expired: "bg-red-500/15 text-red-300",
+  cancelled: "bg-white/10 text-gray-400",
+  draft: "bg-white/10 text-gray-300",
+};
+
+function proFcfa(n: number) {
+  return (Number(n) || 0).toLocaleString("fr-FR") + " FCFA";
+}
+function proDate(d: string | null) {
+  return d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "—";
+}
+
+function EspacePro({ T }: { T: (m: string) => void }) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [vue, setVue] = useState<"pros" | "devis" | "factures" | "paiements" | "journal">("pros");
+
+  const charger = async () => {
+    setLoading(true);
+    try {
+      setData(await adminApi("pro_overview"));
+    } catch (e: any) {
+      T(e?.message || "Chargement de l'Espace Pro impossible.");
+    }
+    setLoading(false);
+  };
+  useEffect(() => { charger(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  if (loading) {
+    return (
+      <>
+        <PageHead title="🧾 Espace Pro" sub="Chargement…" />
+        <Card><div className="py-10 text-center text-[.85rem] text-[#8B949E]">Lecture des tables pro_*…</div></Card>
+      </>
+    );
+  }
+  if (!data) {
+    return (
+      <>
+        <PageHead title="🧾 Espace Pro" />
+        <Card><div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucune donnee. <button onClick={charger} className={btnG}>Reessayer</button></div></Card>
+      </>
+    );
+  }
+  if (data.needsMigration) {
+    return (
+      <>
+        <PageHead title="🧾 Espace Pro" />
+        <Card>
+          <div className="py-8 text-center text-[.85rem] text-amber-300">
+            Les tables du module ne sont pas encore creees.<br />
+            Executez <b>database/MIGRATION_ESPACE_PRO.sql</b> dans Supabase → SQL Editor.
+          </div>
+        </Card>
+      </>
+    );
+  }
+
+  const t = data.totaux || {};
+  const onglets: ["pros" | "devis" | "factures" | "paiements" | "journal", string, number][] = [
+    ["pros", "Professionnels", (data.par_pro || []).length],
+    ["devis", "Devis", (data.derniers_devis || []).length],
+    ["factures", "Factures", (data.dernieres_factures || []).length],
+    ["paiements", "Paiements", (data.derniers_paiements || []).length],
+    ["journal", "Journal", (data.journal || []).length],
+  ];
+
+  return (
+    <>
+      <PageHead
+        title="🧾 Espace Pro"
+        sub={`${t.professionnels || 0} professionnels · ${t.devis || 0} devis · ${t.factures || 0} factures — donnees reelles`}
+      >
+        <button onClick={charger} className={btnG}>↻ Actualiser</button>
+      </PageHead>
+
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="👔" label="Professionnels actifs" value={t.professionnels || 0} trend={`${t.abonnes || 0} abonnés`} />
+        <Kpi grad="bg-g8" icon="💰" label="Facture (FCFA)" value={t.facture || 0} trend="hors brouillons" />
+        <Kpi grad="bg-g4" icon="✅" label="Encaisse (FCFA)" value={t.encaisse || 0} trend="paiements reels" />
+        <Kpi grad="bg-g5" icon="⏳" label="En attente (FCFA)" value={t.en_attente || 0} trend="facture moins encaisse" />
+      </div>
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <Kpi grad="bg-g3" icon="👥" label="Clients" value={t.clients || 0} />
+        <Kpi grad="bg-g7" icon="🗂️" label="Projets" value={t.projets || 0} />
+        <Kpi grad="bg-g2" icon="📄" label="Devis" value={t.devis || 0} />
+        <Kpi grad="bg-g6" icon="🧰" label="Prestations au catalogue" value={t.prestations || 0} />
+      </div>
+
+      <div className="mb-3 grid gap-3 lg:grid-cols-2">
+        <Card title="Devis par statut">
+          <ProRepartition m={data.devis_par_statut} labels={PRO_STATUT_DEVIS} total={t.devis || 0} />
+        </Card>
+        <Card title="Factures par statut">
+          <ProRepartition m={data.factures_par_statut} labels={PRO_STATUT_FACTURE} total={t.factures || 0} />
+        </Card>
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        {onglets.map(([id, label, n]) => (
+          <button
+            key={id}
+            onClick={() => setVue(id)}
+            className={`rounded-[9px] px-3.5 py-2 text-[.78rem] font-bold ${vue === id ? "bg-g1 text-white" : "border border-[#30363D] bg-[#21262D] text-[#8B949E] hover:text-white"}`}
+          >
+            {label} <span className="opacity-70">({n})</span>
+          </button>
+        ))}
+      </div>
+
+      {vue === "pros" && (
+        <Card title="Qui utilise le module" sub="Trie par montant facture">
+          {(data.par_pro || []).length === 0 ? (
+            <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Personne n&apos;a encore ouvert l&apos;Espace Pro.</div>
+          ) : (
+            <Tbl head={["Professionnel", "Statut", "Abonnement", "Clients", "Devis", "Factures", "Facture", "Encaisse", "Derniere activite"]}>
+              {data.par_pro.map((p: any) => (
+                <tr key={p.user_id} className="hover:bg-white/[.02]">
+                  <Td bold>
+                    {p.nom || <span className="text-[#484F58]">sans nom</span>}
+                    {p.telephone && <div className="text-[.68rem] font-normal text-[#8B949E]">{p.telephone}</div>}
+                  </Td>
+                  <Td>
+                    <span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${p.statut_legal === "formel" ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-gray-300"}`}>
+                      {p.statut_legal === "formel" ? "Formel" : p.profil_complet ? "Informel" : "Profil vide"}
+                    </span>
+                  </Td>
+                  <Td>
+                    {p.abonnement?.actif ? (
+                      <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[.68rem] font-bold text-emerald-300">
+                        {p.abonnement.plan === "annuel" ? "Annuel" : "Mensuel"}
+                        <span className="ml-1 font-normal opacity-70">
+                          jusqu&apos;au {proDate(p.abonnement.expires_at)}
+                        </span>
+                      </span>
+                    ) : p.abonnement ? (
+                      <span className="rounded-md bg-red-500/15 px-2 py-0.5 text-[.68rem] font-bold text-red-300">Expire</span>
+                    ) : (
+                      <span className="text-[.72rem] text-[#484F58]">Gratuit</span>
+                    )}
+                  </Td>
+                  <Td>{p.clients}</Td>
+                  <Td>{p.devis}{p.devis_acceptes > 0 && <span className="text-emerald-400"> · {p.devis_acceptes} ✓</span>}</Td>
+                  <Td>{p.factures}</Td>
+                  <Td><span className="font-extrabold text-[#E6EDF3]">{proFcfa(p.facture)}</span></Td>
+                  <Td><span className="font-extrabold text-emerald-400">{proFcfa(p.encaisse)}</span></Td>
+                  <Td>{proDate(p.derniere_activite)}</Td>
+                </tr>
+              ))}
+            </Tbl>
+          )}
+        </Card>
+      )}
+
+      {vue === "devis" && (
+        <Card title="Derniers devis">
+          <Tbl head={["Date", "Numero", "Professionnel", "Objet", "Montant", "Statut"]}>
+            {(data.derniers_devis || []).map((q: any) => (
+              <tr key={q.id} className="hover:bg-white/[.02]">
+                <Td>{proDate(q.created_at)}</Td>
+                <Td bold>{q.number || "—"}</Td>
+                <Td>{q.pro || <span className="text-[#484F58]">—</span>}</Td>
+                <Td>{q.title}</Td>
+                <Td><span className="font-extrabold text-[#E6EDF3]">{proFcfa(q.total)}</span></Td>
+                <Td><span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${PRO_PILL[q.status] || "bg-white/10 text-gray-300"}`}>{PRO_STATUT_DEVIS[q.status] || q.status}</span></Td>
+              </tr>
+            ))}
+          </Tbl>
+        </Card>
+      )}
+
+      {vue === "factures" && (
+        <Card title="Dernieres factures">
+          <Tbl head={["Date", "Numero", "Professionnel", "Objet", "Total", "Encaisse", "Statut"]}>
+            {(data.dernieres_factures || []).map((f: any) => (
+              <tr key={f.id} className="hover:bg-white/[.02]">
+                <Td>{proDate(f.issue_date || f.created_at)}</Td>
+                <Td bold>{f.number || "—"}</Td>
+                <Td>{f.pro || <span className="text-[#484F58]">—</span>}</Td>
+                <Td>{f.title}</Td>
+                <Td><span className="font-extrabold text-[#E6EDF3]">{proFcfa(f.total)}</span></Td>
+                <Td><span className={(f.paid_amount || 0) > 0 ? "font-extrabold text-emerald-400" : "text-[#484F58]"}>{proFcfa(f.paid_amount)}</span></Td>
+                <Td><span className={`rounded-md px-2 py-0.5 text-[.68rem] font-bold ${PRO_PILL[f.status] || "bg-white/10 text-gray-300"}`}>{PRO_STATUT_FACTURE[f.status] || f.status}</span></Td>
+              </tr>
+            ))}
+          </Tbl>
+        </Card>
+      )}
+
+      {vue === "paiements" && (
+        <Card title="Derniers encaissements">
+          {(data.derniers_paiements || []).length === 0 ? (
+            <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucun paiement enregistre.</div>
+          ) : (
+            <Tbl head={["Date", "Professionnel", "Moyen", "Montant"]}>
+              {data.derniers_paiements.map((y: any) => (
+                <tr key={y.id} className="hover:bg-white/[.02]">
+                  <Td>{proDate(y.paid_at)}</Td>
+                  <Td bold>{y.pro || "—"}</Td>
+                  <Td>{y.method || "—"}</Td>
+                  <Td><span className="font-extrabold text-emerald-400">+ {proFcfa(y.amount)}</span></Td>
+                </tr>
+              ))}
+            </Tbl>
+          )}
+        </Card>
+      )}
+
+      {vue === "journal" && (
+        <Card title="Journal" sub="Les 60 derniers evenements, tous professionnels confondus">
+          <div className="flex flex-col divide-y divide-[#21262D]">
+            {(data.journal || []).map((e: any) => (
+              <div key={e.id} className="flex items-start gap-3 py-2.5">
+                <span className="w-[70px] shrink-0 text-[.72rem] text-[#8B949E]">{proDate(e.created_at)}</span>
+                <span className="min-w-0 flex-1 text-[.82rem] text-[#C9D1D9]">{e.message}</span>
+                <span className="shrink-0 text-[.72rem] font-bold text-[#484F58]">{e.pro || ""}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </>
+  );
+}
+
+/** Une repartition par statut, en barres — plus lisible qu'une liste de nombres. */
+function ProRepartition({ m, labels, total }: { m: Record<string, number>; labels: Record<string, string>; total: number }) {
+  const lignes = Object.entries(m || {}).sort((a, b) => b[1] - a[1]);
+  if (!lignes.length) return <div className="py-6 text-center text-[.82rem] text-[#8B949E]">Rien pour l&apos;instant.</div>;
+  return (
+    <div className="flex flex-col gap-2.5">
+      {lignes.map(([k, n]) => {
+        const pct = total > 0 ? Math.round((n / total) * 100) : 0;
+        const barre = PRO_PILL[k] || "";
+        return (
+          <div key={k}>
+            <div className="mb-1 flex items-center justify-between text-[.76rem]">
+              <span className="font-bold text-[#C9D1D9]">{labels[k] || k}</span>
+              <span className="text-[#8B949E]">{n} · {pct} %</span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#21262D]">
+              <div
+                className={`h-full rounded-full ${barre.includes("emerald") ? "bg-emerald-400" : barre.includes("red") ? "bg-red-400" : barre.includes("amber") ? "bg-amber-400" : barre.includes("blue") ? "bg-blue-400" : "bg-gray-500"}`}
+                style={{ width: pct + "%" }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

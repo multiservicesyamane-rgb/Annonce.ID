@@ -10,6 +10,8 @@ import HomeMapSection from "@/components/HomeMapSection";
 import { getFeaturedListings, getPremiumListings, getRecentListings } from "@/lib/homeSections";
 import { createClient } from "@supabase/supabase-js";
 import { buildMapPoints } from "@/lib/geo";
+import { DOC_TEMPLATES } from "@/lib/pro";
+import { getProStats } from "@/lib/proPublic";
 
 import UneCarousel from "@/components/UneCarousel";
 import FeaturedSlider from "@/components/FeaturedSlider";
@@ -68,6 +70,9 @@ export default async function HomePage() {
     .order('created_at', { ascending: false })
     .limit(200);
   const mapPoints = buildMapPoints(locationRows || []);
+
+  // null tant que le module n'a pas assez d'usage reel pour etre cite.
+  const proStats = await getProStats();
 
   const bCountMap: Record<string, number> = {};
   (boutiqueCounts || []).forEach((l: any) => { bCountMap[l.user_id] = (bCountMap[l.user_id] || 0) + 1; });
@@ -350,6 +355,43 @@ export default async function HomePage() {
                 l&apos;accepte depuis son téléphone, <b>sans créer de compte</b> — et la facture
                 se génère toute seule.
               </p>
+              {/* Preuve d'usage : elle n'apparait qu'une fois les seuils de
+                  lib/proPublic franchis. Tant que la base ne contient que les
+                  essais du proprietaire, getProStats renvoie null et ce bloc
+                  disparait — puis il se rallume seul, sans rien rebrancher. */}
+              {proStats && (
+                <div className="mt-4 inline-flex items-baseline gap-2 rounded-xl bg-green/5 px-3.5 py-2.5 dark:bg-green/10">
+                  <span className="font-display text-[1.25rem] font-black leading-none text-green">
+                    {proStats.facture.toLocaleString("fr-FR")} FCFA
+                  </span>
+                  <span className="text-[.76rem] font-semibold text-gray-600 dark:text-gray-400">
+                    déjà facturés depuis Wanteermako
+                  </span>
+                </div>
+              )}
+
+              {/* Des chiffres de PRODUIT, eux toujours vrais : le nombre de
+                  modeles vient de DOC_TEMPLATES, le reste est une regle du
+                  produit. Ils tiennent le premier jour comme le millieme. */}
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { n: String(DOC_TEMPLATES.length), l: "modèles de document" },
+                  { n: "0 F", l: "abonnement, commission" },
+                  { n: "2 min", l: "pour un devis complet" },
+                  { n: "A4", l: "PDF avec QR code" },
+                ].map((s) => (
+                  <div
+                    key={s.l}
+                    className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 dark:border-white/10 dark:bg-white/[.03]"
+                  >
+                    <div className="font-display text-[1.15rem] font-black leading-none text-green dark:text-neon-gold">
+                      {s.n}
+                    </div>
+                    <div className="mt-1 text-[.68rem] leading-snug text-gray-500 dark:text-gray-400">{s.l}</div>
+                  </div>
+                ))}
+              </div>
+
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link
                   href="/mon-activite"

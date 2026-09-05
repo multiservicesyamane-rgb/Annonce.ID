@@ -74,6 +74,150 @@ export async function POST(req: Request) {
       return response;
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // Espace Pro — vue consolidee de TOUS les professionnels.
+    //
+    // Cette lecture ne peut pas se faire depuis le navigateur : les tables
+    // pro_* sont sous RLS stricte (auth.uid() = user_id), un admin n'y verrait
+    // que ses propres pieces. D'ou le passage par la service_role ici.
+    //
+    // Memes conventions comptables que /api/pro/dashboard, sans quoi l'admin
+    // et le professionnel liraient deux chiffres differents pour la meme
+    // activite : le chiffre d'affaires exclut les brouillons et les annulees,
+    // l'encaisse exclut les paiements des factures annulees.
+    // ─────────────────────────────────────────────────────────────────────
+    if (action === "pro_overview") {
+      const [settings, clients, projects, quotes, invoices, payments, events, items] = await Promise.all([
+        sb.from("pro_settings").select("*"),
+        sb.from("pro_clients").select("id, user_id, name, company, city, status, archived, created_at"),
+        sb.from("pro_projects").select("id, user_id, name, status, budget, created_at"),
+        sb.from("pro_quotes").select("id, user_id, client_id, number, title, total, status, valid_until, created_at, accepted_at"),
+        sb.from("pro_invoices").select("id, user_id, client_id, number, title, total, paid_amount, status, issue_date, due_date, created_at"),
+        sb.from("pro_payments").select("id, user_id, invoice_id, amount, method, paid_at"),
+        sb.from("pro_events").select("*").order("created_at", { ascending: false }).limit(60),
+        sb.from("pro_items").select("id, user_id, label, unit_price, uses"),
+      ]);
+
+      // Abonnements a l'Espace Pro. Table facultative : tant que
+      // MIGRATION_ABONNEMENT_PRO.sql n'est pas passe, tout le monde est
+      // « gratuit » plutot que de faire tomber l'ecran.
+      const { data: abos } = await sb
+        .from("pro_subscriptions")
+        .select("user_id, plan, expires_at, source");
+      const aboById: Record<string, any> = Object.fromEntries(
+        (abos || []).map((a: any) => [a.user_id, a]),
+      );
+
+      // Migration pas encore passee : on le dit, plutot que d'afficher des zeros
+      // qui laisseraient croire que personne n'utilise le module.
+      const missing = [settings, clients, quotes, invoices].find(
+        (r: any) => r.error && /does not exist|schema cache/i.test(r.error.message || ""),
+      );
+      if (missing) return NextResponse.json({ needsMigration: true });
+
+      const S = settings.data || [];
+      const C = clients.data || [];
+      const P = projects.data || [];
+      const Q = quotes.data || [];
+      const I = invoices.data || [];
+      const Y = payments.data || [];
+      const IT = items.data || [];
+
+      const annulees = new Set(I.filter((i: any) => i.status === "cancelled").map((i: any) => i.id));
+      const facturables = I.filter((i: any) => i.status !== "draft" && i.status !== "cancelled");
+      const encaissables = Y.filter((y: any) => !annulees.has(y.invoice_id));
+
+      const somme = (rows: any[], champ: string) =>
+        rows.reduce((t: number, r: any) => t + (Number(r[champ]) || 0), 0);
+      const parStatut = (rows: any[]) =>
+        rows.reduce((m: Record<string, number>, r: any) => {
+          const k = r.status || "—";
+          m[k] = (m[k] || 0) + 1;
+          return m;
+        }, {});
+
+      // Qui est qui : le nom d'entreprise si le profil pro est rempli, sinon le
+      // profil public, sinon rien — jamais l'identifiant brut a l'ecran.
+      const ids = Array.from(
+        new Set([...S, ...C, ...Q, ...I].map((r: any) => r.user_id).filter(Boolean)),
+      );
+      const { data: profs } = ids.length
+        ? await sb.from("profiles").select("id, full_name, phone").in("id", ids)
+        : { data: [] as any[] };
+      const profById: Record<string, any> = Object.fromEntries((profs || []).map((p: any) => [p.id, p]));
+      const setById: Record<string, any> = Object.fromEntries(S.map((r: any) => [r.user_id, r]));
+
+      const parPro = ids
+        .map((uid: string) => {
+          const st = setById[uid];
+          const pf = profById[uid];
+          const qs = Q.filter((r: any) => r.user_id === uid);
+          const is = I.filter((r: any) => r.user_id === uid);
+          const fact = is.filter((r: any) => r.status !== "draft" && r.status !== "cancelled");
+          const enc = Y.filter((y: any) => y.user_id === uid && !annulees.has(y.invoice_id));
+          return {
+            user_id: uid,
+            nom: st?.business_name || pf?.full_name || "",
+            telephone: st?.phone || pf?.phone || "",
+            statut_legal: st?.business_status || null,
+            profil_complet: Boolean(st),
+            abonnement: (() => {
+              const a = aboById[uid];
+              if (!a) return null;
+              const actif = new Date(a.expires_at).getTime() > Date.now();
+              return { plan: a.plan, expires_at: a.expires_at, source: a.source, actif };
+            })(),
+            clients: C.filter((r: any) => r.user_id === uid).length,
+            projets: P.filter((r: any) => r.user_id === uid).length,
+            devis: qs.length,
+            devis_acceptes: qs.filter((r: any) => r.status === "accepted").length,
+            factures: is.length,
+            prestations: IT.filter((r: any) => r.user_id === uid).length,
+            facture: somme(fact, "total"),
+            encaisse: somme(enc, "amount"),
+            derniere_activite:
+              [...qs, ...is].map((r: any) => r.created_at).sort().slice(-1)[0] || st?.created_at || null,
+          };
+        })
+        .sort((a, b) => b.facture - a.facture || b.factures - a.factures);
+
+      const nomDe = (uid: string) => setById[uid]?.business_name || profById[uid]?.full_name || "";
+
+      return NextResponse.json({
+        totaux: {
+          professionnels: ids.length,
+          profils_remplis: S.length,
+          abonnes: (abos || []).filter(
+            (a: any) => new Date(a.expires_at).getTime() > Date.now(),
+          ).length,
+          clients: C.length,
+          projets: P.length,
+          devis: Q.length,
+          factures: I.length,
+          prestations: IT.length,
+          facture: somme(facturables, "total"),
+          encaisse: somme(encaissables, "amount"),
+          en_attente: Math.max(0, somme(facturables, "total") - somme(encaissables, "amount")),
+        },
+        devis_par_statut: parStatut(Q),
+        factures_par_statut: parStatut(I),
+        par_pro: parPro,
+        derniers_devis: [...Q]
+          .sort((a: any, b: any) => String(b.created_at).localeCompare(String(a.created_at)))
+          .slice(0, 25)
+          .map((r: any) => ({ ...r, pro: nomDe(r.user_id) })),
+        dernieres_factures: [...I]
+          .sort((a: any, b: any) => String(b.created_at).localeCompare(String(a.created_at)))
+          .slice(0, 25)
+          .map((r: any) => ({ ...r, pro: nomDe(r.user_id) })),
+        derniers_paiements: [...Y]
+          .sort((a: any, b: any) => String(b.paid_at).localeCompare(String(a.paid_at)))
+          .slice(0, 25)
+          .map((r: any) => ({ ...r, pro: nomDe(r.user_id) })),
+        journal: (events.data || []).map((r: any) => ({ ...r, pro: nomDe(r.user_id) })),
+      });
+    }
+
     if (action === "dashboard") {
       const [
         total,
