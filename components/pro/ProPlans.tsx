@@ -6,15 +6,20 @@ import { DOC_TEMPLATES } from "@/lib/pro";
 import { PRO_PLANS, formatFcfaPlan, type ProPlanKey } from "@/lib/proBilling";
 
 /**
- * L'offre Pro, en trois colonnes — la meme sur la page publique et dans l'appli.
+ * L'offre Pro : deux plans, Gratuit et Pro — la meme section sur la page
+ * publique et dans l'appli.
  *
  * Avant, le prix n'etait ecrit qu'a un seul endroit du site : l'encadre montre
  * au professionnel au moment ou son quota sautait. La page /espace-pro, elle,
  * promettait « sans abonnement cache » — un visiteur decouvrait donc le peage
  * apres s'etre inscrit et avoir travaille. On montre le prix avant.
  *
- * Le gratuit occupe une vraie colonne. Sans lui, le lecteur ne sait ni ce qu'il
- * garde ni ce qu'il perd, et l'annonce « gratuit » de l'accueil sonne faux.
+ * Mensuel et annuel ne sont PAS deux offres : c'est la meme, payee autrement.
+ * Les presenter en deux colonnes obligeait a comparer trois cases dont deux
+ * identiques, et noyait la seule question qui compte — est-ce que je passe au
+ * Pro. Une case a cocher change le mode de paiement, et le prix affiche avec.
+ * Le mensuel est montre en premier : 3 900 F se decide plus vite que 39 000 F,
+ * et l'economie de l'annuel ne se comprend qu'apres avoir vu le prix du mois.
  *
  * Ce que le Pro change, exactement : la limite de factures saute. Rien d'autre.
  * Les dix mises en page, le logo, le cachet, le QR code et le suivi des
@@ -41,26 +46,27 @@ export default function ProPlans({
    */
   quotaFactures?: number;
 }) {
-  const [busy, setBusy] = useState<ProPlanKey | null>(null);
+  const [annuel, setAnnuel] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const mensuel = PRO_PLANS.mensuel;
-  const annuel = PRO_PLANS.annuel;
-  // 39 000 / 12 = 3 250. Ecrire l'equivalent mensuel evite au lecteur de poser
-  // la division : c'est ce calcul, pas l'etiquette « 2 mois offerts », qui rend
-  // l'annuel evident.
-  const parMois = Math.round(annuel.price / 12);
+  const plan = annuel ? PRO_PLANS.annuel : PRO_PLANS.mensuel;
+  const douzeMois = PRO_PLANS.mensuel.price * 12;
+  // 46 800 − 39 000 = 7 800, soit deux mois. On montre l'economie en francs :
+  // « 2 mois offerts » est une formule, un montant est une preuve.
+  const economie = douzeMois - PRO_PLANS.annuel.price;
+  const parMois = Math.round(PRO_PLANS.annuel.price / 12);
   const factures = quotaFactures === 1 ? "1 facture" : `${quotaFactures} factures`;
 
-  async function payer(plan: ProPlanKey) {
+  async function payer(cle: ProPlanKey) {
     if (busy) return;
-    setBusy(plan);
+    setBusy(true);
     setError("");
     try {
       const res = await fetch("/api/chariow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ proPlan: plan }),
+        body: JSON.stringify({ proPlan: cle }),
       });
       if (res.status === 401) {
         window.location.href = "/connexion?redirect=/mon-activite";
@@ -69,18 +75,24 @@ export default function ProPlans({
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.redirect_url) {
         setError(data.error || "Le paiement n'a pas pu être ouvert. Réessayez.");
-        setBusy(null);
+        setBusy(false);
         return;
       }
       window.location.href = data.redirect_url;
     } catch {
       setError("Connexion au service de paiement impossible. Vérifiez votre réseau.");
-      setBusy(null);
+      setBusy(false);
     }
   }
 
   return (
-    <section className={mode === "public" ? "" : "rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-dark-border dark:bg-white/[.03] sm:p-5"}>
+    <section
+      className={
+        mode === "public"
+          ? ""
+          : "rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-dark-border dark:bg-white/[.03] sm:p-5"
+      }
+    >
       {mode === "app" ? (
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
@@ -114,84 +126,123 @@ export default function ProPlans({
         </div>
       )}
 
-      <div className={`grid gap-4 lg:grid-cols-3 ${mode === "public" ? "mt-9" : "mt-0"}`}>
-        {/* ---------------------------- Gratuit ---------------------------- */}
-        <Colonne titre="Gratuit" prix="0" unite="FCFA" note="Pour travailler pour de vrai, sans carte bancaire.">
-          <Ligne>Devis <b>illimités</b></Ligne>
-          <Ligne><b>{factures}</b> par mois</Ligne>
-          <Ligne>Les {DOC_TEMPLATES.length} mises en page, logo, signature, cachet</Ligne>
-          <Ligne>PDF A4, QR code, envoi par WhatsApp</Ligne>
-          <Ligne>Suivi des paiements et des retards</Ligne>
-          <Ligne manque>Au-delà, il faut le Pro</Ligne>
-          <Bouton>
+      <div className={`grid gap-4 md:grid-cols-2 ${mode === "public" ? "mt-9" : "mt-0"}`}>
+        {/* ============================= Gratuit ============================= */}
+        <div className="flex flex-col rounded-2xl border-2 border-gray-100 bg-white p-5 dark:border-dark-border dark:bg-[#111722]">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="font-display text-[1rem] font-extrabold text-gray-900 dark:text-white">
+              🆓 Gratuit
+            </span>
+            <span className="shrink-0 font-mono text-[1.05rem] font-extrabold tabular-nums text-gray-500">
+              0 F
+            </span>
+          </div>
+          <p className="mt-1.5 text-[.8rem] leading-relaxed text-gray-500 dark:text-gray-400">
+            Pour travailler pour de vrai, sans carte bancaire et sans limite de durée.
+          </p>
+
+          <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
+            <Atout>Devis illimités</Atout>
+            <Atout>{factures} par mois</Atout>
+            <Atout>{DOC_TEMPLATES.length} mises en page</Atout>
+            <Atout>Logo, signature, cachet</Atout>
+            <Atout>PDF A4 et QR code</Atout>
+            <Atout>Envoi par WhatsApp</Atout>
+            <Atout>Suivi des paiements</Atout>
+          </div>
+
+          <div className="mt-5">
             {mode === "public" ? (
-              <Link href="/mon-activite" className="btn btn-outline w-full py-2.5 text-[.85rem] font-extrabold">
+              <Link
+                href="/mon-activite"
+                className="btn btn-outline w-full py-2.5 text-[.85rem] font-extrabold"
+              >
                 Commencer gratuitement
               </Link>
             ) : (
-              <span className="block w-full rounded-[10px] border-2 border-transparent bg-gray-100 py-2.5 text-center text-[.85rem] font-bold text-gray-500 dark:bg-white/5 dark:text-gray-400">
-                Vous y êtes
+              <span className="block w-full rounded-[10px] bg-gray-100 py-2.5 text-center text-[.85rem] font-bold text-gray-500 dark:bg-white/5 dark:text-gray-400">
+                Votre formule actuelle
               </span>
             )}
-          </Bouton>
-        </Colonne>
+          </div>
+        </div>
 
-        {/* -------------------------- Pro annuel --------------------------- */}
-        <Colonne
-          titre={annuel.name}
-          prix={annuel.price.toLocaleString("fr-FR")}
-          unite="FCFA / an"
-          note={`Soit ${parMois.toLocaleString("fr-FR")} F par mois — deux mois de moins qu'au tarif mensuel.`}
-          avant
-        >
-          <Ligne><b>Factures illimitées</b></Ligne>
-          <Ligne>Tout ce que contient le gratuit</Ligne>
-          <Ligne>Un seul paiement dans l&apos;année</Ligne>
-          <Ligne>{formatFcfaPlan(mensuel.price * 12)} au tarif mensuel, {formatFcfaPlan(annuel.price)} ici</Ligne>
-          <Bouton>
+        {/* =============================== Pro =============================== */}
+        <div className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-gold bg-gold/[.04] p-5 shadow-[0_18px_44px_-26px_rgba(245,166,35,.65)] dark:bg-gold/[.06]">
+          {/* Le bandeau en biais des offres d'annonces : meme langage, meme or. */}
+          <div className="absolute -right-8 top-3 rotate-45 bg-gold px-8 py-0.5 text-[.5rem] font-black tracking-wider text-dark-900">
+            PRO
+          </div>
+
+          <div className="flex items-baseline justify-between gap-3 pr-8">
+            <span className="font-display text-[1rem] font-extrabold text-gray-900 dark:text-white">
+              👑 Pro
+            </span>
+          </div>
+
+          {/* Le prix change avec la case a cocher, et lui seul : le reste de la
+              colonne ne bouge pas, sinon on ne voit pas ce qui a change. */}
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="font-mono text-[2rem] font-extrabold leading-none tabular-nums tracking-tight text-gray-900 dark:text-white">
+              {plan.price.toLocaleString("fr-FR")}
+            </span>
+            <span className="text-[.8rem] font-bold text-gray-500 dark:text-gray-400">
+              FCFA {annuel ? "/ an" : "/ mois"}
+            </span>
+            {annuel && (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[.66rem] font-black text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
+                − {economie.toLocaleString("fr-FR")} F
+              </span>
+            )}
+          </div>
+
+          <p className="mt-1.5 min-h-[2.6em] text-[.8rem] leading-relaxed text-gray-600 dark:text-gray-400">
+            {annuel
+              ? `Soit ${parMois.toLocaleString("fr-FR")} F par mois. Deux mois de moins qu'au tarif mensuel, payés une seule fois.`
+              : "Sans engagement, résiliable à tout moment."}
+          </p>
+
+          {/* La case a cocher : un seul geste, qui ne change que le paiement. */}
+          <label className="mt-3 flex cursor-pointer items-center gap-2.5 rounded-xl border-[1.5px] border-gold/40 bg-white px-3 py-2.5 transition hover:border-gold dark:bg-[#111722]">
+            <input
+              type="checkbox"
+              checked={annuel}
+              onChange={(e) => setAnnuel(e.target.checked)}
+              className="h-4 w-4 shrink-0 accent-gold"
+            />
+            <span className="text-[.82rem] font-bold leading-snug text-gray-800 dark:text-gray-100">
+              Payer à l&apos;année
+              <span className="ml-1.5 font-extrabold text-gold-dark dark:text-neon-gold">
+                2 mois offerts
+              </span>
+            </span>
+          </label>
+
+          <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
+            <Atout fort>Factures illimitées</Atout>
+            <Atout>Tout ce que contient le gratuit</Atout>
+            <Atout>{annuel ? "Un seul paiement dans l'année" : "Résiliable à tout moment"}</Atout>
+          </div>
+
+          <div className="mt-5">
             {mode === "public" ? (
-              <Link href="/mon-activite" className="btn btn-gold w-full py-2.5 text-[.85rem] font-extrabold">
-                Passer au Pro annuel
+              <Link
+                href="/mon-activite"
+                className="btn btn-gold w-full py-2.5 text-[.85rem] font-extrabold"
+              >
+                Passer au Pro — {formatFcfaPlan(plan.price)}
               </Link>
             ) : (
               <button
-                onClick={() => payer("annuel")}
-                disabled={busy !== null}
+                onClick={() => payer(plan.key)}
+                disabled={busy}
                 className="btn btn-gold w-full py-2.5 text-[.85rem] font-extrabold disabled:opacity-60"
               >
-                {busy === "annuel" ? "Ouverture…" : "Passer au Pro annuel"}
+                {busy ? "Ouverture…" : `Passer au Pro — ${formatFcfaPlan(plan.price)}`}
               </button>
             )}
-          </Bouton>
-        </Colonne>
-
-        {/* ------------------------- Pro mensuel --------------------------- */}
-        <Colonne
-          titre={mensuel.name}
-          prix={mensuel.price.toLocaleString("fr-FR")}
-          unite="FCFA / mois"
-          note="Sans engagement, résiliable à tout moment."
-        >
-          <Ligne><b>Factures illimitées</b></Ligne>
-          <Ligne>Tout ce que contient le gratuit</Ligne>
-          <Ligne>Sans engagement</Ligne>
-          <Ligne manque>À renouveler chaque mois</Ligne>
-          <Bouton>
-            {mode === "public" ? (
-              <Link href="/mon-activite" className="btn btn-outline w-full py-2.5 text-[.85rem] font-extrabold">
-                Passer au Pro mensuel
-              </Link>
-            ) : (
-              <button
-                onClick={() => payer("mensuel")}
-                disabled={busy !== null}
-                className="btn btn-outline w-full py-2.5 text-[.85rem] font-extrabold disabled:opacity-60"
-              >
-                {busy === "mensuel" ? "Ouverture…" : "Passer au Pro mensuel"}
-              </button>
-            )}
-          </Bouton>
-        </Colonne>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -208,62 +259,18 @@ export default function ProPlans({
   );
 }
 
-/* ============================== Les briques ============================== */
-
-/**
- * Une colonne d'offre. `avant` ne se donne qu'a une seule : une bordure doree,
- * une ombre et un bouton plein sur toute la section, sinon plus rien ne
- * ressort. L'or est reserve au Pro dans toute l'application.
- */
-function Colonne({
-  titre, prix, unite, note, avant, children,
-}: {
-  titre: string; prix: string; unite: string; note: string;
-  avant?: boolean; children: React.ReactNode;
-}) {
+/** Pastille d'avantage, reprise des offres de boost : compacte, elle tient a
+    plusieurs par ligne sur un telephone la ou une liste a puces prend la page. */
+function Atout({ children, fort }: { children: React.ReactNode; fort?: boolean }) {
   return (
-    <div
-      className={`relative flex flex-col rounded-2xl border bg-white p-5 dark:bg-[#111722] ${
-        avant
-          ? "border-[1.5px] border-neon-gold shadow-[0_18px_44px_-26px_rgba(245,166,35,.65)]"
-          : "border-gray-200 dark:border-white/10"
+    <span
+      className={`rounded-md border px-1.5 py-0.5 text-[.68rem] leading-snug ${
+        fort
+          ? "border-emerald-200 bg-emerald-50 font-bold text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+          : "border-gray-200 bg-gray-50 text-gray-600 dark:border-dark-border dark:bg-dark-900 dark:text-gray-300"
       }`}
     >
-      {avant && (
-        <span className="absolute -top-2.5 left-5 rounded-full bg-gold px-2.5 py-0.5 text-[.6rem] font-black uppercase tracking-wider text-dark-900">
-          2 mois offerts
-        </span>
-      )}
-      <div className="font-display text-[.92rem] font-bold text-gray-900 dark:text-white">{titre}</div>
-      <div className="mt-2 font-mono text-[1.75rem] font-extrabold leading-none tabular-nums tracking-tight text-gray-900 dark:text-white">
-        {prix}
-        <span className="ml-1.5 font-sans text-[.72rem] font-bold tracking-normal text-gray-400">{unite}</span>
-      </div>
-      <p className="mt-2.5 min-h-[2.8em] text-[.78rem] leading-relaxed text-gray-500 dark:text-gray-400">{note}</p>
-      <ul className="mt-4 flex flex-1 flex-col gap-2.5 border-t border-gray-100 pt-4 dark:border-white/10">
-        {children}
-      </ul>
-    </div>
+      ✓ {children}
+    </span>
   );
-}
-
-/** Le manque se dit en gris, jamais en rouge : on ne punit pas qui n'a pas payé. */
-function Ligne({ children, manque }: { children: React.ReactNode; manque?: boolean }) {
-  return (
-    <li className="flex items-start gap-2.5 text-[.82rem] leading-snug">
-      <span
-        aria-hidden="true"
-        className={`mt-px shrink-0 font-bold ${manque ? "text-gray-300 dark:text-gray-600" : "text-emerald-600"}`}
-      >
-        {manque ? "—" : "✓"}
-      </span>
-      <span className={manque ? "text-gray-400 dark:text-gray-500" : "text-gray-700 dark:text-gray-300"}>
-        {children}
-      </span>
-    </li>
-  );
-}
-
-function Bouton({ children }: { children: React.ReactNode }) {
-  return <li className="mt-4 list-none">{children}</li>;
 }
