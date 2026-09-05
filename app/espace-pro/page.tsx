@@ -1,7 +1,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import ScrollReveal from "@/components/ScrollReveal";
+import ProPlans from "@/components/pro/ProPlans";
 import { DOC_TEMPLATES } from "@/lib/pro";
+import { QUOTA_GRATUIT_FACTURES } from "@/lib/proBilling";
 
 export const metadata: Metadata = {
   title: "Espace Pro — Devis & factures gratuits | Wanteermako",
@@ -46,6 +48,10 @@ const FEATURES = [
  * page a donc continué d'annoncer cinq modèles alors que le produit en
  * proposait dix.
  */
+/** « une facture » ou « 3 factures » selon PRO_QUOTA_FACTURES, sans le repeter. */
+const FACTURES_GRATUITES =
+  QUOTA_GRATUIT_FACTURES === 1 ? "une facture" : `${QUOTA_GRATUIT_FACTURES} factures`;
+
 type Tpl = (typeof DOC_TEMPLATES)[number];
 
 function TemplateSwatch({ t }: { t: Tpl }) {
@@ -123,7 +129,8 @@ export default function EspaceProPage() {
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-[1.02rem] leading-relaxed text-gray-600 dark:text-gray-400">
           L'outil de gestion pensé pour les indépendants et petites entreprises
-          d'Afrique de l'Ouest — sans carte bancaire, sans abonnement caché.
+          d'Afrique de l'Ouest. Devis illimités et {FACTURES_GRATUITES} par mois,
+          sans carte bancaire — et le prix du reste est écrit sur cette page.
         </p>
         <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
           <Link
@@ -197,9 +204,9 @@ export default function EspaceProPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-gray-100 bg-white p-5 dark:border-white/10 dark:bg-[#111722]">
             <p className="text-[1.4rem]">🆓</p>
-            <h3 className="mt-1 font-bold text-gray-900 dark:text-white">100 % gratuit</h3>
+            <h3 className="mt-1 font-bold text-gray-900 dark:text-white">Gratuit pour commencer</h3>
             <p className="mt-1 text-[.85rem] text-gray-600 dark:text-gray-400">
-              Aucune carte bancaire, aucun abonnement pour commencer.
+              Devis illimités et {FACTURES_GRATUITES} par mois, sans carte bancaire.
             </p>
           </div>
           <div className="rounded-xl border border-gray-100 bg-white p-5 dark:border-white/10 dark:bg-[#111722]">
@@ -218,6 +225,13 @@ export default function EspaceProPage() {
           </div>
         </div>
       </ScrollReveal>
+
+      {/* Tarifs — le prix se lit avant l'inscription, pas au moment du blocage */}
+      <div id="tarifs" className="mt-16 scroll-mt-24 md:mt-24">
+        <ScrollReveal delay={100}>
+          <ProPlans mode="public" quotaFactures={QUOTA_GRATUIT_FACTURES} />
+        </ScrollReveal>
+      </div>
 
       {/* CTA final */}
       <ScrollReveal className="mt-16 md:mt-24" delay={100}>
