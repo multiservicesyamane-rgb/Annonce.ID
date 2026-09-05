@@ -23,8 +23,27 @@
  *   node scripts/campagnes.mjs --modele boosts --only a@b.com --go
  *
  * Sans --go, rien ne part.
+ *
+ * ENVOI EN LOT (le mode normal depuis septembre 2026)
+ *
+ * Un envoi de masse a brule 5 % du fichier en une nuit : 15 rebonds definitifs,
+ * et l'IP partagee Brevo refusee par plusieurs serveurs senegalais. On distille
+ * desormais : quelques adresses par jour, jamais deux fois le meme visuel a la
+ * meme personne, jamais une adresse morte.
+ *
+ *   node scripts/campagnes.mjs --lot --public prospects --modele publier --go
+ *   node scripts/campagnes.mjs --lot --public membres  --modele boosts  --go
+ *
+ *   --budget N   plafond de la journee POUR CE PUBLIC (defaut 5, soit 10 par
+ *                jour en tout : 5 prospects et 5 membres, deux messages distincts)
+ *   --max N      plafond de cet appel-ci (defaut : ce qui reste du budget)
+ *   --repos J    jours de repos avant de re-solliciter quelqu'un (defaut 7)
+ *
+ * Le tri sort d'abord les moins sollicites, et tourne d'un jour a l'autre : la
+ * tete de liste n'est jamais deux fois la meme.
  */
 import fs from "node:fs";
+import * as J from "./journal-campagnes.mjs";
 
 const SITE = "https://www.wanteermako.com";
 const BUCKET =
@@ -376,6 +395,9 @@ if (has("--apercu")) {
 
 const pub = val("--public") || "tous";
 const only = val("--only");
+const lot = has("--lot");
+const repos = Number(val("--repos") || 7);
+const budget = Number(val("--budget") || 5);
 
 let cible = [];
 if (only) {
@@ -387,12 +409,75 @@ if (only) {
   if (pub === "prospects" || pub === "tous") cible = cible.concat(await prospects());
 }
 
+/* La liste noire s'applique quel que soit le mode : une adresse qui a rebondi
+   definitivement ne coute pas qu'un echec, elle abime la reputation du domaine. */
+const journal = J.charger();
+let morts = 0;
+if (!only) {
+  const avant = cible.length;
+  cible = cible.filter((d) => !J.estBanni(journal, d.email));
+  morts = avant - cible.length;
+}
+
+let ecartes = null;
+let dejaAujourdhui = 0;
+if (lot) {
+  if (only) {
+    console.error("--lot et --only ne vont pas ensemble : le lot se choisit tout seul.");
+    process.exit(1);
+  }
+  if (pub !== "membres" && pub !== "prospects") {
+    console.error(
+      "--lot exige --public membres OU --public prospects. " +
+        "Les deux publics ne recoivent pas le meme message : lancez deux fois, avec deux modeles."
+    );
+    process.exit(1);
+  }
+  dejaAujourdhui = J.envoisDuJour(journal, J.jour(), pub);
+  const restant = Math.max(0, budget - dejaAujourdhui);
+  const demande = val("--max") ? Number(val("--max")) : restant;
+  const r = J.classer(cible, journal, { modele: cle, image: M.image, repos });
+  ecartes = r.ecartes;
+  cible = r.gardes.slice(0, Math.min(demande, restant));
+}
+
 console.log("Modele     : " + cle + " — " + M.titre);
 console.log("Visuel     : " + BUCKET + "/" + M.image);
 console.log("Expediteur : Wanteermako <" + env.BREVO_SENDER_EMAIL + ">");
 console.log("Membres    : " + cible.filter((d) => d.public === "membres").length);
 console.log("Prospects  : " + cible.filter((d) => d.public === "prospects").length);
 console.log("TOTAL      : " + cible.length);
+if (morts) console.log("Ecartees   : " + morts + " adresse(s) sur liste noire (rebond definitif)");
+
+if (lot) {
+  console.log("");
+  console.log(
+    "Budget du jour : " + dejaAujourdhui + "/" + budget + " deja envoye(s) a ce public, " +
+      cible.length + " dans ce lot"
+  );
+  console.log("Repos          : " + repos + " jour(s) minimum entre deux sollicitations");
+  console.log(
+    "Ecartes        : " +
+      ecartes.dejaVu.length + " ont deja vu ce message ou ce visuel, " +
+      ecartes.repos.length + " sont en repos"
+  );
+  console.log("");
+  if (!cible.length) {
+    console.log("Aucun destinataire eligible aujourd'hui — rien a envoyer.");
+    process.exit(0);
+  }
+  console.log("Le lot du jour :");
+  for (const d of cible) {
+    const n = J.nbEnvois(journal, d.email);
+    const dc = J.dernierContact(journal, d.email);
+    console.log(
+      "   " + d.email.padEnd(38) +
+        (d.nom || "-").slice(0, 22).padEnd(24) +
+        n + " envoi(s)" + (dc ? ", dernier le " + dc : "")
+    );
+  }
+  console.log("");
+}
 
 if (!has("--go")) {
   console.log("\nMode liste : RIEN n'a ete envoye. Ajouter --go pour envoyer.");
@@ -407,6 +492,8 @@ for (let i = 0; i < cible.length; i++) {
   const r = await envoyer(M, d);
   if (r.ok) {
     ok++;
+    J.noter(journal, d, cle, M.image);
+    J.sauver(journal);
     if (d.public === "prospects" && d.id) await marquerProspect(d);
   } else {
     ko++;

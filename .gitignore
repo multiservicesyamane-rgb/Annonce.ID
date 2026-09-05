@@ -41,3 +41,6 @@ scripts/fetch.log
 scripts/prospects-manuels.csv
 scripts/*.xlsx
 scripts/prospects-*.csv
+
+# journal des campagnes email (contient des adresses de prospects)
+scripts/journal-campagnes.json
