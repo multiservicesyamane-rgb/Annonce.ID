@@ -14,7 +14,7 @@ import {
 } from "@/lib/pro";
 import {
   api, card, cardRaised, input, lbl, Badge, Crumb, Empty, F, FilterBar, ItemsEditor, Kpi,
-  MigrationNotice, MobileActionBar, MoneyField, PageHead, Progress, Section, Select, TotalsBox, useConfirm,
+  MigrationNotice, MobileActionBar, MoneyField, PageHead, Progress, Section, Select, stickyAside, TotalsBox, useConfirm,
   INVOICE_STYLE,
   type Client, type GoTo, type Invoice, type Payment, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
@@ -38,6 +38,10 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
   // atteint (402). On garde SON texte plutot que d'en ecrire un second
   // ici : deux formulations finiraient par annoncer deux prix.
   const [quotaMessage, setQuotaMessage] = useState<string | null>(null);
+  // Etat du quota connu DES le chargement, et pas seulement au moment
+  // d'enregistrer : c'est ce qui permet de ne pas dessiner l'apercu d'une
+  // facture qui ne pourra pas etre creee.
+  const [quota, setQuota] = useState<{ peutCreer: boolean; message: string | null } | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
 
   const [query, setQuery] = useState("");
@@ -63,17 +67,23 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [i, q, c, p] = await Promise.all([
+    const [i, q, c, p, qt] = await Promise.all([
       api("invoices", { action: "list" }),
       api("quotes", { action: "list" }),
       api("clients", { action: "list" }),
       api("projects", { action: "list" }),
+      api("invoices", { action: "quota" }),
     ]);
     if (i.data?.needsMigration) setNeedsMigration(true);
     setInvoices(i.data?.invoices || []);
     setQuotes(q.data?.quotes || []);
     setClients(c.data?.clients || []);
     setProjects(p.data?.projects || []);
+    setQuota(
+      qt.ok && typeof qt.data?.peutCreer === "boolean"
+        ? { peutCreer: qt.data.peutCreer, message: qt.data.message || null }
+        : null,
+    );
     setLoading(false);
   }, []);
 
@@ -436,6 +446,12 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
 
   /* ===== Formulaire ===== */
   if (view === "form") {
+    // L'apercu dessine la facture ENTIERE dans le navigateur, sans passer par
+    // le serveur : sans ce verrou, un compte a court de quota compose sa
+    // facture, la lit a l'ecran et la photographie — le peage ne protege plus
+    // rien. On ne bloque que la CREATION : modifier une piece deja emise
+    // garde son apercu, elle est deja payee ou deja gratuite.
+    const apercuBloque = !editing && quota !== null && !quota.peutCreer;
     return (
       <div className="mx-auto w-full max-w-[980px] lg:max-w-[1280px] xl:max-w-[1560px]">
         {confirmNode}
@@ -544,22 +560,28 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
               </Section>
             </div>
 
-            <PreviewAside
-              doc={previewDoc}
-              seller={seller}
-              client={previewClient}
-              actionLabel={editing ? "Enregistrer" : "Créer la facture"}
-              onAction={save}
-              busy={busy}
-              onExpand={() => setPreviewOpen(true)}
-            />
+            {apercuBloque ? (
+              <div className={stickyAside}>
+                <ProUpgrade message={quota?.message || undefined} />
+              </div>
+            ) : (
+              <PreviewAside
+                doc={previewDoc}
+                seller={seller}
+                client={previewClient}
+                actionLabel={editing ? "Enregistrer" : "Créer la facture"}
+                onAction={save}
+                busy={busy}
+                onExpand={() => setPreviewOpen(true)}
+              />
+            )}
 
             <MobileActionBar
               label={editing ? "Enregistrer" : "Créer la facture"}
               onAction={save}
               busy={busy}
               total={totals.total}
-              onPreview={() => setPreviewOpen(true)}
+              onPreview={apercuBloque ? undefined : () => setPreviewOpen(true)}
             />
           </div>
         )}
@@ -567,7 +589,7 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
         {/* Sur téléphone, l'aperçu n'a pas de colonne où vivre : il s'ouvre
             par-dessus la saisie, à la demande. */}
         <PreviewOverlay
-          open={previewOpen}
+          open={previewOpen && !apercuBloque}
           onClose={() => setPreviewOpen(false)}
           doc={previewDoc}
           seller={seller}

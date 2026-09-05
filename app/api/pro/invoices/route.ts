@@ -25,6 +25,20 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
 
+    // Etat du quota, lu au chargement de l'ecran. Sans lui, l'interface ne
+    // decouvre la limite qu'au moment d'enregistrer — trop tard pour empecher
+    // que la facture ait deja ete composee, et affichee en entier.
+    if (action === "quota") {
+      const q = await getEtatQuota(sb, userId);
+      return NextResponse.json({
+        abonne: q.abonne,
+        utilisees: q.utilisees,
+        quota: q.abonne ? null : q.quota,
+        peutCreer: q.peutCreer,
+        message: q.peutCreer ? null : messageQuotaAtteint(),
+      });
+    }
+
     if (action === "list") {
       const { data, error } = await sb
         .from("pro_invoices")
