@@ -146,8 +146,14 @@ export async function POST(req: Request) {
     const phoneCountry = (process.env.CHARIOW_PHONE_COUNTRY || "SN").toUpperCase();
 
     const baseUrl = getBaseUrl(req);
+    // Le retour depend de ce qui vient d'etre achete : un boost ramene a
+    // l'annonce, un abonnement Pro ramene la ou le professionnel avait ete
+    // interrompu — sa facture a saisir. Le renvoyer au tableau de bord des
+    // annonces lui ferait rechercher lui-meme l'ecran qu'il venait de quitter.
     const redirectUrl =
-      `${baseUrl}/paiement/succes?sale={sale_id}` + (intent.listingId ? `&listing_id=${intent.listingId}` : "");
+      `${baseUrl}/paiement/succes?sale={sale_id}` +
+      (intent.listingId ? `&listing_id=${intent.listingId}` : "") +
+      (intent.proPlan ? `&pro=${intent.proPlan}` : "");
 
     // custom_metadata (max 10 cles, 255 caracteres par valeur) : repris tel quel
     // dans le payload du Pulse, c'est notre seul lien vente -> utilisateur/annonce.

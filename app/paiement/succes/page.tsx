@@ -3,7 +3,26 @@
 import Link from "next/link";
 import React from "react";
 
-export default function PaymentSuccess({ searchParams }: { searchParams: { listing_id?: string } }) {
+export default function PaymentSuccess({
+  searchParams,
+}: {
+  searchParams: { listing_id?: string; pro?: string };
+}) {
+  // Un abonnement Pro et un boost d'annonce n'aboutissent pas au meme endroit :
+  // le premier attend une facture a rediger, le second une annonce a voir.
+  const estPro = searchParams?.pro === "mensuel" || searchParams?.pro === "annuel";
+  const etapes = estPro
+    ? [
+        { n: "1", t: "Paiement reçu", d: "Votre paiement a bien été enregistré.", done: true },
+        { n: "2", t: "Vérification automatique", d: "Notre système confirme la transaction (quelques secondes à quelques minutes)." },
+        { n: "3", t: "Espace Pro débloqué", d: "Devis et factures illimités. Reprenez votre facture là où vous l'aviez laissée." },
+      ]
+    : [
+        { n: "1", t: "Paiement reçu", d: "Votre paiement a bien été enregistré.", done: true },
+        { n: "2", t: "Vérification automatique", d: "Notre système confirme la transaction (quelques secondes à quelques minutes)." },
+        { n: "3", t: "Activation du boost", d: "Votre annonce est mise en avant automatiquement — rien à faire !" },
+      ];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-gray-50 to-white py-10 transition-colors dark:from-[#06231a] dark:via-black dark:to-black sm:py-16">
       <div className="mx-auto max-w-[540px] px-3 sm:px-4">
@@ -30,11 +49,7 @@ export default function PaymentSuccess({ searchParams }: { searchParams: { listi
                 Que se passe-t-il maintenant ?
               </div>
               <div className="space-y-3">
-                {[
-                  { n: "1", t: "Paiement reçu", d: "Votre paiement a bien été enregistré.", done: true },
-                  { n: "2", t: "Vérification automatique", d: "Notre système confirme la transaction (quelques secondes à quelques minutes)." },
-                  { n: "3", t: "Activation du boost", d: "Votre annonce est mise en avant automatiquement — rien à faire !" },
-                ].map((s) => (
+                {etapes.map((s) => (
                   <div key={s.n} className="flex items-start gap-3">
                     <span
                       className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[.75rem] font-extrabold ${
@@ -60,10 +75,10 @@ export default function PaymentSuccess({ searchParams }: { searchParams: { listi
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/dashboard"
+                href={estPro ? "/mon-activite?ecran=invoices" : "/dashboard"}
                 className="flex-1 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3.5 text-center text-[.95rem] font-extrabold text-white shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02]"
               >
-                📊 Mon tableau de bord
+                {estPro ? "🧾 Créer ma facture" : "📊 Mon tableau de bord"}
               </Link>
               <Link
                 href="/"

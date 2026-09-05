@@ -14,7 +14,7 @@ import {
 } from "@/lib/pro";
 import {
   api, card, cardRaised, input, lbl, Badge, Crumb, Empty, F, FilterBar, ItemsEditor, Kpi,
-  MigrationNotice, MobileActionBar, MoneyField, PageHead, Progress, Section, Select, stickyAside, TotalsBox, useConfirm,
+  MigrationNotice, MobileActionBar, MoneyField, PageHead, Progress, Section, Select, TotalsBox, useConfirm,
   INVOICE_STYLE,
   type Client, type GoTo, type Invoice, type Payment, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
@@ -446,12 +446,34 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
 
   /* ===== Formulaire ===== */
   if (view === "form") {
-    // L'apercu dessine la facture ENTIERE dans le navigateur, sans passer par
-    // le serveur : sans ce verrou, un compte a court de quota compose sa
-    // facture, la lit a l'ecran et la photographie — le peage ne protege plus
-    // rien. On ne bloque que la CREATION : modifier une piece deja emise
-    // garde son apercu, elle est deja payee ou deja gratuite.
-    const apercuBloque = !editing && quota !== null && !quota.peutCreer;
+    // Quota epuise et facture NEUVE : on ne montre que les offres.
+    //
+    // Faire saisir un document qui ne pourra pas etre enregistre est une perte
+    // de temps doublee d'une fuite : l'apercu dessine la facture entiere dans
+    // le navigateur, sans passer par le serveur — il suffisait de la
+    // photographier. Le formulaire ne s'ouvre donc plus du tout ; le
+    // professionnel paie, revient par la page de succes, et saisit alors.
+    //
+    // Seule la CREATION est fermee : modifier une facture deja emise reste
+    // possible, elle est deja comptee. Et si le compteur est illisible
+    // (quota === null), on laisse passer : un quota casse ne doit jamais
+    // empecher un artisan de travailler devant son client.
+    const creationFermee = !editing && quota !== null && !quota.peutCreer;
+
+    if (creationFermee) {
+      return (
+        <div className="mx-auto w-full max-w-[720px]">
+          {confirmNode}
+          <Crumb
+            onBack={() => { setView("list"); setEditing(null); }}
+            parent="Factures"
+            current="Nouvelle facture"
+          />
+          <ProUpgrade message={quota?.message || quotaMessage || undefined} />
+        </div>
+      );
+    }
+
     return (
       <div className="mx-auto w-full max-w-[980px] lg:max-w-[1280px] xl:max-w-[1560px]">
         {confirmNode}
@@ -560,28 +582,22 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
               </Section>
             </div>
 
-            {apercuBloque ? (
-              <div className={stickyAside}>
-                <ProUpgrade message={quota?.message || undefined} />
-              </div>
-            ) : (
-              <PreviewAside
-                doc={previewDoc}
-                seller={seller}
-                client={previewClient}
-                actionLabel={editing ? "Enregistrer" : "Créer la facture"}
-                onAction={save}
-                busy={busy}
-                onExpand={() => setPreviewOpen(true)}
-              />
-            )}
+            <PreviewAside
+              doc={previewDoc}
+              seller={seller}
+              client={previewClient}
+              actionLabel={editing ? "Enregistrer" : "Créer la facture"}
+              onAction={save}
+              busy={busy}
+              onExpand={() => setPreviewOpen(true)}
+            />
 
             <MobileActionBar
               label={editing ? "Enregistrer" : "Créer la facture"}
               onAction={save}
               busy={busy}
               total={totals.total}
-              onPreview={apercuBloque ? undefined : () => setPreviewOpen(true)}
+              onPreview={() => setPreviewOpen(true)}
             />
           </div>
         )}
@@ -589,7 +605,7 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
         {/* Sur téléphone, l'aperçu n'a pas de colonne où vivre : il s'ouvre
             par-dessus la saisie, à la demande. */}
         <PreviewOverlay
-          open={previewOpen && !apercuBloque}
+          open={previewOpen}
           onClose={() => setPreviewOpen(false)}
           doc={previewDoc}
           seller={seller}
