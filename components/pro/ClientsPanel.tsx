@@ -12,6 +12,7 @@ import {
   api, card, input, lbl, Badge, Crumb, Empty, F, FilterBar, MigrationNotice,
   PageHead, Section, Select, useConfirm, CLIENT_STYLE,
   type Client, type Invoice, type Payment, type ProEvent, type Project, type Quote, type Toast,
+  TONE_TEXT,
 } from "./ui";
 
 type Detail = {
@@ -503,8 +504,7 @@ function Info({ icon, label, value, link }: { icon: string; label: string; value
 }
 
 function Line({ label, value, tone }: { label: string; value: string; tone?: "green" | "amber" }) {
-  const color =
-    tone === "green" ? "text-green" : tone === "amber" ? "text-amber-600 dark:text-amber-400" : "text-gray-900 dark:text-white";
+  const color = TONE_TEXT[tone || "neutral"];
   return (
     <div className="flex items-center justify-between gap-3">
       <dt className="text-gray-600 dark:text-gray-400">{label}</dt>

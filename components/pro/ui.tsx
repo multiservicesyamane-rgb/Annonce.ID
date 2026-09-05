@@ -40,26 +40,50 @@ export const lbl =
 // et on perdait le haut de l'aperçu.
 export const stickyAside = "flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start";
 
+/**
+ * Le ton d'un chiffre dit son ETAT, jamais une action.
+ *
+ * L'indigo appartient au bouton et au lien ; l'argent rentre est vert. Le
+ * piege : `green` est redirige vers l'indigo dans tailwind.config.ts, donc un
+ * `text-green` affiche la couleur du bouton d'a cote. C'est `emerald`, intacte,
+ * qui porte le vert du produit — la meme que la tuile Factures de l'accueil.
+ */
+export const TONE_TEXT: Record<string, string> = {
+  green: "text-emerald-700 dark:text-emerald-400",
+  amber: "text-amber-600 dark:text-amber-400",
+  red: "text-red-600 dark:text-red-400",
+  blue: "text-blue-600 dark:text-blue-400",
+  neutral: "text-gray-900 dark:text-white",
+};
+
+export const TONE_BAR: Record<string, string> = {
+  green: "bg-emerald-600",
+  amber: "bg-amber-500",
+  red: "bg-brand-red",
+  blue: "bg-blue-500",
+  neutral: "bg-gray-300 dark:bg-white/20",
+};
+
 export const CLIENT_STYLE: Record<string, string> = {
   prospect: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  active: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
+  active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
   inactive: "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400",
 };
 
 export const PROJECT_STYLE: Record<string, string> = {
   planned: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  active: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
+  active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
   paused: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
   done: "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300",
-  cancelled: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  cancelled: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
 };
 
 export const QUOTE_STYLE: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300",
   sent: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
   viewed: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  accepted: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  refused: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  accepted: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
+  refused: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
   expired: "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400",
 };
 
@@ -67,8 +91,8 @@ export const INVOICE_STYLE: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300",
   sent: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
   partial: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  paid: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  late: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  paid: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
+  late: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
   cancelled: "bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400",
 };
 
@@ -343,20 +367,10 @@ export function Kpi({
   label: string; value: string; tone?: "green" | "amber" | "red" | "blue";
   small?: boolean; sub?: string; onClick?: () => void;
 }) {
-  const color =
-    tone === "green" ? "text-green"
-    : tone === "amber" ? "text-amber-600 dark:text-amber-400"
-    : tone === "red" ? "text-red-600 dark:text-red-400"
-    : tone === "blue" ? "text-blue-600 dark:text-blue-400"
-    : "text-gray-900 dark:text-white";
+  const color = TONE_TEXT[tone || "neutral"];
   // Filet de couleur en tête de carte : lecture du ton au coup d'œil, sans
   // teinter tout le fond (qui écraserait la valeur, seule chose à lire).
-  const bar =
-    tone === "green" ? "bg-green"
-    : tone === "amber" ? "bg-amber-500"
-    : tone === "red" ? "bg-brand-red"
-    : tone === "blue" ? "bg-blue-500"
-    : "bg-gray-300 dark:bg-white/20";
+  const bar = TONE_BAR[tone || "neutral"];
   const Tag: any = onClick ? "button" : "div";
   return (
     <Tag
@@ -423,7 +437,7 @@ export function Progress({ value, tone = "green" }: { value: number; tone?: "gre
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
       <div
-        className={`h-full rounded-full transition-all ${tone === "amber" ? "bg-amber-500" : "bg-green"}`}
+        className={`h-full rounded-full transition-all ${tone === "amber" ? "bg-amber-500" : "bg-emerald-600"}`}
         style={{ width: `${pct}%` }}
       />
     </div>

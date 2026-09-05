@@ -773,14 +773,14 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
                 <div className="flex flex-col divide-y divide-gray-100 dark:divide-white/10">
                   {detail.payments.map((p) => (
                     <div key={p.id} className="flex items-center gap-3 py-2.5">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-green/10 text-[.9rem]">💰</span>
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-[.9rem]">💰</span>
                       <div className="min-w-0 flex-1">
                         <div className="text-[.85rem] font-bold text-gray-900 dark:text-white">
                           {p.method || "Paiement"}
                         </div>
                         <div className="text-[.72rem] text-gray-500">{formatDate(p.paid_at)}</div>
                       </div>
-                      <span className="shrink-0 font-mono text-[.88rem] font-extrabold tabular-nums text-green">
+                      <span className="shrink-0 font-mono text-[.88rem] font-extrabold tabular-nums text-emerald-700 dark:text-emerald-400">
                         + {formatFcfa(p.amount)}
                       </span>
                       <button

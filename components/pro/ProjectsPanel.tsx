@@ -17,6 +17,7 @@ import {
   PageHead, Progress, Section, Select, useConfirm,
   PROJECT_STYLE, QUOTE_STYLE, INVOICE_STYLE,
   type Client, type Invoice, type ProEvent, type Project, type Quote, type Toast,
+  TONE_TEXT,
 } from "./ui";
 
 type Detail = { project: Project; quotes: Quote[]; invoices: Invoice[]; events: ProEvent[] };
@@ -630,8 +631,7 @@ function Meta({ label, value, tone }: { label: string; value: string; tone?: "re
 }
 
 function Row({ label, value, tone }: { label: string; value: string; tone?: "green" | "amber" }) {
-  const color =
-    tone === "green" ? "text-green" : tone === "amber" ? "text-amber-600 dark:text-amber-400" : "text-gray-900 dark:text-white";
+  const color = TONE_TEXT[tone || "neutral"];
   return (
     <div className="flex items-center justify-between gap-3">
       <dt className="text-gray-600 dark:text-gray-400">{label}</dt>
