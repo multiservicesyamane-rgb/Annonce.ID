@@ -51,13 +51,14 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
     if (query) setRouteQuery("?" + query);
 
     const error = params.get("error");
-    const reason = params.get("reason"); // DIAGNOSTIC temporaire (login Google)
     if (error === "callback") {
+      // Le motif renvoye par le callback ne veut rien dire pour qui essaie
+      // simplement de se connecter : il part dans la console, pas a l'ecran.
+      const reason = params.get("reason");
+      if (reason) console.error("[auth] retour Google en echec :", reason);
       setNotice({
         tone: "error",
-        text:
-          "La connexion avec Google a été interrompue. Réessayez." +
-          (reason ? ` [diagnostic : ${reason}]` : ""),
+        text: "La connexion avec Google a été interrompue. Réessayez.",
       });
     } else if (error === "session") {
       setNotice({ tone: "error", text: "Votre session a expiré. Reconnectez-vous pour continuer." });
@@ -86,7 +87,13 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
     }
     if (normalized.includes("password")) return "Le mot de passe ne respecte pas les règles de sécurité.";
     if (normalized.includes("rate limit")) return "Trop de tentatives. Patientez quelques minutes avant de réessayer.";
-    return message;
+
+    // Tout le reste vient de Supabase, en anglais et en jargon : « Failed to
+    // fetch », « AuthApiError ». L'afficher ne dit pas quoi faire, et laisse
+    // croire que le site est cassé. Le détail part dans la console, où il sert
+    // au diagnostic ; l'utilisateur lit une phrase qui lui donne une action.
+    console.error("[auth]", message);
+    return "La connexion n'a pas abouti. Vérifiez votre réseau, puis réessayez.";
   }
 
   async function handleEmailAuth(event: React.FormEvent<HTMLFormElement>) {
@@ -364,7 +371,7 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
                 spellCheck={false}
                 required
                 className="input min-h-[48px] dark:bg-[#161B22]"
-                placeholder={isSignup ? "vous@exemple.com" : "vous@exemple.com"}
+                placeholder={isSignup ? "vous@exemple.com" : "vous@exemple.com ou nom d'utilisateur"}
               />
             </div>
 
