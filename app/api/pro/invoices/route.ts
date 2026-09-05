@@ -4,6 +4,7 @@ import {
   proContext, txt, num, dateOrNull, isMissingTable,
   logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, taxAllowed,
 } from "@/lib/proServer";
+import { getEtatQuota, messageQuotaAtteint } from "@/lib/proBilling";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,22 @@ export async function POST(req: Request) {
 
       if (!title) return NextResponse.json({ error: "Indiquez l'objet de la facture." }, { status: 400 });
       if (!items.length) return NextResponse.json({ error: "Ajoutez au moins une ligne." }, { status: 400 });
+
+      // Quota du mois. Le controle est ICI et pas dans l'interface : masquer un
+      // bouton n'empeche personne d'appeler la route a la main.
+      //
+      // Il ne s'applique qu'a la creation MANUELLE. La facture engendree par
+      // l'acceptation d'un devis passe par /api/pro/quote-public et n'est pas
+      // concernee : elle decoule d'un geste du CLIENT, et lui refuser sa
+      // facture parce que le professionnel a epuise son quota le punirait pour
+      // une decision qui n'est pas la sienne.
+      const quota = await getEtatQuota(sb, userId);
+      if (!quota.peutCreer) {
+        return NextResponse.json(
+          { error: messageQuotaAtteint(), quotaAtteint: true, utilisees: quota.utilisees, quota: quota.quota },
+          { status: 402 },
+        );
+      }
 
       if (clientId && !(await ownsRow(sb, "pro_clients", clientId, userId))) {
         return NextResponse.json({ error: "Client introuvable." }, { status: 404 });

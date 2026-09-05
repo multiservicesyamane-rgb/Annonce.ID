@@ -6,6 +6,7 @@
 // les espèces n'ont pas d'API de rapprochement au Sénégal.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import ProUpgrade from "./ProUpgrade";
 import {
   formatFcfa, formatDate, timeAgo, computeTotals, waNumber, daysUntil,
   INVOICE_LABELS, PAYMENT_METHODS, TAX_RATES, effectiveInvoiceStatus, canChargeTax,
@@ -33,6 +34,10 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
 
   const [view, setView] = useState<"list" | "form" | "detail">("list");
   const [editing, setEditing] = useState<Invoice | null>(null);
+  // Message renvoye par le serveur quand le quota gratuit du mois est
+  // atteint (402). On garde SON texte plutot que d'en ecrire un second
+  // ici : deux formulations finiraient par annoncer deux prix.
+  const [quotaMessage, setQuotaMessage] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
 
   const [query, setQuery] = useState("");
@@ -286,8 +291,14 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
     };
     if (editing) payload.id = editing.id;
 
-    const { ok, data } = await api("invoices", payload);
+    const { ok, status, data } = await api("invoices", payload);
     setBusy(false);
+    if (status === 402) {
+      // Quota atteint : la saisie reste a l'ecran, rien n'est perdu. Le
+      // professionnel paie, revient, et enregistre.
+      setQuotaMessage(data.error || null);
+      return;
+    }
     if (!ok) return toast("⚠ " + (data.error || "Erreur"));
     toast(editing ? "✓ Facture mise à jour" : `✓ Facture ${data.invoice.number} créée`);
     setView("list");
@@ -297,8 +308,12 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
 
   async function fromQuote(q: Quote) {
     setBusy(true);
-    const { ok, data } = await api("invoices", { action: "create", quote_id: q.id });
+    const { ok, status, data } = await api("invoices", { action: "create", quote_id: q.id });
     setBusy(false);
+    if (status === 402) {
+      setQuotaMessage(data.error || null);
+      return;
+    }
     if (!ok) return toast("⚠ " + (data.error || "Erreur"));
     toast(`✓ Facture ${data.invoice.number} créée`);
     load();
@@ -429,6 +444,12 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
           parent="Factures"
           current={editing ? `Modifier ${editing.number}` : "Nouvelle facture"}
         />
+
+        {quotaMessage && (
+          <div className="mb-4">
+            <ProUpgrade message={quotaMessage} onClose={() => setQuotaMessage(null)} />
+          </div>
+        )}
 
         {clients.length === 0 ? (
           <Empty
@@ -782,6 +803,12 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
     <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
       {confirmNode}
       {viewerNode}
+      {quotaMessage && (
+        <div className="mb-4">
+          <ProUpgrade message={quotaMessage} onClose={() => setQuotaMessage(null)} />
+        </div>
+      )}
+
       {payFor && (
         <PaymentDialog
           invoice={payFor}

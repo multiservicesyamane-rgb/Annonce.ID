@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { effectiveQuoteStatus, effectiveInvoiceStatus, daysUntil } from "@/lib/pro";
 import { proContext, isMissingTable } from "@/lib/proServer";
+import { getEtatQuota, getProSubscription, PRO_PLANS } from "@/lib/proBilling";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,11 @@ export async function GET() {
     if (isMissingTable(clientsRes.error) || isMissingTable(quotesRes.error)) {
       return NextResponse.json({ needsMigration: true });
     }
+
+    const [abonnement, quota] = await Promise.all([
+      getProSubscription(sb, userId),
+      getEtatQuota(sb, userId),
+    ]);
 
     const clients = clientsRes.data || [];
     const projects = projectsRes.data || [];
@@ -257,6 +263,13 @@ export async function GET() {
         dueSoonAmount: dueSoon.reduce(
           (s: number, i: any) => s + Math.max(0, (Number(i.total) || 0) - (Number(i.paid_amount) || 0)), 0,
         ),
+      },
+      abonnement: {
+        ...abonnement,
+        quota_utilisees: quota.utilisees,
+        quota_total: quota.abonne ? null : quota.quota,
+        peut_creer: quota.peutCreer,
+        offres: [PRO_PLANS.mensuel, PRO_PLANS.annuel],
       },
       performance: { acceptanceRate, averageInvoice, averageDelay, collectionRate },
       evolution,

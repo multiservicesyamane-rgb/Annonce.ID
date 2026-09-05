@@ -3,8 +3,12 @@ import { createClient as createSupabaseAdminClient, type SupabaseClient } from "
 
 import { BOOSTS, SUBSCRIPTION_PLANS } from "@/lib/constants";
 import { boostPriceKey, subPriceKey, type PriceMap } from "@/lib/prices";
+import { PRO_PLANS, type ProPlanKey } from "@/lib/proBilling";
 
-export type CheckoutIntentType = "boost" | "subscription";
+// « pro » = abonnement a l'Espace Pro (devis/factures). Distinct de
+// « subscription », qui designe la Boutique Pro : deux produits, deux prix,
+// deux echeances.
+export type CheckoutIntentType = "boost" | "subscription" | "pro";
 
 export type CheckoutIntent = {
   type: CheckoutIntentType;
@@ -15,6 +19,7 @@ export type CheckoutIntent = {
   boostKey: string;
   subKey: string;
   category: string;
+  proPlan: string;
   userId: string;
   metadata: {
     userId: string;
@@ -22,6 +27,7 @@ export type CheckoutIntent = {
     boostKey: string;
     subKey: string;
     category: string;
+    proPlan: string;
     expectedAmount: number;
     intentType: CheckoutIntentType;
   };
@@ -116,8 +122,30 @@ export async function resolveCheckoutIntent(userId: string, body: unknown): Prom
   const subKey = cleanString(payload.subKey, 40);
   const categoryInput = cleanString(payload.category, 40);
   const listingId = cleanString(payload.listingId, 120);
+  const proPlan = cleanString(payload.proPlan, 20);
   const supabase = createPaymentAdminClient();
   const prices = await loadServerPrices(supabase);
+
+  // Le prix des plans pro n'est PAS surchargeable depuis les Parametres : il
+  // vit dans lib/proBilling, unique source de verite, et c'est lui que le
+  // webhook revalide contre la vente Chariow.
+  if (proPlan) {
+    const plan = PRO_PLANS[proPlan as ProPlanKey];
+    if (!plan) {
+      throw new PaymentValidationError("Formule Pro invalide.", 400);
+    }
+    return buildIntent({
+      type: "pro",
+      amount: plan.price,
+      itemName: plan.name,
+      userId,
+      listingId: "",
+      boostKey: "",
+      subKey: "",
+      category: "",
+      proPlan: plan.key,
+    });
+  }
 
   if (subKey) {
     const category = Object.prototype.hasOwnProperty.call(SUBSCRIPTION_PLANS, categoryInput)
@@ -144,6 +172,7 @@ export async function resolveCheckoutIntent(userId: string, body: unknown): Prom
       boostKey: "",
       subKey,
       category,
+      proPlan: "",
     });
   }
 
@@ -175,6 +204,7 @@ export async function resolveCheckoutIntent(userId: string, body: unknown): Prom
       boostKey,
       subKey: "",
       category: "",
+      proPlan: "",
     });
   }
 
@@ -191,6 +221,7 @@ function buildIntent(input: Omit<CheckoutIntent, "reference" | "metadata">): Che
       boostKey: input.boostKey,
       subKey: input.subKey,
       category: input.category,
+      proPlan: input.proPlan,
       expectedAmount: input.amount,
       intentType: input.type,
     },

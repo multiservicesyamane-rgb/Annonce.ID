@@ -5,6 +5,7 @@ import { sendInvoiceEmail } from "@/lib/email";
 import { publishOneListing } from "@/lib/campaign-engine";
 import { assertProviderAmount, ensureListingOwnedByUser, PaymentValidationError } from "@/lib/paymentSecurity";
 import { SUBSCRIPTION_PLANS } from "@/lib/constants";
+import { PRO_PLANS, type ProPlanKey } from "@/lib/proBilling";
 
 export const dynamic = "force-dynamic";
 
@@ -180,6 +181,10 @@ export async function POST(req: Request) {
     const listingId = String(metadata.listingId || metadata.listing_id || "");
     const boostKey = String(metadata.boostKey || metadata.boost_key || "");
     const subKey = String(metadata.subKey || metadata.sub_key || "");
+    // Abonnement a l'Espace Pro (devis/factures). Produit distinct de la
+    // Boutique Pro : il a sa propre table et sa propre echeance, pour qu'on
+    // puisse etre abonne a l'un sans l'autre.
+    const proPlan = String(metadata.proPlan || metadata.pro_plan || "") as ProPlanKey | "";
     const category = String(metadata.category || "general");
     const amount = Math.round(Number(verified.amount?.value ?? sale.amount?.value ?? 0)) || 0;
     const expectedAmount = metadata.expectedAmount || metadata.expected_amount;
@@ -193,7 +198,7 @@ export async function POST(req: Request) {
     const supabase = createClient(supabaseUrl, serviceKey);
     if (listingId) await ensureListingOwnedByUser(supabase, listingId, userId);
 
-    const purchaseType = listingId ? "boost" : subKey ? "subscription" : "credits";
+    const purchaseType = listingId ? "boost" : (subKey || proPlan) ? "subscription" : "credits";
     const alreadyProcessed = await insertPurchaseOnce(supabase, userId, amount, saleId, purchaseType);
     if (alreadyProcessed) {
       return NextResponse.json({ success: true, duplicate: true });
@@ -201,6 +206,32 @@ export async function POST(req: Request) {
 
     if (listingId) {
       await activateListing(supabase, listingId, boostKey);
+    } else if (proPlan && userId) {
+      const plan = PRO_PLANS[proPlan as ProPlanKey];
+      if (plan) {
+        // Reabonnement : on repart de la fin en cours si elle n'est pas
+        // passee, sinon d'aujourd'hui. Sans cela, renouveler trois jours avant
+        // l'echeance ferait perdre ces trois jours au professionnel.
+        const { data: existant } = await supabase
+          .from("pro_subscriptions").select("expires_at").eq("user_id", userId).maybeSingle();
+        const base = existant?.expires_at && new Date(existant.expires_at).getTime() > Date.now()
+          ? new Date(existant.expires_at).getTime()
+          : Date.now();
+        const expires = new Date(base + plan.days * 86400000).toISOString();
+
+        const { error } = await supabase.from("pro_subscriptions").upsert(
+          {
+            user_id: userId,
+            plan: plan.key,
+            expires_at: expires,
+            source: "chariow",
+            sale_id: saleId,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" },
+        );
+        if (error) console.error("Chariow pro subscription activation error:", error);
+      }
     } else if (subKey && userId) {
       // Plan réel (quotas + durée) depuis la grille du site ; repli sur "general".
       const plan =

@@ -44,7 +44,7 @@ function getBaseUrl(req: Request): string {
 
 // Correspondance offre du site -> produit Chariow.
 // CHARIOW_PRODUCTS = {"boost:premium":"prd_...","sub:standard:auto":"prd_...","default":"prd_..."}
-function resolveProductId(boostKey: string, subKey: string, category: string): string | null {
+function resolveProductId(boostKey: string, subKey: string, category: string, proPlan = ""): string | null {
   let map: Record<string, string> = {};
   try {
     map = JSON.parse(process.env.CHARIOW_PRODUCTS || "{}");
@@ -53,6 +53,7 @@ function resolveProductId(boostKey: string, subKey: string, category: string): s
   }
 
   const keys = [
+    proPlan ? `pro:${proPlan}` : "",
     boostKey ? `boost:${boostKey}` : "",
     subKey && category ? `sub:${subKey}:${category}` : "",
     subKey ? `sub:${subKey}` : "",
@@ -118,7 +119,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const intent = await resolveCheckoutIntent(user.id, body);
 
-    const productId = resolveProductId(intent.boostKey, intent.subKey, intent.category);
+    const productId = resolveProductId(intent.boostKey, intent.subKey, intent.category, intent.proPlan);
     if (!productId) {
       // Offre pas encore reliee a un produit Chariow (ex: abonnements non mappes).
       return NextResponse.json(
@@ -166,6 +167,7 @@ export async function POST(req: Request) {
         boostKey: intent.metadata.boostKey,
         subKey: intent.metadata.subKey,
         category: intent.metadata.category,
+        proPlan: intent.metadata.proPlan,
         expectedAmount: String(intent.metadata.expectedAmount),
         intentType: intent.metadata.intentType,
       },
