@@ -103,12 +103,17 @@ export async function openaiGenerate(prompt: string, system: string): Promise<st
 }
 
 /**
- * DeepSeek — API compatible OpenAI, tarif nettement inferieur.
+ * DeepSeek — API compatible OpenAI, le tarif le plus bas des trois.
  *
- * Comme les deux autres, elle est PREPAYEE : il faut créditer le compte sur
- * platform.deepseek.com. Le prix au million de jetons est le plus bas des
- * trois, ce qui en fait le meilleur choix si le palier gratuit de Gemini ne
- * suffit plus.
+ * Modele par defaut : `deepseek-v4-flash`. Verifie sur la documentation
+ * officielle le 07/09/2026 — l'ancien identifiant `deepseek-chat` n'est plus
+ * servi, et l'ecrire ici aurait fait echouer chaque appel avec une erreur de
+ * modele inconnu.
+ *
+ * PREPAYEE comme OpenAI : aucun palier gratuit, aucun modele gratuit. Les
+ * frais sont deduits d'un solde recharge sur platform.deepseek.com. Le tarif
+ * reste tres bas — de l'ordre de quelques dixiemes de dollar pour mille
+ * courriers — et il baisse encore aux heures creuses.
  */
 export async function deepseekGenerate(prompt: string, system: string): Promise<string | null> {
   return compatibleOpenAI(
@@ -116,7 +121,7 @@ export async function deepseekGenerate(prompt: string, system: string): Promise<
     {
       url: "https://api.deepseek.com/chat/completions",
       cle: process.env.DEEPSEEK_API_KEY,
-      model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+      model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
     },
     prompt,
     system,
