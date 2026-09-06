@@ -19,8 +19,10 @@ export type Module = "carriere" | "pro";
 /**
  * Défauts délibérément différents.
  *
- * `carriere` est fermé : le module vient d'être écrit, personne d'autre que
- * le propriétaire n'y a de document réel.
+ * `carriere` a été fermé le temps de la finition, puis OUVERT le 07/09/2026 :
+ * le parcours tient debout, et un module que personne ne peut essayer ne
+ * remonte aucun défaut. `CARRIERE_PUBLIC=off` le referme sans toucher au
+ * code si le besoin revient.
  *
  * `pro` est OUVERT, et le refermer serait une faute : au 06/09/2026, six
  * comptes qui ne sont pas ceux du propriétaire y ont déjà des clients et des
@@ -29,7 +31,7 @@ export type Module = "carriere" | "pro";
  * ouvert sauf demande explicite via `PRO_PUBLIC=off`.
  */
 const DEFAUTS: Record<Module, boolean> = {
-  carriere: false,
+  carriere: true,
   pro: true,
 };
 

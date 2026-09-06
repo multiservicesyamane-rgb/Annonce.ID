@@ -86,7 +86,7 @@ const NAV: NavItem[] = [
   // application autonome, pas un panneau. Sans `proOnly` — chercher un
   // emploi ne demande pas d'être abonné, seule la rédaction assistée est
   // comptée au-delà du quota gratuit.
-  { id: "carriere", icon: "🎓", label: "Ma Carrière", isLink: true, href: "/carriere", ownerOnly: true },
+  { id: "carriere", icon: "🎓", label: "Ma Carrière", isLink: true, href: "/carriere" },
   { id: "favorites", icon: "❤", label: "Mes Favoris", section: "Interactions" },
   { id: "notifications", icon: "🔔", label: "Notifications" },
   { id: "messages", icon: "💬", label: "Messages" },
@@ -775,10 +775,8 @@ export default function Dashboard() {
           )}
 
           {/* Ma Carrière, juste sous l'espace pro : deux applications à part,
-              deux passerelles au même endroit. Masquée tant que le module
-              n'est pas ouvert au public — montrer une porte qui répond
-              « bientôt » use la confiance pour rien. */}
-          {estProprietaire && (
+              deux passerelles au même endroit. Visible par tous depuis
+              l'ouverture du module. */}
           <Link
             href="/carriere"
             className="mt-2 flex items-center gap-2 rounded-[12px] bg-gray-100 px-3 py-2.5 text-[.76rem] font-bold text-green transition hover:bg-green/10 dark:bg-white/[.06] dark:hover:bg-green/10"
@@ -787,7 +785,6 @@ export default function Dashboard() {
             <span className="truncate">Ma Carrière</span>
             <span aria-hidden="true" className="ml-auto shrink-0 opacity-60">→</span>
           </Link>
-          )}
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -952,9 +949,8 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Ma Carrière — même rôle que le bloc ci-dessus. Masquée tant que
-                le module n'est pas ouvert au public. */}
-            {estProprietaire && (
+            {/* Ma Carrière — même rôle que le bloc ci-dessus : sans un rappel
+                sur l'accueil, le module ne se découvre que par le menu. */}
             <div className="mb-4 flex flex-col gap-3 rounded-[16px] border border-gray-100 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-[#161B22] sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="flex min-w-0 items-start gap-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-green/10 text-[1.1rem]">🎓</span>
@@ -974,7 +970,6 @@ export default function Dashboard() {
                 Ouvrir →
               </Link>
             </div>
-            )}
 
             {/* Outils : Assistant IA + Parrainage + Réseaux (zone secondaire, compacte) */}
             <div className="mb-4 grid gap-4 lg:grid-cols-2">
