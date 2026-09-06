@@ -41,10 +41,13 @@ export type SortieAssistant = {
 };
 
 export default function Assistant({
+  ia,
   onTerminer,
   onQuitter,
   toast,
 }: {
+  /** Un moteur de redaction repond-il ? Faux = mode degrade assume. */
+  ia: boolean;
   onTerminer: (s: SortieAssistant) => void;
   onQuitter: () => void;
   toast: (m: string) => void;
@@ -58,6 +61,14 @@ export default function Assistant({
   const [busy, setBusy] = useState(false);
   /** L'IA a-t-elle releve des informations dans la phrase ? */
   const [compris, setCompris] = useState(false);
+  /**
+   * La demarche vient-elle d'une vraie comprehension, ou d'une correspondance
+   * de mots-cles ? Une supposition se fait confirmer, elle ne s'impose pas :
+   * « resilier mon contrat de mariage » contient « mariage » ET « resilier »,
+   * et enchainer sur la mauvaise fiche est exactement ce qui rend l'assistant
+   * incoherent.
+   */
+  const [supposition, setSupposition] = useState(false);
 
   async function router(texte: string) {
     const t = texte.trim();
@@ -76,6 +87,15 @@ export default function Assistant({
         setDemarche(d.demarche);
         setReponses(d.reponses || {});
         setCompris(Object.keys(d.reponses || {}).length > 0);
+
+        if (d.parIA === false) {
+          // Mots-cles : on s'arrete et on demande confirmation.
+          setSupposition(true);
+          setCatalogue(d.catalogue || null);
+          return;
+        }
+
+        setSupposition(false);
         // On reprend a la premiere question restee sans reponse.
         const questions = d.demarche.questions || [];
         const premiere = questions.findIndex((q: any) => !(d.reponses || {})[q.id]);
@@ -117,6 +137,13 @@ export default function Assistant({
         <Title sub="Ecris ce dont tu as besoin, avec tes mots. Je te guide ensuite.">
           De quoi as-tu besoin ?
         </Title>
+
+        {!ia && (
+          <Note tone="warn">
+            L&apos;assistant IA est indisponible : je ne pourrai pas lire ta phrase finement.
+            Je te proposerai une demarche a confirmer, et tu pourras corriger.
+          </Note>
+        )}
 
         <label className="block">
           <span className={lbl}>Ta demande</span>
@@ -176,6 +203,64 @@ export default function Assistant({
           <PrimaryBtn onClick={() => router(demande)} disabled={busy}>
             {busy ? "Je lis ta demande…" : "Continuer"}
           </PrimaryBtn>
+        </ActionBar>
+      </div>
+    );
+  }
+
+  /* ============== 1 bis. La supposition, a confirmer ============== */
+
+  if (supposition) {
+    return (
+      <div className={page}>
+        <Title sub="Je n'ai pas pu analyser ta phrase — l'assistant IA est indisponible.">
+          C&apos;est bien de ca qu&apos;il s&apos;agit ?
+        </Title>
+
+        <Note tone="warn">
+          J&apos;ai devine a partir des mots de ta demande, ce qui se trompe souvent.
+          Confirme, ou choisis toi-meme dans la liste.
+        </Note>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSupposition(false);
+            setCatalogue(null);
+            setEtape(0);
+          }}
+          className="mt-4 flex w-full items-center gap-3 rounded-2xl border-[1.5px] border-green bg-green/5 px-4 py-4 text-left"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-[1rem] font-bold text-green">{demarche.nom}</span>
+            <span className="mt-0.5 block text-[.84rem] text-gray-500">{demarche.resume}</span>
+          </span>
+          <span className="shrink-0 text-[1.2rem] text-green" aria-hidden="true">›</span>
+        </button>
+
+        {catalogue && (
+          <>
+            <p className="mb-2 mt-6 text-[.85rem] font-semibold text-gray-500">Ou alors :</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {catalogue
+                .filter((c) => c.id !== demarche.id)
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => choisirDansCatalogue(c.id)}
+                    className="rounded-xl border border-gray-200 bg-white p-3 text-left transition hover:border-green dark:border-white/10 dark:bg-dark-800"
+                  >
+                    <span className="block text-[.92rem] font-bold text-gray-900 dark:text-white">{c.nom}</span>
+                    <span className="block text-[.8rem] text-gray-500">{c.resume}</span>
+                  </button>
+                ))}
+            </div>
+          </>
+        )}
+
+        <ActionBar>
+          <Retour onClick={() => { setSupposition(false); setDemarche(null); setEtape(-1); }} />
         </ActionBar>
       </div>
     );

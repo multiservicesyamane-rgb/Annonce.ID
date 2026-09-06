@@ -56,6 +56,7 @@ const Dossier = (
 );
 
 export default function Accueil({
+  ia,
   quota,
   onAssistant,
   onCv,
@@ -63,6 +64,8 @@ export default function Accueil({
   onDemande,
   onDocuments,
 }: {
+  /** Un moteur de redaction repond-il ? */
+  ia: boolean;
   quota: { abonne: boolean; utilises: number; quota: number } | null;
   onAssistant: () => void;
   onCv: () => void;
@@ -102,7 +105,17 @@ export default function Accueil({
         </div>
       </button>
 
-      <Note>L&apos;assistant te pose quatre questions, puis prepare ton document.</Note>
+      {ia ? (
+        <Note>L&apos;assistant lit ta demande, pose les questions qui manquent, puis redige.</Note>
+      ) : (
+        // Dit avant de commencer, pas apres : quelqu'un qui sait que l'IA dort
+        // relit son texte au lieu de l'envoyer tel quel.
+        <Note tone="warn">
+          L&apos;assistant IA est momentanement indisponible. Tu peux creer tous tes documents,
+          mais les textes seront composes a partir de modeles : relis-les et personnalise-les
+          avant d&apos;envoyer.
+        </Note>
+      )}
 
       {/* Le plafond vient de la reponse de l'API, jamais d'une constante lue
           ici : CARRIERE_QUOTA_GRATUIT est une variable serveur, invisible du

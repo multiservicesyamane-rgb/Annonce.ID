@@ -68,13 +68,29 @@ export async function POST(req: Request) {
     const id = (reponse?.texte || "").trim().toLowerCase().replace(/[^a-z-]/g, "");
     const choisie = DEMARCHES.find((d) => d.id === id) || parMots;
 
+    // L'IA a-t-elle reellement compris, ou est-ce le repli par mots-cles ?
+    // La distinction est capitale : une correspondance de mots-cles se trompe
+    // souvent — « resilier mon contrat de mariage » contient « mariage » ET
+    // « resilier » — et la presenter comme une comprehension donne exactement
+    // l'incoherence que l'utilisateur constate.
+    const parIA = !!reponse?.texte && DEMARCHES.some((d) => d.id === id);
+
     if (choisie) {
       // Deuxieme temps : ce que la phrase contient DEJA comme reponses.
       // « je veux voyager en Gambie pour voir ma famille » repond a lui seul
       // a deux des quatre questions de la fiche. Les redemander donnerait
       // l'impression que rien n'a ete lu.
-      const reponses = await extraire(demande, choisie);
-      return NextResponse.json({ demarche: choisie, reponses, moteur: reponse?.par || null });
+      const reponses = parIA ? await extraire(demande, choisie) : {};
+      return NextResponse.json({
+        demarche: choisie,
+        reponses,
+        moteur: reponse?.par || null,
+        // false => la demarche est une SUPPOSITION a faire confirmer.
+        parIA,
+        // Le catalogue accompagne toujours une supposition : l'utilisateur
+        // doit pouvoir corriger sans repartir de zero.
+        catalogue: parIA ? undefined : DEMARCHES.map((d) => ({ id: d.id, nom: d.nom, resume: d.resume })),
+      });
     }
 
     // On ne laisse jamais l'utilisateur devant un mur : le catalogue lui est

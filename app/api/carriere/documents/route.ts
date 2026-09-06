@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { proContext, txt, isMissingTable } from "@/lib/proServer";
 import { messageFerme, peutAcceder } from "@/lib/moduleAccess";
 import { etatQuota, isCareerKind, nettoyerContenu } from "@/lib/carriereServer";
+import { moteursDisponibles } from "@/lib/ia";
 import { DEFAULT_TEMPLATE, isTemplateId, templateIsPro, titreParDefaut } from "@/lib/carriere";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,11 @@ export async function POST(req: Request) {
       return NextResponse.json({
         documents: data || [],
         quota: await etatQuota(sb, userId, email),
+        // Sert a prevenir l'utilisateur AVANT qu'il commence : sans moteur,
+        // l'assistant ne comprend pas les phrases et les textes sont composes
+        // a partir de modeles. Le lui cacher, c'est lui faire prendre une
+        // approximation pour une redaction.
+        ia: moteursDisponibles().length > 0,
       });
     }
 

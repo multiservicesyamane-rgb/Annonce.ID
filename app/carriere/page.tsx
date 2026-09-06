@@ -55,6 +55,8 @@ export default function CarrierePage() {
   const [ecran, setEcran] = useState<Ecran>({ v: "accueil" });
   const [documents, setDocuments] = useState<DocRow[]>([]);
   const [quota, setQuota] = useState<{ abonne: boolean; utilises: number; quota: number } | null>(null);
+  /** Un moteur de redaction repond-il ? Faux = mode degrade assume. */
+  const [ia, setIa] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
   const toast = (m: string) => {
@@ -67,6 +69,7 @@ export default function CarrierePage() {
       const d = await api("documents", { action: "list" });
       setDocuments(d.documents || []);
       setQuota(d.quota || null);
+      setIa(d.ia !== false);
       setEtat(d.needsMigration ? "migration" : "pret");
     } catch (e: any) {
       if (e?.status === 401) setEtat("nonConnecte");
@@ -254,6 +257,7 @@ export default function CarrierePage() {
         <>
           {ecran.v === "accueil" && (
             <Accueil
+              ia={ia}
               quota={quota}
               onAssistant={() => setEcran({ v: "assistant" })}
               onCv={() => setEcran({ v: "cv" })}
@@ -276,7 +280,7 @@ export default function CarrierePage() {
           )}
 
           {ecran.v === "assistant" && (
-            <Assistant onTerminer={depuisAssistant} onQuitter={rentrer} toast={toast} />
+            <Assistant ia={ia} onTerminer={depuisAssistant} onQuitter={rentrer} toast={toast} />
           )}
 
           {ecran.v === "cv" && (
