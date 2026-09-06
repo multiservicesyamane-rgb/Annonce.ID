@@ -4,6 +4,8 @@ import { proContext, txt } from "@/lib/proServer";
 import { messageFerme, peutAcceder } from "@/lib/moduleAccess";
 import { consommerPassage, etatQuota } from "@/lib/carriereServer";
 import { consigneAccord, ligneDate, type Genre } from "@/lib/carriere";
+import { demarcheParId } from "@/lib/demarches";
+import { corpsCourrier, corpsLettreMotivation, missionsCV, profilCV } from "@/lib/modelesTexte";
 
 export const dynamic = "force-dynamic";
 
@@ -83,15 +85,24 @@ export async function POST(req: Request) {
     const genre: Genre = ["f", "m"].includes(txt(body?.genre, 2)) ? (txt(body?.genre, 2) as Genre) : "?";
 
     const textes: Record<string, string> = {};
-    /** Quel moteur a reellement ecrit — renvoye pour le diagnostic. */
+    /** Quel moteur a reellement ecrit — « modele » quand aucune IA n'a repondu. */
     let moteur: string | null = null;
+
     for (const cible of demandees) {
       const r = await redigerIA(consigne(cible, body, genre), SYSTEME);
-      // Une cible sans reponse n'annule pas les autres : mieux vaut rendre la
-      // lettre seule que de tout perdre parce que le resume a echoue.
       if (r) {
         textes[cible] = nettoyer(r.texte);
         moteur = r.par;
+        continue;
+      }
+      // Aucun moteur n'a repondu : plutot que de renvoyer une erreur, on
+      // compose le texte a partir des seules reponses de l'utilisateur. Il
+      // repart avec un courrier complet et modifiable, ce qui vaut infiniment
+      // mieux qu'un ecran qui dit « reessaie plus tard ».
+      const secours = modele(cible, body);
+      if (secours) {
+        textes[cible] = secours;
+        moteur = moteur || "modele";
       }
     }
 
@@ -102,9 +113,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Le passage n'est compte qu'ici, une fois un texte reellement obtenu :
-    // une panne de l'IA ne doit pas manger l'essai de l'utilisateur.
-    await consommerPassage(sb, userId, body?.kind === "lettre" ? "lettre" : "cv");
+    // Un texte compose sans IA ne consomme aucun quota : il n'a rien coute, et
+    // le facturer reviendrait a faire payer la panne a l'utilisateur.
+    if (moteur !== "modele") {
+      await consommerPassage(sb, userId, body?.kind === "lettre" ? "lettre" : "cv");
+    }
 
     return NextResponse.json({ textes, moteur, quota: await etatQuota(sb, userId, email) });
   } catch (e: any) {
@@ -194,4 +207,57 @@ N'ecris NI la date (« ${ligneDate(ville)} » est ajoutee automatiquement), NI
 l'adresse, NI l'objet, NI la signature.
 N'affirme aucun fait qui ne figure pas ci-dessus : ni date, ni numero, ni montant.
 Longueur : 1 200 signes maximum.`;
+}
+
+/* ======================= Les textes de secours ======================= */
+
+/**
+ * Texte compose sans IA, a partir des reponses deja saisies.
+ *
+ * C'est le meme role que le repli par gabarit de /api/ai pour les annonces :
+ * le service continue de rendre quelque chose d'utilisable quand le moteur
+ * de redaction est indisponible. Rien n'y est invente — chaque ligne vient
+ * d'un champ rempli par l'utilisateur.
+ */
+function modele(cible: Cible, b: any): string | null {
+  const ville = txt(b?.city, 80) || "Dakar";
+
+  if (cible === "summary") {
+    return profilCV({
+      poste: txt(b?.targetJob, 100),
+      ville,
+      parcours: txt(b?.parcours, 600),
+    });
+  }
+
+  if (cible === "bullets") {
+    const deja = txt(b?.missions, 600);
+    return deja || missionsCV(txt(b?.jobTitle, 100));
+  }
+
+  if (cible === "lettre") {
+    return corpsLettreMotivation({
+      entreprise: txt(b?.company, 120),
+      poste: txt(b?.targetJob, 100),
+      recruteur: txt(b?.recruiter, 100),
+      pourquoi: txt(b?.why, 800),
+      ville,
+    });
+  }
+
+  // demande : le corps se compose a partir de la fiche de demarche.
+  const fiche = demarcheParId(txt(b?.demarcheId, 40) || "emploi");
+  if (!fiche) return null;
+
+  // Les reponses arrivent ici sous forme de texte deja mis en forme par
+  // l'editeur ; on les reconstruit par identifiant pour retrouver les
+  // libelles exacts de la fiche.
+  const reponses: Record<string, string> = {};
+  const brut = b?.reponses && typeof b.reponses === "object" ? b.reponses : {};
+  for (const q of fiche.questions) {
+    const v = txt(brut[q.id], 600);
+    if (v) reponses[q.id] = v;
+  }
+
+  return corpsCourrier(fiche, reponses, txt(b?.destinataire, 160));
 }

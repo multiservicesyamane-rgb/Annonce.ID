@@ -130,8 +130,14 @@ export default function CVWizard({
     try {
       const d = await api("generate", { targets: [cible], genre, kind: "cv", ...charge });
       const texte = d.textes?.[cible];
-      if (texte) appliquer(texte);
-      else toast("La redaction n'a rien renvoye. Reessaie.");
+      if (texte) {
+        appliquer(texte);
+        // Quand aucun moteur n'a repondu, le texte vient d'un modele : le dire
+        // evite qu'on envoie tel quel un courrier qu'on croyait personnalise.
+        if (d.moteur === "modele") toast("Texte compose sans IA : relis-le et personnalise-le.");
+      } else {
+        toast("La redaction n'a rien renvoye. Reessaie.");
+      }
     } catch (e: any) {
       // 402 : ce n'est pas une panne, c'est le quota. On ouvre l'abonnement.
       if (e?.status === 402) onPeage();

@@ -113,6 +113,11 @@ export default function CourrierWizard({
           ? { company: c.company, targetJob: c.targetJob, recruiter: c.recruiter, why: c.why, city: c.from.city }
           : {
               demarche: demarche?.nom || "",
+              // Envoyes en plus du contexte redige : le repli sans IA
+              // recompose le courrier a partir de la fiche et des reponses
+              // brutes, il lui faut donc les identifiants d'origine.
+              demarcheId: demarche?.id || "",
+              reponses,
               destinataire,
               objet,
               city: c.from.city,
@@ -134,6 +139,9 @@ export default function CourrierWizard({
       // eux qui apparaissent sur la page, ils ne doivent plus bouger tout
       // seuls si une reponse change ensuite.
       patch({ body: texte, ...(kind === "demande" ? { objet, to: destinataire } : {}) });
+      // Un texte de modele n'est pas un texte redige : on le signale plutot que
+      // de laisser croire a une personnalisation qui n'a pas eu lieu.
+      if (d.moteur === "modele") toast("Texte compose sans IA : relis-le et personnalise-le.");
       setEtape(1);
     } catch (e: any) {
       if (e?.status === 402) onPeage();
