@@ -8,6 +8,11 @@ export const OWNER_EMAILS = [
   "ibrahimadiop363@gmail.com",
   "wanteermako@gmail.com",
   "analysteprogrammeur1374@gmail.com",
+  // Ajouté le 06/09/2026 : il manquait à la liste, alors qu'il fait partie
+  // des comptes du propriétaire. Cette liste ne sert plus seulement aux
+  // annonces gratuites — elle ouvre aussi Ma Carrière et lève le quota de
+  // l'Espace Pro. Un oubli ici ferme une porte, il ne se voit pas tout seul.
+  "khalilpro1374@gmail.com",
 ];
 
 export function isOwner(email?: string | null): boolean {
