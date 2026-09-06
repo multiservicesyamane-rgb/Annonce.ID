@@ -1,35 +1,41 @@
-// Trois moteurs de redaction, essayes l'un apres l'autre.
+// Quatre moteurs de redaction, essayes l'un apres l'autre.
 //
 // ── Pourquoi plusieurs ───────────────────────────────────────────────────
 // Un seul fournisseur, c'est un seul point de panne. Gemini a un palier
-// gratuit mais plafonne ; DeepSeek et OpenAI sont payants et disponibles.
+// gratuit mais plafonne ; ChatGPT, DeepSeek et Claude sont payants.
 // Les enchainer donne un module qui continue d'ecrire quand l'un tombe, sans
 // que l'utilisateur ait quoi que ce soit a faire.
 //
 // Et quand AUCUN ne repond, la redaction ne s'arrete pas non plus : le
 // courrier est compose a partir des reponses saisies (lib/modelesTexte.ts).
 //
-// Les trois clefs sont facultatives : avec une seule, le module fonctionne
+// Les quatre clefs sont facultatives : avec une seule, le module fonctionne
 // avec celle-la ; avec aucune, il compose ses textes lui-meme.
 
 import { geminiGenerate } from "@/lib/gemini";
 
-export type Fournisseur = "gemini" | "openai" | "deepseek";
+export type Fournisseur = "gemini" | "openai" | "deepseek" | "claude";
 
 export type Redaction = { texte: string; par: Fournisseur };
 
-const TOUS: Fournisseur[] = ["gemini", "deepseek", "openai"];
+/**
+ * L'ordre par defaut, decide le 07/09/2026 :
+ * Gemini (seul gratuit) -> ChatGPT -> DeepSeek -> Claude.
+ *
+ * Claude ferme la marche et doit y rester : c'est le plus cher, et il ne doit
+ * consommer du solde que lorsque tous les autres sont a sec.
+ */
+const TOUS: Fournisseur[] = ["gemini", "openai", "deepseek", "claude"];
 
 /**
  * Ordre d'essai.
  *
- * Gemini d'abord parce qu'il a un palier gratuit. DeepSeek ensuite : son API
- * est nettement moins chere qu'OpenAI a qualite comparable sur de la
- * redaction courte en francais. OpenAI en dernier, c'est le plus cher des
- * trois.
+ * Gemini d'abord parce qu'il est le seul a avoir un palier gratuit. Les trois
+ * suivants sont prepayes ; ils ne sont sollicites que si le precedent n'a
+ * rien rendu, donc ils ne coutent rien tant que Gemini tient.
  *
  * CARRIERE_IA_ORDRE change l'ordre sans toucher au code —
- * « deepseek,gemini,openai » par exemple.
+ * « deepseek,gemini,claude » par exemple.
  */
 function ordre(): Fournisseur[] {
   const brut = (process.env.CARRIERE_IA_ORDRE || TOUS.join(",")).toLowerCase();
@@ -128,6 +134,55 @@ export async function deepseekGenerate(prompt: string, system: string): Promise<
   );
 }
 
+/* ============================== Claude ============================== */
+
+/**
+ * Claude — le dernier de la chaine, par decision du 07/09/2026.
+ *
+ * Il n'est appele que si Gemini, ChatGPT et DeepSeek ont tous echoue. C'est
+ * le plus cher des quatre ; le placer en dernier fait qu'il ne coute rien
+ * tant que les autres tiennent, et qu'il prend le relais sans intervention le
+ * jour ou ils tombent.
+ *
+ * ANTHROPIC_MODEL permet de choisir un modele moins cher — `claude-haiku-4-5`
+ * suffit largement pour un courrier d'une page et coute cinq fois moins que
+ * le defaut.
+ *
+ * PREPAYEE, comme ChatGPT et DeepSeek : le solde se recharge sur
+ * console.anthropic.com. C'est un compte distinct d'un abonnement Claude.
+ */
+async function claudeGenerate(prompt: string, system: string): Promise<string | null> {
+  const cle = process.env.ANTHROPIC_API_KEY;
+  if (!cle || cle.length < 20) return null;
+
+  try {
+    // Import differe : le SDK ne pese sur le demarrage du serveur que le jour
+    // ou Claude est reellement sollicite, c'est-a-dire presque jamais.
+    const { default: Anthropic } = await import("@anthropic-ai/sdk");
+    const client = new Anthropic({ apiKey: cle });
+
+    const reponse = await client.messages.create({
+      model: process.env.ANTHROPIC_MODEL || "claude-opus-5",
+      max_tokens: 1200,
+      system,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    // `content` est une union : on ne lit `.text` qu'apres avoir verifie le
+    // type du bloc, et on ignore les blocs de reflexion.
+    const texte = reponse.content
+      .filter((bloc): bloc is Extract<typeof bloc, { type: "text" }> => bloc.type === "text")
+      .map((bloc) => bloc.text)
+      .join("\n")
+      .trim();
+
+    return texte || null;
+  } catch (e: any) {
+    console.warn("[ia] claude:", e?.message);
+    return null;
+  }
+}
+
 /* ============================== L'enchainement ============================== */
 
 /**
@@ -143,9 +198,11 @@ export async function redigerIA(prompt: string, system: string): Promise<Redacti
     const texte =
       fournisseur === "gemini"
         ? await geminiGenerate(prompt, system)
-        : fournisseur === "deepseek"
-          ? await deepseekGenerate(prompt, system)
-          : await openaiGenerate(prompt, system);
+        : fournisseur === "openai"
+          ? await openaiGenerate(prompt, system)
+          : fournisseur === "deepseek"
+            ? await deepseekGenerate(prompt, system)
+            : await claudeGenerate(prompt, system);
 
     if (texte && texte.trim()) {
       return { texte: texte.trim(), par: fournisseur };
@@ -164,5 +221,7 @@ export function moteursDisponibles(): Fournisseur[] {
   if (d && d.length >= 20) dispo.push("deepseek");
   const o = process.env.OPENAI_API_KEY;
   if (o && o.length >= 20) dispo.push("openai");
+  const c = process.env.ANTHROPIC_API_KEY;
+  if (c && c.length >= 20) dispo.push("claude");
   return dispo;
 }

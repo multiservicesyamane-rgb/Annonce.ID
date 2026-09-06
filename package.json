@@ -11,7 +11,7 @@
     "test:security": "node scripts/security-smoke.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.104.2",
+    "@anthropic-ai/sdk": "^0.124.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "html-to-image": "^1.11.13",
