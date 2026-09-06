@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   try {
     const ctx = await proContext();
     if ("error" in ctx) return ctx.error;
-    const { sb, userId } = ctx;
+    const { sb, userId, email } = ctx;
 
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     // decouvre la limite qu'au moment d'enregistrer — trop tard pour empecher
     // que la facture ait deja ete composee, et affichee en entier.
     if (action === "quota") {
-      const q = await getEtatQuota(sb, userId);
+      const q = await getEtatQuota(sb, userId, email);
       return NextResponse.json({
         abonne: q.abonne,
         utilisees: q.utilisees,
@@ -124,7 +124,7 @@ export async function POST(req: Request) {
       // concernee : elle decoule d'un geste du CLIENT, et lui refuser sa
       // facture parce que le professionnel a epuise son quota le punirait pour
       // une decision qui n'est pas la sienne.
-      const quota = await getEtatQuota(sb, userId);
+      const quota = await getEtatQuota(sb, userId, email);
       if (!quota.peutCreer) {
         return NextResponse.json(
           { error: messageQuotaAtteint(), quotaAtteint: true, utilisees: quota.utilisees, quota: quota.quota },

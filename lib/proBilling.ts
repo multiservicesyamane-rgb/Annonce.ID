@@ -5,6 +5,7 @@
 // fait que constater un abonnement actif et compter les pieces du mois.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isOwner } from "@/lib/owners";
 
 export type ProPlanKey = "mensuel" | "annuel";
 
@@ -131,7 +132,15 @@ export type EtatQuota = {
 export async function getEtatQuota(
   sb: SupabaseClient,
   userId: string,
+  email?: string,
 ): Promise<EtatQuota> {
+  // Les comptes proprietaires facturent sans limite, comme ils publient sans
+  // limite (lib/owners.ts). Meme regle pour les annonces, l'Espace Pro et Ma
+  // Carriere : une seule liste a tenir a jour.
+  if (isOwner(email)) {
+    return { abonne: true, utilisees: 0, quota: Infinity, peutCreer: true };
+  }
+
   const abo = await getProSubscription(sb, userId);
   if (abo.actif) {
     return { abonne: true, utilisees: 0, quota: Infinity, peutCreer: true };

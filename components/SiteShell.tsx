@@ -28,15 +28,22 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   // celui de l'appli en z-20 — et posait le footer public et la navigation
   // basse « Accueil / Publier » sous un éditeur de facture.
   const isProApp = pathname.startsWith("/mon-activite");
+  // Ma Carriere est une application à part, comme Mon Activité : elle porte
+  // sa propre barre du haut ET sa propre barre du bas. Sans cette ligne, la
+  // navigation basse du site (« Accueil / Vendre / Boutiques ») viendrait se
+  // superposer à celle du module, et le pied de page public se retrouverait
+  // sous un éditeur de CV.
+  const isCarriere = pathname.startsWith("/carriere");
   const isFocusedFlow =
     isAuth ||
     isDashboard ||
     isProApp ||
+    isCarriere ||
     pathname.startsWith("/paiement") ||
     pathname.startsWith("/publier");
 
   const noFooter = isAdmin || isFocusedFlow;
-  const hideHeader = isAdmin || isAuth || isDashboard || isProApp;
+  const hideHeader = isAdmin || isAuth || isDashboard || isProApp || isCarriere;
   const isAnnoncePage = pathname.startsWith("/annonce/");
   
   // On cache le BottomNav et WhatsApp sur les pages où ça gène

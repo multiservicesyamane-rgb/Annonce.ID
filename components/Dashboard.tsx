@@ -1,5 +1,7 @@
 "use client";
 
+import { isOwner } from "@/lib/owners";
+
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -54,6 +56,8 @@ function BoutiqueUrl({ userId }: { userId: string }) {
 type NavItem = {
   id: string; icon: string; label: string; section?: string; badge?: number;
   isLink?: boolean; href?: string;
+  /** Reserve aux comptes proprietaires tant que le module n'est pas public. */
+  ownerOnly?: boolean;
   /** N'apparaît que si l'espace pro est activé. */
   proOnly?: boolean;
 };
@@ -78,6 +82,11 @@ const NAV: NavItem[] = [
   // sélecteur de mode, lui, redirigeait déjà vers /mon-activite — deux
   // chemins pour le même mot, menant à deux écrans différents.
   { id: "activity", icon: "💼", label: "Mon Activité pro", isLink: true, href: "/mon-activite", proOnly: true },
+  // Ma Carrière suit la même règle que Mon Activité : un lien vers une
+  // application autonome, pas un panneau. Sans `proOnly` — chercher un
+  // emploi ne demande pas d'être abonné, seule la rédaction assistée est
+  // comptée au-delà du quota gratuit.
+  { id: "carriere", icon: "🎓", label: "Ma Carrière", isLink: true, href: "/carriere", ownerOnly: true },
   { id: "favorites", icon: "❤", label: "Mes Favoris", section: "Interactions" },
   { id: "notifications", icon: "🔔", label: "Notifications" },
   { id: "messages", icon: "💬", label: "Messages" },
@@ -540,6 +549,11 @@ export default function Dashboard() {
 
   const displayName = profileName || profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || user?.phone || "Utilisateur";
   const displayEmail = user?.email || user?.phone || "Nouvel utilisateur";
+
+  // Ma Carriere n'est pas encore ouverte au public : ses points d'entree ne
+  // s'affichent que pour les comptes proprietaires (lib/owners.ts). La porte
+  // est aussi fermee cote serveur — masquer un lien ne protege rien.
+  const estProprietaire = isOwner(user?.email);
   const isKonnecta = typeof displayEmail === 'string' && displayEmail.toLowerCase().includes('multiservicesyamane');
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || "";
   const isWelcome = searchParams.get("welcome") === "1";
@@ -759,11 +773,26 @@ export default function Dashboard() {
               </span>
             </Link>
           )}
+
+          {/* Ma Carrière, juste sous l'espace pro : deux applications à part,
+              deux passerelles au même endroit. Masquée tant que le module
+              n'est pas ouvert au public — montrer une porte qui répond
+              « bientôt » use la confiance pour rien. */}
+          {estProprietaire && (
+          <Link
+            href="/carriere"
+            className="mt-2 flex items-center gap-2 rounded-[12px] bg-gray-100 px-3 py-2.5 text-[.76rem] font-bold text-green transition hover:bg-green/10 dark:bg-white/[.06] dark:hover:bg-green/10"
+          >
+            <span aria-hidden="true" className="shrink-0">🎓</span>
+            <span className="truncate">Ma Carrière</span>
+            <span aria-hidden="true" className="ml-auto shrink-0 opacity-60">→</span>
+          </Link>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {NAV
-            .filter((n) => !n.proOnly || proActivated)
+            .filter((n) => (!n.proOnly || proActivated) && (!n.ownerOnly || estProprietaire))
             .map((n) => (
             <div key={n.id}>
               {n.section && <div className="px-5 pb-1 pt-4 text-[.66rem] font-bold uppercase tracking-widest text-gray-300 dark:text-white/40">{n.section}</div>}
@@ -921,6 +950,30 @@ export default function Dashboard() {
                   Activer mon espace pro
                 </Link>
               </div>
+            )}
+
+            {/* Ma Carrière — même rôle que le bloc ci-dessus. Masquée tant que
+                le module n'est pas ouvert au public. */}
+            {estProprietaire && (
+            <div className="mb-4 flex flex-col gap-3 rounded-[16px] border border-gray-100 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-[#161B22] sm:flex-row sm:items-center sm:justify-between sm:p-5">
+              <div className="flex min-w-0 items-start gap-3">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-green/10 text-[1.1rem]">🎓</span>
+                <div className="min-w-0">
+                  <div className="font-display text-[.95rem] font-extrabold text-gray-900 dark:text-white">
+                    Ma Carrière
+                  </div>
+                  <p className="mt-0.5 text-[.78rem] leading-relaxed text-gray-500 dark:text-gray-400">
+                    CV, lettre de motivation et demande d&apos;emploi — en PDF, prêts à envoyer par WhatsApp.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/carriere"
+                className="shrink-0 rounded-lg bg-green px-5 py-2.5 text-center text-[.82rem] font-bold text-white transition hover:opacity-90"
+              >
+                Ouvrir →
+              </Link>
+            </div>
             )}
 
             {/* Outils : Assistant IA + Parrainage + Réseaux (zone secondaire, compacte) */}

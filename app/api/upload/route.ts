@@ -6,7 +6,10 @@ export const dynamic = "force-dynamic";
 
 const BUCKET = "images";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const ALLOWED_FOLDERS = new Set(["listings", "covers", "avatars", "campaigns"]);
+// « carriere » : les photos d'identité des CV du module Ma Carrière. Un
+// dossier à part et non « avatars » — ces images partent dans un document
+// exporté, pas sur un profil, et se supprimeront un jour avec le document.
+const ALLOWED_FOLDERS = new Set(["listings", "covers", "avatars", "campaigns", "carriere"]);
 const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",

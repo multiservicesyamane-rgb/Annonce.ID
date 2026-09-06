@@ -36,7 +36,7 @@ export async function GET() {
   try {
     const ctx = await proContext();
     if ("error" in ctx) return ctx.error;
-    const { sb, userId } = ctx;
+    const { sb, userId, email } = ctx;
 
     const [clientsRes, projectsRes, quotesRes, invoicesRes, paymentsRes, eventsRes] = await Promise.all([
       sb.from("pro_clients").select("id, name, company, status, created_at").eq("user_id", userId).eq("archived", false),
@@ -55,7 +55,7 @@ export async function GET() {
 
     const [abonnement, quota] = await Promise.all([
       getProSubscription(sb, userId),
-      getEtatQuota(sb, userId),
+      getEtatQuota(sb, userId, email),
     ]);
 
     const clients = clientsRes.data || [];

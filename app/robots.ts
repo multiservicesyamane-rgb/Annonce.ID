@@ -17,6 +17,9 @@ export default function robots(): MetadataRoute.Robots {
         // L'application de gestion (devis/factures) : rien d'indexable, tout
         // est derrière la connexion. Sa vitrine publique est /espace-pro.
         "/mon-activite",
+        // Ma Carrière : CV et lettres personnels, tout est derrière la
+        // connexion. Rien à indexer, et surtout rien à exposer.
+        "/carriere",
         "/connexion",
         "/inscription",
         "/favoris",

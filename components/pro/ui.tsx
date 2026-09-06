@@ -419,13 +419,26 @@ export function Empty({
   );
 }
 
-export function MigrationNotice({ what = "Base de données à préparer" }: { what?: string }) {
+/**
+ * Avis affiché quand les tables d'un module n'existent pas encore.
+ *
+ * `file` est paramétrable depuis que Ma Carrière réutilise cet avis : le nom
+ * du script était écrit en dur, et le module envoyait donc exécuter la
+ * migration d'un AUTRE module — qui, elle, était déjà passée.
+ */
+export function MigrationNotice({
+  what = "Base de données à préparer",
+  file = "MIGRATION_MON_ACTIVITE.sql",
+}: {
+  what?: string;
+  file?: string;
+}) {
   return (
     <div className={`${card} mx-auto max-w-[620px] p-8 text-center`}>
       <div className="text-[1.8rem]">🗄️</div>
       <h2 className="mt-2 font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white">{what}</h2>
       <p className="mt-1 text-[.85rem] text-gray-500 dark:text-gray-400">
-        Exécutez <b>database/MIGRATION_MON_ACTIVITE.sql</b> dans Supabase → SQL Editor, puis rechargez la page.
+        Exécutez <b>database/{file}</b> dans Supabase → SQL Editor, puis rechargez la page.
       </p>
     </div>
   );

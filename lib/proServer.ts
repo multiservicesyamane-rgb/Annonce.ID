@@ -63,7 +63,13 @@ export function isCheckViolation(error: unknown, constraint: string): boolean {
   return (e.code === "23514" || /violates check constraint/i.test(text)) && text.includes(constraint);
 }
 
-export type ProContext = { sb: SupabaseClient; userId: string };
+/**
+ * `email` accompagne l'identifiant depuis que Ma Carrière doit reconnaître le
+ * propriétaire du site (SUPER_ADMIN_EMAIL) pour lui ouvrir ses propres
+ * modules. Champ ajouté, jamais retiré : les appelants qui ne lisent que
+ * `sb` et `userId` continuent de fonctionner tels quels.
+ */
+export type ProContext = { sb: SupabaseClient; userId: string; email: string };
 
 /**
  * Authentifie et prépare le contexte, ou renvoie la réponse d'erreur toute faite.
@@ -74,12 +80,18 @@ export async function proContext(): Promise<ProContext | { error: NextResponse }
   if (!supabase) return { error: NextResponse.json({ error: "Supabase non configuré" }, { status: 500 }) };
 
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return { error: NextResponse.json({ error: "Non autorisé." }, { status: 401 }) };
+  if (authErr || !user) {
+    // La raison du refus part dans les journaux du serveur : sans elle, un
+    // 401 ne dit pas s'il s'agit d'une session absente, expirée, ou d'une
+    // erreur de configuration — et on cherche à l'aveugle.
+    console.warn("[auth] refus:", authErr?.message || "aucune session");
+    return { error: NextResponse.json({ error: "Non autorisé." }, { status: 401 }) };
+  }
 
   const sb = adminClient();
   if (!sb) return { error: NextResponse.json({ error: "Service indisponible." }, { status: 500 }) };
 
-  return { sb, userId: user.id };
+  return { sb, userId: user.id, email: user.email || "" };
 }
 
 /**
