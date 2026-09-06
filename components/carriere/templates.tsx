@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Ma Carriere — les quatre mises en page de CV.
+ * Ma Carriere — les huit mises en page de CV.
  *
  * Adaptes des gabarits du projet cvurgent, avec deux differences voulues :
  *  - les niveaux de langue sont des pastilles sur 5 (voir lib/carriere.ts) ;
@@ -127,7 +127,59 @@ function HSide({ children, color = "#ffffff" }: { children: ReactNode; color?: s
 }
 
 /** Experiences + formation : le corps commun a tous les gabarits. */
-function Parcours({ cv, accent }: { cv: CVContent; accent: string }) {
+function Parcours({
+  cv, accent, formationDabord = false,
+}: {
+  cv: CVContent;
+  accent: string;
+  /** Un etudiant met ses etudes avant une experience qu'il n'a pas encore. */
+  formationDabord?: boolean;
+}) {
+  const experience = cv.experiences.length > 0 && (
+    <section style={{ marginBottom: 22 }}>
+      <H color={accent}>Experience professionnelle</H>
+      {cv.experiences.map((e) => (
+        <div key={e.id} style={{ marginBottom: 15 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{e.title}</p>
+              <p style={{ fontSize: 12, color: "#6B7280" }}>
+                {[e.company, e.location].filter(Boolean).join(", ")}
+              </p>
+            </div>
+            <p style={{ fontSize: 11.5, color: "#6B7280", whiteSpace: "nowrap" }}>{periode(e)}</p>
+          </div>
+          <ul style={{ marginTop: 6, paddingLeft: 14 }}>
+            {e.bullets.filter(Boolean).map((b, i) => (
+              <li key={i} style={{ fontSize: 12, lineHeight: 1.6, color: "#374151", listStyle: "disc" }}>
+                {b}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+  );
+
+  const formation = cv.education.length > 0 && (
+    <section style={{ marginBottom: 22 }}>
+      <H color={accent}>Formation</H>
+      {cv.education.map((f) => (
+        <div key={f.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 12.5, fontWeight: 700, color: "#111827" }}>{f.degree}</p>
+            <p style={{ fontSize: 11.5, color: "#6B7280" }}>
+              {[f.school, f.location].filter(Boolean).join(", ")}
+            </p>
+          </div>
+          <p style={{ fontSize: 11.5, color: "#6B7280", whiteSpace: "nowrap" }}>
+            {periode({ ...f, isCurrent: false })}
+          </p>
+        </div>
+      ))}
+    </section>
+  );
+
   return (
     <>
       {cv.summary.trim() && (
@@ -137,48 +189,8 @@ function Parcours({ cv, accent }: { cv: CVContent; accent: string }) {
         </section>
       )}
 
-      {cv.experiences.length > 0 && (
-        <section style={{ marginBottom: 22 }}>
-          <H color={accent}>Experience professionnelle</H>
-          {cv.experiences.map((e) => (
-            <div key={e.id} style={{ marginBottom: 15 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{e.title}</p>
-                  <p style={{ fontSize: 12, color: "#6B7280" }}>
-                    {[e.company, e.location].filter(Boolean).join(", ")}
-                  </p>
-                </div>
-                <p style={{ fontSize: 11.5, color: "#6B7280", whiteSpace: "nowrap" }}>{periode(e)}</p>
-              </div>
-              <ul style={{ marginTop: 6, paddingLeft: 14 }}>
-                {e.bullets.filter(Boolean).map((b, i) => (
-                  <li key={i} style={{ fontSize: 12, lineHeight: 1.6, color: "#374151", listStyle: "disc" }}>
-                    {b}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {cv.education.length > 0 && (
-        <section style={{ marginBottom: 22 }}>
-          <H color={accent}>Formation</H>
-          {cv.education.map((f) => (
-            <div key={f.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
-              <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 12.5, fontWeight: 700, color: "#111827" }}>{f.degree}</p>
-                <p style={{ fontSize: 11.5, color: "#6B7280" }}>
-                  {[f.school, f.location].filter(Boolean).join(", ")}
-                </p>
-              </div>
-              <p style={{ fontSize: 11.5, color: "#6B7280", whiteSpace: "nowrap" }}>{periode({ ...f, isCurrent: false })}</p>
-            </div>
-          ))}
-        </section>
-      )}
+      {formationDabord ? formation : experience}
+      {formationDabord ? experience : formation}
 
       {cv.atouts.length > 0 && (
         <section>
@@ -524,13 +536,347 @@ function Africain({ cv }: { cv: CVContent }) {
   );
 }
 
+/**
+ * Minimal — aucune couleur de fond, une seule colonne.
+ *
+ * C'est le gabarit qui passe le mieux les lecteurs automatiques de CV et les
+ * photocopieuses : pas d'aplat, pas de colonne, du texte aligne a gauche. Les
+ * gabarits a bande coloree sont plus jolis a l'ecran, celui-ci est plus sur
+ * quand on ne sait pas ce que le recruteur fera du fichier.
+ */
+function Minimal({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "minimal");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <main style={{ flex: 1, padding: "60px 64px" }}>
+        <header style={{ borderBottom: `2px solid ${accent}`, paddingBottom: 16, marginBottom: 26 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            {p.photoUrl && <Photo p={p} taille={82} forme="rect" bordure="#E5E7EB" couleurTexte="#9CA3AF" marge={0} />}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: -0.5, color: "#111827" }}>
+                {fullName(p) || "Ton nom"}
+              </h1>
+              <p style={{ fontSize: 14, color: accent, marginTop: 4, fontWeight: 600 }}>{p.title}</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", marginTop: 10, fontSize: 11, color: "#6B7280" }}>
+                {[p.location, p.phone, p.email, p.linkedin].filter(Boolean).map((v) => (
+                  <span key={v}>{v}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <Parcours cv={cv} accent={accent} />
+
+        {(cv.skills.length > 0 || cv.languages.length > 0) && (
+          <section style={{ marginTop: 4 }}>
+            <H color={accent}>Competences et langues</H>
+            {cv.skills.length > 0 && (
+              <p style={{ fontSize: 12, lineHeight: 1.8, color: "#374151" }}>{cv.skills.join(" · ")}</p>
+            )}
+            {cv.languages.length > 0 && (
+              <p style={{ fontSize: 12, lineHeight: 1.8, color: "#374151", marginTop: 4 }}>
+                {cv.languages.map((l) => `${l.name} (${l.level}/5)`).join(" · ")}
+              </p>
+            )}
+          </section>
+        )}
+      </main>
+    </Sheet>
+  );
+}
+
+/**
+ * Etudiant — la formation avant l'experience.
+ *
+ * Un premier CV se juge sur les etudes ; commencer par une experience vide ou
+ * par un stage de trois semaines dessert le candidat. L'ordre des rubriques
+ * est ici inverse, et c'est toute la difference.
+ */
+function Etudiant({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "etudiant");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <header style={{ background: `${accent}12`, borderBottom: `3px solid ${accent}`, padding: "38px 48px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            {p.photoUrl ? (
+              <Photo p={p} taille={78} forme="cercle" bordure={accent} couleurTexte={accent} marge={0} />
+            ) : null}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h1 style={{ fontSize: 27, fontWeight: 800, color: "#111827" }}>{fullName(p) || "Ton nom"}</h1>
+              <p style={{ fontSize: 13.5, color: accent, fontWeight: 700, marginTop: 3 }}>{p.title}</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", marginTop: 8, fontSize: 11, color: "#4B5563" }}>
+                {[p.location, p.phone, p.email].filter(Boolean).map((v) => (
+                  <span key={v}>{v}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main style={{ flex: 1, padding: "30px 48px" }}>
+          <Parcours cv={cv} accent={accent} formationDabord />
+
+          {(cv.skills.length > 0 || cv.languages.length > 0) && (
+            <section style={{ display: "flex", gap: 32 }}>
+              {cv.skills.length > 0 && (
+                <div style={{ flex: 1 }}>
+                  <H color={accent}>Competences</H>
+                  <ul style={{ paddingLeft: 14 }}>
+                    {cv.skills.map((k, i) => (
+                      <li key={i} style={{ fontSize: 12, lineHeight: 1.8, color: "#374151", listStyle: "disc" }}>
+                        {k}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {cv.languages.length > 0 && (
+                <div style={{ width: 200 }}>
+                  <H color={accent}>Langues</H>
+                  {cv.languages.map((l) => (
+                    <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontSize: 12, color: "#374151" }}>{l.name}</span>
+                      <Dots level={l.level} color={accent} off="#D1D5DB" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </main>
+      </div>
+    </Sheet>
+  );
+}
+
+/**
+ * Chronologie — une frise verticale le long des experiences.
+ *
+ * Met en valeur un parcours continu : les postes s'enchainent visuellement,
+ * ce qu'une liste ne montre pas. Reserve aux abonnes.
+ */
+function Chrono({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "chrono");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <header style={{ background: accent, color: "#fff", padding: "34px 48px", display: "flex", alignItems: "center", gap: 20 }}>
+          {p.photoUrl && <Photo p={p} taille={72} forme="cercle" bordure="rgba(255,255,255,.6)" couleurTexte="#fff" marge={0} />}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 800 }}>{fullName(p) || "Ton nom"}</h1>
+            <p style={{ fontSize: 13.5, opacity: 0.85, marginTop: 3 }}>{p.title}</p>
+          </div>
+          <div style={{ textAlign: "right", fontSize: 11, opacity: 0.9, lineHeight: 1.7 }}>
+            {[p.phone, p.email, p.location].filter(Boolean).map((v) => (
+              <div key={v}>{v}</div>
+            ))}
+          </div>
+        </header>
+
+        <main style={{ flex: 1, padding: "30px 48px" }}>
+          {cv.summary.trim() && (
+            <section style={{ marginBottom: 22 }}>
+              <H color={accent}>Profil</H>
+              <p style={{ fontSize: 12.5, lineHeight: 1.65, color: "#374151" }}>{cv.summary}</p>
+            </section>
+          )}
+
+          {cv.experiences.length > 0 && (
+            <section style={{ marginBottom: 22 }}>
+              <H color={accent}>Parcours</H>
+              <div style={{ position: "relative", paddingLeft: 22 }}>
+                {/* Le trait de la frise, derriere les pastilles. */}
+                <span
+                  style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 2, background: `${accent}33` }}
+                  aria-hidden="true"
+                />
+                {cv.experiences.map((e) => (
+                  <div key={e.id} style={{ position: "relative", marginBottom: 16 }}>
+                    <span
+                      style={{
+                        position: "absolute", left: -22, top: 4, width: 12, height: 12,
+                        borderRadius: 9999, background: accent, border: "2px solid #fff",
+                      }}
+                      aria-hidden="true"
+                    />
+                    <p style={{ fontSize: 11, color: accent, fontWeight: 700 }}>{periode(e)}</p>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{e.title}</p>
+                    <p style={{ fontSize: 12, color: "#6B7280" }}>
+                      {[e.company, e.location].filter(Boolean).join(", ")}
+                    </p>
+                    <ul style={{ marginTop: 5, paddingLeft: 14 }}>
+                      {e.bullets.filter(Boolean).map((b, i) => (
+                        <li key={i} style={{ fontSize: 12, lineHeight: 1.6, color: "#374151", listStyle: "disc" }}>
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {cv.education.length > 0 && (
+            <section style={{ marginBottom: 20 }}>
+              <H color={accent}>Formation</H>
+              {cv.education.map((f) => (
+                <div key={f.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+                  <div>
+                    <p style={{ fontSize: 12.5, fontWeight: 700, color: "#111827" }}>{f.degree}</p>
+                    <p style={{ fontSize: 11.5, color: "#6B7280" }}>{[f.school, f.location].filter(Boolean).join(", ")}</p>
+                  </div>
+                  <p style={{ fontSize: 11.5, color: "#6B7280", whiteSpace: "nowrap" }}>
+                    {periode({ ...f, isCurrent: false })}
+                  </p>
+                </div>
+              ))}
+            </section>
+          )}
+
+          {(cv.skills.length > 0 || cv.languages.length > 0) && (
+            <section>
+              <H color={accent}>Competences et langues</H>
+              <p style={{ fontSize: 12, lineHeight: 1.8, color: "#374151" }}>
+                {[...cv.skills, ...cv.languages.map((l) => `${l.name} (${l.level}/5)`)].join(" · ")}
+              </p>
+            </section>
+          )}
+        </main>
+      </div>
+    </Sheet>
+  );
+}
+
+/**
+ * Compact — deux colonnes de largeur egale, sans aplat.
+ *
+ * Pour les parcours charges : a surface egale il fait tenir nettement plus de
+ * lignes qu'une colonne unique, sans reduire la taille du texte au point de
+ * le rendre penible. Reserve aux abonnes.
+ */
+function Compact({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "compact");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <header style={{ borderTop: `6px solid ${accent}`, padding: "30px 44px 18px" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20 }}>
+            <div style={{ minWidth: 0 }}>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: "#111827" }}>{fullName(p) || "Ton nom"}</h1>
+              <p style={{ fontSize: 13, color: accent, fontWeight: 700, marginTop: 2 }}>{p.title}</p>
+            </div>
+            <div style={{ textAlign: "right", fontSize: 10.5, color: "#6B7280", lineHeight: 1.7 }}>
+              {[p.phone, p.email, p.location, p.linkedin].filter(Boolean).map((v) => (
+                <div key={v}>{v}</div>
+              ))}
+            </div>
+          </div>
+          {cv.summary.trim() && (
+            <p style={{ fontSize: 12, lineHeight: 1.6, color: "#374151", marginTop: 14 }}>{cv.summary}</p>
+          )}
+        </header>
+
+        <main style={{ flex: 1, display: "flex", gap: 28, padding: "18px 44px 40px" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {cv.experiences.length > 0 && (
+              <section>
+                <H color={accent}>Experience</H>
+                {cv.experiences.map((e) => (
+                  <div key={e.id} style={{ marginBottom: 13 }}>
+                    <p style={{ fontSize: 12.5, fontWeight: 700, color: "#111827" }}>{e.title}</p>
+                    <p style={{ fontSize: 11, color: "#6B7280" }}>
+                      {[e.company, periode(e)].filter(Boolean).join(" · ")}
+                    </p>
+                    <ul style={{ marginTop: 4, paddingLeft: 13 }}>
+                      {e.bullets.filter(Boolean).map((b, i) => (
+                        <li key={i} style={{ fontSize: 11.5, lineHeight: 1.55, color: "#374151", listStyle: "disc" }}>
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </section>
+            )}
+          </div>
+
+          <div style={{ width: 250, flexShrink: 0 }}>
+            {cv.education.length > 0 && (
+              <section style={{ marginBottom: 18 }}>
+                <H color={accent}>Formation</H>
+                {cv.education.map((f) => (
+                  <div key={f.id} style={{ marginBottom: 9 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{f.degree}</p>
+                    <p style={{ fontSize: 11, color: "#6B7280" }}>
+                      {[f.school, periode({ ...f, isCurrent: false })].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {cv.skills.length > 0 && (
+              <section style={{ marginBottom: 18 }}>
+                <H color={accent}>Competences</H>
+                <ul style={{ paddingLeft: 13 }}>
+                  {cv.skills.map((k, i) => (
+                    <li key={i} style={{ fontSize: 11.5, lineHeight: 1.7, color: "#374151", listStyle: "disc" }}>
+                      {k}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {cv.languages.length > 0 && (
+              <section style={{ marginBottom: 18 }}>
+                <H color={accent}>Langues</H>
+                {cv.languages.map((l) => (
+                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+                    <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                    <Dots level={l.level} color={accent} off="#D1D5DB" />
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {cv.atouts.length > 0 && (
+              <section>
+                <H color={accent}>Atouts</H>
+                <ul style={{ paddingLeft: 13 }}>
+                  {cv.atouts.map((a, i) => (
+                    <li key={i} style={{ fontSize: 11.5, lineHeight: 1.7, color: "#374151", listStyle: "disc" }}>
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+        </main>
+      </div>
+    </Sheet>
+  );
+}
+
 /* ============================= Selection ============================= */
 
 const GABARITS: Record<TemplateId, (p: { cv: CVContent }) => JSX.Element> = {
   moderne: Moderne,
   classique: Classique,
-  executif: Executif,
+  minimal: Minimal,
+  etudiant: Etudiant,
   africain: Africain,
+  executif: Executif,
+  chrono: Chrono,
+  compact: Compact,
 };
 
 export default function CVSheet({ cv, template }: { cv: CVContent; template: TemplateId }) {

@@ -42,8 +42,12 @@ export function accord(kind: CareerKind, masculin: string): string {
 export const CV_TEMPLATES = [
   { id: "moderne", name: "Moderne", pro: false },
   { id: "classique", name: "Classique", pro: false },
-  { id: "executif", name: "Executif", pro: true },
+  { id: "minimal", name: "Minimal", pro: false },
+  { id: "etudiant", name: "Etudiant", pro: false },
   { id: "africain", name: "Africain", pro: false },
+  { id: "executif", name: "Executif", pro: true },
+  { id: "chrono", name: "Chronologie", pro: true },
+  { id: "compact", name: "Compact", pro: true },
 ] as const;
 
 export type TemplateId = (typeof CV_TEMPLATES)[number]["id"];
@@ -62,10 +66,10 @@ export function templateIsPro(id: string): boolean {
 /* ============================ Les couleurs ============================ */
 
 /**
- * Palette d'accent, commune aux quatre gabarits.
+ * Palette d'accent, commune aux huit gabarits.
  *
- * Quatre mises en page multipliees par six couleurs se lisent comme
- * vingt-quatre modeles, pour le prix d'une variable. Les teintes sont toutes
+ * Huit mises en page multipliees par six couleurs se lisent comme
+ * quarante-huit modeles, pour le prix d'une variable. Les teintes sont toutes
  * SOMBRES et saturees : un CV s'imprime souvent en noir et blanc et se lit
  * sur des ecrans mediocres — un accent pastel disparait dans les deux cas.
  */
@@ -82,8 +86,12 @@ export const ACCENTS = [
 export const TEMPLATE_ACCENT: Record<TemplateId, string> = {
   moderne: "#2B4C8C",
   classique: "#111827",
-  executif: "#0F172A",
+  minimal: "#1F2937",
+  etudiant: "#0F766E",
   africain: "#14532D",
+  executif: "#0F172A",
+  chrono: "#7F1D1D",
+  compact: "#2B4C8C",
 };
 
 export function isAccent(v: unknown): v is string {
