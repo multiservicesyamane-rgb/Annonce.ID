@@ -73,7 +73,19 @@ function isInvalidSessionError(error: unknown) {
       : ''
   const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
 
-  return code === 'refresh_token_not_found' || message.includes('refresh token')
+  // « Refresh Token Already Used » n'est PAS une session morte : c'est une
+  // course entre deux requêtes simultanées. Une page qui appelle trois routes
+  // d'un coup — /carriere en lance jusqu'à cinq — les voit toutes tenter le
+  // même rafraîchissement ; la première réussit, les autres reçoivent cette
+  // erreur alors que la session vient précisément d'être renouvelée.
+  //
+  // L'ancien test attrapait tout ce qui contenait « refresh token » et purgeait
+  // alors les cookies : l'utilisateur se retrouvait déconnecté une seconde
+  // après s'être connecté, sans rien avoir fait de mal.
+  if (code === 'refresh_token_already_used' || message.includes('already used')) return false
+
+  // On ne purge que sur un jeton réellement absent ou révoqué.
+  return code === 'refresh_token_not_found' || message.includes('refresh token not found')
 }
 
 export async function middleware(request: NextRequest) {
