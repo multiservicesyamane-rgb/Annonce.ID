@@ -42,7 +42,7 @@ function ordre(): Fournisseur[] {
  * economique de la gamme, et la redaction d'un courrier d'une page ne demande
  * pas davantage.
  */
-async function openaiGenerate(prompt: string, system: string): Promise<string | null> {
+export async function openaiGenerate(prompt: string, system: string): Promise<string | null> {
   const cle = process.env.OPENAI_API_KEY;
   if (!cle || cle.length < 20) return null;
 

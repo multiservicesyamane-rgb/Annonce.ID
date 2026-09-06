@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { moteursDisponibles, openaiGenerate } from "@/lib/ia";
 
 // Route serveur — Utilise le modèle Gemini 1.5 Flash (Gratuit) via l'API Key.
 export const dynamic = "force-dynamic";
@@ -297,6 +298,9 @@ export async function POST(req: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
   const isAll = body?.kind === "listing_all";
   const hasKey = apiKey && !apiKey.includes("your_gemini");
+  // Au moins un moteur configuré — Gemini OU OpenAI. Ne tester que Gemini
+  // renvoyait un texte tout fait alors qu'un second moteur était prêt.
+  const moteurDispo = moteursDisponibles().length > 0;
 
   // Appel Gemini commun. Lance une erreur si échec (pour basculer sur le template).
   async function callGemini(prompt: string): Promise<string> {
@@ -325,9 +329,9 @@ export async function POST(req: Request) {
 
   // ── Mode "tout générer" : renvoie { title, description, specs } ──
   if (isAll) {
-    if (!hasKey) return NextResponse.json({ ...templateAll(body), source: "template" });
+    if (!moteurDispo) return NextResponse.json({ ...templateAll(body), source: "template" });
     try {
-      const parsed = parseAll(await callGemini(buildAllPrompt(body)));
+      const parsed = parseAll(await callIA(buildAllPrompt(body)));
       if (!parsed) throw new Error("JSON invalide");
       return NextResponse.json({
         title: (parsed.title || "").slice(0, 80),
@@ -336,15 +340,38 @@ export async function POST(req: Request) {
         source: "ai",
       });
     } catch (error: any) {
-      console.warn("Gemini all error (fallback template):", error?.message);
+      console.warn("[ai] les deux moteurs ont echoue, repli template :", error?.message);
       return NextResponse.json({ ...templateAll(body), source: "template" });
     }
   }
 
+  /**
+   * Le même appel, mais sur DEUX moteurs.
+   *
+   * Gemini d'abord — il est gratuit et sa configuration est réglée ici
+   * (thinkingBudget à 0, température 0.9). S'il refuse — quota épuisé, panne,
+   * clef absente — OpenAI prend le relais au lieu de retomber sur un texte
+   * tout fait. C'est la même mécanique que lib/ia.ts, appliquée à l'IA des
+   * annonces : sans elle, un quota Gemini dépassé rendait muette la
+   * génération de descriptions sur tout le site, en silence.
+   */
+  async function callIA(prompt: string): Promise<string> {
+    if (hasKey) {
+      try {
+        return await callGemini(prompt);
+      } catch (error: any) {
+        console.warn("[ai] gemini indisponible, bascule OpenAI :", error?.message);
+      }
+    }
+    const secours = await openaiGenerate(prompt, SYSTEM_INSTRUCTION);
+    if (!secours) throw new Error("aucun moteur de rédaction disponible");
+    return secours;
+  }
+
   // ── Mode texte simple (titre, description, email, whatsapp, facebook…) ──
-  if (!hasKey) return NextResponse.json({ text: templateText(body), source: "template" });
+  if (!moteurDispo) return NextResponse.json({ text: templateText(body), source: "template" });
   try {
-    return NextResponse.json({ text: await callGemini(buildPrompt(body)), source: "ai" });
+    return NextResponse.json({ text: await callIA(buildPrompt(body)), source: "ai" });
   } catch (error: any) {
     console.warn("Gemini API error (falling back to templates):", error?.message);
     return NextResponse.json({ text: templateText(body), source: "template" });
