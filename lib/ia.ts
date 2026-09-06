@@ -1,60 +1,74 @@
-// Deux moteurs de redaction, l'un derriere l'autre.
+// Trois moteurs de redaction, essayes l'un apres l'autre.
 //
-// ── Pourquoi deux ────────────────────────────────────────────────────────
-// Un seul fournisseur, c'est un seul point de panne. Gemini a des quotas par
-// minute sur son offre gratuite : au-dela, il refuse. OpenAI est payant mais
-// disponible. Les enchainer donne un module qui continue d'ecrire quand l'un
-// des deux tombe — sans que l'utilisateur ait quoi que ce soit a faire.
+// ── Pourquoi plusieurs ───────────────────────────────────────────────────
+// Un seul fournisseur, c'est un seul point de panne. Gemini a un palier
+// gratuit mais plafonne ; DeepSeek et OpenAI sont payants et disponibles.
+// Les enchainer donne un module qui continue d'ecrire quand l'un tombe, sans
+// que l'utilisateur ait quoi que ce soit a faire.
 //
-// ── L'ordre, et pourquoi ─────────────────────────────────────────────────
-// Gemini d'abord : il est gratuit, et la facture d'un module ouvert au public
-// se compte vite. OpenAI ne prend le relais que si Gemini n'a rien rendu.
-// CARRIERE_IA_ORDRE inverse l'ordre sans toucher au code — « openai,gemini »
-// fait ecrire OpenAI en premier, par exemple pour comparer la qualite.
+// Et quand AUCUN ne repond, la redaction ne s'arrete pas non plus : le
+// courrier est compose a partir des reponses saisies (lib/modelesTexte.ts).
 //
-// Les deux clefs sont facultatives : avec une seule, le module fonctionne
-// avec celle-la ; avec aucune, la redaction est simplement indisponible et
-// l'editeur reste utilisable a la main.
+// Les trois clefs sont facultatives : avec une seule, le module fonctionne
+// avec celle-la ; avec aucune, il compose ses textes lui-meme.
 
 import { geminiGenerate } from "@/lib/gemini";
 
-export type Fournisseur = "gemini" | "openai";
+export type Fournisseur = "gemini" | "openai" | "deepseek";
 
 export type Redaction = { texte: string; par: Fournisseur };
 
-/** Ordre d'essai, lu une fois au demarrage du serveur. */
+const TOUS: Fournisseur[] = ["gemini", "deepseek", "openai"];
+
+/**
+ * Ordre d'essai.
+ *
+ * Gemini d'abord parce qu'il a un palier gratuit. DeepSeek ensuite : son API
+ * est nettement moins chere qu'OpenAI a qualite comparable sur de la
+ * redaction courte en francais. OpenAI en dernier, c'est le plus cher des
+ * trois.
+ *
+ * CARRIERE_IA_ORDRE change l'ordre sans toucher au code —
+ * « deepseek,gemini,openai » par exemple.
+ */
 function ordre(): Fournisseur[] {
-  const brut = (process.env.CARRIERE_IA_ORDRE || "gemini,openai").toLowerCase();
+  const brut = (process.env.CARRIERE_IA_ORDRE || TOUS.join(",")).toLowerCase();
   const liste = brut
     .split(",")
     .map((f) => f.trim())
-    .filter((f): f is Fournisseur => f === "gemini" || f === "openai");
-  return liste.length ? liste : ["gemini", "openai"];
+    .filter((f): f is Fournisseur => (TOUS as string[]).includes(f));
+  return liste.length ? liste : TOUS;
 }
 
-/* ============================== OpenAI ============================== */
+/* ====================== Les APIs au format OpenAI ====================== */
 
 /**
- * Appel OpenAI. Renvoie null plutot que de lever : un fournisseur en panne
- * doit laisser sa place au suivant, pas casser la requete.
+ * Appel d'une API au format OpenAI.
  *
- * Le modele est configurable (OPENAI_MODEL) : celui par defaut est le plus
- * economique de la gamme, et la redaction d'un courrier d'une page ne demande
- * pas davantage.
+ * OpenAI et DeepSeek partagent exactement la meme forme de requete et de
+ * reponse — seules l'adresse, la clef et le modele changent. Une fonction
+ * pour les deux evite que l'une derive de l'autre a la premiere retouche.
+ *
+ * Renvoie null plutot que de lever : un fournisseur en panne doit laisser sa
+ * place au suivant, pas casser la requete.
  */
-export async function openaiGenerate(prompt: string, system: string): Promise<string | null> {
-  const cle = process.env.OPENAI_API_KEY;
-  if (!cle || cle.length < 20) return null;
+async function compatibleOpenAI(
+  nom: Fournisseur,
+  cfg: { url: string; cle?: string; model: string },
+  prompt: string,
+  system: string,
+): Promise<string | null> {
+  if (!cfg.cle || cfg.cle.length < 20) return null;
 
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch(cfg.url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${cle}`,
+        Authorization: `Bearer ${cfg.cle}`,
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        model: cfg.model,
         temperature: 0.7,
         max_tokens: 900,
         messages: [
@@ -70,9 +84,43 @@ export async function openaiGenerate(prompt: string, system: string): Promise<st
     const texte = String(data?.choices?.[0]?.message?.content || "").trim();
     return texte || null;
   } catch (e: any) {
-    console.warn("[ia] openai:", e?.message);
+    console.warn(`[ia] ${nom}:`, e?.message);
     return null;
   }
+}
+
+export async function openaiGenerate(prompt: string, system: string): Promise<string | null> {
+  return compatibleOpenAI(
+    "openai",
+    {
+      url: "https://api.openai.com/v1/chat/completions",
+      cle: process.env.OPENAI_API_KEY,
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    },
+    prompt,
+    system,
+  );
+}
+
+/**
+ * DeepSeek — API compatible OpenAI, tarif nettement inferieur.
+ *
+ * Comme les deux autres, elle est PREPAYEE : il faut créditer le compte sur
+ * platform.deepseek.com. Le prix au million de jetons est le plus bas des
+ * trois, ce qui en fait le meilleur choix si le palier gratuit de Gemini ne
+ * suffit plus.
+ */
+export async function deepseekGenerate(prompt: string, system: string): Promise<string | null> {
+  return compatibleOpenAI(
+    "deepseek",
+    {
+      url: "https://api.deepseek.com/chat/completions",
+      cle: process.env.DEEPSEEK_API_KEY,
+      model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    },
+    prompt,
+    system,
+  );
 }
 
 /* ============================== L'enchainement ============================== */
@@ -88,7 +136,11 @@ export async function openaiGenerate(prompt: string, system: string): Promise<st
 export async function redigerIA(prompt: string, system: string): Promise<Redaction | null> {
   for (const fournisseur of ordre()) {
     const texte =
-      fournisseur === "gemini" ? await geminiGenerate(prompt, system) : await openaiGenerate(prompt, system);
+      fournisseur === "gemini"
+        ? await geminiGenerate(prompt, system)
+        : fournisseur === "deepseek"
+          ? await deepseekGenerate(prompt, system)
+          : await openaiGenerate(prompt, system);
 
     if (texte && texte.trim()) {
       return { texte: texte.trim(), par: fournisseur };
@@ -103,6 +155,8 @@ export function moteursDisponibles(): Fournisseur[] {
   const dispo: Fournisseur[] = [];
   const g = process.env.GEMINI_API_KEY;
   if (g && !g.includes("your_gemini")) dispo.push("gemini");
+  const d = process.env.DEEPSEEK_API_KEY;
+  if (d && d.length >= 20) dispo.push("deepseek");
   const o = process.env.OPENAI_API_KEY;
   if (o && o.length >= 20) dispo.push("openai");
   return dispo;
