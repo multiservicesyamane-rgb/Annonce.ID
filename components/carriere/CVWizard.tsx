@@ -1,22 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CVSheet from "./templates";
 import ExportA4 from "./ExportA4";
 import { useDoc } from "./useDoc";
 import A4Preview from "@/components/pro/A4Preview";
 import ImageCropperModal from "@/components/ImageCropperModal";
 import {
-  ActionBar, AiBtn, Area, AsideCard, Dots, Field, Note, OutlineBtn, PrimaryBtn,
-  Select, Split, Title, api, card, input, lbl, page, pageWide,
+  ActionBar, AiBtn, Area, AsideCard, BarreOutils, Dots, Field, Note, OutilBtn,
+  OutlineBtn, PanneauOutil, PrimaryBtn, Select, Split, Title, ZOOMS,
+  api, card, input, lbl, pageWide,
 } from "./ui";
 import {
   ACCENTS,
   CV_TEMPLATES,
+  DEFAULT_POLICE,
   MOIS_LABELS,
   PHOTO_RATIO,
+  POLICES,
   accentDe,
   newId,
+  resumeDossier,
   templateIsPro,
   type CVContent,
   type Genre,
@@ -54,6 +58,24 @@ const ETAPES = [
 
 const APERCU = 6;
 
+/**
+ * Miniature d'un gabarit, dans le selecteur de modeles.
+ *
+ * Largeur FIXE, et l'echelle s'en deduit. La version precedente ecrivait
+ * `scale(0.174)` en dur : l'echelle ne suivait donc pas la largeur reelle de la
+ * carte, et elargir la grille aurait laisse la feuille flotter dans le vide au
+ * lieu de grandir. Ici, seule la largeur de la miniature est un choix — le
+ * facteur et la hauteur en decoulent, et ne peuvent plus se contredire.
+ */
+const MINI_W = 148;
+const MINI_SCALE = MINI_W / 794;
+const MINI_H = Math.round(1123 * MINI_SCALE);
+
+/** Meme mecanique, en plus petit, pour la bande de modeles du panneau. */
+const VIGNETTE_W = 92;
+const VIGNETTE_SCALE = VIGNETTE_W / 794;
+const VIGNETTE_H = Math.round(1123 * VIGNETTE_SCALE);
+
 const COMPETENCES_COURANTES = [
   "Relation client", "Vente", "Pack Office", "Excel", "Organisation",
   "Travail en equipe", "Caisse", "Gestion de stock", "Saisie de donnees",
@@ -73,6 +95,7 @@ const EXEMPLE: CVContent = {
     location: "Dakar, Senegal", linkedin: "", photoUrl: "",
   },
   accent: "",
+  police: "",
   summary: "Assistante commerciale rigoureuse, quatre ans d'experience dans le suivi des ventes et la relation client.",
   experiences: [{
     id: "x1", title: "Assistante commerciale", company: "SunuCom", location: "Dakar",
@@ -80,6 +103,7 @@ const EXEMPLE: CVContent = {
     bullets: ["Gestion des commandes clients et suivi des livraisons.", "Preparation des devis et des factures."],
   }],
   education: [{ id: "e1", degree: "Licence en Commerce", school: "Universite Cheikh Anta Diop", location: "Dakar", startDate: "2016", endDate: "2019" }],
+  certifications: [{ id: "c1", name: "Bureautique et Pack Office", issuer: "Centre Sonatel Academy", year: "2020" }],
   skills: ["Relation client", "Prospection", "Pack Office"],
   languages: [{ id: "l1", name: "Francais", level: 5 }, { id: "l2", name: "Anglais", level: 3 }],
   atouts: ["Sens de l'organisation", "Rigueur"],
@@ -118,6 +142,10 @@ export default function CVWizard({
    */
   const [carteOuverte, setCarteOuverte] = useState<string | null>(null);
   const [envoiPhoto, setEnvoiPhoto] = useState(false);
+  /** Outil deplie sous la barre de l'apercu. `null` = aucun. */
+  const [panneau, setPanneau] = useState<"modele" | "couleur" | "police" | null>(null);
+  /** Zoom de l apercu lateral. Index dans ZOOMS ; 1 = page entiere. */
+  const [iZoomLateral, setIZoomLateral] = useState(1);
 
   const patchCv = (p: Partial<CVContent>) => doc.patch(p as Record<string, unknown>);
   const patchInfo = (p: Partial<CVContent["personalInfo"]>) =>
@@ -189,20 +217,214 @@ export default function CVWizard({
   // Un seul champ « Prenom et nom », coupe au premier espace : au Senegal le
   // prenom precede le nom (Fatou Ndiaye), et un nom compose reste entier du
   // bon cote.
+  //
+  // Le champ garde EXACTEMENT ce qui est tape, dans son propre etat. La version
+  // precedente decoupait puis recomposait la valeur a chaque frappe, avec un
+  // `trim()` au passage : l'espace etait donc efface a l'instant meme ou on le
+  // tapait, le champ revenait a « Fatou », et la frappe suivante donnait
+  // « FatouNdiaye ». Impossible de saisir un nom en deux mots.
   const nomComplet = `${cv.personalInfo.firstName} ${cv.personalInfo.lastName}`.trim();
+  const [nomSaisi, setNomSaisi] = useState(nomComplet);
+
+  // Le CV peut changer sans passer par le champ : chargement d'un document,
+  // exemple, remplissage par l'assistant. On resynchronise alors la saisie —
+  // sauf si elle dit deja la meme chose, pour ne pas manger l'espace en cours.
+  useEffect(() => {
+    setNomSaisi((actuel) => (actuel.trim().replace(/\s+/g, " ") === nomComplet ? actuel : nomComplet));
+  }, [nomComplet]);
+
   const setNomComplet = (v: string) => {
-    const [prenom, ...reste] = v.trim().split(/\s+/);
-    patchInfo({ firstName: prenom || "", lastName: reste.join(" ") });
+    setNomSaisi(v);
+    const saisie = v.replace(/^\s+/, "");
+    const coupure = saisie.indexOf(" ");
+    patchInfo(
+      coupure === -1
+        ? { firstName: saisie, lastName: "" }
+        : { firstName: saisie.slice(0, coupure), lastName: saisie.slice(coupure + 1).trim() },
+    );
   };
 
   const miniature = useMemo(() => (nomComplet ? cv : EXEMPLE), [nomComplet, cv]);
 
   /** Apercu vivant de la colonne de droite, sur grand ecran uniquement. */
+  /* --------------------- Les outils de mise en forme ---------------------
+     Definis une seule fois : l'apercu en direct de la colonne de droite et
+     l'ecran d'apercu final montrent EXACTEMENT la meme barre. Les ecrire deux
+     fois aurait garanti qu'un reglage finisse par n'exister que d'un cote. */
+
+  const outilsCV = (compact: boolean) => (
+    <>
+      <OutilBtn
+        icone="▦"
+        compact={compact}
+        actif={panneau === "modele"}
+        onClick={() => setPanneau((p) => (p === "modele" ? null : "modele"))}
+      >
+        Modele
+      </OutilBtn>
+      <OutilBtn
+        icone="🎨"
+        compact={compact}
+        actif={panneau === "couleur"}
+        onClick={() => setPanneau((p) => (p === "couleur" ? null : "couleur"))}
+      >
+        Couleur
+      </OutilBtn>
+      <OutilBtn
+        icone="Aa"
+        compact={compact}
+        actif={panneau === "police"}
+        onClick={() => setPanneau((p) => (p === "police" ? null : "police"))}
+      >
+        Police
+      </OutilBtn>
+    </>
+  );
+
+  const panneauCV =
+    panneau === "modele" ? (
+      <PanneauOutil titre="Modele" sur={CV_TEMPLATES.find((t) => t.id === doc.template)?.name}>
+        {/* Une BANDE horizontale de vraies miniatures, et non une liste de
+            noms : « Mosaique » ou « Duo » ne disent rien de ce qu'on choisit,
+            alors que l'image le montre. En ligne plutot qu'en grille, le
+            panneau reste bas et ne recouvre pas la feuille qu'on est en train
+            de regarder. */}
+        <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-2">
+          {CV_TEMPLATES.map((t) => {
+            const verrou = t.pro && !abonne;
+            const choisi = doc.template === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => (verrou ? onPeage() : doc.setTemplate(t.id as TemplateId))}
+                aria-pressed={choisi}
+                className={
+                  "relative shrink-0 rounded-xl border-2 bg-white p-1.5 transition dark:bg-dark-900 " +
+                  (choisi
+                    ? "border-green shadow-[0_8px_22px_-12px_rgba(99,102,241,.7)]"
+                    : "border-gray-200 hover:border-green/50 dark:border-white/10")
+                }
+              >
+                <span
+                  className="block overflow-hidden rounded-md ring-1 ring-black/5"
+                  style={{ width: VIGNETTE_W, height: VIGNETTE_H }}
+                >
+                  <span
+                    className="block origin-top-left"
+                    style={{ transform: `scale(${VIGNETTE_SCALE})`, width: 794, height: 1123 }}
+                    aria-hidden="true"
+                  >
+                    <span className="block" style={{ padding: 53 }}>
+                      <CVSheet cv={miniature} template={t.id as TemplateId} />
+                    </span>
+                  </span>
+                </span>
+                <span
+                  className={
+                    "mt-1.5 block truncate text-center text-[.72rem] font-bold " +
+                    (choisi ? "text-green" : "text-gray-600 dark:text-gray-300")
+                  }
+                  style={{ width: VIGNETTE_W }}
+                >
+                  {t.name}
+                </span>
+                {verrou && (
+                  <span
+                    className="absolute right-1 top-1 rounded-full bg-gold px-1.5 py-0.5 text-[.58rem] font-bold text-white"
+                    aria-label="Reserve au Pro"
+                  >
+                    Pro
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </PanneauOutil>
+    ) : panneau === "couleur" ? (
+      <PanneauOutil titre="Couleur d'accent" sur={cv.accent ? undefined : "celle du modele"}>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => patchCv({ accent: "" })}
+            className={
+              "h-9 rounded-lg border px-3 text-[.8rem] font-bold transition " +
+              (cv.accent
+                ? "border-gray-200 text-gray-600 hover:border-green/50 dark:border-white/10 dark:text-gray-300"
+                : "border-green bg-green/10 text-green")
+            }
+          >
+            Par defaut
+          </button>
+          {ACCENTS.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => patchCv({ accent: a.value })}
+              title={a.name}
+              aria-label={a.name}
+              aria-pressed={cv.accent === a.value}
+              className={
+                "h-9 w-9 rounded-lg border-2 transition " +
+                (cv.accent === a.value ? "border-green ring-2 ring-green/30" : "border-transparent hover:scale-105")
+              }
+              style={{ background: a.value }}
+            />
+          ))}
+        </div>
+      </PanneauOutil>
+    ) : panneau === "police" ? (
+      <PanneauOutil titre="Police du document">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {POLICES.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => patchCv({ police: p.id })}
+              className={
+                "rounded-lg border px-2.5 py-2 text-left transition " +
+                ((cv.police || DEFAULT_POLICE) === p.id
+                  ? "border-green bg-green/10"
+                  : "border-gray-200 hover:border-green/50 dark:border-white/10")
+              }
+            >
+              {/* Le nom s'ecrit DANS sa propre police : c'est le seul apercu
+                  qui vaille pour un choix de caractere. */}
+              <span
+                className="block text-[1rem] font-bold text-gray-900 dark:text-white"
+                style={{ fontFamily: p.stack }}
+              >
+                {p.name}
+              </span>
+              <span className="block text-[.7rem] text-gray-500">{p.genre}</span>
+            </button>
+          ))}
+        </div>
+      </PanneauOutil>
+    ) : null;
+
+  /**
+   * Apercu de la colonne de droite, pendant la saisie.
+   *
+   * Il porte la MEME barre que l'apercu final : changer de modele, de couleur
+   * ou de police ne doit pas obliger a aller jusqu'au bout du parcours. La
+   * barre y est compacte — icones seules — parce que la colonne fait 360 px.
+   */
   const apercuLateral = (
     <AsideCard titre="Apercu en direct">
-      <A4Preview>
-        <CVSheet cv={cv} template={doc.template} />
-      </A4Preview>
+      <BarreOutils
+        compact
+        outils={outilsCV(true)}
+        panneau={panneauCV}
+        onFermer={() => setPanneau(null)}
+        iZoom={iZoomLateral}
+        setIZoom={setIZoomLateral}
+      >
+        <A4Preview zoom={ZOOMS[iZoomLateral]}>
+          <CVSheet cv={cv} template={doc.template} />
+        </A4Preview>
+      </BarreOutils>
     </AsideCard>
   );
 
@@ -228,7 +450,13 @@ export default function CVWizard({
     // accompagne la saisie, il faut la largeur des deux colonnes. Avec `page`
     // (680 px), la colonne de gauche tombait a 300 px — un formulaire en
     // timbre-poste au milieu d'un ecran vide.
-    <div className={etape === 0 ? page : pageWide}>
+    // Tous les ecrans prennent la largeur : les ecrans de saisie parce qu'ils
+    // posent l'apercu a droite (voir `Split`, qui borne lui-meme la colonne de
+    // texte a une mesure lisible), et le choix du modele parce que c'est une
+    // galerie. Il etait le seul a rester dans la colonne etroite : les
+    // dix-sept gabarits y formaient cinq rangees a derouler, au milieu d'un
+    // ecran vide aux deux tiers.
+    <div className={pageWide}>
       <div className="mb-5">
         <Dots total={ETAPES.length} current={etape} />
         {etat && <p className="mt-2 text-center text-[.74rem] text-gray-400">{etat}</p>}
@@ -239,9 +467,12 @@ export default function CVWizard({
         <>
           <Title sub={ETAPES[0].sous}>{ETAPES[0].titre}</Title>
 
-          {/* Deux modeles cote a cote au telephone, les quatre d'un coup sur
-              grand ecran : on les compare mieux qu'en faisant defiler. */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {/* Deux modeles cote a cote au telephone, puis autant que la largeur
+              en accepte — jusqu'a sept sur un ecran d'ordinateur. A quatre
+              colonnes dans la colonne etroite des formulaires, les dix-sept
+              gabarits formaient cinq rangees a derouler au milieu d'un ecran
+              vide aux deux tiers : on ne pouvait pas les comparer. */}
+          <div className="grid grid-cols-2 gap-3 sm:[grid-template-columns:repeat(auto-fill,minmax(164px,1fr))]">
             {CV_TEMPLATES.map((t) => {
               const verrouille = t.pro && !abonne;
               const choisi = doc.template === t.id;
@@ -256,11 +487,16 @@ export default function CVWizard({
                   }
                 >
                   {/* Vraie miniature du gabarit : une case grise ne dit rien
-                      de ce qu'on choisit. */}
-                  <span className="block overflow-hidden rounded-lg" style={{ height: 196 }}>
+                      de ce qu'on choisit. Largeur figee et centree — la carte
+                      peut s'elargir avec la grille sans que la feuille se
+                      deforme ni se decale. */}
+                  <span
+                    className="mx-auto block overflow-hidden rounded-lg ring-1 ring-black/5"
+                    style={{ width: MINI_W, height: MINI_H }}
+                  >
                     <span
                       className="block origin-top-left"
-                      style={{ transform: "scale(0.174)", width: 794, height: 1123 }}
+                      style={{ transform: `scale(${MINI_SCALE})`, width: 794, height: 1123 }}
                       aria-hidden="true"
                     >
                       <span className="block" style={{ padding: 53 }}>
@@ -288,9 +524,9 @@ export default function CVWizard({
             })}
           </div>
 
-          {/* Quatre mises en page x six couleurs se lisent comme vingt-quatre
-              modeles, pour le prix d'une variable. « D'origine » rend au
-              gabarit sa teinte propre. */}
+          {/* Dix-sept mises en page x six couleurs se lisent comme une
+              centaine de modeles, pour le prix d'une variable. « D'origine »
+              rend au gabarit sa teinte propre. */}
           <section className="mt-6">
             <p className={lbl}>Couleur</p>
             <div className="flex flex-wrap gap-2.5">
@@ -387,7 +623,7 @@ export default function CVWizard({
           </section>
 
           <div className="space-y-4">
-            <Field label="Prenom et nom" value={nomComplet} onChange={setNomComplet} placeholder="Fatou Ndiaye" maxLength={80} />
+            <Field label="Prenom et nom" value={nomSaisi} onChange={setNomComplet} placeholder="Fatou Ndiaye" maxLength={80} />
             <Field label="Poste recherche" value={cv.personalInfo.title} onChange={(v) => patchInfo({ title: v })} placeholder="Assistante commerciale" maxLength={100} />
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Ville" value={cv.personalInfo.location} onChange={(v) => patchInfo({ location: v })} placeholder="Dakar" maxLength={80} />
@@ -428,7 +664,12 @@ export default function CVWizard({
               onClick={() =>
                 rediger(
                   "summary",
-                  { targetJob: cv.personalInfo.title, city: cv.personalInfo.location, parcours: cv.summary },
+                  {
+                    targetJob: cv.personalInfo.title,
+                    city: cv.personalInfo.location,
+                    parcours: cv.summary,
+                    dossier: resumeDossier(cv),
+                  },
                   (t) => patchCv({ summary: t }),
                 )
               }
@@ -488,7 +729,16 @@ export default function CVWizard({
                   onClick={() =>
                     rediger(
                       "bullets",
-                      { id: e.id, jobTitle: e.title, employer: e.company, missions: e.bullets.join("\n") },
+                      {
+                        id: e.id,
+                        jobTitle: e.title,
+                        employer: e.company,
+                        missions: e.bullets.join("\n"),
+                        // Le poste vise oriente les missions vers la candidature
+                        // en cours, au lieu d'une liste de taches interchangeable.
+                        targetJob: cv.personalInfo.title,
+                        dossier: resumeDossier(cv),
+                      },
                       (t) =>
                         majExp(e.id, {
                           bullets: t.split("\n").map((l) => l.replace(/^[-•\s]+/, "").trim()).filter(Boolean),
@@ -556,6 +806,65 @@ export default function CVWizard({
               setCarteOuverte(id);
             }}
           />
+
+          {/* ---- Certifications ----
+               Sur le meme ecran que la formation, mais dans sa propre rubrique :
+               une certification recente pese souvent plus lourd aupres d'un
+               recruteur qu'un diplome ancien. Les melanger effacerait cette
+               distinction sur le CV imprime. */}
+          <div className="mt-7 border-t border-gray-100 pt-6 dark:border-white/10">
+            <h2 className="mb-1 font-display text-[1.05rem] font-extrabold text-gray-900 dark:text-white">
+              Certifications
+            </h2>
+            <p className="mb-4 text-[.85rem] text-gray-500 dark:text-gray-400">
+              Attestations, formations courtes, permis. Facultatif.
+            </p>
+
+            {cv.certifications.map((c, i) => (
+              <Fiche
+                key={c.id}
+                titre={c.name || `Certification ${i + 1}`}
+                resume={[c.issuer, c.year].filter(Boolean).join(" · ")}
+                ouvert={ouverte(cv.certifications.map((x) => x.id)) === c.id}
+                onToggle={() => setCarteOuverte(carteOuverte === c.id ? "" : c.id)}
+                onSupprimer={() =>
+                  patchCv({ certifications: cv.certifications.filter((x) => x.id !== c.id) })
+                }
+              >
+                <Field
+                  label="Intitule"
+                  value={c.name}
+                  onChange={(v) => majCert(c.id, { name: v })}
+                  placeholder="Bureautique et Pack Office"
+                  maxLength={140}
+                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field
+                    label="Organisme"
+                    value={c.issuer}
+                    onChange={(v) => majCert(c.id, { issuer: v })}
+                    placeholder="Centre de formation, Google…"
+                    maxLength={120}
+                  />
+                  <Select
+                    label="Annee"
+                    value={c.year}
+                    onChange={(v) => majCert(c.id, { year: v })}
+                    options={optionsAnnees}
+                  />
+                </div>
+              </Fiche>
+            ))}
+
+            <Ajouter
+              label="Ajouter une certification"
+              onClick={() => {
+                const id = newId("cert");
+                patchCv({ certifications: [...cv.certifications, { id, name: "", issuer: "", year: "" }] });
+                setCarteOuverte(id);
+              }}
+            />
+          </div>
 
           <Barre onBack={() => setEtape(3)} onNext={() => setEtape(5)} onApercu={() => setEtape(APERCU)} />
         </Split>
@@ -626,28 +935,24 @@ export default function CVWizard({
       {/* -------------------------- 7. L'apercu -------------------------- */}
       {etape === APERCU && (
         <>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="font-display text-[1.7rem] font-extrabold leading-tight text-gray-900 dark:text-white">
-                {ETAPES[APERCU].titre}
-              </h1>
-              <p className="mt-1 text-[.9rem] text-gray-500">{ETAPES[APERCU].sous}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="rounded-full border border-green/40 px-3 py-1 text-[.8rem] font-bold text-green">
-                {CV_TEMPLATES.find((t) => t.id === doc.template)?.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => setEtape(1)}
-                className="rounded-lg px-3 py-2 text-[.85rem] font-bold text-gray-500 transition hover:bg-gray-100 hover:text-green dark:hover:bg-white/10"
-              >
-                ✎ Modifier
-              </button>
-            </div>
+          <div className="mb-4">
+            <h1 className="font-display text-[1.7rem] font-extrabold leading-tight text-gray-900 dark:text-white">
+              {ETAPES[APERCU].titre}
+            </h1>
+            <p className="mt-1 text-[.9rem] text-gray-500">{ETAPES[APERCU].sous}</p>
           </div>
 
           <ExportA4
+            outils={
+              <>
+                {outilsCV(false)}
+                <OutilBtn icone="✎" onClick={() => setEtape(1)}>
+                  Modifier
+                </OutilBtn>
+              </>
+            }
+            panneau={panneauCV}
+            onFermerPanneau={() => setPanneau(null)}
             filename={`CV-${(nomComplet || "sans-nom").replace(/[^\w-]+/g, "-")}.pdf`}
             title={`CV ${nomComplet}`.trim()}
             footer={
@@ -655,11 +960,30 @@ export default function CVWizard({
                 <Note tone="warn">Ce modele est reserve a l&apos;abonnement Pro : le PDF sort avec le modele Moderne.</Note>
               ) : null
             }
+            aside={
+              <div className="mb-4 border-b border-gray-100 pb-4 dark:border-white/10">
+                <p className="text-[.68rem] font-bold uppercase tracking-[.06em] text-gray-400">Ton document</p>
+                <p className="mt-1.5 truncate text-[.95rem] font-extrabold text-gray-900 dark:text-white">
+                  {nomComplet ? `CV — ${nomComplet}` : "CV"}
+                </p>
+                <p className="mt-0.5 text-[.8rem] text-gray-500">
+                  Modele {CV_TEMPLATES.find((t) => t.id === doc.template)?.name} · format A4
+                </p>
+                <p className="mt-3 flex items-start gap-2 text-[.78rem] leading-relaxed text-gray-500">
+                  <span className="text-green" aria-hidden="true">✓</span>
+                  <span>
+                    Enregistre dans <strong className="text-gray-700 dark:text-gray-300">Mes documents</strong>.
+                  </span>
+                </p>
+              </div>
+            }
           >
             <CVSheet cv={cv} template={doc.template} />
           </ExportA4>
 
-          <p className="mt-4 text-center text-[.82rem] text-gray-400">
+          {/* Au telephone seulement : sur grand ecran, le rappel vit dans le
+              panneau de droite, a cote des boutons. */}
+          <p className="mt-4 text-center text-[.82rem] text-gray-400 lg:hidden">
             Ton CV est enregistre dans <strong className="text-gray-500">Mes documents</strong>.
           </p>
 
@@ -687,6 +1011,9 @@ export default function CVWizard({
   }
   function majEdu(id: string, p: Partial<CVContent["education"][number]>) {
     patchCv({ education: cv.education.map((x) => (x.id === id ? { ...x, ...p } : x)) });
+  }
+  function majCert(id: string, p: Partial<CVContent["certifications"][number]>) {
+    patchCv({ certifications: cv.certifications.map((x) => (x.id === id ? { ...x, ...p } : x)) });
   }
   function majLangue(id: string, p: Partial<CVContent["languages"][number]>) {
     patchCv({ languages: cv.languages.map((x) => (x.id === id ? { ...x, ...p } : x)) });

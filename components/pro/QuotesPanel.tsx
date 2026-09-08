@@ -17,6 +17,7 @@ import {
   QUOTE_STYLE,
   type Client, type GoTo, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
+import Pagination, { usePagination } from "@/components/Pagination";
 import { PreviewAside, PreviewOverlay } from "./DocPreview";
 import type { PrintDoc, PrintParty } from "./PrintableDocument";
 
@@ -121,6 +122,9 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
         .some((v) => String(v).toLowerCase().includes(needle));
     });
   }, [withStatus, query, filter]);
+
+  // La cle porte la signature du filtre : changer de recherche ramene a la page 1.
+  const pagination = usePagination(filtered, query + "|" + filter);
 
   const totals = useMemo(() => computeTotals(items, discount, taxRate), [items, discount, taxRate]);
 
@@ -786,8 +790,119 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
               <p className="text-[.86rem] text-gray-500">Aucun devis ne correspond à cette recherche.</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              {filtered.map((q) => (
+            <>
+            {/* Tableau sur ordinateur, cartes sous `lg` — même parti que les
+                factures, pour que les deux écrans se lisent pareil. */}
+            <div className={`${card} hidden overflow-x-auto p-0 lg:block`}>
+              <table className="w-full min-w-[820px] text-left">
+                <thead>
+                  <tr className="border-b border-gray-100 dark:border-white/10">
+                    {[
+                      { t: "Numéro", a: "" },
+                      { t: "Client", a: "" },
+                      { t: "Créé le", a: "" },
+                      { t: "Validité", a: "" },
+                      { t: "Montant", a: "text-right" },
+                      { t: "Statut", a: "" },
+                      { t: "", a: "text-right" },
+                    ].map((h, i) => (
+                      <th
+                        key={h.t || i}
+                        scope="col"
+                        className={`px-4 py-3 text-[.66rem] font-bold uppercase tracking-[.06em] text-gray-400 ${h.a}`}
+                      >
+                        {h.t}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-white/10">
+                  {pagination.visibles.map((q) => {
+                    const jours = daysUntil(q.valid_until);
+                    const expire = jours != null && jours <= 7 && quoteIsOpen(q);
+                    return (
+                      <tr key={q.id} className="transition hover:bg-gray-50 dark:hover:bg-white/5">
+                        <td className="cursor-pointer px-4 py-3" onClick={() => openDetail(q.id)}>
+                          <div className="font-mono text-[.82rem] font-bold text-gray-900 dark:text-white">
+                            {q.number || "—"}
+                          </div>
+                          <div className="max-w-[220px] truncate text-[.76rem] text-gray-500">{q.title}</div>
+                        </td>
+                        <td className="cursor-pointer px-4 py-3 text-[.82rem] text-gray-700 dark:text-gray-300" onClick={() => openDetail(q.id)}>
+                          <span className="block max-w-[180px] truncate">
+                            {q.pro_clients?.company || q.pro_clients?.name || (
+                              <span className="text-gray-300">Sans client</span>
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-[.8rem] text-gray-500">{formatDate(q.created_at)}</td>
+                        <td className="px-4 py-3 text-[.8rem]">
+                          {q.valid_until ? (
+                            <span className={expire ? "font-bold text-amber-600 dark:text-amber-400" : "text-gray-500"}>
+                              {formatDate(q.valid_until)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-[.85rem] font-bold tabular-nums text-gray-900 dark:text-white">
+                          {formatFcfa(q.total)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge cls={QUOTE_STYLE[q.status] || QUOTE_STYLE.draft}>
+                            {QUOTE_LABELS[q.status] || q.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setViewing(q)}
+                              title="Voir le devis"
+                              aria-label="Voir le devis"
+                              className="grid h-8 w-8 place-items-center rounded-lg text-[.9rem] text-gray-500 transition hover:bg-gray-100 dark:hover:bg-white/10"
+                            >
+                              👁
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => send(q)}
+                              disabled={busy}
+                              title="Envoyer par WhatsApp"
+                              aria-label="Envoyer par WhatsApp"
+                              className="grid h-8 w-8 place-items-center rounded-lg text-[.9rem] text-gray-500 transition hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-white/10"
+                            >
+                              💬
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => copyLink(q)}
+                              title="Copier le lien"
+                              aria-label="Copier le lien"
+                              className="grid h-8 w-8 place-items-center rounded-lg text-[.9rem] text-gray-500 transition hover:bg-gray-100 dark:hover:bg-white/10"
+                            >
+                              🔗
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openPdf(q)}
+                              title="Télécharger le PDF"
+                              aria-label="Télécharger le PDF"
+                              className="grid h-8 w-8 place-items-center rounded-lg text-[.9rem] text-gray-500 transition hover:bg-gray-100 dark:hover:bg-white/10"
+                            >
+                              ⬇
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-3 lg:hidden">
+              {pagination.visibles.map((q) => (
                 <div key={q.id} className={`${card} p-4`}>
                   <button onClick={() => openDetail(q.id)} className="flex w-full items-start gap-3 text-left">
                     <div className="min-w-0 flex-1">
@@ -834,6 +949,29 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
                 </div>
               ))}
             </div>
+            <Pagination
+              {...pagination}
+              nom="devis"
+              resume={
+                <>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Total{" "}
+                    <b className="font-mono font-bold tabular-nums text-gray-800 dark:text-gray-100">
+                      {formatFcfa(filtered.reduce((s, q) => s + (q.total || 0), 0))}
+                    </b>
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Accepté{" "}
+                    <b className="font-mono font-bold tabular-nums text-green">
+                      {formatFcfa(
+                        filtered.reduce((s, q) => (q.status === "accepted" ? s + (q.total || 0) : s), 0),
+                      )}
+                    </b>
+                  </span>
+                </>
+              }
+            />
+            </>
           )}
         </>
       )}

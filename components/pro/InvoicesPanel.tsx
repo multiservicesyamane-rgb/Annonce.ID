@@ -18,6 +18,7 @@ import {
   INVOICE_STYLE,
   type Client, type GoTo, type Invoice, type Payment, type ProEvent, type Project, type Quote, type Toast,
 } from "./ui";
+import Pagination, { usePagination } from "@/components/Pagination";
 import { PreviewAside, PreviewOverlay } from "./DocPreview";
 import type { PrintDoc, PrintParty } from "./PrintableDocument";
 
@@ -152,6 +153,9 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
         .some((v) => String(v).toLowerCase().includes(needle));
     });
   }, [withStatus, query, filter]);
+
+  // La cle porte la signature du filtre : changer de recherche ramene a la page 1.
+  const pagination = usePagination(filtered, query + "|" + filter);
 
   const totals = useMemo(() => computeTotals(items, discount, taxRate), [items, discount, taxRate]);
 
@@ -936,8 +940,142 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
               <p className="text-[.86rem] text-gray-500">Aucune facture ne correspond à cette recherche.</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              {filtered.map((inv) => {
+            <>
+            {/* ---- Tableau sur ordinateur ----
+                 Les cartes empilaient quatre boutons libellés par facture :
+                 trente-deux boutons à l'écran pour huit pièces, et des montants
+                 dispersés qu'on ne pouvait pas comparer d'une ligne à l'autre.
+                 Le tableau les aligne en colonne et réduit les actions à des
+                 icônes en bout de ligne. Il disparaît sous `lg`, où les cartes
+                 reprennent la main. */}
+            <div className={`${card} hidden overflow-x-auto p-0 lg:block`}>
+              <table className="w-full min-w-[860px] text-left">
+                <thead>
+                  <tr className="border-b border-gray-100 dark:border-white/10">
+                    {[
+                      { t: "Numéro", a: "" },
+                      { t: "Client", a: "" },
+                      { t: "Émission", a: "" },
+                      { t: "Échéance", a: "" },
+                      { t: "Montant", a: "text-right" },
+                      { t: "Solde dû", a: "text-right" },
+                      { t: "Statut", a: "" },
+                      { t: "", a: "text-right" },
+                    ].map((h, i) => (
+                      <th
+                        key={h.t || i}
+                        scope="col"
+                        className={`px-4 py-3 text-[.66rem] font-bold uppercase tracking-[.06em] text-gray-400 ${h.a}`}
+                      >
+                        {h.t}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-white/10">
+                  {pagination.visibles.map((inv) => {
+                    const reste = Math.max(0, (inv.total || 0) - (inv.paid_amount || 0));
+                    const jours = daysUntil(inv.due_date);
+                    const enRetard = jours != null && jours < 0 && inv.status !== "paid";
+                    return (
+                      <tr key={inv.id} className="transition hover:bg-gray-50 dark:hover:bg-white/5">
+                        <td className="cursor-pointer px-4 py-3" onClick={() => openDetail(inv.id)}>
+                          <div className="font-mono text-[.82rem] font-bold text-gray-900 dark:text-white">
+                            {inv.number || "—"}
+                          </div>
+                          <div className="max-w-[220px] truncate text-[.76rem] text-gray-500">{inv.title}</div>
+                        </td>
+                        <td className="cursor-pointer px-4 py-3 text-[.82rem] text-gray-700 dark:text-gray-300" onClick={() => openDetail(inv.id)}>
+                          <span className="block max-w-[180px] truncate">
+                            {inv.pro_clients?.company || inv.pro_clients?.name || (
+                              <span className="text-gray-300">Sans client</span>
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-[.8rem] text-gray-500">
+                          {inv.issue_date ? formatDate(inv.issue_date) : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-[.8rem]">
+                          {inv.due_date ? (
+                            <span className={enRetard ? "font-bold text-red-600 dark:text-red-400" : "text-gray-500"}>
+                              {formatDate(inv.due_date)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-[.85rem] font-bold tabular-nums text-gray-900 dark:text-white">
+                          {formatFcfa(inv.total)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-[.85rem] font-bold tabular-nums">
+                          {reste > 0 ? (
+                            <span className={enRetard ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}>
+                              {formatFcfa(reste)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge cls={INVOICE_STYLE[inv.status] || INVOICE_STYLE.draft}>
+                            {INVOICE_LABELS[inv.status] || inv.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          {/* Actions en icônes : le libellé se lit dans
+                              l'infobulle, la ligne reste lisible. */}
+                          <div className="flex items-center justify-end gap-1">
+                            {inv.status !== "paid" && inv.status !== "cancelled" && (
+                              <button
+                                type="button"
+                                onClick={() => setPayFor(inv)}
+                                disabled={busy}
+                                title="Enregistrer un paiement"
+                                aria-label="Enregistrer un paiement"
+                                className="grid h-8 w-8 place-items-center rounded-lg text-[.9rem] text-green transition hover:bg-green/10 disabled:opacity-40"
+                              >
+                                💰
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setViewing(inv)}
+                              title="Voir la facture"
+                              aria-label="Voir la facture"
+                              className="grid h-8 w-8 place-items-center rounded-lg text-[.9rem] text-gray-500 transition hover:bg-gray-100 dark:hover:bg-white/10"
+                            >
+                              👁
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => send(inv)}
+                              disabled={busy}
+                              title="Envoyer par WhatsApp"
+                              aria-label="Envoyer par WhatsApp"
+                              className="grid h-8 w-8 place-items-center rounded-lg text-[.9rem] text-gray-500 transition hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-white/10"
+                            >
+                              💬
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openPdf(inv)}
+                              title="Télécharger le PDF"
+                              aria-label="Télécharger le PDF"
+                              className="grid h-8 w-8 place-items-center rounded-lg text-[.9rem] text-gray-500 transition hover:bg-gray-100 dark:hover:bg-white/10"
+                            >
+                              ⬇
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-3 lg:hidden">
+              {pagination.visibles.map((inv) => {
                 const remaining = Math.max(0, (inv.total || 0) - (inv.paid_amount || 0));
                 const left = daysUntil(inv.due_date);
                 return (
@@ -998,6 +1136,38 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
                 );
               })}
             </div>
+            {/* Les totaux portent sur la liste FILTRÉE entière, pas sur la
+                page affichée : un total qui changerait en tournant la page ne
+                voudrait rien dire. */}
+            <Pagination
+              {...pagination}
+              nom="facture"
+              resume={
+                <>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Total{" "}
+                    <b className="font-mono font-bold tabular-nums text-gray-800 dark:text-gray-100">
+                      {formatFcfa(filtered.reduce((s, i) => s + (i.total || 0), 0))}
+                    </b>
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Solde dû{" "}
+                    <b className="font-mono font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                      {formatFcfa(
+                        filtered.reduce(
+                          (s, i) =>
+                            i.status === "cancelled"
+                              ? s
+                              : s + Math.max(0, (i.total || 0) - (i.paid_amount || 0)),
+                          0,
+                        ),
+                      )}
+                    </b>
+                  </span>
+                </>
+              }
+            />
+            </>
           )}
         </>
       )}

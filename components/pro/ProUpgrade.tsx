@@ -15,9 +15,14 @@ import ProPlans from "./ProPlans";
 export default function ProUpgrade({
   message,
   onClose,
+  module = "pro",
+  quotaInclus,
 }: {
   message?: string;
   onClose?: () => void;
+  /** Quel module raconte l offre. L abonnement reste le meme. */
+  module?: "pro" | "carriere";
+  quotaInclus?: number;
 }) {
-  return <ProPlans mode="app" message={message} onClose={onClose} />;
+  return <ProPlans mode="app" module={module} message={message} onClose={onClose} quotaInclus={quotaInclus} />;
 }

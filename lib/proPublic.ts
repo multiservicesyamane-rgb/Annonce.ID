@@ -104,6 +104,12 @@ export async function fetchSeller(sb: ReturnType<typeof admin>, userId: string):
     signature_label: settings?.signature_label || null,
     template: settings?.doc_template || null,
     accent: settings?.doc_accent || null,
+    // Papier a en-tete. Colonnes absentes tant que la migration n a pas
+    // tourne : on retombe alors sur le mode genere, le comportement actuel.
+    entete_mode: settings?.entete_mode || null,
+    entete_url: settings?.entete_url || null,
+    entete_haut_mm: settings?.entete_haut_mm ?? null,
+    entete_bas_mm: settings?.entete_bas_mm ?? null,
   };
 }
 

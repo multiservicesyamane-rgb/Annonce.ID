@@ -30,7 +30,29 @@ const PAGE_W = 794;
 const PAGE_H = 1123;
 const MARGIN = 53;
 
-export default function A4Preview({ children }: { children: React.ReactNode }) {
+export default function A4Preview({
+  children,
+  zoom = 1,
+  ajusterHauteur = false,
+}: {
+  children: React.ReactNode;
+  /**
+   * Grossissement demandé, par-dessus l'échelle qui fait tenir la page dans
+   * la colonne. 1 = la page entière est visible ; au-delà, elle déborde et le
+   * conteneur défile — c'est le seul moyen de lire les petits caractères d'un
+   * CV sur un téléphone, où la feuille est réduite à moins d'un tiers.
+   */
+  zoom?: number;
+  /**
+   * Faire tenir la page dans la HAUTEUR visible, en plus de la largeur.
+   *
+   * Sans cela, une colonne large donnait une échelle de 1 : la feuille faisait
+   * ses 1 123 px et il fallait dérouler pour en voir le bas. Sur un écran
+   * d'aperçu, dont le seul travail est de montrer le document, c'est raté —
+   * on veut la page entière du premier coup d'œil.
+   */
+  ajusterHauteur?: boolean;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -39,19 +61,44 @@ export default function A4Preview({ children }: { children: React.ReactNode }) {
   const [styled, setStyled] = useState(false);
   // 0 tant que la largeur disponible n'est pas connue : la feuille reste
   // masquée plutôt que de surgir à la mauvaise taille puis se recadrer.
-  const [scale, setScale] = useState(0);
+  const [fit, setFit] = useState(0);
   const [pages, setPages] = useState(1);
 
-  /* ---- Largeur disponible → facteur d'échelle ---- */
+  /* ---- Place disponible → facteur d'échelle ---- */
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-    const measure = () => setScale(Math.min(1, host.clientWidth / PAGE_W));
+
+    const measure = () => {
+      const parLargeur = host.clientWidth / PAGE_W;
+      if (!ajusterHauteur) {
+        setFit(Math.min(1, parLargeur));
+        return;
+      }
+      // Hauteur restante entre le haut de la feuille et le bas de la fenêtre.
+      // Mesurée à la position actuelle, sans écouter le défilement : une
+      // échelle qui bougerait pendant qu'on fait défiler serait insupportable.
+      const dispo = window.innerHeight - host.getBoundingClientRect().top - 24;
+      // Plancher à 0,28 : sur un téléphone en paysage, le calcul donnerait une
+      // feuille de la taille d'un timbre. Mieux vaut déborder un peu.
+      setFit(Math.max(0.28, Math.min(1, parLargeur, dispo / PAGE_H)));
+    };
+
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(host);
-    return () => ro.disconnect();
-  }, []);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [ajusterHauteur]);
+
+  // L'échelle réelle : celle qui fait tenir la page, multipliée par le zoom.
+  // On mesure `fit` sur le conteneur SANS le zoom, sinon agrandir la feuille
+  // élargirait le conteneur, qui réduirait `fit`, qui rétrécirait la feuille —
+  // une boucle qui n'aurait jamais convergé.
+  const scale = fit * zoom;
 
   /* ---- Préparation de l'iframe ---- */
   const setup = useCallback(() => {
@@ -118,7 +165,11 @@ export default function A4Preview({ children }: { children: React.ReactNode }) {
   const visible = styled && scale > 0;
 
   return (
-    <div ref={hostRef} className="w-full">
+    // `overflow-x-auto` : au-delà de zoom 1, la page est plus large que la
+    // colonne. Sans ce défilement on ne verrait que sa moitié gauche, sans
+    // aucun moyen d'atteindre le reste. `clientWidth` reste la largeur VISIBLE
+    // d'un élément qui défile, la mesure de `fit` n'en est donc pas faussée.
+    <div ref={hostRef} className="w-full overflow-x-auto">
       <div
         className="relative mx-auto overflow-hidden rounded-[3px] ring-1 ring-black/10"
         style={{

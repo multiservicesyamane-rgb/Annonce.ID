@@ -38,8 +38,20 @@ export const page = "mx-auto w-full max-w-[560px] px-4 pb-28 pt-4 lg:max-w-[680p
  */
 export const pageWide = "mx-auto w-full max-w-[560px] px-4 pb-28 pt-4 lg:max-w-[1180px] lg:px-6 lg:pb-14 lg:pt-6";
 
+/**
+ * Carte du module.
+ *
+ * En theme sombre elle porte un lisere lumineux plutot qu'un trait gris : le
+ * module est le visage « tech » du site, et l'identite neon (indigo, violet,
+ * or) y a sa place. En theme clair le halo reste une ombre coloree tres douce
+ * — un neon sur fond blanc ne se voit pas, il salit.
+ */
 export const card =
-  "rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-dark-800";
+  "rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,.04)] dark:border-white/10 dark:bg-dark-800 dark:shadow-[0_0_0_1px_rgba(99,102,241,.12),0_8px_30px_-14px_rgba(99,102,241,.5)]";
+
+/** Halo neon reutilisable, pose sur les elements qui doivent capter le regard. */
+export const glow =
+  "shadow-[0_10px_30px_-12px_rgba(99,102,241,.55)] dark:shadow-[0_0_18px_-2px_rgba(99,102,241,.45),0_0_40px_-10px_rgba(139,92,246,.4)]";
 
 export const input =
   "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-[.95rem] text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-green focus:ring-2 focus:ring-green/20 dark:border-white/10 dark:bg-dark-800 dark:text-white";
@@ -152,7 +164,7 @@ export function PrimaryBtn({
       disabled={disabled}
       // min-h-[52px] : la regle des maquettes, et la taille en dessous de
       // laquelle une cible devient penible au pouce.
-      className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-green px-5 text-[1rem] font-bold text-white shadow-[0_6px_20px_-8px_rgba(99,102,241,.7)] transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(100deg,#4F46E5,#6366F1,#8B5CF6)] px-5 text-[1rem] font-bold text-white shadow-[0_10px_26px_-10px_rgba(99,102,241,.85)] transition hover:shadow-[0_12px_34px_-10px_rgba(139,92,246,.9)] active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-[0_0_20px_-4px_rgba(99,102,241,.7),0_0_44px_-12px_rgba(139,92,246,.6)]"
     >
       {children}
     </button>
@@ -195,11 +207,171 @@ export function AiBtn({
       type="button"
       onClick={onClick}
       disabled={busy}
-      className="inline-flex items-center gap-2 rounded-xl border-[1.5px] border-green/60 px-4 py-2.5 text-[.88rem] font-bold text-green transition hover:bg-green/5 disabled:opacity-60"
+      className="inline-flex items-center gap-2 rounded-xl border-[1.5px] border-green/60 bg-gradient-to-r from-green/5 to-neon-magenta/5 px-4 py-2.5 text-[.88rem] font-bold text-green shadow-[0_0_0_0_rgba(99,102,241,0)] transition hover:border-green hover:shadow-[0_0_18px_-4px_rgba(99,102,241,.75)] disabled:opacity-60 dark:from-green/15 dark:to-neon-magenta/10 dark:text-[#A5B4FC] dark:hover:shadow-[0_0_22px_-4px_rgba(139,92,246,.8)]"
     >
       <span aria-hidden="true">{busy ? "⏳" : "✨"}</span>
       {busy ? "Redaction en cours…" : children}
     </button>
+  );
+}
+
+/**
+ * Bouton de la barre d'outils de l'apercu.
+ *
+ * L'icone porte le sens, le libelle le confirme — et le libelle disparait sous
+ * `sm` pour que quatre outils plus le zoom tiennent sur la largeur d'un
+ * telephone sans se chevaucher. Le `title` et l'`aria-label` gardent le mot
+ * pour la souris et les lecteurs d'ecran.
+ */
+export function OutilBtn({
+  icone,
+  children,
+  onClick,
+  actif,
+  compact,
+}: {
+  icone: string;
+  children: string;
+  onClick: () => void;
+  actif?: boolean;
+  /** Icone seule, quelle que soit la largeur — pour la colonne d'apercu. */
+  compact?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={children}
+      aria-label={children}
+      aria-pressed={actif}
+      className={
+        "flex h-9 shrink-0 items-center gap-1.5 rounded-lg border text-[.82rem] font-bold transition " +
+        (compact ? "w-9 justify-center " : "px-2.5 sm:px-3 ") +
+        (actif
+          ? "border-green bg-green/10 text-green shadow-[0_0_14px_-4px_rgba(99,102,241,.6)]"
+          : "border-gray-200 bg-white text-gray-600 hover:border-green/50 hover:text-green dark:border-white/10 dark:bg-dark-900 dark:text-gray-300")
+      }
+    >
+      <span aria-hidden="true">{icone}</span>
+      {!compact && <span className="hidden sm:inline">{children}</span>}
+    </button>
+  );
+}
+
+/** Paliers de zoom. 1 = page entiere visible, au-dela la feuille deborde. */
+export const ZOOMS = [0.75, 1, 1.25, 1.5, 2];
+
+/**
+ * Barre d'outils d'un apercu, et la feuille qu'elle commande.
+ *
+ * ── Le panneau se SUPERPOSE, il ne pousse pas ────────────────────────────
+ * Premiere version : le panneau ouvert poussait la feuille vers le bas. Sur la
+ * liste des dix-sept modeles, cela chassait le document entierement hors de
+ * l'ecran — on choisissait un modele sans voir ce qu'il donnait, ce qui est
+ * exactement l'inverse du but. Il se pose donc PAR-DESSUS le haut de la
+ * feuille, avec sa propre hauteur maximale et son propre defilement : la page
+ * ne bouge jamais, et tout tient dans la premiere vue.
+ */
+export function BarreOutils({
+  outils,
+  panneau,
+  onFermer,
+  iZoom,
+  setIZoom,
+  compact,
+  children,
+}: {
+  outils?: ReactNode;
+  /** Contenu deplie. `null` = rien d'ouvert. */
+  panneau?: ReactNode;
+  onFermer: () => void;
+  iZoom: number;
+  setIZoom: (maj: (i: number) => number) => void;
+  /** Colonne etroite : icones seules, barre non collante. */
+  compact?: boolean;
+  children: ReactNode;
+}) {
+  const zoom = ZOOMS[iZoom];
+  return (
+    <div className="relative">
+      <div
+        className={
+          compact
+            ? "mb-2 rounded-xl border border-gray-200 bg-white/90 p-1.5 backdrop-blur-md dark:border-white/10 dark:bg-dark-800/90"
+            : // `top-16` : la hauteur exacte de l'en-tete collant du module.
+              "sticky top-16 z-20 -mx-4 mb-3 border-b border-gray-200/70 bg-gray-50/90 px-4 py-2 backdrop-blur-md dark:border-white/10 dark:bg-dark-900/90 sm:-mx-6 sm:px-6 lg:rounded-xl lg:border lg:bg-white/90 lg:px-3 dark:lg:bg-dark-800/90"
+        }
+      >
+        {/* Defilement horizontal plutot qu'un passage a la ligne : deux rangees
+            de boutons mangeraient l'apercu qu'elles servent. */}
+        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {outils}
+
+          <div className="ml-auto flex shrink-0 items-center gap-0.5 rounded-lg border border-gray-200 bg-white p-0.5 dark:border-white/10 dark:bg-dark-900">
+            <button
+              type="button"
+              onClick={() => setIZoom((i) => Math.max(0, i - 1))}
+              disabled={iZoom === 0}
+              aria-label="Reduire l'apercu"
+              className="grid h-8 w-8 place-items-center rounded-md text-[1.1rem] font-bold text-gray-600 transition hover:bg-gray-100 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/10"
+            >
+              −
+            </button>
+            <span className={`text-center font-mono text-[.72rem] font-bold tabular-nums text-gray-600 dark:text-gray-300 ${compact ? "w-9" : "w-11"}`}>
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => setIZoom((i) => Math.min(ZOOMS.length - 1, i + 1))}
+              disabled={iZoom === ZOOMS.length - 1}
+              aria-label="Agrandir l'apercu"
+              className="grid h-8 w-8 place-items-center rounded-md text-[1.1rem] font-bold text-gray-600 transition hover:bg-gray-100 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-white/10"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {panneau && (
+        <>
+          {/* Voile de fermeture : un clic a cote referme, comme partout. */}
+          <button
+            type="button"
+            aria-label="Fermer le panneau"
+            onClick={onFermer}
+            className="fixed inset-0 z-30 cursor-default bg-transparent"
+          />
+          <div className="absolute inset-x-0 top-0 z-40 max-h-[58vh] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-3 shadow-[0_24px_60px_-24px_rgba(16,24,40,.55)] dark:border-white/10 dark:bg-dark-800">
+            {panneau}
+          </div>
+        </>
+      )}
+
+      {children}
+    </div>
+  );
+}
+
+/** Contenu deplie par un `OutilBtn`, sous la barre de l'apercu. */
+export function PanneauOutil({
+  titre,
+  sur,
+  children,
+}: {
+  titre: string;
+  /** Valeur courante, rappelee a droite du titre. */
+  sur?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <p className="mb-2.5 flex items-baseline justify-between gap-3">
+        <span className="text-[.7rem] font-bold uppercase tracking-[.06em] text-gray-400">{titre}</span>
+        {sur && <span className="truncate text-[.78rem] font-semibold text-gray-500">{sur}</span>}
+      </p>
+      {children}
+    </div>
   );
 }
 
@@ -363,7 +535,10 @@ export function Steps({ steps, current }: { steps: string[]; current: number }) 
 export function Title({ children, sub }: { children: ReactNode; sub?: string }) {
   return (
     <header className="mb-6">
-      <h1 className="font-display text-[1.9rem] font-extrabold leading-tight tracking-tight text-gray-900 dark:text-white">
+      {/* Le degrade se deplace lentement (gradShift, deja au catalogue du
+          site). `bg-clip-text` le fait vivre DANS les lettres : c'est la seule
+          fantaisie de l'entete, tout le reste du module reste sobre. */}
+      <h1 className="animate-gradShift bg-[linear-gradient(100deg,#4F46E5,#8B5CF6,#F59E0B,#4F46E5)] bg-[length:300%_auto] bg-clip-text font-display text-[1.9rem] font-extrabold leading-tight tracking-tight text-transparent motion-reduce:animate-none">
         {children}
       </h1>
       {sub && <p className="mt-1.5 text-[.95rem] leading-relaxed text-gray-500 dark:text-gray-400">{sub}</p>}
@@ -393,11 +568,24 @@ export function RowCard({
       onClick={disabled ? undefined : onClick}
       aria-disabled={disabled || undefined}
       className={
-        "flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 text-left transition dark:border-white/10 dark:bg-dark-800 " +
-        (disabled ? "cursor-default opacity-60" : "hover:border-green/40 active:scale-[.995]")
+        "group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left transition-[transform,box-shadow,border-color] dark:border-white/10 dark:bg-dark-800 " +
+        (disabled
+          ? "cursor-default opacity-60"
+          : "hover:-translate-y-0.5 hover:border-green/50 hover:shadow-[0_14px_34px_-16px_rgba(99,102,241,.65)] active:scale-[.995] dark:hover:border-green/60 dark:hover:shadow-[0_0_0_1px_rgba(99,102,241,.35),0_0_28px_-6px_rgba(139,92,246,.5)]")
       }
     >
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-green/10 text-green" aria-hidden="true">
+      {/* Lueur qui s'allume au survol, derriere le contenu. Un dégrade fige
+          alourdirait les six cartes ; la, il ne se montre qu'a l'approche. */}
+      {!disabled && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-green/20 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100 dark:bg-green/40"
+        />
+      )}
+      <span
+        className="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-green/15 to-neon-magenta/15 text-green ring-1 ring-inset ring-green/20 transition-shadow group-hover:shadow-[0_0_16px_-2px_rgba(99,102,241,.6)] dark:from-green/25 dark:to-neon-magenta/20"
+        aria-hidden="true"
+      >
         {icon}
       </span>
       <span className="min-w-0 flex-1">

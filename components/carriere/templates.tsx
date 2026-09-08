@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Ma Carriere — les huit mises en page de CV.
+ * Ma Carriere — les dix-sept mises en page de CV.
  *
  * Adaptes des gabarits du projet cvurgent, avec deux differences voulues :
  *  - les niveaux de langue sont des pastilles sur 5 (voir lib/carriere.ts) ;
@@ -24,6 +24,7 @@ import {
   fullName,
   initials,
   periode,
+  policeDe,
   type CVContent,
   type Langue,
   type TemplateId,
@@ -34,7 +35,16 @@ const PAGE_H = 1123;
 const BLEED = -53;
 
 /** Feuille pleine page, marge de la feuille annulee. */
-function Sheet({ children, bg = "#ffffff" }: { children: ReactNode; bg?: string }) {
+function Sheet({
+  children,
+  bg = "#ffffff",
+  police = "inherit",
+}: {
+  children: ReactNode;
+  bg?: string;
+  /** Pile de polices choisie par l utilisateur (voir POLICES). */
+  police?: string;
+}) {
   return (
     <article
       style={{
@@ -45,7 +55,7 @@ function Sheet({ children, bg = "#ffffff" }: { children: ReactNode; bg?: string 
         color: "#1F2937",
         // Le CV est imprime : on fige la police plutot que d'heriter de celle
         // du site, qui n'est pas garantie dans l'iframe de capture.
-        fontFamily: "Inter, Arial, Helvetica, sans-serif",
+        fontFamily: police,
         display: "flex",
       }}
     >
@@ -128,13 +138,23 @@ function HSide({ children, color = "#ffffff" }: { children: ReactNode; color?: s
 
 /** Experiences + formation : le corps commun a tous les gabarits. */
 function Parcours({
-  cv, accent, formationDabord = false,
+  cv, accent, formationDabord = false, sombre = false,
 }: {
   cv: CVContent;
   accent: string;
   /** Un etudiant met ses etudes avant une experience qu'il n'a pas encore. */
   formationDabord?: boolean;
+  /**
+   * Corps pose sur un fond fonce (gabarits « creatifs »).
+   *
+   * Les encres etaient ecrites en dur en gris fonce : un parcours entier
+   * devenait illisible des qu'un gabarit passait la page en sombre.
+   */
+  sombre?: boolean;
 }) {
+  const encreForte = sombre ? "#F8FAFC" : "#111827";
+  const encre = sombre ? "#D5DCE8" : "#374151";
+  const encreDouce = sombre ? "#93A0B4" : "#6B7280";
   const experience = cv.experiences.length > 0 && (
     <section style={{ marginBottom: 22 }}>
       <H color={accent}>Experience professionnelle</H>
@@ -142,16 +162,16 @@ function Parcours({
         <div key={e.id} style={{ marginBottom: 15 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{e.title}</p>
-              <p style={{ fontSize: 12, color: "#6B7280" }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: encreForte }}>{e.title}</p>
+              <p style={{ fontSize: 12, color: encreDouce }}>
                 {[e.company, e.location].filter(Boolean).join(", ")}
               </p>
             </div>
-            <p style={{ fontSize: 11.5, color: "#6B7280", whiteSpace: "nowrap" }}>{periode(e)}</p>
+            <p style={{ fontSize: 11.5, color: encreDouce, whiteSpace: "nowrap" }}>{periode(e)}</p>
           </div>
           <ul style={{ marginTop: 6, paddingLeft: 14 }}>
             {e.bullets.filter(Boolean).map((b, i) => (
-              <li key={i} style={{ fontSize: 12, lineHeight: 1.6, color: "#374151", listStyle: "disc" }}>
+              <li key={i} style={{ fontSize: 12, lineHeight: 1.6, color: encre, listStyle: "disc" }}>
                 {b}
               </li>
             ))}
@@ -167,14 +187,42 @@ function Parcours({
       {cv.education.map((f) => (
         <div key={f.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
           <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: 12.5, fontWeight: 700, color: "#111827" }}>{f.degree}</p>
-            <p style={{ fontSize: 11.5, color: "#6B7280" }}>
+            <p style={{ fontSize: 12.5, fontWeight: 700, color: encreForte }}>{f.degree}</p>
+            <p style={{ fontSize: 11.5, color: encreDouce }}>
               {[f.school, f.location].filter(Boolean).join(", ")}
             </p>
           </div>
-          <p style={{ fontSize: 11.5, color: "#6B7280", whiteSpace: "nowrap" }}>
+          <p style={{ fontSize: 11.5, color: encreDouce, whiteSpace: "nowrap" }}>
             {periode({ ...f, isCurrent: false })}
           </p>
+        </div>
+      ))}
+    </section>
+  );
+
+  /**
+   * Certifications — posees juste apres la formation, jamais melangees a elle.
+   *
+   * Un diplome sanctionne des annees d etude, une certification atteste d une
+   * competence precise. Au Senegal, une certification recente pese souvent
+   * plus lourd aupres d un recruteur qu un diplome ancien : elle merite sa
+   * propre rubrique, pas une ligne noyee dans les etudes.
+   *
+   * Ecrite ici, dans la brique commune : les dix-sept gabarits l affichent
+   * sans qu aucun n ait a etre touche.
+   */
+  const certifications = cv.certifications?.length > 0 && (
+    <section style={{ marginBottom: 22 }}>
+      <H color={accent}>Certifications</H>
+      {cv.certifications.map((c) => (
+        <div key={c.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 9 }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 12.5, fontWeight: 700, color: encreForte }}>{c.name}</p>
+            {c.issuer.trim() && <p style={{ fontSize: 11.5, color: encreDouce }}>{c.issuer}</p>}
+          </div>
+          {c.year.trim() && (
+            <p style={{ fontSize: 11.5, color: encreDouce, whiteSpace: "nowrap" }}>{c.year}</p>
+          )}
         </div>
       ))}
     </section>
@@ -185,19 +233,20 @@ function Parcours({
       {cv.summary.trim() && (
         <section style={{ marginBottom: 22 }}>
           <H color={accent}>Profil</H>
-          <p style={{ fontSize: 12.5, lineHeight: 1.65, color: "#374151" }}>{cv.summary}</p>
+          <p style={{ fontSize: 12.5, lineHeight: 1.65, color: encre }}>{cv.summary}</p>
         </section>
       )}
 
       {formationDabord ? formation : experience}
       {formationDabord ? experience : formation}
+      {certifications}
 
       {cv.atouts.length > 0 && (
         <section>
           <H color={accent}>Atouts</H>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 18px" }}>
             {cv.atouts.map((a, i) => (
-              <span key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#374151" }}>
+              <span key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: encre }}>
                 <span style={{ color: accent, fontWeight: 700 }} aria-hidden="true">
                   ◆
                 </span>
@@ -866,6 +915,709 @@ function Compact({ cv }: { cv: CVContent }) {
   );
 }
 
+/** Bandeau — large bandeau colore en tete, photo a droite, une seule colonne. */
+function Bandeau({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "bandeau");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <header
+          style={{
+            background: accent,
+            color: "#fff",
+            padding: "38px 44px",
+            display: "flex",
+            alignItems: "center",
+            gap: 26,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>{fullName(p) || "Ton nom"}</h1>
+            <p style={{ fontSize: 14, opacity: 0.88, marginTop: 6 }}>{p.title}</p>
+            <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: "4px 22px" }}>
+              <Contacts cv={cv} color="rgba(255,255,255,.92)" />
+              {p.location.trim() && (
+                <p style={{ display: "flex", gap: 8, fontSize: 11, color: "rgba(255,255,255,.92)" }}>
+                  <span style={{ opacity: 0.7, width: 14 }} aria-hidden="true">◉</span>
+                  <span>{p.location}</span>
+                </p>
+              )}
+            </div>
+          </div>
+          <Photo p={p} taille={96} forme="cercle" bordure="rgba(255,255,255,.6)" couleurTexte="#fff" marge={0} />
+        </header>
+
+        <main style={{ flex: 1, padding: "32px 44px" }}>
+          {(cv.skills.length > 0 || cv.languages.length > 0) && (
+            <section style={{ marginBottom: 22, display: "flex", gap: 34 }}>
+              {cv.skills.length > 0 && (
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <H color={accent}>Competences</H>
+                  <p style={{ fontSize: 12, lineHeight: 1.8, color: "#374151" }}>{cv.skills.join(" · ")}</p>
+                </div>
+              )}
+              {cv.languages.length > 0 && (
+                <div style={{ width: 210, flexShrink: 0 }}>
+                  <H color={accent}>Langues</H>
+                  {cv.languages.map((l) => (
+                    <div
+                      key={l.id}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}
+                    >
+                      <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                      <Bars level={l.level} color={accent} off="#E5E7EB" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+          <Parcours cv={cv} accent={accent} />
+        </main>
+      </div>
+    </Sheet>
+  );
+}
+
+/**
+ * Elegant — aucun aplat de couleur, tout se joue sur les filets et l'espace.
+ * C'est le gabarit a conseiller quand le CV part chez un employeur qui
+ * l'imprimera en noir et blanc : il ne perd rien a la conversion.
+ */
+function Elegant({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "elegant");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "52px 62px" }}>
+        <header style={{ textAlign: "center", paddingBottom: 22 }}>
+          {p.photoUrl && (
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <Photo p={p} taille={88} forme="cercle" bordure="#E5E7EB" couleurTexte="#9CA3AF" marge={18} />
+            </div>
+          )}
+          <h1 style={{ fontSize: 30, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", color: "#111827" }}>
+            {fullName(p) || "Ton nom"}
+          </h1>
+          <p style={{ fontSize: 13, letterSpacing: 1.4, color: accent, marginTop: 8, textTransform: "uppercase" }}>
+            {p.title}
+          </p>
+          <div
+            style={{
+              marginTop: 18,
+              paddingTop: 14,
+              borderTop: `1px solid ${accent}`,
+              borderBottom: `1px solid ${accent}`,
+              paddingBottom: 12,
+              display: "flex",
+              justifyContent: "center",
+              flexWrap: "wrap",
+              gap: "2px 26px",
+            }}
+          >
+            <Contacts cv={cv} color="#4B5563" />
+            {p.location.trim() && (
+              <p style={{ display: "flex", gap: 8, fontSize: 11, color: "#4B5563" }}>
+                <span style={{ opacity: 0.7, width: 14 }} aria-hidden="true">◉</span>
+                <span>{p.location}</span>
+              </p>
+            )}
+          </div>
+        </header>
+
+        <main style={{ flex: 1, paddingTop: 26 }}>
+          <Parcours cv={cv} accent={accent} />
+          {(cv.skills.length > 0 || cv.languages.length > 0) && (
+            <section style={{ marginTop: 22 }}>
+              <H color={accent}>Competences et langues</H>
+              {cv.skills.length > 0 && (
+                <p style={{ fontSize: 12, lineHeight: 1.8, color: "#374151" }}>{cv.skills.join(" · ")}</p>
+              )}
+              {cv.languages.length > 0 && (
+                <p style={{ fontSize: 12, lineHeight: 1.8, color: "#374151", marginTop: 6 }}>
+                  {cv.languages.map((l) => `${l.name} (${l.level}/5)`).join(" · ")}
+                </p>
+              )}
+            </section>
+          )}
+        </main>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Duo — deux colonnes de meme largeur sous un titre plein cadre. */
+function Duo({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "duo");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <header
+          style={{
+            padding: "36px 40px 22px",
+            borderBottom: `4px solid ${accent}`,
+            display: "flex",
+            alignItems: "flex-end",
+            gap: 22,
+          }}
+        >
+          {p.photoUrl && <Photo p={p} taille={84} forme="rect" bordure="#E5E7EB" couleurTexte="#9CA3AF" marge={0} />}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 29, fontWeight: 800, color: "#111827", lineHeight: 1.1 }}>
+              {fullName(p) || "Ton nom"}
+            </h1>
+            <p style={{ fontSize: 13.5, color: accent, fontWeight: 600, marginTop: 5 }}>{p.title}</p>
+          </div>
+        </header>
+
+        <div style={{ flex: 1, display: "flex", gap: 30, padding: "28px 40px" }}>
+          <main style={{ flex: 1, minWidth: 0 }}>
+            <Parcours cv={cv} accent={accent} />
+          </main>
+
+          <aside style={{ width: 240, flexShrink: 0, borderLeft: "1px solid #E5E7EB", paddingLeft: 26 }}>
+            <H color={accent}>Contact</H>
+            <Contacts cv={cv} color="#4B5563" />
+            {p.location.trim() && (
+              <p style={{ display: "flex", gap: 8, fontSize: 11, color: "#4B5563" }}>
+                <span style={{ opacity: 0.7, width: 14 }} aria-hidden="true">◉</span>
+                <span style={{ flex: 1 }}>{p.location}</span>
+              </p>
+            )}
+
+            {cv.skills.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <H color={accent}>Competences</H>
+                {cv.skills.map((s, i) => (
+                  <p key={i} style={{ fontSize: 11.5, color: "#374151", lineHeight: 1.9 }}>
+                    {s}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {cv.languages.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <H color={accent}>Langues</H>
+                {cv.languages.map((l) => (
+                  <div
+                    key={l.id}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}
+                  >
+                    <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                    <Dots level={l.level} color={accent} off="#D1D5DB" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </aside>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Cadre — un filet fait le tour de la page, le titre s'y encastre. */
+function Cadre({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "cadre");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, padding: 26, display: "flex" }}>
+        <div style={{ flex: 1, border: `2px solid ${accent}`, display: "flex", flexDirection: "column", padding: 30 }}>
+          <header
+            style={{
+              textAlign: "center",
+              paddingBottom: 20,
+              marginBottom: 24,
+              borderBottom: `1px solid ${accent}55`,
+            }}
+          >
+            {p.photoUrl && (
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <Photo p={p} taille={84} forme="cercle" bordure={accent} couleurTexte={accent} marge={16} />
+              </div>
+            )}
+            <h1 style={{ fontSize: 27, fontWeight: 800, color: accent, lineHeight: 1.15 }}>
+              {fullName(p) || "Ton nom"}
+            </h1>
+            <p style={{ fontSize: 13, color: "#4B5563", marginTop: 5 }}>{p.title}</p>
+            <div
+              style={{ marginTop: 12, display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "2px 22px" }}
+            >
+              <Contacts cv={cv} color="#4B5563" />
+              {p.location.trim() && (
+                <p style={{ display: "flex", gap: 8, fontSize: 11, color: "#4B5563" }}>
+                  <span style={{ opacity: 0.7, width: 14 }} aria-hidden="true">◉</span>
+                  <span>{p.location}</span>
+                </p>
+              )}
+            </div>
+          </header>
+
+          <main style={{ flex: 1 }}>
+            <Parcours cv={cv} accent={accent} />
+            {(cv.skills.length > 0 || cv.languages.length > 0) && (
+              <section style={{ marginTop: 22 }}>
+                <H color={accent}>Competences et langues</H>
+                {cv.skills.length > 0 && (
+                  <p style={{ fontSize: 12, lineHeight: 1.8, color: "#374151" }}>{cv.skills.join(" · ")}</p>
+                )}
+                {cv.languages.length > 0 && (
+                  <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: "8px 24px" }}>
+                    {cv.languages.map((l) => (
+                      <span key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "#374151" }}>
+                        {l.name}
+                        <Dots level={l.level} color={accent} off="#D1D5DB" />
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+          </main>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Mosaique — competences et langues en pastilles, avant le parcours. */
+function Mosaique({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "mosaique");
+  const p = cv.personalInfo;
+  return (
+    <Sheet bg="#FAFAF9">
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <header style={{ padding: "38px 42px 26px", display: "flex", alignItems: "center", gap: 24 }}>
+          <Photo p={p} taille={92} forme="cercle" bordure={accent} couleurTexte={accent} marge={0} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111827", lineHeight: 1.1 }}>
+              {fullName(p) || "Ton nom"}
+            </h1>
+            <p style={{ fontSize: 13.5, color: accent, fontWeight: 600, marginTop: 5 }}>{p.title}</p>
+            <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: "2px 22px" }}>
+              <Contacts cv={cv} color="#4B5563" />
+              {p.location.trim() && (
+                <p style={{ display: "flex", gap: 8, fontSize: 11, color: "#4B5563" }}>
+                  <span style={{ opacity: 0.7, width: 14 }} aria-hidden="true">◉</span>
+                  <span>{p.location}</span>
+                </p>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main style={{ flex: 1, padding: "0 42px 38px" }}>
+          {cv.skills.length > 0 && (
+            <section style={{ marginBottom: 20 }}>
+              <H color={accent}>Competences</H>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {cv.skills.map((s, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      fontSize: 11.5,
+                      color: "#374151",
+                      background: "#fff",
+                      border: `1px solid ${accent}44`,
+                      borderRadius: 999,
+                      padding: "5px 12px",
+                    }}
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {cv.languages.length > 0 && (
+            <section style={{ marginBottom: 20 }}>
+              <H color={accent}>Langues</H>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {cv.languages.map((l) => (
+                  <span
+                    key={l.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 9,
+                      fontSize: 11.5,
+                      color: "#374151",
+                      background: "#fff",
+                      border: "1px solid #E5E7EB",
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                    }}
+                  >
+                    {l.name}
+                    <Dots level={l.level} color={accent} off="#E5E7EB" />
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <Parcours cv={cv} accent={accent} />
+        </main>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Diagonale — un coin colore taille en biais, le reste tres sobre. */
+function Diagonale({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "diagonale");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
+        {/* Le biais est un simple polygone : html-to-image le capture tel quel,
+            la ou un degrade CSS complexe sort parfois aplati du PDF. */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: 340,
+            height: 250,
+            background: accent,
+            clipPath: "polygon(100% 0, 100% 100%, 0 0)",
+          }}
+        />
+
+        <header style={{ padding: "48px 44px 26px", position: "relative" }}>
+          {p.photoUrl && <Photo p={p} taille={80} forme="rect" bordure="#E5E7EB" couleurTexte="#9CA3AF" marge={16} />}
+          <h1 style={{ fontSize: 30, fontWeight: 800, color: "#111827", lineHeight: 1.1, maxWidth: 420 }}>
+            {fullName(p) || "Ton nom"}
+          </h1>
+          <p style={{ fontSize: 13.5, color: accent, fontWeight: 600, marginTop: 6, maxWidth: 420 }}>{p.title}</p>
+          <div
+            style={{
+              marginTop: 16,
+              paddingTop: 14,
+              borderTop: `2px solid ${accent}`,
+              maxWidth: 420,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "2px 22px",
+            }}
+          >
+            <Contacts cv={cv} color="#4B5563" />
+            {p.location.trim() && (
+              <p style={{ display: "flex", gap: 8, fontSize: 11, color: "#4B5563" }}>
+                <span style={{ opacity: 0.7, width: 14 }} aria-hidden="true">◉</span>
+                <span>{p.location}</span>
+              </p>
+            )}
+          </div>
+        </header>
+
+        <main style={{ flex: 1, padding: "0 44px 40px", position: "relative" }}>
+          <Parcours cv={cv} accent={accent} />
+          {(cv.skills.length > 0 || cv.languages.length > 0) && (
+            <section style={{ marginTop: 22 }}>
+              <H color={accent}>Competences et langues</H>
+              {cv.skills.length > 0 && (
+                <p style={{ fontSize: 12, lineHeight: 1.8, color: "#374151" }}>{cv.skills.join(" · ")}</p>
+              )}
+              {cv.languages.length > 0 && (
+                <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: "8px 24px" }}>
+                  {cv.languages.map((l) => (
+                    <span key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "#374151" }}>
+                      {l.name}
+                      <Bars level={l.level} color={accent} off="#E5E7EB" />
+                    </span>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </main>
+      </div>
+    </Sheet>
+  );
+}
+
+/**
+ * Nuit — page sombre, contenu pose sur une carte claire.
+ *
+ * Le corps reste sur fond blanc a dessein : `Parcours` ecrit en gris fonce, et
+ * un parcours entier en blanc sur noir vide une cartouche d'encre a l'impression
+ * — or ce CV finit souvent imprime dans un cybercafe.
+ */
+function Nuit({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "nuit");
+  const p = cv.personalInfo;
+  const clair = "#E8ECF4";
+  return (
+    <Sheet bg="#0B1220">
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 26 }}>
+        <header style={{ display: "flex", alignItems: "center", gap: 22, padding: "14px 18px 24px" }}>
+          <Photo p={p} taille={88} forme="cercle" bordure="rgba(255,255,255,.35)" couleurTexte={clair} marge={0} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: "#fff", lineHeight: 1.1 }}>
+              {fullName(p) || "Ton nom"}
+            </h1>
+            <p style={{ fontSize: 13.5, color: clair, opacity: 0.75, marginTop: 5 }}>{p.title}</p>
+            <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: "2px 22px" }}>
+              <Contacts cv={cv} color="rgba(232,236,244,.8)" />
+              {p.location.trim() && (
+                <p style={{ display: "flex", gap: 8, fontSize: 11, color: "rgba(232,236,244,.8)" }}>
+                  <span style={{ opacity: 0.7, width: 14 }} aria-hidden="true">◉</span>
+                  <span>{p.location}</span>
+                </p>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {(cv.skills.length > 0 || cv.languages.length > 0) && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "0 18px 20px" }}>
+            {cv.skills.map((s, i) => (
+              <span
+                key={`s${i}`}
+                style={{
+                  fontSize: 11,
+                  color: clair,
+                  border: "1px solid rgba(255,255,255,.25)",
+                  borderRadius: 999,
+                  padding: "4px 11px",
+                }}
+              >
+                {s}
+              </span>
+            ))}
+            {cv.languages.map((l) => (
+              <span
+                key={l.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 11,
+                  color: clair,
+                  border: "1px solid rgba(255,255,255,.25)",
+                  borderRadius: 999,
+                  padding: "4px 11px",
+                }}
+              >
+                {l.name}
+                <Dots level={l.level} color="#fff" off="rgba(255,255,255,.3)" />
+              </span>
+            ))}
+          </div>
+        )}
+
+        <main style={{ flex: 1, background: "#fff", borderRadius: 12, padding: "30px 34px" }}>
+          <Parcours cv={cv} accent={accent} />
+        </main>
+      </div>
+    </Sheet>
+  );
+}
+
+/* ======================= Les deux gabarits neon =======================
+   Page sombre et liseres lumineux, pour les metiers ou l'on attend un CV
+   qui sorte du lot : graphisme, audiovisuel, evenementiel, developpement.
+
+   Ils ignorent volontairement l'accent choisi par l'utilisateur : la palette
+   d'accents est faite de teintes SOMBRES (voir ACCENTS dans lib/carriere.ts),
+   qui disparaitraient sur un fond noir. Ces deux-la portent donc leur propre
+   couple de couleurs.
+
+   Le halo est un `boxShadow` et non un filtre : html-to-image le restitue tel
+   quel dans le PDF, la ou un `filter` sort parfois aplati.
+   ===================================================================== */
+
+const NEON_FOND = "#080B14";
+const NEON_CARTE = "#0F1526";
+
+function Halo({ couleur, force = 14 }: { couleur: string; force?: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: "block",
+        height: 3,
+        borderRadius: 2,
+        background: couleur,
+        boxShadow: `0 0 ${force}px ${couleur}`,
+      }}
+    />
+  );
+}
+
+/** Pastille lumineuse : competences et langues des gabarits neon. */
+function Puce({ children, couleur }: { children: ReactNode; couleur: string }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        fontSize: 11,
+        color: "#E6EDF7",
+        background: "rgba(255,255,255,.04)",
+        border: `1px solid ${couleur}66`,
+        boxShadow: `0 0 10px ${couleur}33`,
+        borderRadius: 999,
+        padding: "5px 12px",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Neon — nom en lettres lumineuses, filets cyan et magenta. */
+function Neon({ cv }: { cv: CVContent }) {
+  const cyan = "#22D3EE";
+  const rose = "#F472B6";
+  const p = cv.personalInfo;
+  return (
+    <Sheet bg={NEON_FOND}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "44px 46px 40px" }}>
+        <header style={{ display: "flex", alignItems: "center", gap: 24, marginBottom: 8 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1
+              style={{
+                fontSize: 32,
+                fontWeight: 800,
+                lineHeight: 1.08,
+                color: "#FFFFFF",
+                textShadow: `0 0 18px ${cyan}AA`,
+              }}
+            >
+              {fullName(p) || "Ton nom"}
+            </h1>
+            <p style={{ fontSize: 14, color: cyan, marginTop: 7, letterSpacing: 0.6 }}>{p.title}</p>
+          </div>
+          {p.photoUrl && (
+            <Photo p={p} taille={92} forme="cercle" bordure={cyan} couleurTexte="#E6EDF7" marge={0} />
+          )}
+        </header>
+
+        <div style={{ margin: "18px 0 20px", display: "flex", gap: 8 }}>
+          <div style={{ flex: 2 }}>
+            <Halo couleur={cyan} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Halo couleur={rose} />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 24px", marginBottom: 22 }}>
+          <Contacts cv={cv} color="#AEBBD0" />
+          {p.location.trim() && (
+            <p style={{ display: "flex", gap: 8, fontSize: 11, color: "#AEBBD0" }}>
+              <span style={{ opacity: 0.7, width: 14 }} aria-hidden="true">◉</span>
+              <span>{p.location}</span>
+            </p>
+          )}
+        </div>
+
+        {(cv.skills.length > 0 || cv.languages.length > 0) && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
+            {cv.skills.map((s, i) => (
+              <Puce key={`s${i}`} couleur={cyan}>
+                {s}
+              </Puce>
+            ))}
+            {cv.languages.map((l) => (
+              <Puce key={l.id} couleur={rose}>
+                {l.name}
+                <Dots level={l.level} color={rose} off="rgba(255,255,255,.2)" />
+              </Puce>
+            ))}
+          </div>
+        )}
+
+        <main style={{ flex: 1 }}>
+          <Parcours cv={cv} accent={cyan} sombre />
+        </main>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Cyber — colonne laterale violette lumineuse, corps sombre a droite. */
+function Cyber({ cv }: { cv: CVContent }) {
+  const violet = "#A855F7";
+  const vert = "#4ADE80";
+  const p = cv.personalInfo;
+  return (
+    <Sheet bg={NEON_FOND}>
+      <aside
+        style={{
+          width: 268,
+          background: NEON_CARTE,
+          borderRight: `1px solid ${violet}55`,
+          boxShadow: `inset -14px 0 26px -18px ${violet}`,
+          padding: "42px 26px",
+        }}
+      >
+        <Photo p={p} taille={84} forme="cercle" bordure={violet} couleurTexte="#E6EDF7" marge={20} />
+        <h1
+          style={{ fontSize: 23, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.15, textShadow: `0 0 16px ${violet}99` }}
+        >
+          {fullName(p) || "Ton nom"}
+        </h1>
+        <p style={{ fontSize: 12.5, color: violet, marginTop: 6 }}>{p.title}</p>
+
+        <div style={{ margin: "20px 0" }}>
+          <Halo couleur={violet} force={12} />
+        </div>
+
+        <HSide color={vert}>Contact</HSide>
+        <Contacts cv={cv} color="#AEBBD0" />
+        {p.location.trim() && (
+          <p style={{ display: "flex", gap: 8, fontSize: 11, color: "#AEBBD0" }}>
+            <span style={{ opacity: 0.7, width: 14 }} aria-hidden="true">◉</span>
+            <span style={{ flex: 1 }}>{p.location}</span>
+          </p>
+        )}
+
+        {cv.skills.length > 0 && (
+          <div style={{ marginTop: 26 }}>
+            <HSide color={vert}>Competences</HSide>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {cv.skills.map((s, i) => (
+                <Puce key={i} couleur={violet}>
+                  {s}
+                </Puce>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {cv.languages.length > 0 && (
+          <div style={{ marginTop: 26 }}>
+            <HSide color={vert}>Langues</HSide>
+            {cv.languages.map((l) => (
+              <div
+                key={l.id}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}
+              >
+                <span style={{ fontSize: 11.5, color: "#D5DCE8" }}>{l.name}</span>
+                <Bars level={l.level} color={vert} off="rgba(255,255,255,.18)" />
+              </div>
+            ))}
+          </div>
+        )}
+      </aside>
+
+      <main style={{ flex: 1, padding: "42px 36px" }}>
+        <Parcours cv={cv} accent={vert} sombre />
+      </main>
+    </Sheet>
+  );
+}
+
 /* ============================= Selection ============================= */
 
 const GABARITS: Record<TemplateId, (p: { cv: CVContent }) => JSX.Element> = {
@@ -874,12 +1626,29 @@ const GABARITS: Record<TemplateId, (p: { cv: CVContent }) => JSX.Element> = {
   minimal: Minimal,
   etudiant: Etudiant,
   africain: Africain,
+  bandeau: Bandeau,
+  elegant: Elegant,
+  duo: Duo,
   executif: Executif,
   chrono: Chrono,
   compact: Compact,
+  cadre: Cadre,
+  mosaique: Mosaique,
+  diagonale: Diagonale,
+  nuit: Nuit,
+  neon: Neon,
+  cyber: Cyber,
 };
 
 export default function CVSheet({ cv, template }: { cv: CVContent; template: TemplateId }) {
   const Gabarit = GABARITS[template] || Moderne;
-  return <Gabarit cv={cv} />;
+  // La police est posee ICI et une seule fois : les gabarits l heritent. La
+  // faire passer en parametre a travers les dix-sept aurait garanti qu on en
+  // oublie un, et ce gabarit-la serait sorti dans une autre police que
+  // l apercu.
+  return (
+    <div style={{ fontFamily: policeDe(cv.police) }}>
+      <Gabarit cv={cv} />
+    </div>
+  );
 }

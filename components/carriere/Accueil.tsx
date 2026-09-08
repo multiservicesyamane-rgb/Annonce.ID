@@ -82,9 +82,19 @@ export default function Accueil({
       <button
         type="button"
         onClick={onAssistant}
-        className="mb-4 w-full overflow-hidden rounded-2xl bg-green p-5 text-left text-white shadow-[0_10px_30px_-12px_rgba(99,102,241,.8)] transition active:scale-[.995]"
+        className="group relative mb-4 w-full overflow-hidden rounded-2xl bg-[linear-gradient(115deg,#4F46E5,#6366F1,#8B5CF6,#4F46E5)] bg-[length:250%_auto] p-5 text-left text-white shadow-[0_14px_38px_-14px_rgba(99,102,241,.9)] transition-[transform,box-shadow] hover:shadow-[0_18px_46px_-14px_rgba(139,92,246,.95)] active:scale-[.995] motion-safe:animate-gradShift dark:shadow-[0_0_26px_-6px_rgba(99,102,241,.75),0_0_60px_-18px_rgba(139,92,246,.7)]"
       >
-        <div className="flex items-center gap-4">
+        {/* Deux halos qui derivent lentement derriere le degrade : c'est la
+            piece la plus voyante du module, celle qu'on veut voir en premier. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-10 -top-14 h-40 w-40 rounded-full bg-white/25 blur-3xl motion-safe:animate-floatBlob"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-16 right-0 h-40 w-40 rounded-full bg-neon-gold/30 blur-3xl motion-safe:animate-floatBlob"
+        />
+        <div className="relative flex items-center gap-4">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white/15 text-[1.4rem]" aria-hidden="true">
             💬
           </span>
@@ -100,7 +110,7 @@ export default function Accueil({
             →
           </span>
         </div>
-        <div className="mt-4 border-t border-white/20 pt-3 text-[.8rem] text-white/80">
+        <div className="relative mt-4 border-t border-white/20 pt-3 text-[.8rem] text-white/80">
           CV · Lettre de motivation · Candidature
         </div>
       </button>

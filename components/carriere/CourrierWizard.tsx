@@ -9,6 +9,7 @@ import {
   ActionBar, AiBtn, Area, AsideCard, Field, Note, OutlineBtn, PrimaryBtn,
   Split, Steps, Title, api, card, input, lbl, pageWide,
 } from "./ui";
+import { resumeDossier } from "@/lib/carriere";
 import type { CVContent, DemandeContent, Genre, LettreContent } from "@/lib/carriere";
 import { demarcheParId, destinataireDe, enTeteDe, objetDe, type Demarche } from "@/lib/demarches";
 
@@ -64,12 +65,18 @@ export default function CourrierWizard({
   const enTete = demarche ? enTeteDe(demarche.id) : null;
   const reponses = c.reponses || {};
 
-  /* ------------------- Coordonnees reprises du dernier CV ------------------- */
-  // Recopier ce que l'utilisateur a deja saisi une fois lui evite de retaper
-  // son nom, son telephone et son e-mail a chaque courrier.
+  /* ------------------- Le dernier CV, repris deux fois ------------------- */
+  // 1. Les coordonnees : les recopier evite de retaper nom, telephone et
+  //    e-mail a chaque courrier.
+  // 2. Le parcours : il part avec la demande de redaction. Une lettre de
+  //    motivation ecrite sans connaitre le CV du candidat ne peut produire
+  //    qu'un texte interchangeable — c'est ce qu'elle faisait jusqu'ici.
   const tente = useRef(false);
+  const [dossier, setDossier] = useState("");
   useEffect(() => {
-    if (tente.current || doc.chargement || c.from.name.trim()) return;
+    // On va chercher le CV meme si les coordonnees sont deja remplies : c'est
+    // le parcours qui nous interesse dans ce cas.
+    if (tente.current || doc.chargement) return;
     tente.current = true;
     (async () => {
       try {
@@ -79,6 +86,8 @@ export default function CourrierWizard({
         const d = await api("documents", { action: "get", id: dernierCv.id });
         const cv = d.document?.content as CVContent | undefined;
         if (!cv?.personalInfo) return;
+        setDossier(resumeDossier(cv));
+        if (c.from.name.trim()) return;
         const p = cv.personalInfo;
         patchFrom({
           name: `${p.firstName} ${p.lastName}`.trim(),
@@ -110,7 +119,15 @@ export default function CourrierWizard({
     try {
       const charge =
         kind === "lettre"
-          ? { company: c.company, targetJob: c.targetJob, recruiter: c.recruiter, why: c.why, city: c.from.city }
+          ? {
+              company: c.company,
+              targetJob: c.targetJob,
+              recruiter: c.recruiter,
+              why: c.why,
+              city: c.from.city,
+              // Le parcours reel du candidat, extrait de son dernier CV.
+              dossier,
+            }
           : {
               demarche: demarche?.nom || "",
               // Envoyes en plus du contexte redige : le repli sans IA
@@ -356,11 +373,32 @@ export default function CourrierWizard({
           <ExportA4
             filename={`${(objet || "courrier").replace(/[^\w-]+/g, "-").slice(0, 60)}.pdf`}
             title={objet}
+            aside={
+              <div className="mb-4 border-b border-gray-100 pb-4 dark:border-white/10">
+                <p className="text-[.68rem] font-bold uppercase tracking-[.06em] text-gray-400">Ton document</p>
+                <p className="mt-1.5 text-[.95rem] font-extrabold leading-snug text-gray-900 dark:text-white">
+                  {objet || (kind === "lettre" ? "Lettre de motivation" : "Courrier")}
+                </p>
+                {destinataire.trim() && (
+                  <p className="mt-0.5 line-clamp-2 text-[.8rem] text-gray-500">
+                    Pour {destinataire.split("\n")[0]}
+                  </p>
+                )}
+                <p className="mt-3 flex items-start gap-2 text-[.78rem] leading-relaxed text-gray-500">
+                  <span className="text-green" aria-hidden="true">✓</span>
+                  <span>
+                    Enregistre dans <strong className="text-gray-700 dark:text-gray-300">Mes documents</strong>.
+                  </span>
+                </p>
+              </div>
+            }
           >
             <LettreSheet from={c.from} to={destinataire} objet={objet} corps={c.body} />
           </ExportA4>
 
-          <p className="mt-4 text-center text-[.82rem] text-gray-400">
+          {/* Au telephone seulement : sur grand ecran le rappel est dans le
+              panneau de droite. */}
+          <p className="mt-4 text-center text-[.82rem] text-gray-400 lg:hidden">
             Ton courrier est enregistre dans <strong className="text-gray-500">Mes documents</strong>.
           </p>
 

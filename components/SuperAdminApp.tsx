@@ -20,6 +20,7 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
   { id: "offres", icon: "💎", label: "Offres commerciales" },
   { id: "moderation", icon: "🛡️", label: "Modération", section: "Plateforme" },
   { id: "pro", icon: "🧾", label: "Espace Pro" },
+  { id: "carriere", icon: "📄", label: "Ma Carriere" },
   { id: "import", icon: "🛒", label: "Import Produits" },
   { id: "users", icon: "👥", label: "Utilisateurs" },
   { id: "encaissement", icon: "💵", label: "Encaissement (espèces)" },
@@ -438,6 +439,7 @@ export default function SuperAdminApp() {
             {page === "offres" && <Offres T={T} />}
             {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
             {page === "pro" && <EspacePro T={T} />}
+            {page === "carriere" && <MaCarriere T={T} />}
             {page === "import" && <ImportProduits T={T} reload={loadAllData} profiles={profiles} />}
             {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
             {page === "encaissement" && <Encaissement profiles={profiles} allListings={allListings} T={T} reload={loadAllData} />}
@@ -3129,6 +3131,176 @@ function EspacePro({ T }: { T: (m: string) => void }) {
 }
 
 /** Une repartition par statut, en barres — plus lisible qu'une liste de nombres. */
+/* ====================== Ma Carriere ====================== */
+
+const CARRIERE_KINDS: Record<string, string> = {
+  cv: "CV",
+  lettre: "Lettre de motivation",
+  demande: "Demande d'emploi ou de stage",
+};
+
+/**
+ * Supervision du module Ma Carriere.
+ *
+ * Le module tournait sans aucun ecran d'administration : impossible de savoir
+ * qui l'utilisait, combien de CV sortaient, ni ou en etait la consommation
+ * d'IA. Meme mecanique que l'Espace Pro — donnees reelles, tolerance a la
+ * migration absente.
+ *
+ * Le CONTENU des documents n'est jamais rapatrie : un CV porte des donnees
+ * personnelles, et superviser l'usage n'exige pas de les lire.
+ */
+function MaCarriere({ T }: { T: (m: string) => void }) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [vue, setVue] = useState<"gens" | "documents">("gens");
+
+  const charger = async () => {
+    setLoading(true);
+    try {
+      setData(await adminApi("carriere_overview"));
+    } catch (e: any) {
+      T(e?.message || "Chargement de Ma Carriere impossible.");
+    }
+    setLoading(false);
+  };
+  useEffect(() => { charger(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  if (loading) {
+    return (
+      <>
+        <PageHead title="📄 Ma Carrière" sub="Chargement…" />
+        <Card><div className="py-10 text-center text-[.85rem] text-[#8B949E]">Lecture des tables career_*…</div></Card>
+      </>
+    );
+  }
+  if (!data) {
+    return (
+      <>
+        <PageHead title="📄 Ma Carrière" />
+        <Card><div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucune donnee. <button onClick={charger} className={btnG}>Reessayer</button></div></Card>
+      </>
+    );
+  }
+  if (data.needsMigration) {
+    return (
+      <>
+        <PageHead title="📄 Ma Carrière" />
+        <Card>
+          <div className="py-8 text-center text-[.85rem] text-amber-300">
+            Les tables du module ne sont pas encore creees.<br />
+            Executez <b>database/MIGRATION_MA_CARRIERE.sql</b> dans Supabase → SQL Editor.
+          </div>
+        </Card>
+      </>
+    );
+  }
+
+  const t = data.totaux || {};
+  const onglets: ["gens" | "documents", string, number][] = [
+    ["gens", "Utilisateurs", (data.par_utilisateur || []).length],
+    ["documents", "Derniers documents", (data.derniers_documents || []).length],
+  ];
+
+  return (
+    <>
+      <PageHead
+        title="📄 Ma Carrière"
+        sub={`${t.utilisateurs || 0} utilisateurs · ${t.documents || 0} documents · ${t.redactions || 0} redactions IA — donnees reelles`}
+      >
+        <button onClick={charger} className={btnG}>↻ Actualiser</button>
+      </PageHead>
+
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="👤" label="Utilisateurs" value={t.utilisateurs || 0} trend={`${t.abonnes || 0} abonnes`} />
+        <Kpi grad="bg-g4" icon="📄" label="Documents crees" value={t.documents || 0} trend={`${t.documents_mois || 0} ce mois`} />
+        <Kpi grad="bg-g5" icon="✨" label="Redactions IA" value={t.redactions || 0} trend={`${t.redactions_mois || 0} ce mois`} />
+        <Kpi grad="bg-g2" icon="📅" label="Documents ce mois" value={t.documents_mois || 0} trend="depuis le 1er" />
+      </div>
+
+      <div className="mb-3 grid gap-3 lg:grid-cols-2">
+        <Card title="Documents par type">
+          <ProRepartition m={data.documents_par_type} labels={CARRIERE_KINDS} total={t.documents || 0} />
+        </Card>
+        <Card title="Redactions IA par type">
+          <ProRepartition m={data.redactions_par_type} labels={CARRIERE_KINDS} total={t.redactions || 0} />
+        </Card>
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        {onglets.map(([id, label, n]) => (
+          <button
+            key={id}
+            onClick={() => setVue(id)}
+            className={`rounded-[9px] px-3.5 py-2 text-[.78rem] font-bold ${vue === id ? "bg-g1 text-white" : "border border-[#30363D] bg-[#21262D] text-[#8B949E] hover:text-white"}`}
+          >
+            {label} <span className="opacity-70">({n})</span>
+          </button>
+        ))}
+      </div>
+
+      {vue === "gens" && (
+        <Card title="Qui utilise le module" sub="Trie par nombre de documents">
+          {(data.par_utilisateur || []).length === 0 ? (
+            <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Personne n&apos;a encore ouvert Ma Carriere.</div>
+          ) : (
+            <Tbl head={["Utilisateur", "Abonnement", "CV", "Lettres", "Demandes", "Total", "Ce mois", "Redactions IA", "Derniere activite"]}>
+              {data.par_utilisateur.map((u: any) => (
+                <tr key={u.user_id} className="hover:bg-white/[.02]">
+                  <Td bold>
+                    {u.nom || <span className="text-[#484F58]">sans nom</span>}
+                    {u.telephone && <div className="text-[.68rem] font-normal text-[#8B949E]">{u.telephone}</div>}
+                  </Td>
+                  <Td>
+                    {u.abonnement?.actif ? (
+                      <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[.68rem] font-bold text-emerald-300">
+                        {u.abonnement.plan === "annuel" ? "Annuel" : "Mensuel"}
+                      </span>
+                    ) : (
+                      <span className="rounded-md bg-white/10 px-2 py-0.5 text-[.68rem] font-bold text-gray-400">Gratuit</span>
+                    )}
+                  </Td>
+                  <Td>{u.cv}</Td>
+                  <Td>{u.lettres}</Td>
+                  <Td>{u.demandes}</Td>
+                  <Td bold>{u.documents}</Td>
+                  <Td>{u.documents_mois}</Td>
+                  <Td>
+                    {u.redactions}
+                    <span className="ml-1 text-[.68rem] text-[#8B949E]">({u.redactions_mois} ce mois)</span>
+                  </Td>
+                  <Td>{proDate(u.derniere_activite)}</Td>
+                </tr>
+              ))}
+            </Tbl>
+          )}
+        </Card>
+      )}
+
+      {vue === "documents" && (
+        <Card title="Derniers documents" sub="Titre et type seulement — le contenu n'est jamais lu">
+          {(data.derniers_documents || []).length === 0 ? (
+            <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucun document.</div>
+          ) : (
+            <Tbl head={["Document", "Type", "Modele", "Auteur", "Cree le", "Modifie le"]}>
+              {data.derniers_documents.map((d: any) => (
+                <tr key={d.id} className="hover:bg-white/[.02]">
+                  <Td bold>{d.title || <span className="text-[#484F58]">sans titre</span>}</Td>
+                  <Td>{CARRIERE_KINDS[d.kind] || d.kind}</Td>
+                  <Td>{d.template}</Td>
+                  <Td>{d.auteur || <span className="text-[#484F58]">—</span>}</Td>
+                  <Td>{proDate(d.created_at)}</Td>
+                  <Td>{proDate(d.updated_at)}</Td>
+                </tr>
+              ))}
+            </Tbl>
+          )}
+        </Card>
+      )}
+    </>
+  );
+}
+
 function ProRepartition({ m, labels, total }: { m: Record<string, number>; labels: Record<string, string>; total: number }) {
   const lignes = Object.entries(m || {}).sort((a, b) => b[1] - a[1]);
   if (!lignes.length) return <div className="py-6 text-center text-[.82rem] text-[#8B949E]">Rien pour l&apos;instant.</div>;

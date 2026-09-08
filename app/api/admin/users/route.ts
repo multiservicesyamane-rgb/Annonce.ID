@@ -218,6 +218,104 @@ export async function POST(req: Request) {
       });
     }
 
+    /**
+     * Ma Carrière — vue de supervision.
+     *
+     * Le module tournait sans aucun écran d'administration : impossible de
+     * savoir qui l'utilisait, combien de CV sortaient, ni où en était la
+     * consommation d'IA. On lit les deux tables du module et on recompose,
+     * comme pour `pro_overview`, une ligne par utilisateur.
+     */
+    if (action === "carriere_overview") {
+      const [docsRes, usageRes] = await Promise.all([
+        sb.from("career_documents").select("id, user_id, kind, title, template, created_at, updated_at"),
+        sb.from("career_usage").select("id, user_id, kind, created_at"),
+      ]);
+
+      // Migration pas encore passée : on le dit, plutôt que d'afficher des
+      // zéros qui laisseraient croire que personne n'utilise le module.
+      const absente = [docsRes, usageRes].find(
+        (r: any) => r.error && /does not exist|schema cache/i.test(r.error.message || ""),
+      );
+      if (absente) return NextResponse.json({ needsMigration: true });
+
+      const D = docsRes.data || [];
+      const U = usageRes.data || [];
+
+      // Bornes du mois courant, en UTC — les mêmes que le quota applicatif
+      // (voir lib/carriereServer.ts), sinon l'admin et l'utilisateur ne
+      // compteraient pas la même chose.
+      const now = new Date();
+      const debutMois = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+      const ceMois = (r: any) => String(r.created_at) >= debutMois;
+
+      const parKind = (rows: any[]) =>
+        rows.reduce((m: Record<string, number>, r: any) => {
+          const k = r.kind || "—";
+          m[k] = (m[k] || 0) + 1;
+          return m;
+        }, {});
+
+      const ids = Array.from(new Set([...D, ...U].map((r: any) => r.user_id).filter(Boolean)));
+      const { data: profs } = ids.length
+        ? await sb.from("profiles").select("id, full_name, phone").in("id", ids)
+        : { data: [] as any[] };
+      const profById: Record<string, any> = Object.fromEntries((profs || []).map((p: any) => [p.id, p]));
+
+      // Abonnement : le même que l'Espace Pro, il ouvre les deux modules.
+      const { data: abos } = await sb
+        .from("pro_subscriptions")
+        .select("user_id, plan, expires_at, source");
+      const aboById: Record<string, any> = Object.fromEntries((abos || []).map((a: any) => [a.user_id, a]));
+
+      const parUtilisateur = ids
+        .map((uid: string) => {
+          const ds = D.filter((r: any) => r.user_id === uid);
+          const us = U.filter((r: any) => r.user_id === uid);
+          const a = aboById[uid];
+          return {
+            user_id: uid,
+            nom: profById[uid]?.full_name || "",
+            telephone: profById[uid]?.phone || "",
+            abonnement: a
+              ? { plan: a.plan, expires_at: a.expires_at, source: a.source, actif: new Date(a.expires_at).getTime() > Date.now() }
+              : null,
+            documents: ds.length,
+            cv: ds.filter((r: any) => r.kind === "cv").length,
+            lettres: ds.filter((r: any) => r.kind === "lettre").length,
+            demandes: ds.filter((r: any) => r.kind === "demande").length,
+            documents_mois: ds.filter(ceMois).length,
+            redactions: us.length,
+            redactions_mois: us.filter(ceMois).length,
+            derniere_activite:
+              ds.map((r: any) => r.updated_at || r.created_at).sort().slice(-1)[0] || null,
+          };
+        })
+        .sort((a, b) => b.documents - a.documents || b.redactions - a.redactions);
+
+      const nomDe = (uid: string) => profById[uid]?.full_name || "";
+
+      return NextResponse.json({
+        totaux: {
+          utilisateurs: ids.length,
+          documents: D.length,
+          documents_mois: D.filter(ceMois).length,
+          redactions: U.length,
+          redactions_mois: U.filter(ceMois).length,
+          abonnes: (abos || []).filter((a: any) => new Date(a.expires_at).getTime() > Date.now()).length,
+        },
+        documents_par_type: parKind(D),
+        redactions_par_type: parKind(U),
+        par_utilisateur: parUtilisateur,
+        derniers_documents: [...D]
+          .sort((a: any, b: any) => String(b.updated_at || b.created_at).localeCompare(String(a.updated_at || a.created_at)))
+          .slice(0, 30)
+          // Le CONTENU n'est jamais renvoyé : un CV porte des données
+          // personnelles, et superviser l'usage n'exige pas de les lire.
+          .map((r: any) => ({ ...r, auteur: nomDe(r.user_id) })),
+      });
+    }
+
     if (action === "dashboard") {
       const [
         total,

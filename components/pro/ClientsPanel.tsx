@@ -9,11 +9,12 @@ import {
   formatFcfa, waNumber, CLIENT_LABELS, SECTORS, effectiveQuoteStatus,
 } from "@/lib/pro";
 import {
-  api, card, input, lbl, Badge, Crumb, Empty, F, FilterBar, MigrationNotice,
+  api, card, input, lbl, Badge, Crumb, Empty, F, FilterBar, Kpi, MigrationNotice,
   PageHead, Section, Select, useConfirm, CLIENT_STYLE,
   type Client, type Invoice, type Payment, type ProEvent, type Project, type Quote, type Toast,
   TONE_TEXT,
 } from "./ui";
+import Pagination, { usePagination } from "@/components/Pagination";
 
 type Detail = {
   client: Client;
@@ -27,6 +28,7 @@ type Detail = {
 export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: string) => void }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [needsMigration, setNeedsMigration] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -48,13 +50,15 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [c, q] = await Promise.all([
+    const [c, q, i] = await Promise.all([
       api("clients", { action: "list" }),
       api("quotes", { action: "list" }),
+      api("invoices", { action: "list" }),
     ]);
     if (c.data?.needsMigration) setNeedsMigration(true);
     setClients(c.data?.clients || []);
     setQuotes(q.data?.quotes || []);
+    setInvoices(i.data?.invoices || []);
     setLoading(false);
   }, []);
 
@@ -71,6 +75,36 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
     return m;
   }, [quotes]);
 
+  /**
+   * Encours par client : facturé moins encaissé, sur les pièces qui comptent.
+   *
+   * Les brouillons et les factures annulées sont exclus — une facture qui
+   * n'est pas partie ne doit rien à personne, et l'annoncer comme une créance
+   * ferait un chiffre faux au moment de relancer.
+   */
+  const encoursByClient = useMemo(() => {
+    const m: Record<string, { count: number; du: number }> = {};
+    for (const i of invoices) {
+      if (!i.client_id || i.status === "draft" || i.status === "cancelled") continue;
+      const e = (m[i.client_id] ||= { count: 0, du: 0 });
+      e.count += 1;
+      e.du += Math.max(0, (i.total || 0) - (i.paid_amount || 0));
+    }
+    return m;
+  }, [invoices]);
+
+  /** Indicateurs de tête : la santé du portefeuille avant la liste. */
+  const bilan = useMemo(() => {
+    const encours = Object.values(encoursByClient).reduce((s, e) => s + e.du, 0);
+    return {
+      total: clients.length,
+      actifs: clients.filter((c) => c.status === "active").length,
+      entreprises: clients.filter((c) => (c.company || "").trim()).length,
+      encours,
+      factures: Object.values(encoursByClient).reduce((s, e) => s + e.count, 0),
+    };
+  }, [clients, encoursByClient]);
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return clients.filter((c) => {
@@ -81,6 +115,9 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
         .some((v) => String(v).toLowerCase().includes(needle));
     });
   }, [clients, query, filter]);
+
+  // La cle porte la signature du filtre : changer de recherche ramene a la page 1.
+  const pagination = usePagination(filtered, query + "|" + filter);
 
   /* ---------------- Actions ---------------- */
 
@@ -174,7 +211,11 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
      plus pour recevoir un devis par WhatsApp. ===== */
   if (view === "form") {
     return (
-      <div className="mx-auto w-full max-w-[480px]">
+      // 480 px etait la bonne mesure pour DEUX champs ; avec les sections
+      // depliees, c etait un ruban de 1 600 px de haut au milieu d un ecran
+      // vide aux deux tiers. La colonne de saisie garde sa largeur lisible,
+      // c est la mise en page qui passe a deux colonnes (voir plus bas).
+      <div className="mx-auto w-full max-w-[980px]">
         {confirmNode}
         <Crumb
           onBack={() => { setView("list"); setEditing(null); }}
@@ -182,7 +223,8 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
           current={editing ? `Modifier ${editing.company || editing.name}` : "Ajouter un client"}
         />
 
-        <div className="flex flex-col gap-4">
+        <div className={showMore ? "grid gap-4 lg:grid-cols-2 lg:items-start" : "mx-auto flex w-full max-w-[520px] flex-col gap-4"}>
+          <div className="flex min-w-0 flex-col gap-4">
           <Section icon="👤" title="Le client">
             <div className="grid gap-3">
               {editing ? (
@@ -197,7 +239,7 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
             </div>
           </Section>
 
-          {!showMore ? (
+          {!showMore && (
             <button
               type="button"
               onClick={() => setShowMore(true)}
@@ -205,8 +247,9 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
             >
               + Ajouter entreprise, adresse, notes…
             </button>
-          ) : (
-            <>
+          )}
+
+          {showMore && (
               <Section icon="🏢" title="Entreprise et facturation (optionnel)">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <F l="Entreprise / Structure" v={form.company} set={(v) => setForm({ ...form, company: v })} ph="Ex : Tekki Foods" />
@@ -227,7 +270,13 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
                   </div>
                 </div>
               </Section>
+          )}
+          </div>
 
+          {/* Colonne de droite — n'existe que dépliée. Sur téléphone la grille
+              n'a qu'une colonne : elle se retrouve simplement en dessous. */}
+          {showMore && (
+            <div className="flex min-w-0 flex-col gap-4">
               <Section icon="🏷️" title="Secteur d'activité">
                 <div className="flex flex-wrap gap-2">
                   {SECTORS.map((s) => (
@@ -269,16 +318,28 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
                   ]}
                 />
               </div>
-            </>
+
+              <button
+                onClick={save}
+                disabled={busy}
+                className="btn btn-green w-full py-3.5 text-[.9rem] font-extrabold disabled:opacity-50"
+              >
+                {busy ? "Enregistrement…" : editing ? "Enregistrer" : "Enregistrer le client"}
+              </button>
+            </div>
           )}
 
-          <button
-            onClick={save}
-            disabled={busy}
-            className="btn btn-green w-full py-3.5 text-[.9rem] font-extrabold disabled:opacity-50"
-          >
-            {busy ? "Enregistrement…" : editing ? "Enregistrer" : "Enregistrer le client"}
-          </button>
+          {/* Replié, le bouton reste sous les deux seuls champs : le déplacer
+              dans une colonne qui n'existe pas encore le ferait disparaître. */}
+          {!showMore && (
+            <button
+              onClick={save}
+              disabled={busy}
+              className="btn btn-green w-full py-3.5 text-[.9rem] font-extrabold disabled:opacity-50"
+            >
+              {busy ? "Enregistrement…" : editing ? "Enregistrer" : "Enregistrer le client"}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -295,11 +356,15 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
     const extraInfo = [c.email, c.city, c.sector, c.billing_name, c.tax_id, c.address].some(Boolean);
 
     return (
-      <div className="mx-auto w-full max-w-[560px]">
+      // Meme largeur que Projets, Devis et Factures : la fiche client etait la
+      // seule bornee a 560 px, soit un ruban etroit au milieu d un ecran
+      // d ordinateur, avec les deux tiers de la place inutilises.
+      <div className="mx-auto w-full max-w-[980px] xl:max-w-[1180px]">
         {confirmNode}
         <Crumb onBack={() => setView("list")} parent="Clients" current={c.company || c.name} />
 
-        <div className="flex flex-col gap-4">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="flex min-w-0 flex-col gap-4">
           {/* En-tête — juste l'essentiel pour contacter le client. */}
           <div className={`${card} p-4 sm:p-5`}>
             <div className="flex items-start gap-3.5">
@@ -351,6 +416,9 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
             </div>
           </div>
 
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-4">
           {/* Portefeuille — un chiffre, sans détail à faire défiler. */}
           <div className="rounded-2xl border border-green/25 bg-green/5 p-4">
             <div className="text-[.68rem] font-bold uppercase tracking-wider text-green">Suivi des paiements</div>
@@ -376,6 +444,7 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
               </p>
             </Section>
           )}
+          </div>
         </div>
       </div>
     );
@@ -423,13 +492,113 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
             ]}
           />
 
+          {/* ---- La santé du portefeuille, avant la liste ----
+               Un écran de gestion se lit du général au détail : combien de
+               clients, combien d'entreprises, et surtout combien on attend.
+               C'est l'encours qui décide de la journée, pas le nombre de
+               fiches. */}
+          {clients.length > 0 && (
+            <section aria-label="Vue d'ensemble" className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Kpi label="Clients" value={String(bilan.total)} sub={`${bilan.actifs} actif${bilan.actifs > 1 ? "s" : ""}`} />
+              <Kpi
+                label="Entreprises"
+                value={String(bilan.entreprises)}
+                sub={`${bilan.total - bilan.entreprises} particulier${bilan.total - bilan.entreprises > 1 ? "s" : ""}`}
+              />
+              <Kpi
+                label="Encours total"
+                value={formatFcfa(bilan.encours)}
+                tone={bilan.encours > 0 ? "amber" : undefined}
+                sub="à encaisser"
+              />
+              <Kpi label="Factures liées" value={String(bilan.factures)} sub="tous clients" />
+            </section>
+          )}
+
           {filtered.length === 0 ? (
             <div className={`${card} px-6 py-10 text-center`}>
               <p className="text-[.86rem] text-gray-500">Aucun client ne correspond à cette recherche.</p>
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {filtered.map((c) => {
+            // `auto-fill` plutot que deux colonnes figees : a 1 180 px de large,
+            // `sm:grid-cols-2` donnait deux cartes de 580 px — et avec un seul
+            // client, une carte a moitie d'ecran suivie de vide. La grille pose
+            // maintenant autant de colonnes que la largeur en accepte.
+            <>
+            {/* ---- Tableau sur ordinateur ----
+                 Des cartes conviennent à dix clients, jamais à cinq cents :
+                 on ne compare pas des montants dispersés dans une grille. Le
+                 tableau les aligne en colonne, ce que l'œil sait lire. Il
+                 disparaît sous `lg`, où les cartes reprennent la main — un
+                 tableau à six colonnes sur un téléphone ne se lit pas. */}
+            <div className={`${card} hidden overflow-hidden p-0 lg:block`}>
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-gray-100 dark:border-white/10">
+                    {["Client", "Contact", "Devis", "Encours", "Statut", ""].map((h, i) => (
+                      <th
+                        key={h || i}
+                        scope="col"
+                        className={`px-4 py-3 text-[.66rem] font-bold uppercase tracking-[.06em] text-gray-400 ${
+                          i === 2 || i === 3 ? "text-right" : ""
+                        }`}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-white/10">
+                  {pagination.visibles.map((c) => {
+                    const stat = quotesByClient[c.id];
+                    const enc = encoursByClient[c.id];
+                    return (
+                      <tr
+                        key={c.id}
+                        onClick={() => openDetail(c.id)}
+                        className="cursor-pointer transition hover:bg-gray-50 dark:hover:bg-white/5"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-green/15 to-neon-gold/15 text-[.72rem] font-extrabold text-green">
+                              {(c.company || c.name).slice(0, 2).toUpperCase()}
+                            </span>
+                            <div className="min-w-0">
+                              <div className="truncate text-[.88rem] font-bold text-gray-900 dark:text-white">
+                                {c.company || c.name}
+                              </div>
+                              <div className="font-mono text-[.7rem] text-gray-400">{c.tracking_code}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-[.8rem] text-gray-500">
+                          {c.phone || c.email || <span className="text-gray-300">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-[.85rem] font-bold tabular-nums text-gray-700 dark:text-gray-300">
+                          {stat?.count || 0}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-[.85rem] font-bold tabular-nums">
+                          {enc?.du ? (
+                            <span className="text-amber-600 dark:text-amber-400">{formatFcfa(enc.du)}</span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge cls={CLIENT_STYLE[c.status] || CLIENT_STYLE.prospect}>
+                            {CLIENT_LABELS[c.status] || c.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right text-[1.1rem] text-gray-300">›</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(290px,1fr))] lg:hidden">
+              {pagination.visibles.map((c) => {
                 const stat = quotesByClient[c.id];
                 return (
                   <button
@@ -471,6 +640,19 @@ export default function ClientsPanel({ toast, goTo }: { toast: Toast; goTo: (p: 
                 );
               })}
             </div>
+            <Pagination
+              {...pagination}
+              nom="client"
+              resume={
+                <span className="text-gray-500 dark:text-gray-400">
+                  Encours{" "}
+                  <b className="font-mono font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                    {formatFcfa(filtered.reduce((s, c) => s + (encoursByClient[c.id]?.du || 0), 0))}
+                  </b>
+                </span>
+              }
+            />
+            </>
           )}
         </>
       )}

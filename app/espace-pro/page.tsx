@@ -229,7 +229,7 @@ export default function EspaceProPage() {
       {/* Tarifs — le prix se lit avant l'inscription, pas au moment du blocage */}
       <div id="tarifs" className="mt-16 scroll-mt-24 md:mt-24">
         <ScrollReveal delay={100}>
-          <ProPlans mode="public" quotaFactures={QUOTA_GRATUIT_FACTURES} />
+          <ProPlans mode="public" quotaInclus={QUOTA_GRATUIT_FACTURES} />
         </ScrollReveal>
       </div>
 

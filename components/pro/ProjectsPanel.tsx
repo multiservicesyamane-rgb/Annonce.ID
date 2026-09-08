@@ -19,6 +19,7 @@ import {
   type Client, type Invoice, type ProEvent, type Project, type Quote, type Toast,
   TONE_TEXT,
 } from "./ui";
+import Pagination, { usePagination } from "@/components/Pagination";
 
 type Detail = { project: Project; quotes: Quote[]; invoices: Invoice[]; events: ProEvent[] };
 
@@ -76,6 +77,9 @@ export default function ProjectsPanel({ toast, goTo }: { toast: Toast; goTo: (p:
         .some((v) => String(v).toLowerCase().includes(needle));
     });
   }, [projects, query, filter]);
+
+  // La cle porte la signature du filtre : changer de recherche ramene a la page 1.
+  const pagination = usePagination(filtered, query + "|" + filter);
 
   /* ---------------- Actions ---------------- */
 
@@ -564,8 +568,9 @@ export default function ProjectsPanel({ toast, goTo }: { toast: Toast; goTo: (p:
               <p className="text-[.86rem] text-gray-500">Aucun projet ne correspond à cette recherche.</p>
             </div>
           ) : (
+            <>
             <div className="flex flex-col gap-3">
-              {filtered.map((p) => {
+              {pagination.visibles.map((p) => {
                 const left = daysUntil(p.due_date);
                 const late = left != null && left < 0 && p.status === "active";
                 return (
@@ -607,6 +612,8 @@ export default function ProjectsPanel({ toast, goTo }: { toast: Toast; goTo: (p:
                 );
               })}
             </div>
+            <Pagination {...pagination} nom="projet" />
+            </>
           )}
         </>
       )}

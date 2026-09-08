@@ -141,10 +141,13 @@ export default function QuoteSectionsEditor({
                             ✕
                           </button>
                         </div>
+                        {/* La consigne vit dans le placeholder, pas dans la
+                            valeur : elle guide la saisie sans jamais partir
+                            chez le client si le champ reste vide. */}
                         <textarea
                           className={`${input} mt-2 min-h-[62px] resize-none`}
                           value={it.body}
-                          placeholder="Texte affiché au client…"
+                          placeholder={it.hint || "Texte affiché au client…"}
                           onChange={(e) => patchItem(si, ii, { body: e.target.value })}
                         />
                       </div>

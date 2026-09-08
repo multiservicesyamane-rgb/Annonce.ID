@@ -3,7 +3,78 @@
 import { useState } from "react";
 import Link from "next/link";
 import { DOC_TEMPLATES } from "@/lib/pro";
+import { CV_TEMPLATES } from "@/lib/carriere";
 import { PRO_PLANS, formatFcfaPlan, type ProPlanKey } from "@/lib/proBilling";
+
+/**
+ * Ce que l'offre raconte, module par module.
+ *
+ * Il n'y a QU'UN abonnement Wanteermako Pro — meme prix, meme tunnel Chariow,
+ * meme case « payer a l'annee » — et il ouvre les deux modules. Mais l'offre
+ * etait racontee avec les mots de l'Espace Pro partout : quelqu'un venu faire
+ * son CV se voyait promettre « devis illimites » et « suivi des paiements »,
+ * et lisait un quota de factures qui ne le concernait pas.
+ *
+ * Seuls les TEXTES changent ici. Le prix, la mise en page et le paiement
+ * restent une seule et meme chose : les dupliquer, c'est se condamner a les
+ * voir diverger.
+ *
+ * Le vouvoiement de l'Espace Pro et le tutoiement de Ma Carriere sont eux
+ * aussi deliberes — les deux modules ne parlent pas au meme public.
+ */
+/** Modeles de CV ouverts a un compte gratuit — les autres sont reserves. */
+const CV_MODELES_GRATUITS = CV_TEMPLATES.filter((t) => !t.pro).length;
+
+const CONTENU = {
+  pro: {
+    unite: (n: number) => (n === 1 ? "1 facture" : `${n} factures`),
+    accroche: (u: string) =>
+      `Le gratuit vous offre ${u} par mois. Le Pro lève la limite — vos devis, eux, ont toujours été illimités.`,
+    sousTitrePublic:
+      "Vous pouvez travailler gratuitement, sans limite de durée. Le Pro ne débloque qu'une chose : le nombre de factures.",
+    sousTitreGratuit: "Pour travailler pour de vrai, sans carte bancaire et sans limite de durée.",
+    atoutsGratuit: (u: string) => [
+      "Devis illimités",
+      `${u} par mois`,
+      `${DOC_TEMPLATES.length} mises en page`,
+      "Logo, signature, cachet",
+      "PDF A4 et QR code",
+      "Envoi par WhatsApp",
+      "Suivi des paiements",
+    ],
+    atoutPro: "Factures illimitées",
+    /** Ce que le Pro ajoute, en plus de l'atout fort ci-dessus. */
+    atoutsPro: ["Tout ce que contient le gratuit"],
+    titreApp: "Passez au Pro",
+    lien: "/mon-activite",
+    pied: "Vos devis et factures déjà créés restent accessibles, quoi qu'il arrive.",
+  },
+  carriere: {
+    unite: (n: number) => (n === 1 ? "1 document" : `${n} documents`),
+    accroche: (u: string) =>
+      `Le gratuit te donne ${u} par mois. Le Pro lève la limite — tu peux réécrire tes textes autant que tu veux, ça n'a jamais été compté.`,
+    sousTitrePublic:
+      "Tu peux créer tes documents gratuitement, sans limite de durée. Le Pro ne débloque qu'une chose : leur nombre.",
+    sousTitreGratuit: "De quoi produire un vrai document, le télécharger et l'envoyer. Sans carte bancaire.",
+    atoutsGratuit: (u: string) => [
+      `${u} par mois`,
+      `${CV_MODELES_GRATUITS} modèles de CV`,
+      "Rédaction assistée par IA",
+      "Lettre de motivation",
+      "Demande d'emploi ou de stage",
+      "PDF A4 téléchargeable",
+      "Tes documents enregistrés",
+    ],
+    atoutPro: "Documents illimités",
+    atoutsPro: [
+      "Tout ce que contient le gratuit",
+      `Les ${CV_TEMPLATES.length} modèles de CV`,
+    ],
+    titreApp: "Passe au Pro",
+    lien: "/carriere",
+    pied: "Tes CV et tes lettres déjà créés restent accessibles, quoi qu'il arrive.",
+  },
+} as const;
 
 /**
  * L'offre Pro : deux plans, Gratuit et Pro — la meme section sur la page
@@ -31,32 +102,37 @@ import { PRO_PLANS, formatFcfaPlan, type ProPlanKey } from "@/lib/proBilling";
  */
 export default function ProPlans({
   mode = "app",
+  module = "pro",
   message,
   onClose,
-  quotaFactures = 1,
+  quotaInclus = 1,
 }: {
   mode?: "public" | "app";
+  /** Quel module raconte l'offre. L'abonnement, lui, est le meme. */
+  module?: keyof typeof CONTENU;
   /** Contexte affiche en tete, cote appli : pourquoi cette offre apparait maintenant. */
   message?: string;
   onClose?: () => void;
   /**
-   * Nombre de factures offertes par mois. Passe par la page serveur, qui seule
-   * peut lire PRO_QUOTA_FACTURES — cette variable n'est pas exposee au client,
-   * et l'importer ici afficherait « 1 » meme apres l'avoir desserree.
+   * Nombre de pieces offertes par mois — factures cote Pro, documents cote
+   * Carriere. Passe par la page serveur, qui seule peut lire les variables de
+   * quota : elles ne sont pas exposees au client, et les importer ici
+   * afficherait « 1 » meme apres les avoir desserrees.
    */
-  quotaFactures?: number;
+  quotaInclus?: number;
 }) {
   const [annuel, setAnnuel] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const t = CONTENU[module];
   const plan = annuel ? PRO_PLANS.annuel : PRO_PLANS.mensuel;
   const douzeMois = PRO_PLANS.mensuel.price * 12;
   // 46 800 − 39 000 = 7 800, soit deux mois. On montre l'economie en francs :
   // « 2 mois offerts » est une formule, un montant est une preuve.
   const economie = douzeMois - PRO_PLANS.annuel.price;
   const parMois = Math.round(PRO_PLANS.annuel.price / 12);
-  const factures = quotaFactures === 1 ? "1 facture" : `${quotaFactures} factures`;
+  const unite = t.unite(quotaInclus);
 
   async function payer(cle: ProPlanKey) {
     if (busy) return;
@@ -97,11 +173,10 @@ export default function ProPlans({
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
             <h3 className="font-display text-[1.05rem] font-black text-gray-900 dark:text-white">
-              Passez au Pro
+              {t.titreApp}
             </h3>
             <p className="mt-1 max-w-[52ch] text-[.84rem] leading-relaxed text-gray-600 dark:text-gray-400">
-              {message ||
-                `Le gratuit vous offre ${factures} par mois. Le Pro lève la limite — vos devis, eux, ont toujours été illimités.`}
+              {message || t.accroche(unite)}
             </p>
           </div>
           {onClose && (
@@ -120,8 +195,7 @@ export default function ProPlans({
             Le prix, avant que vous vous inscriviez
           </h2>
           <p className="mx-auto mt-2 max-w-lg text-[.9rem] leading-relaxed text-gray-600 dark:text-gray-400">
-            Vous pouvez travailler gratuitement, sans limite de durée. Le Pro ne
-            débloque qu&apos;une chose : le nombre de factures.
+            {t.sousTitrePublic}
           </p>
         </div>
       )}
@@ -138,23 +212,19 @@ export default function ProPlans({
             </span>
           </div>
           <p className="mt-1.5 text-[.8rem] leading-relaxed text-gray-500 dark:text-gray-400">
-            Pour travailler pour de vrai, sans carte bancaire et sans limite de durée.
+            {t.sousTitreGratuit}
           </p>
 
           <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
-            <Atout>Devis illimités</Atout>
-            <Atout>{factures} par mois</Atout>
-            <Atout>{DOC_TEMPLATES.length} mises en page</Atout>
-            <Atout>Logo, signature, cachet</Atout>
-            <Atout>PDF A4 et QR code</Atout>
-            <Atout>Envoi par WhatsApp</Atout>
-            <Atout>Suivi des paiements</Atout>
+            {t.atoutsGratuit(unite).map((a) => (
+              <Atout key={a}>{a}</Atout>
+            ))}
           </div>
 
           <div className="mt-5">
             {mode === "public" ? (
               <Link
-                href="/mon-activite"
+                href={t.lien}
                 className="btn btn-outline w-full py-2.5 text-[.85rem] font-extrabold"
               >
                 Commencer gratuitement
@@ -219,15 +289,17 @@ export default function ProPlans({
           </label>
 
           <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
-            <Atout fort>Factures illimitées</Atout>
-            <Atout>Tout ce que contient le gratuit</Atout>
+            <Atout fort>{t.atoutPro}</Atout>
+            {t.atoutsPro.map((a) => (
+              <Atout key={a}>{a}</Atout>
+            ))}
             <Atout>{annuel ? "Un seul paiement dans l'année" : "Résiliable à tout moment"}</Atout>
           </div>
 
           <div className="mt-5">
             {mode === "public" ? (
               <Link
-                href="/mon-activite"
+                href={t.lien}
                 className="btn btn-gold w-full py-2.5 text-[.85rem] font-extrabold"
               >
                 Passer au Pro — {formatFcfaPlan(plan.price)}
@@ -252,8 +324,7 @@ export default function ProPlans({
       )}
 
       <p className="mx-auto mt-5 max-w-[56ch] text-center text-[.76rem] leading-relaxed text-gray-500 dark:text-gray-400">
-        Paiement Mobile Money ou carte, par Chariow. Vos devis et factures déjà
-        créés restent accessibles, quoi qu&apos;il arrive.
+        Paiement Mobile Money ou carte, par Chariow. {t.pied}
       </p>
     </section>
   );

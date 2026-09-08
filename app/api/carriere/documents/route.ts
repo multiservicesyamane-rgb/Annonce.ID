@@ -96,6 +96,25 @@ export async function POST(req: Request) {
         );
       }
 
+      // Le peage est ICI, a la creation : un document gratuit par mois, cinq
+      // avec l'abonnement. C'est le seul endroit ou il compte — une fois le
+      // document ouvert, on ecrit et on recommence sans limite.
+      const q = await etatQuota(sb, userId, email);
+      if (!q.autorise) {
+        // 402 et non 403 : ce n'est pas interdit, c'est paye. L'ecran s'en
+        // sert pour ouvrir l'abonnement plutot qu'un message d'erreur.
+        return NextResponse.json(
+          {
+            error: "Quota de documents atteint",
+            quota: q,
+            message: q.abonne
+              ? `Ton abonnement inclut ${q.quota} documents par mois. Tu les as tous utilises.`
+              : `Ton document gratuit du mois est utilise. L'abonnement en ouvre ${q.quota === 1 ? 5 : q.quota}.`,
+          },
+          { status: 402 },
+        );
+      }
+
       const contenu = nettoyerContenu(kind, body?.content);
       const template = await templateAutorise(sb, userId, email, body?.template);
 

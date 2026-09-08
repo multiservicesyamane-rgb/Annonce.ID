@@ -11,8 +11,11 @@ import { isOwner } from "@/lib/owners";
 import { txt } from "@/lib/proServer";
 import {
   CAREER_KINDS,
-  QUOTA_GRATUIT_CARRIERE,
+  PLAFOND_REDACTIONS,
+  QUOTA_DOCUMENTS_GRATUIT,
+  QUOTA_DOCUMENTS_PRO,
   isAccent,
+  isPoliceId,
   newId,
   type CareerContent,
   type CareerKind,
@@ -29,12 +32,14 @@ export function isCareerKind(v: unknown): v is CareerKind {
 
 export type EtatQuotaCarriere = {
   abonne: boolean;
-  /** Passages de generation consommes depuis le 1er du mois. */
+  /** Documents crees depuis le 1er du mois. */
   utilises: number;
-  /** Plafond du compte gratuit. Sans objet pour un abonne. */
+  /** Documents inclus ce mois-ci : 1 sans abonnement, 5 avec. */
   quota: number;
-  /** false quand un compte gratuit a epuise son mois. */
+  /** false quand le quota de documents du mois est epuise. */
   autorise: boolean;
+  /** Redactions assistees consommees — sert au garde-fou, pas au peage. */
+  redactions: number;
 };
 
 /** Premier jour du mois courant, en ISO — borne du compteur. */
@@ -75,33 +80,56 @@ export async function etatQuota(
   userId: string,
   email?: string,
 ): Promise<EtatQuotaCarriere> {
+  const depuis = debutDuMois();
+
+  /** Compte les lignes d'une table pour ce compte, depuis le 1er du mois. */
+  const compter = async (table: string, colonne: string): Promise<number> => {
+    try {
+      const { count, error } = await sb
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .gte(colonne, depuis);
+      return error ? 0 : count || 0;
+    } catch {
+      // Table absente (migration non passee) ou illisible : on ne ferme pas
+      // la porte sur un compteur.
+      return 0;
+    }
+  };
+
+  const [documents, redactions] = await Promise.all([
+    compter("career_documents", "created_at"),
+    compter("career_usage", "created_at"),
+  ]);
+
+  // Le proprietaire du site n'a pas de quota : il doit pouvoir essayer et
+  // montrer son propre produit sans se heurter a son propre peage.
   if (estProprietaire(email)) {
-    return { abonne: true, utilises: 0, quota: QUOTA_GRATUIT_CARRIERE, autorise: true };
+    return { abonne: true, utilises: documents, quota: QUOTA_DOCUMENTS_PRO, autorise: true, redactions };
   }
 
   const abo = await getProSubscription(sb, userId);
-  if (abo.actif) {
-    return { abonne: true, utilises: 0, quota: QUOTA_GRATUIT_CARRIERE, autorise: true };
-  }
-
-  let utilises = 0;
-  try {
-    const { count, error } = await sb
-      .from("career_usage")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("created_at", debutDuMois());
-    if (!error) utilises = count || 0;
-  } catch {
-    /* table absente ou illisible : on ne bloque pas sur un compteur */
-  }
+  const quota = abo.actif ? QUOTA_DOCUMENTS_PRO : QUOTA_DOCUMENTS_GRATUIT;
 
   return {
-    abonne: false,
-    utilises,
-    quota: QUOTA_GRATUIT_CARRIERE,
-    autorise: utilises < QUOTA_GRATUIT_CARRIERE,
+    abonne: abo.actif,
+    utilises: documents,
+    quota,
+    autorise: documents < quota,
+    redactions,
   };
+}
+
+/**
+ * Le garde-fou de redaction est-il atteint ?
+ *
+ * Distinct du peage : celui-ci porte sur les documents. Ce plafond-la ne sert
+ * qu'a arreter un script, il est hors d'atteinte d'un usage humain.
+ */
+export function plafondRedactionAtteint(etat: EtatQuotaCarriere, email?: string): boolean {
+  if (estProprietaire(email)) return false;
+  return etat.redactions >= PLAFOND_REDACTIONS;
 }
 
 /**
@@ -128,6 +156,7 @@ export async function consommerPassage(
 
 const MAX_EXPERIENCES = 12;
 const MAX_FORMATIONS = 10;
+const MAX_CERTIFICATIONS = 10;
 const MAX_PUCES = 8;
 const MAX_LISTE = 20;
 
@@ -164,6 +193,9 @@ function nettoyerCV(raw: any): CVContent {
     // Hors palette, on retombe sur la couleur du gabarit plutot que d'ecrire
     // une valeur arbitraire qui partirait telle quelle dans un attribut style.
     accent: isAccent(raw?.accent) ? raw.accent : "",
+    // Hors liste, on repart sur la police par defaut : la valeur part dans un
+    // attribut style de la feuille, elle ne peut pas etre libre.
+    police: isPoliceId(raw?.police) ? raw.police : "",
     summary: str(raw?.summary, 800),
     experiences: (Array.isArray(raw?.experiences) ? raw.experiences : [])
       .slice(0, MAX_EXPERIENCES)
@@ -186,6 +218,14 @@ function nettoyerCV(raw: any): CVContent {
         location: str(e?.location, 80),
         startDate: str(e?.startDate, 30),
         endDate: str(e?.endDate, 30),
+      })),
+    certifications: (Array.isArray(raw?.certifications) ? raw.certifications : [])
+      .slice(0, MAX_CERTIFICATIONS)
+      .map((c: any) => ({
+        id: str(c?.id, 40) || newId("cert"),
+        name: str(c?.name, 140),
+        issuer: str(c?.issuer, 120),
+        year: str(c?.year, 20),
       })),
     skills: liste(raw?.skills, MAX_LISTE, 80),
     languages: (Array.isArray(raw?.languages) ? raw.languages : [])

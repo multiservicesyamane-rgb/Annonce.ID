@@ -164,7 +164,20 @@ export default function CarrierePage() {
   const surAccueil = ecran.v === "accueil" || ecran.v === "documents";
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-dark-900">
+    // `isolate` : le fond lumineux ci-dessous est en z-index negatif. Sans
+    // contexte d'empilement ici, il passerait sous le fond de la page et on ne
+    // verrait rien du tout.
+    <div className="relative isolate min-h-screen bg-gray-50 dark:bg-dark-900">
+      {/* Aurore de fond — deux nappes lumineuses fixes, tres diluees.
+          `fixed` et non `absolute` : elles doivent rester en place quand la
+          page defile, sinon la lueur file vers le haut et disparait. Elles ne
+          captent aucun clic et se dissipent presque entierement en theme
+          clair, ou un neon sur blanc salirait au lieu d'eclairer. */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <span className="absolute -left-32 -top-24 h-[420px] w-[420px] rounded-full bg-green/10 blur-[110px] dark:bg-green/25" />
+        <span className="absolute -right-24 top-1/3 h-[380px] w-[380px] rounded-full bg-neon-magenta/10 blur-[110px] dark:bg-neon-magenta/20" />
+      </div>
+
       {/* Barre du haut : un seul niveau de retour, jamais plus. */}
       <div className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-gray-100 bg-white px-4 dark:border-dark-border dark:bg-dark-900">
         {ecran.v === "accueil" ? (
@@ -307,8 +320,19 @@ export default function CarrierePage() {
 
           {ecran.v === "peage" && (
             <div className="px-4 py-6">
+              {/* Le peage porte sur les DOCUMENTS crees dans le mois, pas sur
+                  les redactions : ce message annoncait « tes redactions
+                  assistees sont utilisees » alors qu'on peut reecrire un texte
+                  autant qu'on veut. Il promettait la mauvaise chose au mauvais
+                  moment. */}
               <ProUpgrade
-                message={`Tes ${quota?.quota ?? 3} redactions assistees du mois sont utilisees. L'abonnement Pro les rend illimitees et ouvre tous les modeles de CV.`}
+                module="carriere"
+                quotaInclus={quota?.quota ?? 1}
+                message={
+                  quota
+                    ? `Tu as créé ${quota.utilises} document${quota.utilises > 1 ? "s" : ""} sur ${quota.quota} ce mois-ci. Le Pro lève la limite et ouvre tous les modèles — réécrire tes textes, lui, n'a jamais été compté.`
+                    : undefined
+                }
                 onClose={rentrer}
               />
             </div>

@@ -4,6 +4,7 @@ import SiteShell from "@/components/SiteShell";
 import { BRAND } from "@/lib/constants";
 import InstallPWAButton from "@/components/InstallPWAButton";
 import CookieBanner from "@/components/CookieBanner";
+import Analytics from "@/components/Analytics";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wanteermako.com";
 
@@ -116,6 +117,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-body antialiased">
         <SiteShell>{children}</SiteShell>
+        <Analytics />
         <InstallPWAButton />
         <CookieBanner />
       </body>

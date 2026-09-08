@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { redigerIA } from "@/lib/ia";
 import { proContext, txt } from "@/lib/proServer";
 import { messageFerme, peutAcceder } from "@/lib/moduleAccess";
-import { consommerPassage, etatQuota } from "@/lib/carriereServer";
+import { consommerPassage, etatQuota, plafondRedactionAtteint } from "@/lib/carriereServer";
 import { consigneAccord, ligneDate, type Genre } from "@/lib/carriere";
 import { demarcheParId } from "@/lib/demarches";
 import { corpsCourrier, corpsLettreMotivation, missionsCV, profilCV } from "@/lib/modelesTexte";
@@ -68,17 +68,17 @@ export async function POST(req: Request) {
     }
 
     const quota = await etatQuota(sb, userId, email);
-    if (!quota.autorise) {
-      // 402 et non 403 : l'acces n'est pas interdit, il est paye. L'ecran
-      // s'en sert pour ouvrir la page d'abonnement plutot qu'un message
-      // d'erreur.
+    // Le peage porte sur les DOCUMENTS, plus sur les redactions : une fois ton
+    // document cree, tu ecris et tu recommences autant que tu veux. Seul
+    // subsiste un plafond tres haut, la pour arreter un script.
+    if (plafondRedactionAtteint(quota, email)) {
       return NextResponse.json(
         {
-          error: "Quota epuise",
+          error: "Plafond de redaction atteint",
           quota,
-          message: `Tes ${quota.quota} redactions gratuites du mois sont utilisees.`,
+          message: "Tu as atteint le plafond de redactions de ce mois. Reessaie le mois prochain.",
         },
-        { status: 402 },
+        { status: 429 },
       );
     }
 
@@ -143,12 +143,28 @@ function consigne(cible: Cible, b: any, genre: Genre): string {
   const ville = txt(b?.city, 80) || "Dakar";
   const entreprise = txt(b?.company, 120);
 
+  /**
+   * Extrait factuel du CV deja saisi (voir `resumeDossier`).
+   *
+   * C'est ce qui separe un texte juste d'un texte interchangeable : sans lui,
+   * le modele ecrivait un profil « motive et rigoureux » alors que le candidat
+   * venait de renseigner trois experiences et deux diplomes. On le joint donc
+   * a chaque consigne, avec le rappel qu'il s'agit du SEUL materiau autorise.
+   */
+  const dossier = txt(b?.dossier, 2000);
+  const bloc = dossier
+    ? `\nCE QUE LE CANDIDAT A DEJA RENSEIGNE (seule source de faits autorisee — n'ajoute rien qui n'y figure pas) :\n${dossier}\n`
+    : "";
+
   if (cible === "summary") {
     const parcours = txt(b?.parcours, 600);
     return `Redige le PROFIL PROFESSIONNEL d'un CV : 2 a 3 phrases, a la premiere personne.
 Poste vise : ${poste}.
 Ville : ${ville}.
-${parcours ? `Parcours declare par le candidat :\n${parcours}` : "Le candidat n'a pas encore decrit son parcours : reste general, ne suppose ni diplome ni annees d'experience."}
+${bloc}${parcours ? `Ce que le candidat dit lui-meme de son parcours :\n${parcours}` : ""}
+${dossier
+  ? "Appuie-toi sur son metier, ses annees d'experience et ses competences reelles ci-dessus. Cite au moins un element concret (un intitule de poste, un employeur ou un diplome), sans en inventer d'autre."
+  : "Le candidat n'a encore rien renseigne : reste general, ne suppose ni diplome ni annees d'experience."}
 ${accord}
 Longueur : 400 signes maximum.`;
   }
@@ -159,9 +175,11 @@ Longueur : 400 signes maximum.`;
     const brut = txt(b?.missions, 600);
     return `Redige les MISSIONS d'une experience professionnelle sur un CV.
 Poste occupe : ${intitule}${employeur ? ` chez ${employeur}` : ""}.
-${brut ? `Ce que le candidat en dit :\n${brut}` : "Le candidat n'a rien precise : propose 3 missions courantes et sobres pour ce poste, sans chiffre invente."}
+${b?.targetJob ? `Poste que le candidat vise aujourd'hui : ${poste}. Mets en avant, parmi ses missions, celles qui servent cette candidature.` : ""}
+${bloc}${brut ? `Ce que le candidat en dit :\n${brut}` : "Le candidat n'a rien precise : propose 3 missions courantes et sobres pour ce poste, sans chiffre invente."}
 Rends EXACTEMENT 3 a 4 lignes, une mission par ligne, commencant par un tiret.
-Chaque ligne commence par un verbe a l'infinitif ou un nom d'action. Pas de pourcentage ni de montant qui ne soit pas donne ci-dessus.`;
+Chaque ligne commence par un verbe a l'infinitif ou un nom d'action. Pas de pourcentage ni de montant qui ne soit pas donne ci-dessus.
+Ne repete pas deux fois la meme idee avec des mots differents.`;
   }
 
   if (cible === "lettre") {
@@ -172,7 +190,10 @@ Destinataire : ${recruteur}.
 Entreprise : ${entreprise || "l'entreprise"}.
 Poste vise : ${poste}.
 Ville : ${ville}.
-${pourquoi ? `Motivation exprimee par le candidat :\n${pourquoi}` : "Le candidat n'a pas detaille sa motivation : reste sur son interet pour le poste et l'entreprise, sans inventer d'experience."}
+${bloc}${pourquoi ? `Motivation exprimee par le candidat :\n${pourquoi}` : "Le candidat n'a pas detaille sa motivation : reste sur son interet pour le poste et l'entreprise, sans inventer d'experience."}
+${dossier
+  ? "Le deuxieme paragraphe doit s'appuyer sur son parcours reel ci-dessus : nomme une experience ou une competence qui sert ce poste. N'en invente aucune autre."
+  : ""}
 ${accord}
 
 Structure : 3 paragraphes courts — l'interet pour le poste, ce que le candidat apporte, la disponibilite et la demande d'entretien.

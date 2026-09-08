@@ -1,6 +1,6 @@
 import {
   formatFcfa, formatDate, amountInWords, visibleSections, invoiceTitle,
-  docTemplate, TAX_EXEMPT_MENTION, type QuoteItem,
+  docTemplate, enteteMode, margeMm, mmEnPx, TAX_EXEMPT_MENTION, type QuoteItem,
 } from "@/lib/pro";
 
 /**
@@ -61,6 +61,15 @@ export type PrintParty = {
   status?: string | null;
   /** Intitulé choisi pour les factures : FACTURE, REÇU ou NOTE. */
   doc_title?: string | null;
+  /**
+   * Papier a en-tete de l entreprise — voir MIGRATION_ENTETE_PAPIER.sql.
+   * `genere` (defaut) dessine l en-tete et le pied ; `papier` et `scan` les
+   * effacent et reservent les zones correspondantes.
+   */
+  entete_mode?: string | null;
+  entete_url?: string | null;
+  entete_haut_mm?: number | null;
+  entete_bas_mm?: number | null;
 };
 
 const ACCENT_DEFAULT = "#4F46E5";
@@ -247,6 +256,20 @@ export default function PrintableDocument({
   const headTint = tpl.tinted ? `${ACCENT}0D` : "#F9FAFB"; // 0D ≈ 5 % d'opacité
   const headCaps = tpl.caps ? "tracking-[.12em]" : "tracking-wider";
 
+  /* ---------------- Papier a en-tete de l'entreprise ----------------
+     Trois modes (voir MIGRATION_ENTETE_PAPIER.sql). En « papier » et « scan »,
+     l'en-tete et le pied generes disparaissent, et le document reserve deux
+     zones vides pour ne pas ecrire par-dessus l'impression du papier.
+
+     Le scan est pose en fond, repete tous les 1 123 px : c'est la hauteur
+     d'une page A4 a 96 dpi, donc l'en-tete reapparait a chaque page d'un
+     document long au lieu de ne figurer que sur la premiere. */
+  const modeEntete = enteteMode(seller.entete_mode);
+  const surPapier = modeEntete !== "genere";
+  const margeHaut = surPapier ? mmEnPx(margeMm(seller.entete_haut_mm, 45, 120)) : 0;
+  const margeBas = surPapier ? mmEnPx(margeMm(seller.entete_bas_mm, 25, 80)) : 0;
+  const fondEntete = modeEntete === "scan" && seller.entete_url ? seller.entete_url : null;
+
   const sheet = (
     <article
       className={
@@ -261,6 +284,17 @@ export default function PrintableDocument({
         ["--doc-accent" as string]: ACCENT,
         ["--doc-tint" as string]: `${ACCENT}14`, // 14 ≈ 8 % d'opacité
         ...(preview ? {} : { boxShadow: "0 10px 40px rgba(17,24,39,.08)" }),
+        ...(surPapier ? { paddingTop: margeHaut, paddingBottom: margeBas } : {}),
+        ...(fondEntete
+          ? {
+              backgroundImage: `url(${fondEntete})`,
+              backgroundRepeat: "repeat-y",
+              backgroundPosition: "top center",
+              // 794 x 1123 px = A4 a 96 dpi : le scan couvre exactement une
+              // page, et se repete a l'identique sur les suivantes.
+              backgroundSize: "794px 1123px",
+            }
+          : {}),
       }}
     >
             {/* ================= En-tête =================
@@ -291,6 +325,11 @@ export default function PrintableDocument({
                 }
               >
                 {/* Émetteur */}
+                {/* Emetteur — masque sur papier a en-tete : ses coordonnees
+                    sont deja imprimees sur la feuille, les redessiner ferait
+                    doublon. Le titre et le numero du document, eux, restent :
+                    aucun papier pre-imprime ne les porte. */}
+                {!surPapier && (
                 <div className="flex min-w-0 items-start gap-3">
                   {seller.logo && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -319,6 +358,7 @@ export default function PrintableDocument({
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Identité du document */}
                 <div className={stacked ? "shrink-0" : "shrink-0 sm:text-right"}>
@@ -617,10 +657,14 @@ export default function PrintableDocument({
               </section>
             )}
 
-            <footer className="mt-8 text-center text-[.7rem]" style={{ color: "#9CA3AF" }}>
-              {doc.number ? `${label.toLowerCase()} ${doc.number} · ` : ""}
-              document généré sur wanteermako.com — Espace Freelancer
-            </footer>
+            {/* Pied masqué sur papier à en-tête : la feuille porte déjà le sien,
+                et la zone du bas lui est réservée. */}
+            {!surPapier && (
+              <footer className="mt-8 text-center text-[.7rem]" style={{ color: "#9CA3AF" }}>
+                {doc.number ? `${label.toLowerCase()} ${doc.number} · ` : ""}
+                document généré sur wanteermako.com — Espace Freelancer
+              </footer>
+            )}
     </article>
   );
 

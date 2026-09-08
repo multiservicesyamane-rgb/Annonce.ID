@@ -12,6 +12,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   TAX_RATES, canChargeTax, INVOICE_TITLES, DOC_TEMPLATES,
   type BusinessStatus, type DocTemplate,
+  enteteMode,
+  margeMm,
+  type EnteteMode,
 } from "@/lib/pro";
 import { createClient } from "@/lib/supabase/client";
 import { api, card, input, lbl, F, PageHead, Section, stickyAside, type Toast } from "./ui";
@@ -122,7 +125,7 @@ function TemplateThumb({ tpl, accent }: { tpl: DocTemplate; accent: string }) {
   );
 }
 
-type Asset = "logo_url" | "signature_url" | "stamp_url";
+type Asset = "logo_url" | "signature_url" | "stamp_url" | "entete_url";
 
 export default function BusinessProfile({ toast }: { toast: Toast }) {
   const [form, setForm] = useState<Record<string, string>>({});
@@ -132,8 +135,12 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
   const [docTitle, setDocTitle] = useState("FACTURE");
   const [accent, setAccent] = useState<string | null>(null);
   const [sectionsOpen, setSectionsOpen] = useState(false);
+  /** Papier a en-tete — voir MIGRATION_ENTETE_PAPIER.sql. */
+  const [enteteM, setEnteteM] = useState<EnteteMode>("genere");
+  const [hautMm, setHautMm] = useState(45);
+  const [basMm, setBasMm] = useState(25);
   const [assets, setAssets] = useState<Record<Asset, string | null>>({
-    logo_url: null, signature_url: null, stamp_url: null,
+    logo_url: null, signature_url: null, stamp_url: null, entete_url: null,
   });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -164,7 +171,11 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
           logo_url: s.logo_url || null,
           signature_url: s.signature_url || null,
           stamp_url: s.stamp_url || null,
+          entete_url: s.entete_url || null,
         });
+        setEnteteM(enteteMode(s.entete_mode));
+        setHautMm(margeMm(s.entete_haut_mm, 45, 120));
+        setBasMm(margeMm(s.entete_bas_mm, 25, 80));
       }
       setLoading(false);
     })();
@@ -211,6 +222,9 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
       invoice_title: docTitle,
       doc_template: template,
       doc_accent: accent,
+      entete_mode: enteteM,
+      entete_haut_mm: hautMm,
+      entete_bas_mm: basMm,
       ...assets,
     });
     setBusy(false);
@@ -307,6 +321,88 @@ export default function BusinessProfile({ toast }: { toast: Toast }) {
               onClear={() => setAssets((a) => ({ ...a, logo_url: null }))}
               hint="PNG à fond transparent de préférence."
             />
+          </Section>
+
+          {/* ---------------- Papier à en-tête ----------------
+              Beaucoup d'entreprises d'ici ont déjà du papier pré-imprimé
+              commandé chez un imprimeur. Leur imposer l'en-tête généré les
+              obligerait à choisir entre leur identité et cet outil. */}
+          <Section icon="📄" title="Papier à en-tête">
+            <p className="mb-3 text-[.78rem] leading-relaxed text-gray-500 dark:text-gray-400">
+              Vous avez déjà du papier à en-tête ? Le document peut se composer{" "}
+              <b className="text-gray-700 dark:text-gray-200">sans en-tête ni pied de page</b>, en
+              réservant la place de vos impressions.
+            </p>
+
+            <div className="flex flex-col gap-2">
+              {[
+                { id: "genere", t: "En-tête du site", d: "Vos coordonnées et votre logo sont dessinés sur le document. C'est le réglage par défaut." },
+                { id: "papier", t: "Sur mon papier pré-imprimé", d: "Aucun en-tête, aucun pied. Vous imprimez sur vos feuilles à en-tête." },
+                { id: "scan", t: "Mon en-tête scanné", d: "Votre en-tête scanné est posé en fond de page. Pour imprimer sur du papier ordinaire." },
+              ].map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setEnteteM(o.id as EnteteMode)}
+                  aria-pressed={enteteM === o.id}
+                  className={
+                    "rounded-xl border-[1.5px] p-3 text-left transition " +
+                    (enteteM === o.id
+                      ? "border-green bg-green/5"
+                      : "border-gray-200 hover:border-green/40 dark:border-white/10")
+                  }
+                >
+                  <span className={`block text-[.88rem] font-bold ${enteteM === o.id ? "text-green" : "text-gray-800 dark:text-gray-100"}`}>
+                    {o.t}
+                  </span>
+                  <span className="mt-0.5 block text-[.76rem] leading-snug text-gray-500 dark:text-gray-400">
+                    {o.d}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {enteteM !== "genere" && (
+              <div className="mt-4 border-t border-gray-100 pt-4 dark:border-white/10">
+                {enteteM === "scan" && (
+                  <div className="mb-4">
+                    <p className={lbl}>Scan de l&apos;en-tête</p>
+                    <AssetField
+                      value={assets.entete_url}
+                      busy={uploading === "entete_url"}
+                      onPick={(f) => onPick("entete_url", f)}
+                      onClear={() => setAssets((a) => ({ ...a, entete_url: null }))}
+                      hint="Scannez une feuille A4 entière à 200 dpi minimum, sinon l'impression sortira floue."
+                    />
+                  </div>
+                )}
+
+                <p className="mb-2 text-[.78rem] leading-relaxed text-gray-500 dark:text-gray-400">
+                  Hauteur réservée, en millimètres. Réglez-les en regardant l&apos;aperçu, puis
+                  faites un essai sur une feuille avant d&apos;imprimer toute une série.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <F
+                    l="En haut (mm)"
+                    type="number"
+                    v={String(hautMm)}
+                    set={(v) => setHautMm(margeMm(v, 45, 120))}
+                  />
+                  <F
+                    l="En bas (mm)"
+                    type="number"
+                    v={String(basMm)}
+                    set={(v) => setBasMm(margeMm(v, 25, 80))}
+                  />
+                </div>
+
+                <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-[.76rem] leading-relaxed text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
+                  ⚠ Les zones réservées valent pour la <b>première page</b> en haut et la{" "}
+                  <b>dernière</b> en bas. Un document qui dépasse une page peut donc écrire dans
+                  l&apos;en-tête des pages suivantes — vérifiez l&apos;aperçu.
+                </p>
+              </div>
+            )}
           </Section>
 
           <Section icon="🎨" title="Modèle de document">

@@ -16,15 +16,21 @@ export default function CookieBanner() {
     }
   }, []);
 
-  const acceptCookies = () => {
-    localStorage.setItem("wanteermako_cookie_consent", "accepted");
+  /**
+   * L'événement prévient la mesure d'audience (components/Analytics.tsx).
+   *
+   * `storage` ne se déclenche JAMAIS dans l'onglet qui écrit — sans cet
+   * événement, il faudrait recharger la page pour que l'accord prenne effet,
+   * et la première visite ne serait jamais comptée.
+   */
+  const enregistrerChoix = (valeur: "accepted" | "declined") => {
+    localStorage.setItem("wanteermako_cookie_consent", valeur);
+    window.dispatchEvent(new Event("cookie-consent"));
     setShow(false);
   };
 
-  const declineCookies = () => {
-    localStorage.setItem("wanteermako_cookie_consent", "declined");
-    setShow(false);
-  };
+  const acceptCookies = () => enregistrerChoix("accepted");
+  const declineCookies = () => enregistrerChoix("declined");
 
   if (!show) return null;
 

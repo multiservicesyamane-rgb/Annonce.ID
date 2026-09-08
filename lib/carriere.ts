@@ -45,9 +45,18 @@ export const CV_TEMPLATES = [
   { id: "minimal", name: "Minimal", pro: false },
   { id: "etudiant", name: "Etudiant", pro: false },
   { id: "africain", name: "Africain", pro: false },
+  { id: "bandeau", name: "Bandeau", pro: false },
+  { id: "elegant", name: "Elegant", pro: false },
+  { id: "duo", name: "Duo", pro: false },
   { id: "executif", name: "Executif", pro: true },
   { id: "chrono", name: "Chronologie", pro: true },
   { id: "compact", name: "Compact", pro: true },
+  { id: "cadre", name: "Cadre", pro: true },
+  { id: "mosaique", name: "Mosaique", pro: true },
+  { id: "diagonale", name: "Diagonale", pro: true },
+  { id: "nuit", name: "Nuit", pro: true },
+  { id: "neon", name: "Neon", pro: true },
+  { id: "cyber", name: "Cyber", pro: true },
 ] as const;
 
 export type TemplateId = (typeof CV_TEMPLATES)[number]["id"];
@@ -89,10 +98,55 @@ export const TEMPLATE_ACCENT: Record<TemplateId, string> = {
   minimal: "#1F2937",
   etudiant: "#0F766E",
   africain: "#14532D",
+  bandeau: "#0F766E",
+  elegant: "#111827",
+  duo: "#2B4C8C",
   executif: "#0F172A",
   chrono: "#7F1D1D",
   compact: "#2B4C8C",
+  cadre: "#7F1D1D",
+  mosaique: "#B45309",
+  diagonale: "#2B4C8C",
+  nuit: "#0F172A",
+  // Les deux gabarits creatifs allument leur propre palette lumineuse : ces
+  // valeurs ne servent que de repli, la feuille ne les peint pas telles quelles.
+  neon: "#22D3EE",
+  cyber: "#A855F7",
 };
+
+/* ============================ Les polices ============================ */
+
+/**
+ * Polices proposees pour la feuille.
+ *
+ * Deliberement courtes et sures : chacune existe soit sur toutes les machines
+ * (Georgia, Arial, Times), soit deja chargee par le site (Inter, Sora). Une
+ * police qu'il faudrait aller telecharger arriverait apres la capture du PDF —
+ * le document sortirait dans une police de repli, differente de l'apercu.
+ *
+ * Le choix n'est pas cosmetique : une candidature dans l'administration ou une
+ * banque se lit mieux en serif, une candidature dans le numerique en sans.
+ */
+export const POLICES = [
+  { id: "inter", name: "Inter", stack: "Inter, Arial, Helvetica, sans-serif", genre: "Sans-serif moderne" },
+  { id: "sora", name: "Sora", stack: "Sora, Inter, Arial, sans-serif", genre: "Sans-serif marquee" },
+  { id: "georgia", name: "Georgia", stack: "Georgia, 'Times New Roman', serif", genre: "Serif classique" },
+  { id: "times", name: "Times", stack: "'Times New Roman', Times, serif", genre: "Serif administratif" },
+  { id: "arial", name: "Arial", stack: "Arial, Helvetica, sans-serif", genre: "Neutre, partout" },
+] as const;
+
+export type PoliceId = (typeof POLICES)[number]["id"];
+
+export const DEFAULT_POLICE: PoliceId = "inter";
+
+export function isPoliceId(v: unknown): v is PoliceId {
+  return POLICES.some((p) => p.id === v);
+}
+
+/** Pile de polices d'un CV. Repli sur Inter, jamais sur rien. */
+export function policeDe(id: unknown): string {
+  return (POLICES.find((p) => p.id === id) || POLICES[0]).stack;
+}
 
 export function isAccent(v: unknown): v is string {
   return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
@@ -121,6 +175,24 @@ export type Experience = {
   endDate: string;
   isCurrent: boolean;
   bullets: string[];
+};
+
+/**
+ * Certification ou attestation.
+ *
+ * Distincte de la formation : un diplome sanctionne des annees d etude, une
+ * certification atteste d une competence precise et porte souvent une date de
+ * validite. Les melanger dans la meme rubrique brouille les deux — et au
+ * Senegal, une certification recente (Google, Microsoft, un centre de
+ * formation) pese parfois plus lourd qu un diplome ancien.
+ */
+export type Certification = {
+  id: string;
+  name: string;
+  /** Organisme qui l a delivree. */
+  issuer: string;
+  /** Annee d obtention, format libre court. */
+  year: string;
 };
 
 export type Education = {
@@ -166,9 +238,12 @@ export type CVContent = {
   personalInfo: PersonalInfo;
   /** Couleur d'accent choisie, ou "" pour celle du gabarit. */
   accent: string;
+  /** Police de la feuille (voir POLICES). Vide = Inter, la valeur par defaut. */
+  police: string;
   summary: string;
   experiences: Experience[];
   education: Education[];
+  certifications: Certification[];
   skills: string[];
   languages: Langue[];
   /** Qualites illustrees en pied de CV sur le gabarit Moderne. */
@@ -263,22 +338,41 @@ export function consigneAccord(genre: Genre): string {
 /* ============================== Le quota ============================== */
 
 /**
- * Passages de generation offerts a un compte gratuit, par mois.
+ * Documents offerts a un compte gratuit, par mois.
  *
- * On compte les PASSAGES et non les documents : l'assistant produit un CV et
- * une lettre d'un seul coup, et « Recommencer avec l'IA » relance le tout.
- * Compter par document aurait laisse une seule relance consommer deux unites,
- * ce que personne ne comprend en regardant l'ecran.
- *
- * Trois : de quoi produire un dossier, le relire et le refaire une fois —
- * assez pour juger la qualite, pas assez pour s'en servir tous les jours.
- *
- * CARRIERE_QUOTA_GRATUIT desserre le plafond sans toucher au code (il faut
- * tout de meme un redeploiement pour que l'hebergeur relise la variable).
+ * Un seul : de quoi produire son CV, le telecharger, le montrer — assez pour
+ * juger le produit en conditions reelles, pas assez pour s'en servir comme
+ * outil de travail. C'est la porte d'entree, et elle doit rester ouverte :
+ * quelqu'un qui ne peut rien produire ne reviendra pas.
  */
-export const QUOTA_GRATUIT_CARRIERE = (() => {
-  const n = Number(process.env.CARRIERE_QUOTA_GRATUIT);
-  return Number.isFinite(n) && n > 0 ? n : 3;
+export const QUOTA_DOCUMENTS_GRATUIT = (() => {
+  const n = Number(process.env.CARRIERE_DOCS_GRATUIT);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+})();
+
+/**
+ * Documents inclus dans l'abonnement, par mois.
+ *
+ * Cinq : une candidature complete fait deja trois pieces (CV, lettre,
+ * demande), et il en reste pour une seconde. Au-dela, c'est un usage
+ * professionnel qui justifiera un palier superieur le jour venu.
+ */
+export const QUOTA_DOCUMENTS_PRO = (() => {
+  const n = Number(process.env.CARRIERE_DOCS_PRO);
+  return Number.isFinite(n) && n > 0 ? n : 5;
+})();
+
+/**
+ * Garde-fou de redaction, par mois et par compte.
+ *
+ * Le peage porte sur les DOCUMENTS, pas sur les appels a l'IA : une fois ton
+ * document ouvert, tu rediges et tu recommences autant que tu veux. Ce
+ * plafond tres haut n'existe que pour arreter un script — un humain ne
+ * l'atteint jamais.
+ */
+export const PLAFOND_REDACTIONS = (() => {
+  const n = Number(process.env.CARRIERE_PLAFOND_IA);
+  return Number.isFinite(n) && n > 0 ? n : 60;
 })();
 
 /* ============================= Utilitaires ============================= */
@@ -289,6 +383,71 @@ export function newId(prefix: string): string {
 
 export function fullName(p: PersonalInfo): string {
   return `${p.firstName} ${p.lastName}`.trim();
+}
+
+/**
+ * Extrait factuel du CV, a joindre aux demandes de redaction.
+ *
+ * L'assistant ecrivait jusqu'ici a l'aveugle : pour le PROFIL il ne recevait
+ * que le poste vise et la ville, pour une LETTRE il ne voyait pas le CV du
+ * tout. Il produisait donc des textes justes mais interchangeables — « motive
+ * et rigoureux » — alors que l'utilisateur venait de saisir ses trois
+ * experiences et ses diplomes juste au-dessus.
+ *
+ * On ne transmet que ce qui a ete DECLARE, jamais de deduction : le modele
+ * reste tenu de n'inventer aucun fait, il a simplement de quoi s'appuyer.
+ * Le tout est plafonne, un CV bavard ne doit pas gonfler la requete.
+ */
+export function resumeDossier(cv: CVContent, maxSignes = 1800): string {
+  const p = cv.personalInfo;
+  const lignes: string[] = [];
+
+  if (p.title.trim()) lignes.push(`Poste vise : ${p.title.trim()}`);
+  if (p.location.trim()) lignes.push(`Ville : ${p.location.trim()}`);
+
+  const exp = cv.experiences.filter((e) => e.title.trim() || e.company.trim());
+  if (exp.length) {
+    lignes.push("Experiences declarees :");
+    for (const e of exp.slice(0, 5)) {
+      const tete = [e.title.trim(), e.company.trim()].filter(Boolean).join(" chez ");
+      const quand = periode(e);
+      lignes.push(`- ${tete}${quand ? ` (${quand})` : ""}`);
+      for (const b of e.bullets.filter((x) => x.trim()).slice(0, 3)) lignes.push(`  · ${b.trim()}`);
+    }
+  }
+
+  const form = cv.education.filter((f) => f.degree.trim() || f.school.trim());
+  if (form.length) {
+    lignes.push("Formation declaree :");
+    for (const f of form.slice(0, 4)) {
+      const tete = [f.degree.trim(), f.school.trim()].filter(Boolean).join(", ");
+      const quand = periode({ ...f, isCurrent: false });
+      lignes.push(`- ${tete}${quand ? ` (${quand})` : ""}`);
+    }
+  }
+
+  const certs = (cv.certifications || []).filter((c) => c.name.trim());
+  if (certs.length) {
+    lignes.push("Certifications :");
+    for (const c of certs.slice(0, 6)) {
+      const suite = [c.issuer.trim(), c.year.trim()].filter(Boolean).join(", ");
+      lignes.push(`- ${c.name.trim()}${suite ? ` (${suite})` : ""}`);
+    }
+  }
+
+  const comp = cv.skills.filter((s) => s.trim());
+  if (comp.length) lignes.push(`Competences declarees : ${comp.slice(0, 20).join(", ")}`);
+
+  const langues = cv.languages.filter((l) => l.name.trim());
+  if (langues.length) {
+    lignes.push(`Langues : ${langues.map((l) => `${l.name.trim()} (${l.level}/5)`).join(", ")}`);
+  }
+
+  const atouts = cv.atouts.filter((a) => a.trim());
+  if (atouts.length) lignes.push(`Atouts : ${atouts.slice(0, 10).join(", ")}`);
+
+  const texte = lignes.join("\n");
+  return texte.length > maxSignes ? `${texte.slice(0, maxSignes)}…` : texte;
 }
 
 export function initials(p: PersonalInfo): string {
@@ -331,9 +490,11 @@ export function cvVide(): CVContent {
       location: "", linkedin: "", photoUrl: "",
     },
     accent: "",
+    police: "",
     summary: "",
     experiences: [],
     education: [],
+    certifications: [],
     skills: [],
     languages: [],
     atouts: [],

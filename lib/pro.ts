@@ -19,7 +19,21 @@ export type QuoteSection = {
   title: string;
   icon: string;
   enabled: boolean;
-  items: { label: string; body: string }[];
+  items: {
+    label: string;
+    body: string;
+    /**
+     * Consigne affichée à l'utilisateur dans l'éditeur, JAMAIS imprimée.
+     *
+     * Certaines rubriques ne peuvent pas avoir de contenu par défaut : personne
+     * ne peut écrire le parcours du professionnel à sa place. Ces consignes
+     * vivaient donc dans le champ `body`, et partaient telles quelles chez le
+     * client — un devis reçu qui dit « Présentez en deux phrases votre
+     * expérience et votre spécialité ». Elles ont maintenant leur propre champ,
+     * que le document imprimé ignore.
+     */
+    hint?: string;
+  }[];
 };
 
 /* ============================ Statuts ============================ */
@@ -147,6 +161,31 @@ export const businessStatus = (v: unknown): BusinessStatus =>
 export const canChargeTax = (status: unknown): boolean => businessStatus(status) === "formel";
 
 /** Intitulés de pièce proposés — le mot attendu diffère selon le métier. */
+/* ==================== Papier à en-tête de l'entreprise ====================
+   Voir database/MIGRATION_ENTETE_PAPIER.sql pour le détail des trois modes. */
+
+export const ENTETE_MODES = ["genere", "papier", "scan"] as const;
+export type EnteteMode = (typeof ENTETE_MODES)[number];
+
+export function enteteMode(v: unknown): EnteteMode {
+  return ENTETE_MODES.includes(v as EnteteMode) ? (v as EnteteMode) : "genere";
+}
+
+/**
+ * Marge réservée, en millimètres, bornée comme en base.
+ *
+ * Une valeur aberrante sortirait la facture de la feuille au lieu de la
+ * décaler : on retombe sur la valeur par défaut plutôt que d'imprimer
+ * n'importe quoi.
+ */
+export function margeMm(v: unknown, defaut: number, max: number): number {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n >= 0 && n <= max ? n : defaut;
+}
+
+/** Millimètres → pixels à 96 dpi, l'unité de la feuille A4 de l'aperçu. */
+export const mmEnPx = (mm: number) => Math.round((mm * 96) / 25.4);
+
 export const INVOICE_TITLES = ["FACTURE", "REÇU", "NOTE"] as const;
 
 export const invoiceTitle = (v: unknown, fallback = "FACTURE"): string => {
@@ -312,10 +351,14 @@ export const DEFAULT_QUOTE_SECTIONS: QuoteSection[] = [
     key: "profil",
     title: "À propos de moi",
     icon: "👤",
-    enabled: true,
+    // Éteinte par défaut : c'est la seule rubrique dont personne ne peut écrire
+    // le contenu à la place du professionnel. Allumée et vide, elle imprimait
+    // deux titres sans texte ; allumée avec ses anciennes consignes, elle
+    // envoyait au client un devis qui lui demandait de présenter SON parcours.
+    enabled: false,
     items: [
-      { label: "Mon parcours", body: "Présentez en deux phrases votre expérience et votre spécialité." },
-      { label: "Références", body: "Citez deux ou trois clients ou projets marquants." },
+      { label: "Mon parcours", body: "", hint: "Deux phrases sur votre expérience et votre spécialité." },
+      { label: "Références", body: "", hint: "Deux ou trois clients ou projets marquants." },
     ],
   },
   {
@@ -373,6 +416,7 @@ export function sanitizeSections(raw: unknown): QuoteSection[] {
         .map((it: any) => ({
           label: String(it?.label ?? "").trim().slice(0, 120),
           body: String(it?.body ?? "").trim().slice(0, 800),
+          hint: String(it?.hint ?? "").trim().slice(0, 200) || undefined,
         }))
         // Une entrée sans titre ET sans texte n'apporte rien au document.
         .filter((it: { label: string; body: string }) => it.label || it.body),
@@ -381,8 +425,19 @@ export function sanitizeSections(raw: unknown): QuoteSection[] {
 }
 
 /** Rubriques réellement imprimables : actives et non vides. */
+/**
+ * Rubriques réellement imprimées.
+ *
+ * Une entrée sans texte est écartée : allumée mais non remplie, elle posait un
+ * titre en gras suivi de rien du tout sur le devis du client. Et une rubrique
+ * qui n'a plus aucune entrée à montrer ne s'imprime pas non plus — un intitulé
+ * de section suivi du vide fait un document inachevé.
+ */
 export function visibleSections(raw: unknown): QuoteSection[] {
-  return sanitizeSections(raw).filter((s) => s.enabled);
+  return sanitizeSections(raw)
+    .filter((s) => s.enabled)
+    .map((s) => ({ ...s, items: s.items.filter((it) => it.body) }))
+    .filter((s) => s.items.length > 0);
 }
 
 export function sanitizeItems(raw: unknown): QuoteItem[] {

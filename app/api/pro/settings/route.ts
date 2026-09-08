@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { proContext, txt, isMissingTable, isMissingColumn, isCheckViolation } from "@/lib/proServer";
 import { fetchSeller } from "@/lib/proPublic";
-import { sanitizeSections, businessStatus, canChargeTax, invoiceTitle, docTemplate } from "@/lib/pro";
+import {
+  sanitizeSections, businessStatus, canChargeTax, invoiceTitle, docTemplate,
+  enteteMode, margeMm,
+} from "@/lib/pro";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +13,8 @@ const NEW_COLUMNS = [
   "quote_sections", "logo_url", "signature_url", "stamp_url",
   "doc_template", "doc_accent", "signature_label",
   "business_status", "invoice_title",
+  // MIGRATION_ENTETE_PAPIER.sql — papier a en-tete de l entreprise.
+  "entete_mode", "entete_url", "entete_haut_mm", "entete_bas_mm",
 ] as const;
 
 /**
@@ -152,6 +157,11 @@ export async function POST(req: Request) {
       if (body?.quote_sections !== undefined) payload.quote_sections = sanitizeSections(body.quote_sections);
       if (body?.doc_template !== undefined) payload.doc_template = docTemplateId(body.doc_template);
       if (body?.doc_accent !== undefined) payload.doc_accent = hexColor(body.doc_accent);
+      // Papier a en-tete : le mode et les marges partent dans le rendu du
+      // document, ils sont donc ramenes a des valeurs connues, jamais crus.
+      if (body?.entete_mode !== undefined) payload.entete_mode = enteteMode(body.entete_mode);
+      if (body?.entete_haut_mm !== undefined) payload.entete_haut_mm = margeMm(body.entete_haut_mm, 45, 120);
+      if (body?.entete_bas_mm !== undefined) payload.entete_bas_mm = margeMm(body.entete_bas_mm, 25, 80);
       if (body?.signature_label !== undefined) payload.signature_label = txt(body.signature_label, 120) || null;
       if (body?.invoice_title !== undefined) payload.invoice_title = invoiceTitle(body.invoice_title);
 
@@ -162,7 +172,7 @@ export async function POST(req: Request) {
       if (body?.business_status !== undefined) {
         payload.business_status = businessStatus(body.business_status);
       }
-      for (const k of ["logo_url", "signature_url", "stamp_url"] as const) {
+      for (const k of ["logo_url", "signature_url", "stamp_url", "entete_url"] as const) {
         if (body?.[k] !== undefined) payload[k] = assetUrl(body[k]);
       }
 

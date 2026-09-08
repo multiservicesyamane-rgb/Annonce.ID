@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import A4Preview from "@/components/pro/A4Preview";
-import { ActionBar, OutlineBtn, PrimaryBtn } from "./ui";
+import { ActionBar, BarreOutils, OutlineBtn, PrimaryBtn, ZOOMS } from "./ui";
 
 /**
  * Apercu A4 d'un document de carriere, et son export.
@@ -35,16 +35,38 @@ export default function ExportA4({
   title,
   children,
   footer,
+  aside,
+  outils,
+  panneau,
+  onFermerPanneau,
 }: {
   filename: string;
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** Boutons propres au document (modele, couleur, police), a gauche de la barre. */
+  outils?: ReactNode;
+  /** Panneau deplie sous la barre par l'un de ces boutons. */
+  panneau?: ReactNode;
+  /** Referme le panneau — appele par le clic a cote. */
+  onFermerPanneau?: () => void;
+  /**
+   * Ce qui accompagne les boutons sur grand ecran — nom du modele, rappel
+   * d'enregistrement. Sans lui, la colonne de droite n'etait qu'une paire de
+   * boutons flottant au milieu de 900 px de vide a cote d'une page A4.
+   * Masque au telephone, ou les actions vivent dans la barre du bas.
+   */
+  aside?: ReactNode;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<"pdf" | "share" | null>(null);
   const [canShare, setCanShare] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // Index dans ZOOMS. On demarre a 1 — la page entiere — et non a un
+  // grossissement : la premiere chose a verifier sur un CV, c'est qu'il tient
+  // sur une page.
+  const [iZoom, setIZoom] = useState(1);
+  const zoom = ZOOMS[iZoom];
 
   // Le partage de fichiers n'existe qu'au navigateur, et pas sur tous : on ne
   // montre le bouton « natif » que la ou il fonctionne reellement.
@@ -166,8 +188,18 @@ export default function ExportA4({
     // boutons restent visibles sans avoir a derouler toute la page A4, qui
     // fait a elle seule plus d'un ecran de haut.
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-8">
-      <div ref={hostRef} className="mb-5 lg:mb-0">
-        <A4Preview>{children}</A4Preview>
+      <div className="mb-5 lg:mb-0">
+        <BarreOutils
+          outils={outils}
+          panneau={panneau}
+          onFermer={onFermerPanneau ?? (() => {})}
+          iZoom={iZoom}
+          setIZoom={setIZoom}
+        >
+          <div ref={hostRef}>
+            <A4Preview zoom={zoom} ajusterHauteur>{children}</A4Preview>
+          </div>
+        </BarreOutils>
       </div>
 
       <div className="lg:sticky lg:top-24">
@@ -175,12 +207,18 @@ export default function ExportA4({
 
         {/* Au telephone, les actions rejoignent la barre fixe du bas : sans
             cela il faudrait derouler une page A4 entiere — 1 123 px — avant
-            d'atteindre « Telecharger ». Sur grand ecran elles restent dans la
-            colonne de droite, a cote de la feuille. */}
+            d'atteindre « Telecharger ». Sur grand ecran elles deviennent un
+            vrai panneau, pose a cote de la feuille. */}
         <div className="lg:hidden">
           <ActionBar>{boutons}</ActionBar>
         </div>
-        <div className="mt-5 hidden space-y-3 lg:mt-0 lg:block">{boutons}</div>
+
+        <div className="mt-5 hidden lg:mt-0 lg:block">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,.04)] dark:border-white/10 dark:bg-dark-800 dark:shadow-[0_0_0_1px_rgba(99,102,241,.12),0_8px_30px_-14px_rgba(99,102,241,.5)]">
+            {aside}
+            <div className="space-y-3">{boutons}</div>
+          </div>
+        </div>
 
         {msg && (
           <p role="status" aria-live="polite" className="mt-3 text-center text-[.85rem] leading-relaxed text-gray-500">
