@@ -59,6 +59,8 @@ export default function CourrierWizard({
   const [panneauModele, setPanneauModele] = useState(false);
   /** Zoom de l apercu final. Index dans ZOOMS ; 1 = page entiere. */
   const [iZoomCourrier, setIZoomCourrier] = useState(1);
+  /** Echelle reelle de l'apercu lateral, pour un pourcentage qui ne ment pas. */
+  const [echelleLaterale, setEchelleLaterale] = useState<number | undefined>(undefined);
   const c = doc.content as LettreContent & DemandeContent;
   // Meme regle que pour les CV : un courrier deja ecrit s ouvre sur sa page,
   // pas sur le questionnaire.
@@ -269,8 +271,9 @@ export default function CourrierWizard({
         onFermer={() => setPanneauModele(false)}
         iZoom={iZoomCourrier}
         setIZoom={setIZoomCourrier}
+        echelle={echelleLaterale}
       >
-        <A4Preview zoom={ZOOMS[iZoomCourrier]} ajusterHauteur>
+        <A4Preview zoom={ZOOMS[iZoomCourrier]} ajusterHauteur onEchelle={setEchelleLaterale}>
           <LettreSheet from={c.from} to={destinataire} objet={objet} corps={c.body} template={doc.template} />
         </A4Preview>
       </BarreOutils>

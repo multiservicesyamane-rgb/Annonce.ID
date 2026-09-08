@@ -295,6 +295,7 @@ export function BarreOutils({
   onFermer,
   iZoom,
   setIZoom,
+  echelle,
   compact,
   children,
 }: {
@@ -304,11 +305,21 @@ export function BarreOutils({
   onFermer: () => void;
   iZoom: number;
   setIZoom: (maj: (i: number) => number) => void;
+  /**
+   * Echelle REELLE de la feuille, remontee par l'apercu.
+   *
+   * La barre affichait le multiplicateur de zoom : « 100 % » s'inscrivait
+   * au-dessus d'une feuille reduite au tiers par la place disponible. On
+   * montre desormais ce qu'on voit, et l'absence de valeur retombe sur le
+   * multiplicateur — mieux vaut l'ancien chiffre que rien.
+   */
+  echelle?: number;
   /** Colonne etroite : icones seules, barre non collante. */
   compact?: boolean;
   children: ReactNode;
 }) {
   const zoom = ZOOMS[iZoom];
+  const pourcent = Math.round((echelle ?? zoom) * 100);
   return (
     <div className="relative">
       <div
@@ -335,7 +346,7 @@ export function BarreOutils({
               −
             </button>
             <span className={`text-center font-mono text-[.72rem] font-bold tabular-nums text-gray-600 dark:text-gray-300 ${compact ? "w-9" : "w-11"}`}>
-              {Math.round(zoom * 100)}%
+              {pourcent}%
             </span>
             <button
               type="button"

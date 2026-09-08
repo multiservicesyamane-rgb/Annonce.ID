@@ -34,6 +34,7 @@ export default function A4Preview({
   children,
   zoom = 1,
   ajusterHauteur = false,
+  onEchelle,
 }: {
   children: React.ReactNode;
   /**
@@ -52,6 +53,14 @@ export default function A4Preview({
    * on veut la page entière du premier coup d'œil.
    */
   ajusterHauteur?: boolean;
+  /**
+   * Échelle réellement appliquée, remontée à chaque mesure.
+   *
+   * La barre d'outils affichait le MULTIPLICATEUR de zoom : elle annonçait
+   * « 100 % » sur une feuille réduite à 33 % par la place disponible. Un
+   * chiffre faux est pire que pas de chiffre.
+   */
+  onEchelle?: (echelle: number) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -70,18 +79,30 @@ export default function A4Preview({
     if (!host) return;
 
     const measure = () => {
-      const parLargeur = host.clientWidth / PAGE_W;
+      const parLargeur = Math.min(1, host.clientWidth / PAGE_W);
       if (!ajusterHauteur) {
-        setFit(Math.min(1, parLargeur));
+        setFit(parLargeur);
         return;
       }
       // Hauteur restante entre le haut de la feuille et le bas de la fenêtre.
       // Mesurée à la position actuelle, sans écouter le défilement : une
       // échelle qui bougerait pendant qu'on fait défiler serait insupportable.
       const dispo = window.innerHeight - host.getBoundingClientRect().top - 24;
-      // Plancher à 0,28 : sur un téléphone en paysage, le calcul donnerait une
-      // feuille de la taille d'un timbre. Mieux vaut déborder un peu.
-      setFit(Math.max(0.28, Math.min(1, parLargeur, dispo / PAGE_H)));
+      const parHauteur = dispo / PAGE_H;
+
+      // ── Page entière, ou page lisible ? ────────────────────────────────
+      // Faire tenir un A4 entier dans la hauteur est une contrainte dure :
+      // sur une fenêtre de 700 px, il reste ~420 px sous la barre d'outils,
+      // soit 37 % — une vignette qu'on ne peut pas relire. C'est de la
+      // géométrie, aucun réglage ne la contourne.
+      //
+      // Alors on choisit : tant que la page entière reste lisible, on la
+      // montre en entier — c'est ce qu'on veut vérifier sur un CV, qu'il
+      // tienne sur UNE page. En dessous, on prend la largeur et on laisse
+      // dérouler : mieux vaut une feuille lisible qu'on fait défiler qu'une
+      // page entière illisible.
+      const LISIBLE = 0.55;
+      setFit(parHauteur >= LISIBLE ? Math.min(parLargeur, parHauteur) : parLargeur);
     };
 
     measure();
@@ -99,6 +120,13 @@ export default function A4Preview({
   // élargirait le conteneur, qui réduirait `fit`, qui rétrécirait la feuille —
   // une boucle qui n'aurait jamais convergé.
   const scale = fit * zoom;
+
+  // Remontée à l'affichage, jamais pendant le rendu : la barre d'outils la
+  // stocke dans son état, et un `setState` appelé en plein rendu du parent
+  // ferait boucler React.
+  useEffect(() => {
+    onEchelle?.(scale);
+  }, [scale, onEchelle]);
 
   /* ---- Préparation de l'iframe ---- */
   const setup = useCallback(() => {

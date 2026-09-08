@@ -153,6 +153,8 @@ export default function CVWizard({
    */
   const [carteOuverte, setCarteOuverte] = useState<string | null>(null);
   const [envoiPhoto, setEnvoiPhoto] = useState(false);
+  /** Echelle reelle de l'apercu lateral, pour un pourcentage qui ne ment pas. */
+  const [echelleLaterale, setEchelleLaterale] = useState<number | undefined>(undefined);
   /** Outil deplie sous la barre de l'apercu. `null` = aucun. */
   const [panneau, setPanneau] = useState<"modele" | "couleur" | "police" | null>(null);
   /** Zoom de l apercu lateral. Index dans ZOOMS ; 1 = page entiere. */
@@ -469,8 +471,9 @@ export default function CVWizard({
         onFermer={() => setPanneau(null)}
         iZoom={iZoomLateral}
         setIZoom={setIZoomLateral}
+        echelle={echelleLaterale}
       >
-        <A4Preview zoom={ZOOMS[iZoomLateral]} ajusterHauteur>
+        <A4Preview zoom={ZOOMS[iZoomLateral]} ajusterHauteur onEchelle={setEchelleLaterale}>
           <CVSheet cv={cv} template={templateCV(doc.template)} />
         </A4Preview>
       </BarreOutils>
@@ -1047,11 +1050,15 @@ export default function CVWizard({
       {/* -------------------------- 7. L'apercu -------------------------- */}
       {etape === APERCU && (
         <>
-          <div className="mb-4">
-            <h1 className="font-display text-[1.7rem] font-extrabold leading-tight text-gray-900 dark:text-white">
+          {/* Titre compact sur grand ecran : chaque pixel pris ici est un
+              pixel de moins pour la feuille, et sur une fenetre courte c'est
+              la hauteur qui decide de la taille du CV. Le sous-titre disparait
+              a partir de lg — l'ecran dit assez de lui-meme ce qu'il montre. */}
+          <div className="mb-4 lg:mb-2">
+            <h1 className="font-display text-[1.7rem] font-extrabold leading-tight text-gray-900 dark:text-white lg:text-[1.15rem]">
               {ETAPES[APERCU].titre}
             </h1>
-            <p className="mt-1 text-[.9rem] text-gray-500">{ETAPES[APERCU].sous}</p>
+            <p className="mt-1 text-[.9rem] text-gray-500 lg:hidden">{ETAPES[APERCU].sous}</p>
           </div>
 
           <ExportA4

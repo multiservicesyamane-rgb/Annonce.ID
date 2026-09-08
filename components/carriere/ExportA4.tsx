@@ -86,6 +86,8 @@ export default function ExportA4({
   // sur une page.
   const [iZoom, setIZoom] = useState(1);
   const zoom = ZOOMS[iZoom];
+  /** Echelle reellement appliquee, pour que la barre dise la verite. */
+  const [echelle, setEchelle] = useState<number | undefined>(undefined);
   // Geste en attente de confirmation. `null` = rien a confirmer. Il porte
   // l'action demandee pour la rejouer telle quelle une fois l'accord donne :
   // confirmer un partage ne doit pas declencher un telechargement.
@@ -284,9 +286,12 @@ export default function ExportA4({
           onFermer={onFermerPanneau ?? (() => {})}
           iZoom={iZoom}
           setIZoom={setIZoom}
+          echelle={echelle}
         >
           <div ref={hostRef}>
-            <A4Preview zoom={zoom} ajusterHauteur>{children}</A4Preview>
+            <A4Preview zoom={zoom} ajusterHauteur onEchelle={setEchelle}>
+              {children}
+            </A4Preview>
           </div>
         </BarreOutils>
       </div>
