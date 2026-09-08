@@ -651,6 +651,77 @@ export function contenuVide(kind: CareerKind): CareerContent {
   return demandeVide();
 }
 
+/**
+ * Ce document ne contient-il encore RIEN de saisi ?
+ *
+ * ── Le bug que cette regle corrige ───────────────────────────────────────
+ * L'enregistrement de Ma Carriere est automatique, 1,2 s apres un changement.
+ * Il partait des le montage de l'editeur : ouvrir « Creer mon CV » pour
+ * regarder les modeles, puis ressortir, creait un CV vide. Sur un plan gratuit
+ * a un document par mois, le quota etait consomme sans qu'une seule lettre ait
+ * ete tapee — et « Mes documents » se remplissait de CV sans nom.
+ *
+ * La regle vit ICI et non dans l'ecran : le serveur et le navigateur doivent
+ * repondre la MEME chose. Deux definitions auraient fini par diverger, et le
+ * navigateur aurait envoye sans fin un document que le serveur refuse.
+ *
+ * ── Ce qui ne compte pas comme du contenu ────────────────────────────────
+ * Le modele, la couleur, la police, et le `demarcheId` d'un courrier sont des
+ * valeurs par defaut ou des choix d'habillage, pas une saisie. Les compter
+ * recreerait exactement le document fantome : choisir un modele suffirait.
+ */
+export function documentVide(kind: CareerKind, c: CareerContent): boolean {
+  const plein = (v: unknown): boolean => typeof v === "string" && v.trim() !== "";
+  /** Une ligne de liste porte-t-elle au moins un champ rempli ? */
+  const lignes = (arr: unknown, champs: string[]): boolean =>
+    Array.isArray(arr) &&
+    arr.some((o) => champs.some((f) => plein((o as Record<string, unknown>)?.[f])));
+
+  if (kind === "cv") {
+    const cv = c as CVContent;
+    const p = cv.personalInfo || ({} as CVContent["personalInfo"]);
+    const experiences =
+      Array.isArray(cv.experiences) &&
+      cv.experiences.some(
+        (e) =>
+          plein(e?.title) || plein(e?.company) || plein(e?.location) ||
+          plein(e?.startDate) || plein(e?.endDate) ||
+          (Array.isArray(e?.bullets) && e.bullets.some(plein)),
+      );
+
+    return !(
+      plein(p.firstName) || plein(p.lastName) || plein(p.title) ||
+      plein(p.email) || plein(p.phone) || plein(p.location) ||
+      plein(p.linkedin) || plein(p.photoUrl) ||
+      plein(cv.summary) ||
+      experiences ||
+      lignes(cv.education, ["degree", "school", "location", "startDate", "endDate"]) ||
+      lignes(cv.certifications, ["name", "issuer", "year"]) ||
+      lignes(cv.languages, ["name"]) ||
+      (Array.isArray(cv.skills) && cv.skills.some(plein)) ||
+      (Array.isArray(cv.atouts) && cv.atouts.some(plein))
+    );
+  }
+
+  if (kind === "lettre") {
+    const l = c as LettreContent;
+    const f = l.from || expediteurVide();
+    return !(
+      plein(f.name) || plein(f.phone) || plein(f.email) || plein(f.city) ||
+      plein(l.company) || plein(l.targetJob) || plein(l.recruiter) ||
+      plein(l.why) || plein(l.body)
+    );
+  }
+
+  const d = c as DemandeContent;
+  const f = d.from || expediteurVide();
+  return !(
+    plein(f.name) || plein(f.phone) || plein(f.email) || plein(f.city) ||
+    plein(d.to) || plein(d.objet) || plein(d.body) ||
+    Object.values(d.reponses || {}).some(plein)
+  );
+}
+
 /** Titre par defaut d'un document, tel qu'il apparait dans « Mes documents ». */
 export function titreParDefaut(kind: CareerKind, c: CareerContent): string {
   if (kind === "cv") {

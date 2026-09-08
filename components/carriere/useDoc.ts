@@ -5,6 +5,7 @@ import { api } from "./ui";
 import {
   DEFAULT_TEMPLATE,
   contenuVide,
+  documentVide,
   titreParDefaut,
   type CareerContent,
   type CareerKind,
@@ -24,6 +25,17 @@ import {
  * telephone, souvent en 4G instable : un bouton « Enregistrer » a trouver
  * avant de fermer l'onglet perd du travail. Le premier enregistrement CREE
  * le document, les suivants le mettent a jour.
+ *
+ * ── Rien n'est cree tant que rien n'est saisi ────────────────────────────
+ * L'enregistrement partait des le montage de l'editeur : ouvrir « Creer mon
+ * CV » pour regarder les modeles, puis ressortir, creait un CV vide. Sur un
+ * plan gratuit a un document par mois, le quota etait consomme sans qu'une
+ * seule lettre ait ete tapee.
+ *
+ * La creation attend donc le premier contenu reel (`documentVide`, partage
+ * avec le serveur). Une fois le document cree, l'enregistrement automatique
+ * reprend sur CHAQUE changement, y compris pour vider un champ — la retenue
+ * ne vaut que pour le premier.
  *
  * ── Le verrou du plan gratuit ────────────────────────────────────────────
  * Un document telecharge devient FINI : sans abonnement, il ne se remodifie
@@ -58,6 +70,20 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
   // Le premier rendu ne doit rien enregistrer : sans ce garde-fou, ouvrir un
   // document creerait aussitot une copie vide.
   const pret = useRef(false);
+
+  /**
+   * Le contenu tel qu'il etait a l'ouverture, fige.
+   *
+   * `documentVide` ne suffit pas a lui seul : en venant de l'assistant, le CV
+   * arrive PRE-REMPLI (poste vise, ville). Il n'est donc pas vide, et un
+   * document se creait a l'ouverture sans qu'une touche ait ete pressee —
+   * la meme fuite, par une autre porte.
+   *
+   * On compare donc au point de depart : tant que rien n'a bouge, rien ne
+   * part. Le pre-remplissage n'est pas une saisie.
+   */
+  const depart = useRef<string | null>(null);
+  if (depart.current === null) depart.current = JSON.stringify(content);
 
   /* ---------------------------- Chargement ---------------------------- */
   useEffect(() => {
@@ -111,6 +137,14 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
         }
         setEtat("enregistre");
       } catch (e: any) {
+        // 422 : le serveur juge le document encore vide. Ce n'est pas une
+        // panne non plus — c'est le meme verdict que le notre, rendu une
+        // seconde fois. On se tait : afficher « Erreur » a quelqu'un qui n'a
+        // rien tape serait incomprehensible.
+        if (e?.status === 422 && e?.data?.vide) {
+          setEtat("repos");
+          return;
+        }
         // 402 : le document est fini et le compte est gratuit. Ce n'est pas
         // une panne, c'est le peage — on bascule en lecture seule et on
         // reprend le texte du serveur plutot que d'afficher « Erreur ».
@@ -132,12 +166,17 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
     // declencherait un refus du serveur, et le bandeau clignoterait a l'infini
     // sur un ecran ou l'utilisateur ne peut de toute facon rien changer.
     if (verrouille) return;
+    // Tant que le document n'existe pas, deux conditions avant d'en creer un :
+    // qu'il y ait quelque chose (regle du serveur, importee), et que ce
+    // quelque chose ne soit pas simplement ce avec quoi l'ecran s'est ouvert.
+    // C'est ce qui creait des CV fantomes a la simple ouverture de l'editeur.
+    if (!id && (documentVide(kind, content) || JSON.stringify(content) === depart.current)) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => enregistrer(content, template), 1200);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [content, template, chargement, enregistrer, verrouille]);
+  }, [content, template, chargement, enregistrer, verrouille, id, kind]);
 
   /**
    * Le document vient d'etre telecharge : il est fini.

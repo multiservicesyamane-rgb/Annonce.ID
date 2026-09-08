@@ -13,6 +13,7 @@ import { moteursDisponibles } from "@/lib/ia";
 import {
   DEFAULT_LETTRE_TEMPLATE,
   DEFAULT_TEMPLATE,
+  documentVide,
   isLettreTemplateId,
   isTemplateId,
   lettreTemplateIsPro,
@@ -116,6 +117,23 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Type de document inconnu." }, { status: 400 });
       }
 
+      const contenu = nettoyerContenu(kind, body?.content);
+
+      // Rien de saisi : on ne cree pas. Et surtout, on ne compte pas.
+      //
+      // L'enregistrement est automatique 1,2 s apres un changement, et il
+      // partait des l'ouverture de l'editeur : venir regarder les modeles
+      // puis ressortir creait un CV vide et consommait le document gratuit du
+      // mois. Depuis le registre, cette unite ne revenait meme plus en
+      // supprimant le document — la fuite s'etait transformee en piege.
+      //
+      // 422 et non 400 : la demande est bien formee, elle est seulement
+      // prematuree. L'ecran s'en sert pour se taire et reessayer a la frappe
+      // suivante, sans afficher d'erreur a quelqu'un qui n'a rien fait.
+      if (documentVide(kind, contenu)) {
+        return NextResponse.json({ error: "Document encore vide.", vide: true }, { status: 422 });
+      }
+
       const { count } = await sb
         .from("career_documents")
         .select("id", { count: "exact", head: true })
@@ -149,7 +167,6 @@ export async function POST(req: Request) {
         );
       }
 
-      const contenu = nettoyerContenu(kind, body?.content);
       const template = await templateAutorise(sb, userId, email, body?.template);
 
       const { data, error } = await sb
