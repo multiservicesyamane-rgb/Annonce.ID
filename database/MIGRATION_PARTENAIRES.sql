@@ -28,6 +28,10 @@ create table if not exists partenaires (
   statut      text not null default 'candidat',
   -- Ce qu'il declare savoir faire : sert a lui envoyer les bonnes demandes.
   metiers     text[] not null default '{}',
+  -- Le nom sous lequel il travaille. Il s'imprime sur les affiches qu'il
+  -- telecharge, a cote de son numero — ce n'est donc pas une note interne
+  -- mais une donnee que ses clients voient.
+  agence      text not null default '',
   ville       text not null default '',
   telephone   text not null default '',
   -- Points cumules : partages, filleuls inscrits, missions livrees.

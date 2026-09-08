@@ -20,6 +20,10 @@ export default function robots(): MetadataRoute.Robots {
         // Ma Carrière : CV et lettres personnels, tout est derrière la
         // connexion. Rien à indexer, et surtout rien à exposer.
         "/carriere",
+        // L'espace de travail des partenaires : coordonnees, points et
+        // missions d'une agence. Rien a indexer. Sa vitrine publique, elle,
+        // est /partenaires et doit au contraire etre trouvee.
+        "/partenaires/dashboard",
         "/connexion",
         "/inscription",
         "/favoris",
