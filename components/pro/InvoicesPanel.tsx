@@ -236,7 +236,7 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
     kind: "facture",
     // Sur une facture en cours, le numero a venir. Le montrer vaut mieux que
     // de laisser un blanc a l'endroit ou tout le monde le cherche.
-    number: editing?.number || numeroSuivant,
+    number: form.number?.trim() || editing?.number || numeroSuivant,
     title: form.title?.trim() || "Objet de la facture",
     items: items.filter((i) => i.label.trim()),
     subtotal: totals.subtotal,
@@ -307,9 +307,13 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
   function openNew() {
     setEditing(null);
     setNouveauClient({ name: "", phone: "", company: "" });
+    // Pre-rempli avec le numero propose. Vide, le serveur en attribue un —
+    // mais montrer le format evite d'avoir a le deviner.
+    const numero = numeroSuivant || "";
     const due = new Date();
     due.setDate(due.getDate() + 30);
     setForm({
+      number: numero,
       issue_date: new Date().toISOString().slice(0, 10),
       due_date: due.toISOString().slice(0, 10),
     });
@@ -323,6 +327,7 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
     setEditing(inv);
     setForm({
       title: inv.title || "",
+      number: inv.number || "",
       client_id: inv.client_id || "",
       project_id: inv.project_id || "",
       issue_date: inv.issue_date || "",
@@ -353,6 +358,7 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
     const payload: Record<string, unknown> = {
       action: editing ? "update" : "create",
       title: form.title,
+      number: form.number ?? "",
       // `__nouveau` n'est pas un identifiant : on l'efface et on envoie la
       // saisie a la place. Le serveur cree le client puis la facture, en une
       // seule requete — en deux appels, une coupure entre les deux laisserait
@@ -654,6 +660,13 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
 
               <Section icon="🧾" title="Informations">
                 <div className="grid gap-3 sm:grid-cols-2">
+                  <F
+                    l="Numéro"
+                    v={form.number}
+                    set={(v) => setForm({ ...form, number: v })}
+                    ph={numeroSuivant || "FAC-2026-001"}
+                    hint="Modifiable : reprenez la numérotation de votre carnet si vous en avez une."
+                  />
                   <F l="Objet de la facture" v={form.title} set={(v) => setForm({ ...form, title: v })} ph="Ex : Prestation de design" />
                   <Select
                     l="Projet (optionnel)"

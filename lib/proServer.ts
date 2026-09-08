@@ -227,6 +227,95 @@ export async function apercuProchainNumero(
   }
 }
 
+/**
+ * Numéro de pièce choisi par le professionnel, ou attribué d'office.
+ *
+ * ── Pourquoi la saisie manuelle ──────────────────────────────────────────
+ * Beaucoup continuent la numérotation de leur carnet papier : leur prochaine
+ * facture est la 47, pas la 1. Leur imposer notre compteur les obligerait à
+ * tenir deux séries en parallèle — et une comptabilité à deux séries n'est
+ * plus une comptabilité.
+ *
+ * ── Trois choses vérifiées, et aucune n'est superflue ────────────────────
+ * 1. La FORME. Le numéro part sur un document et dans une URL publique ;
+ *    on n'y laisse pas passer n'importe quel caractère.
+ * 2. L'UNICITÉ, pour ce compte. Deux pièces portant le même numéro, c'est
+ *    une comptabilité fausse — et la base ne l'interdit pas d'elle-même : il
+ *    n'existe aucun index unique sur (user_id, number).
+ * 3. Le COMPTEUR. Si le numéro saisi suit notre format et dépasse le
+ *    compteur, on avance celui-ci. Sans cela, taper FAC-2026-047 laisserait
+ *    le compteur à 1, et la pièce suivante repartirait à 002 — en arrière.
+ *
+ * Champ vide : on attribue d'office, comme avant.
+ */
+export async function numeroChoisi(
+  sb: SupabaseClient,
+  userId: string,
+  prefix: "DEV" | "FAC",
+  brut: unknown,
+  /** Pièce en cours de modification, à ne pas confondre avec un doublon. */
+  ignorerId?: string,
+): Promise<{ numero: string } | { error: string }> {
+  const saisi = txt(brut, 40);
+  if (!saisi) return { numero: await nextDocumentNumber(sb, userId, prefix) };
+
+  // Lettres, chiffres, tiret, barre oblique, point, espace. Ce qui s'écrit sur
+  // une facture et se recopie dans un lien sans être encodé.
+  if (!/^[A-Za-z0-9][A-Za-z0-9\-\/. ]{0,39}$/.test(saisi)) {
+    return { error: "Numéro invalide : lettres, chiffres, tiret, barre oblique et point uniquement." };
+  }
+
+  const table = prefix === "DEV" ? "pro_quotes" : "pro_invoices";
+  try {
+    let q = sb.from(table).select("id").eq("user_id", userId).eq("number", saisi).limit(1);
+    if (ignorerId) q = q.neq("id", ignorerId);
+    const { data } = await q;
+    if (data && data.length > 0) {
+      return { error: `Le numéro ${saisi} est déjà utilisé par une autre pièce.` };
+    }
+  } catch {
+    // Contrôle impossible : on laisse passer plutôt que de bloquer une
+    // facturation sur une lecture qui a échoué. Le risque assumé est un
+    // doublon, jamais un professionnel empêché de travailler.
+  }
+
+  await avancerCompteur(sb, userId, prefix, saisi);
+  return { numero: saisi };
+}
+
+/**
+ * Aligne le compteur sur un numéro saisi à la main, s'il le dépasse.
+ *
+ * Silencieux : un compteur qui n'a pas pu être avancé ne doit pas annuler une
+ * facture déjà composée. Au pire, la pièce suivante proposera un numéro plus
+ * bas — que le professionnel corrigera, puisqu'il peut désormais le saisir.
+ */
+async function avancerCompteur(
+  sb: SupabaseClient,
+  userId: string,
+  prefix: "DEV" | "FAC",
+  numero: string,
+): Promise<void> {
+  const annee = new Date().getFullYear();
+  const m = numero.match(new RegExp(`^${prefix}-${annee}-(\\d+)$`));
+  if (!m) return; // Numérotation maison : on ne touche pas au compteur.
+
+  const valeur = Number(m[1]);
+  if (!Number.isFinite(valeur) || valeur < 1) return;
+
+  try {
+    const { data } = await sb
+      .from("pro_counters").select("value")
+      .eq("user_id", userId).eq("prefix", prefix).eq("year", annee).maybeSingle();
+    if ((Number(data?.value) || 0) >= valeur) return;
+    await sb
+      .from("pro_counters")
+      .upsert({ user_id: userId, prefix, year: annee, value: valeur }, { onConflict: "user_id,prefix,year" });
+  } catch {
+    /* compteur indisponible — jamais bloquant */
+  }
+}
+
 export async function nextDocumentNumber(
   sb: SupabaseClient,
   userId: string,
@@ -340,7 +429,10 @@ export async function creerClientRapide(
         name,
         phone: txt(brut?.phone, 40) || null,
         company: txt(brut?.company) || null,
-        status: "client",
+        // Statuts autorises par la contrainte : prospect / active / inactive.
+        // « active » et non « prospect » : on ne cree cette fiche que parce
+        // qu'on est en train de lui adresser un devis ou une facture.
+        status: "active",
         tracking_code: trackingCode(name),
       })
       .select("id")

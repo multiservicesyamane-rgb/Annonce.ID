@@ -6,6 +6,7 @@ import {
   logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, taxAllowed,
   apercuProchainNumero,
   creerClientRapide,
+  numeroChoisi,
 } from "@/lib/proServer";
 import {
   factureVerrouillee,
@@ -200,12 +201,19 @@ export async function POST(req: Request) {
       if (taxRate > 0 && !(await taxAllowed(sb, userId))) taxRate = 0;
       const t = computeTotals(items, discount, taxRate);
 
+      // Le numero saisi par le professionnel l'emporte. Champ vide : on
+      // attribue d'office, comme avant.
+      const numeroPiece = await numeroChoisi(sb, userId, "FAC", body?.number);
+      if ("error" in numeroPiece) {
+        return NextResponse.json({ error: numeroPiece.error }, { status: 400 });
+      }
+
       const payload = {
         user_id: userId,
         client_id: clientId,
         project_id: projectId,
         quote_id: fromQuoteId || null,
-        number: await nextDocumentNumber(sb, userId, "FAC"),
+        number: numeroPiece.numero,
         title,
         items,
         subtotal: t.subtotal,
@@ -279,6 +287,15 @@ export async function POST(req: Request) {
         const t = txt(body.title);
         if (!t) return NextResponse.json({ error: "L'objet de la facture est obligatoire." }, { status: 400 });
         patch.title = t;
+      }
+      // Le numero se corrige tant que la piece est modifiable : les verrous
+      // poses plus haut (paiement recu, facture remise sur plan gratuit) s'y
+      // appliquent deja. Une faute de frappe sur un brouillon ne doit pas
+      // obliger a tout refaire.
+      if ("number" in body) {
+        const n = await numeroChoisi(sb, userId, "FAC", body.number, id);
+        if ("error" in n) return NextResponse.json({ error: n.error }, { status: 400 });
+        patch.number = n.numero;
       }
       if ("terms" in body) patch.terms = txt(body.terms, 1000) || null;
       if ("issue_date" in body) patch.issue_date = dateOrNull(body.issue_date) || before.issue_date;

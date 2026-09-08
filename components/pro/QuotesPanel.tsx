@@ -187,7 +187,7 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
   const previewDoc = useMemo<PrintDoc>(() => ({
     kind: "devis",
     // Sur un devis en cours, le numero a venir plutot qu'un blanc.
-    number: editing?.number || numeroSuivant,
+    number: form.number?.trim() || editing?.number || numeroSuivant,
     // Un titre vide laisserait un trou dans l'en-tête : on montre l'intitulé
     // du champ à la place, le temps qu'il soit rempli.
     title: form.title?.trim() || "Objet du devis",
@@ -261,7 +261,8 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
   function openNew() {
     setEditing(null);
     setNouveauClient({ name: "", phone: "", company: "" });
-    setForm({});
+    // Numero propose des l'ouverture : montrer le format evite de le deviner.
+    setForm({ number: numeroSuivant || "" });
     setItems([{ label: "", qty: 1, unit_price: 0 }]);
     setDiscount(0);
     setTaxRate(0);
@@ -302,6 +303,7 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
     const payload: Record<string, unknown> = {
       action: editing ? "update" : "create",
       title: form.title,
+      number: form.number ?? "",
       // `__nouveau` n'est pas un identifiant : le serveur cree le client puis
       // le devis, en une seule requete.
       client_id: clientNouveau ? "" : form.client_id || "",
@@ -485,6 +487,13 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
 
               <Section icon="🧾" title="Informations">
                 <div className="grid gap-3 sm:grid-cols-2">
+                  <F
+                    l="Numéro"
+                    v={form.number}
+                    set={(v) => setForm({ ...form, number: v })}
+                    ph={numeroSuivant || "DEV-2026-001"}
+                    hint="Modifiable : reprenez la numérotation de votre carnet si vous en avez une."
+                  />
                   <F l="Objet du devis" v={form.title} set={(v) => setForm({ ...form, title: v })} ph="Ex : Logo + charte graphique" />
                   <Select
                     l="Projet (optionnel)"

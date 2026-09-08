@@ -5,6 +5,7 @@ import {
   logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, defaultQuoteSections, taxAllowed,
   apercuProchainNumero,
   creerClientRapide,
+  numeroChoisi,
 } from "@/lib/proServer";
 
 export const dynamic = "force-dynamic";
@@ -97,11 +98,17 @@ export async function POST(req: Request) {
       // acceptés — un document engagé ne change pas après coup.
       const sections = await defaultQuoteSections(sb, userId);
 
+      // Le numero saisi l'emporte ; champ vide, on attribue d'office.
+      const numeroPiece = await numeroChoisi(sb, userId, "DEV", body?.number);
+      if ("error" in numeroPiece) {
+        return NextResponse.json({ error: numeroPiece.error }, { status: 400 });
+      }
+
       const payload = {
         user_id: userId,
         client_id: clientId,
         project_id: projectId,
-        number: await nextDocumentNumber(sb, userId, "DEV"),
+        number: numeroPiece.numero,
         title,
         items,
         subtotal: t.subtotal,
