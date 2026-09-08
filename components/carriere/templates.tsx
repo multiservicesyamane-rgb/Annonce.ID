@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Ma Carriere — les vingt-sept mises en page de CV.
+ * Ma Carriere — les mises en page de CV (voir CV_TEMPLATES pour la liste).
  *
  * Adaptes des gabarits du projet cvurgent, avec deux differences voulues :
  *  - les niveaux de langue sont des pastilles sur 5 (voir lib/carriere.ts) ;
@@ -209,7 +209,7 @@ function Parcours({
    * plus lourd aupres d un recruteur qu un diplome ancien : elle merite sa
    * propre rubrique, pas une ligne noyee dans les etudes.
    *
-   * Ecrite ici, dans la brique commune : les dix-sept gabarits l affichent
+   * Ecrite ici, dans la brique commune : tous les gabarits l affichent
    * sans qu aucun n ait a etre touche.
    */
   const certifications = cv.certifications?.length > 0 && (
@@ -389,6 +389,160 @@ function Contacts({ cv, color }: { cv: CVContent; color: string }) {
         </p>
       ))}
     </>
+  );
+}
+
+/* ===================== Briques des maquettes ===================== */
+/*
+ * Ce qui revient dans presque tous les modeles de CV professionnels du
+ * commerce, et qui manquait ici : la pastille ronde d'icone devant chaque
+ * coordonnee, le titre de rubrique en pilule pleine, et le bord courbe entre
+ * la colonne et le corps.
+ *
+ * Ce sont des STRUCTURES, pas des copies : proportions, hierarchie, place de
+ * la photo, rythme des rubriques. Aucun fichier n'est repris.
+ */
+
+/** Pastille ronde portant une icone — la signature des maquettes a colonne. */
+function Pastille({
+  children, fond, encre, taille = 21,
+}: {
+  children: ReactNode;
+  fond: string;
+  encre: string;
+  taille?: number;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        width: taille,
+        height: taille,
+        borderRadius: 9999,
+        background: fond,
+        color: encre,
+        display: "inline-grid",
+        placeItems: "center",
+        fontSize: Math.round(taille * 0.5),
+        flexShrink: 0,
+        lineHeight: 1,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Coordonnees avec pastille d'icone.
+ *
+ * La ville figure ici et non a part : sur les maquettes, telephone, e-mail,
+ * adresse et lien forment un seul bloc aligne. Les separer cassait la
+ * colonne d'icones en deux.
+ */
+function ContactsPastilles({
+  cv, texte, fond, encre, taille = 11,
+}: {
+  cv: CVContent;
+  texte: string;
+  fond: string;
+  encre: string;
+  taille?: number;
+}) {
+  const p = cv.personalInfo;
+  const items = [
+    { i: "☎", v: p.phone },
+    { i: "✉", v: p.email },
+    { i: "◉", v: p.location },
+    { i: "in", v: p.linkedin },
+  ].filter((x) => x.v.trim());
+
+  return (
+    <>
+      {items.map((x) => (
+        <p
+          key={x.v}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            fontSize: taille,
+            color: texte,
+            marginBottom: 9,
+            wordBreak: "break-word",
+          }}
+        >
+          <Pastille fond={fond} encre={encre}>{x.i}</Pastille>
+          <span style={{ flex: 1, minWidth: 0 }}>{x.v}</span>
+        </p>
+      ))}
+    </>
+  );
+}
+
+/** Titre de rubrique en pilule pleine, pleine largeur. */
+function HPilule({
+  children, fond, encre,
+}: {
+  children: ReactNode;
+  fond: string;
+  encre: string;
+}) {
+  return (
+    <h2
+      style={{
+        background: fond,
+        color: encre,
+        fontSize: 11.5,
+        fontWeight: 800,
+        letterSpacing: 1,
+        textTransform: "uppercase",
+        padding: "6px 14px",
+        borderRadius: 9999,
+        marginBottom: 12,
+      }}
+    >
+      {children}
+    </h2>
+  );
+}
+
+/**
+ * Bord courbe entre la colonne et le corps.
+ *
+ * Un SVG et non un `border-radius` : le rayon d'un coin arrondi ne depasse
+ * jamais la moitie de la hauteur, alors que la courbe des maquettes file sur
+ * toute la page. Le trace est pose en absolu sur le bord droit de la colonne.
+ */
+function BordCourbe({ couleur, largeur = 46 }: { couleur: string; largeur?: number }) {
+  return (
+    <svg
+      width={largeur}
+      height={PAGE_H}
+      viewBox={`0 0 ${largeur} ${PAGE_H}`}
+      preserveAspectRatio="none"
+      style={{ position: "absolute", top: 0, left: "100%", display: "block" }}
+      aria-hidden="true"
+    >
+      <path d={`M0 0 C ${largeur * 1.4} ${PAGE_H * 0.3}, ${largeur * 1.4} ${PAGE_H * 0.7}, 0 ${PAGE_H} Z`} fill={couleur} />
+    </svg>
+  );
+}
+
+/** Carte blanche posee sur un fond gris — le rythme des maquettes « fiche ». */
+function CarteBlanche({ children, marge = 16 }: { children: ReactNode; marge?: number }) {
+  return (
+    <section
+      style={{
+        background: "#ffffff",
+        borderRadius: 10,
+        padding: "16px 18px",
+        marginBottom: marge,
+        boxShadow: "0 1px 3px rgba(16,24,40,.10)",
+      }}
+    >
+      {children}
+    </section>
   );
 }
 
@@ -1669,13 +1823,7 @@ function ColonneLaterale({
       {cv.skills.length > 0 && (
         <div style={{ marginTop: 24 }}>
           <HSide color={titre}>Competences</HSide>
-          <ul style={{ paddingLeft: 14 }}>
-            {cv.skills.map((s, i) => (
-              <li key={i} style={{ fontSize: 11.5, lineHeight: 1.9, color: texte, listStyle: "disc" }}>
-                {s}
-              </li>
-            ))}
-          </ul>
+          <Competences cv={cv} texte={texte} remplissage={titre} piste={off} />
         </div>
       )}
 
@@ -2150,6 +2298,587 @@ function Grille({ cv }: { cv: CVContent }) {
 
 /* ============================= Selection ============================= */
 
+/* ================== Serie « maquettes professionnelles » ==================
+ *
+ * Dix mises en page reprenant les codes des modeles de CV que le public
+ * reconnait : colonne a bord courbe, rubriques en pilules pleines, cartes
+ * blanches sur fond gris, photo en medaillon a cheval sur le bandeau.
+ *
+ * Ce sont les STRUCTURES qui sont reprises — proportions, hierarchie, place
+ * de la photo, rythme des rubriques — jamais un fichier.
+ *
+ * Toutes suivent les memes regles que le reste de la serie : une seule
+ * couleur d'accent, marges tenues, lisible imprime en noir et blanc. Un CV
+ * finit sur le bureau d'un recruteur, souvent photocopie.
+ */
+
+/** Vague — colonne sombre a bord courbe, la mise en page la plus repandue. */
+function Vague({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "vague");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <aside
+        style={{
+          width: 252,
+          background: accent,
+          color: "#fff",
+          padding: "44px 24px 40px",
+          position: "relative",
+          zIndex: 1,
+          flexShrink: 0,
+        }}
+      >
+        {/* La courbe deborde sur le corps : la colonne passe donc au-dessus. */}
+        <BordCourbe couleur={accent} />
+
+        <div style={{ display: "grid", placeItems: "center", marginBottom: 22 }}>
+          <Photo p={p} taille={104} forme="cercle" bordure="rgba(255,255,255,.55)" couleurTexte="#fff" marge={0} />
+        </div>
+
+        <HSide>Contact</HSide>
+        <ContactsPastilles cv={cv} texte="rgba(255,255,255,.94)" fond="rgba(255,255,255,.16)" encre="#fff" />
+
+        {cv.skills.length > 0 && (
+          <div style={{ marginTop: 26 }}>
+            <HSide>Competences</HSide>
+            <Competences cv={cv} texte="#ffffff" remplissage="#ffffff" piste="rgba(255,255,255,.26)" />
+          </div>
+        )}
+
+        {cv.languages.length > 0 && (
+          <div style={{ marginTop: 26 }}>
+            <HSide>Langues</HSide>
+            {cv.languages.map((l) => (
+              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}>
+                <span style={{ fontSize: 11.5 }}>{l.name}</span>
+                <Bars level={l.level} color="#fff" off="rgba(255,255,255,.3)" />
+              </div>
+            ))}
+          </div>
+        )}
+      </aside>
+
+      <main style={{ flex: 1, minWidth: 0, padding: "44px 38px 40px 62px" }}>
+        <h1 style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1, color: "#111827" }}>
+          {fullName(p) || "Ton nom"}
+        </h1>
+        {p.title.trim() && (
+          <p style={{ fontSize: 13.5, color: accent, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", marginTop: 7 }}>
+            {p.title}
+          </p>
+        )}
+        <span style={{ display: "block", width: 62, height: 3, background: accent, borderRadius: 2, margin: "16px 0 22px" }} />
+        <Parcours cv={cv} accent={accent} />
+      </main>
+    </Sheet>
+  );
+}
+
+/** Fiche — cartes blanches posees sur un fond gris, bandeau colore en tete. */
+function Fiche({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "fiche");
+  const p = cv.personalInfo;
+  return (
+    <Sheet bg="#EEF1F5">
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <header style={{ background: accent, color: "#fff", padding: "30px 40px", display: "flex", alignItems: "center", gap: 22 }}>
+          <Photo p={p} taille={86} forme="cercle" bordure="rgba(255,255,255,.6)" couleurTexte="#fff" marge={0} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 27, fontWeight: 800, lineHeight: 1.1 }}>{fullName(p) || "Ton nom"}</h1>
+            <p style={{ fontSize: 13, opacity: 0.9, marginTop: 5, letterSpacing: 1.2, textTransform: "uppercase" }}>
+              {p.title}
+            </p>
+          </div>
+        </header>
+
+        <div style={{ flex: 1, padding: "20px 30px 28px", display: "flex", gap: 18, alignItems: "flex-start" }}>
+          <div style={{ width: 226, flexShrink: 0 }}>
+            <CarteBlanche>
+              <H color={accent}>Contact</H>
+              <ContactsPastilles cv={cv} texte="#374151" fond={accent + "1A"} encre={accent} />
+            </CarteBlanche>
+
+            {cv.skills.length > 0 && (
+              <CarteBlanche>
+                <H color={accent}>Competences</H>
+                <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" />
+              </CarteBlanche>
+            )}
+
+            {cv.languages.length > 0 && (
+              <CarteBlanche marge={0}>
+                <H color={accent}>Langues</H>
+                {cv.languages.map((l) => (
+                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                    <Bars level={l.level} color={accent} off="#E5E7EB" />
+                  </div>
+                ))}
+              </CarteBlanche>
+            )}
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <CarteBlanche marge={0}>
+              <Parcours cv={cv} accent={accent} />
+            </CarteBlanche>
+          </div>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Pilule — chaque rubrique annoncee par un titre en pilule pleine. */
+function Pilule({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "pilule");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <header style={{ padding: "40px 44px 22px", display: "flex", alignItems: "center", gap: 22 }}>
+          <Photo p={p} taille={94} forme="cercle" bordure={accent} couleurTexte={accent} marge={0} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1, color: accent }}>
+              {fullName(p) || "Ton nom"}
+            </h1>
+            <p style={{ fontSize: 13, color: "#4B5563", marginTop: 6, letterSpacing: 1.4, textTransform: "uppercase" }}>
+              {p.title}
+            </p>
+          </div>
+        </header>
+
+        <div style={{ flex: 1, padding: "0 44px 40px", display: "flex", gap: 26, alignItems: "flex-start" }}>
+          <div style={{ width: 214, flexShrink: 0 }}>
+            <HPilule fond={accent} encre="#fff">Contact</HPilule>
+            <ContactsPastilles cv={cv} texte="#374151" fond={accent + "1A"} encre={accent} />
+
+            {cv.skills.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <HPilule fond={accent} encre="#fff">Competences</HPilule>
+                <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" />
+              </div>
+            )}
+
+            {cv.languages.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <HPilule fond={accent} encre="#fff">Langues</HPilule>
+                {cv.languages.map((l) => (
+                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                    <Dots level={l.level} color={accent} off="#E5E7EB" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {cv.summary.trim() && (
+              <section style={{ marginBottom: 18 }}>
+                <HPilule fond={accent} encre="#fff">Profil</HPilule>
+                <p style={{ fontSize: 12, lineHeight: 1.7, color: "#374151" }}>{cv.summary}</p>
+              </section>
+            )}
+            <Parcours cv={cv} accent={accent} />
+          </div>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Medaillon — photo ronde a cheval sur le bandeau, comme les maquettes. */
+function Medaillon({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "medaillon");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <header style={{ background: accent, color: "#fff", padding: "36px 44px 46px", position: "relative" }}>
+          <h1 style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1, paddingRight: 140 }}>
+            {fullName(p) || "Ton nom"}
+          </h1>
+          <p style={{ fontSize: 13, opacity: 0.9, marginTop: 7, letterSpacing: 1.5, textTransform: "uppercase", paddingRight: 140 }}>
+            {p.title}
+          </p>
+          {/* A cheval sur le bord bas du bandeau : le medaillon deborde de
+              moitie sur le corps blanc, exactement comme sur les maquettes. */}
+          <div style={{ position: "absolute", right: 44, top: 30 }}>
+            <Photo p={p} taille={112} forme="cercle" bordure="#ffffff" couleurTexte="#fff" marge={0} />
+          </div>
+        </header>
+
+        <div style={{ flex: 1, padding: "26px 44px 40px", display: "flex", gap: 28, alignItems: "flex-start" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Parcours cv={cv} accent={accent} />
+          </div>
+          <div style={{ width: 210, flexShrink: 0 }}>
+            <H color={accent}>Contact</H>
+            <ContactsPastilles cv={cv} texte="#374151" fond={accent} encre="#fff" />
+
+            {cv.skills.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <H color={accent}>Competences</H>
+                <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" />
+              </div>
+            )}
+
+            {cv.languages.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <H color={accent}>Langues</H>
+                {cv.languages.map((l) => (
+                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                    <Dots level={l.level} color={accent} off="#E5E7EB" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Biseau — angles coupes en haut a gauche et en bas a droite. */
+function Biseau({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "biseau");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, minWidth: 0, position: "relative", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        {/* Deux triangles obtenus par des bordures : aucune image, rien a
+            charger, et le trace survit a la capture du PDF. */}
+        <span
+          aria-hidden="true"
+          style={{ position: "absolute", top: 0, left: 0, width: 0, height: 0, borderTop: "168px solid " + accent, borderRight: "168px solid transparent" }}
+        />
+        <span
+          aria-hidden="true"
+          style={{ position: "absolute", bottom: 0, right: 0, width: 0, height: 0, borderBottom: "120px solid " + accent + "22", borderLeft: "120px solid transparent" }}
+        />
+
+        <header style={{ padding: "44px 44px 20px", display: "flex", alignItems: "flex-start", gap: 24, position: "relative" }}>
+          <div style={{ flex: 1, minWidth: 0, paddingLeft: 104 }}>
+            <h1 style={{ fontSize: 31, fontWeight: 800, lineHeight: 1.1, color: "#111827" }}>
+              {fullName(p) || "Ton nom"}
+            </h1>
+            <p style={{ fontSize: 13, color: accent, fontWeight: 700, marginTop: 6, letterSpacing: 1.4, textTransform: "uppercase" }}>
+              {p.title}
+            </p>
+          </div>
+          <Photo p={p} taille={96} forme="rect" bordure={accent} couleurTexte={accent} marge={0} />
+        </header>
+
+        <div style={{ flex: 1, padding: "8px 44px 44px", display: "flex", gap: 28, alignItems: "flex-start", position: "relative" }}>
+          <div style={{ width: 208, flexShrink: 0 }}>
+            <HPilule fond={accent} encre="#fff">Contact</HPilule>
+            <ContactsPastilles cv={cv} texte="#374151" fond={accent + "1A"} encre={accent} />
+
+            {cv.skills.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <HPilule fond={accent} encre="#fff">Competences</HPilule>
+                <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" />
+              </div>
+            )}
+
+            {cv.languages.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <HPilule fond={accent} encre="#fff">Langues</HPilule>
+                {cv.languages.map((l) => (
+                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                    <Bars level={l.level} color={accent} off="#E5E7EB" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Parcours cv={cv} accent={accent} />
+          </div>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Ruban — colonne sombre, photo cerclee, rubriques a pastille. */
+function Ruban({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "ruban");
+  const p = cv.personalInfo;
+  const encreColonne = "#0F172A";
+  return (
+    <Sheet>
+      <aside style={{ width: 262, background: encreColonne, color: "#fff", padding: "40px 26px", flexShrink: 0 }}>
+        <div style={{ display: "grid", placeItems: "center", marginBottom: 20 }}>
+          {/* L'anneau est un fond colore debordant de la photo : deux cadres
+              concentriques auraient fait un second reglage a tenir. */}
+          <span style={{ padding: 5, borderRadius: 9999, background: accent, display: "inline-flex" }}>
+            <Photo p={p} taille={102} forme="cercle" bordure={encreColonne} couleurTexte="#fff" marge={0} />
+          </span>
+        </div>
+
+        <h1 style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.2, textAlign: "center" }}>
+          {fullName(p) || "Ton nom"}
+        </h1>
+        <p style={{ fontSize: 11.5, color: accent, textAlign: "center", marginTop: 6, letterSpacing: 1.3, textTransform: "uppercase" }}>
+          {p.title}
+        </p>
+
+        <hr style={{ border: 0, borderTop: "1px solid rgba(255,255,255,.16)", margin: "22px 0" }} />
+        <HSide color={accent}>Contact</HSide>
+        <ContactsPastilles cv={cv} texte="rgba(255,255,255,.9)" fond={accent} encre="#fff" />
+
+        {cv.skills.length > 0 && (
+          <>
+            <hr style={{ border: 0, borderTop: "1px solid rgba(255,255,255,.16)", margin: "22px 0" }} />
+            <HSide color={accent}>Competences</HSide>
+            <Competences cv={cv} texte="rgba(255,255,255,.92)" remplissage={accent} piste="rgba(255,255,255,.18)" />
+          </>
+        )}
+
+        {cv.languages.length > 0 && (
+          <>
+            <hr style={{ border: 0, borderTop: "1px solid rgba(255,255,255,.16)", margin: "22px 0" }} />
+            <HSide color={accent}>Langues</HSide>
+            {cv.languages.map((l) => (
+              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}>
+                <span style={{ fontSize: 11.5 }}>{l.name}</span>
+                <Dots level={l.level} color={accent} off="rgba(255,255,255,.22)" />
+              </div>
+            ))}
+          </>
+        )}
+      </aside>
+
+      <main style={{ flex: 1, minWidth: 0, padding: "44px 36px" }}>
+        <Parcours cv={cv} accent={accent} />
+      </main>
+    </Sheet>
+  );
+}
+
+/** Entete — formes angulaires en tete, a la maniere d'un papier a en-tete. */
+function Entete({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "entete");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <header style={{ position: "relative", height: 150, flexShrink: 0, overflow: "hidden" }}>
+          <span aria-hidden="true" style={{ position: "absolute", inset: 0, background: accent }} />
+          {/* Le biseau clair qui traverse le bandeau : une seule forme posee
+              de biais. Deux triangles superposes bougeaient a l'export. */}
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute", top: 0, right: 0, width: 300, height: "100%",
+              background: "rgba(255,255,255,.14)", transform: "skewX(-18deg)", transformOrigin: "top right",
+            }}
+          />
+          <div style={{ position: "relative", padding: "34px 44px", display: "flex", alignItems: "center", gap: 22 }}>
+            <Photo p={p} taille={82} forme="cercle" bordure="rgba(255,255,255,.7)" couleurTexte="#fff" marge={0} />
+            <div style={{ flex: 1, minWidth: 0, color: "#fff" }}>
+              <h1 style={{ fontSize: 29, fontWeight: 800, lineHeight: 1.1 }}>{fullName(p) || "Ton nom"}</h1>
+              <p style={{ fontSize: 12.5, opacity: 0.92, marginTop: 6, letterSpacing: 1.5, textTransform: "uppercase" }}>
+                {p.title}
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <div style={{ background: "#F3F4F6", padding: "12px 44px", display: "flex", flexWrap: "wrap", gap: "6px 26px" }}>
+          <ContactsPastilles cv={cv} texte="#374151" fond={accent} encre="#fff" taille={10.5} />
+        </div>
+
+        <main style={{ flex: 1, padding: "26px 44px 40px" }}>
+          <Parcours cv={cv} accent={accent} />
+          {(cv.skills.length > 0 || cv.languages.length > 0) && (
+            <section style={{ marginTop: 20, display: "flex", gap: 32, alignItems: "flex-start" }}>
+              {cv.skills.length > 0 && (
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <H color={accent}>Competences</H>
+                  <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" />
+                </div>
+              )}
+              {cv.languages.length > 0 && (
+                <div style={{ width: 210, flexShrink: 0 }}>
+                  <H color={accent}>Langues</H>
+                  {cv.languages.map((l) => (
+                    <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                      <Bars level={l.level} color={accent} off="#E5E7EB" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </main>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Tandem — bandeau clair pleine largeur, puis deux colonnes egales. */
+function Tandem({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "tandem");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <header style={{ borderBottom: "4px solid " + accent, padding: "44px 44px 24px", display: "flex", gap: 24, alignItems: "center" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.05, color: "#111827", letterSpacing: -0.5 }}>
+              {fullName(p) || "Ton nom"}
+            </h1>
+            <p style={{ fontSize: 13.5, color: accent, fontWeight: 700, marginTop: 8, letterSpacing: 2, textTransform: "uppercase" }}>
+              {p.title}
+            </p>
+          </div>
+          <Photo p={p} taille={92} forme="rect" bordure={accent + "55"} couleurTexte={accent} marge={0} />
+        </header>
+
+        <div style={{ background: "#F9FAFB", padding: "14px 44px", display: "flex", flexWrap: "wrap", gap: "6px 24px" }}>
+          <ContactsPastilles cv={cv} texte="#374151" fond={accent + "1A"} encre={accent} taille={10.5} />
+        </div>
+
+        <div style={{ flex: 1, padding: "24px 44px 40px", display: "flex", gap: 30, alignItems: "flex-start" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Parcours cv={cv} accent={accent} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {cv.skills.length > 0 && (
+              <section style={{ marginBottom: 20 }}>
+                <H color={accent}>Competences</H>
+                <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" />
+              </section>
+            )}
+            {cv.languages.length > 0 && (
+              <section>
+                <H color={accent}>Langues</H>
+                {cv.languages.map((l) => (
+                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                    <Bars level={l.level} color={accent} off="#E5E7EB" />
+                  </div>
+                ))}
+              </section>
+            )}
+          </div>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Relief — colonne teintee tres claire, photo rectangulaire au format officiel. */
+function Relief({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "relief");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <aside style={{ width: 248, background: accent + "0F", padding: "40px 24px", flexShrink: 0 }}>
+        <Photo p={p} taille={98} forme="rect" bordure={accent + "55"} couleurTexte={accent} marge={20} />
+        <h1 style={{ fontSize: 23, fontWeight: 800, lineHeight: 1.15, color: "#111827" }}>
+          {fullName(p) || "Ton nom"}
+        </h1>
+        <p style={{ fontSize: 12, color: accent, fontWeight: 700, marginTop: 6, letterSpacing: 1.2, textTransform: "uppercase" }}>
+          {p.title}
+        </p>
+
+        <div style={{ marginTop: 24 }}>
+          <H color={accent}>Contact</H>
+          <ContactsPastilles cv={cv} texte="#374151" fond={accent} encre="#fff" />
+        </div>
+
+        {cv.skills.length > 0 && (
+          <div style={{ marginTop: 22 }}>
+            <H color={accent}>Competences</H>
+            {/* La piste est BLANCHE et non grise : sur un fond deja teinte, un
+                gris clair se confondrait avec le fond et la barre semblerait
+                pleine a tous les niveaux. */}
+            <Competences cv={cv} texte="#374151" remplissage={accent} piste="#FFFFFF" />
+          </div>
+        )}
+
+        {cv.languages.length > 0 && (
+          <div style={{ marginTop: 22 }}>
+            <H color={accent}>Langues</H>
+            {cv.languages.map((l) => (
+              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                <Dots level={l.level} color={accent} off="#FFFFFF" />
+              </div>
+            ))}
+          </div>
+        )}
+      </aside>
+
+      <main style={{ flex: 1, minWidth: 0, padding: "40px 36px" }}>
+        <Parcours cv={cv} accent={accent} />
+      </main>
+    </Sheet>
+  );
+}
+
+/** Sillon — rubriques separees par un filet plein, sans colonne. */
+function Sillon({ cv }: { cv: CVContent }) {
+  const accent = accentDe(cv.accent, "sillon");
+  const p = cv.personalInfo;
+  return (
+    <Sheet>
+      <div style={{ flex: 1, minWidth: 0, padding: "46px 52px 40px" }}>
+        <header style={{ display: "flex", alignItems: "center", gap: 24, paddingBottom: 20, borderBottom: "3px solid " + accent }}>
+          <Photo p={p} taille={90} forme="cercle" bordure={accent} couleurTexte={accent} marge={0} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.05, color: "#111827" }}>
+              {fullName(p) || "Ton nom"}
+            </h1>
+            <p style={{ fontSize: 13, color: "#4B5563", marginTop: 7, letterSpacing: 1.6, textTransform: "uppercase" }}>
+              {p.title}
+            </p>
+          </div>
+        </header>
+
+        <div style={{ padding: "14px 0", borderBottom: "1px solid #E5E7EB", display: "flex", flexWrap: "wrap", gap: "6px 26px" }}>
+          <ContactsPastilles cv={cv} texte="#374151" fond={accent} encre="#fff" taille={10.5} />
+        </div>
+
+        <div style={{ paddingTop: 20 }}>
+          <Parcours cv={cv} accent={accent} />
+        </div>
+
+        {(cv.skills.length > 0 || cv.languages.length > 0) && (
+          <section style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid #E5E7EB", display: "flex", gap: 34, alignItems: "flex-start" }}>
+            {cv.skills.length > 0 && (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <H color={accent}>Competences</H>
+                <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" taille={12} />
+              </div>
+            )}
+            {cv.languages.length > 0 && (
+              <div style={{ width: 220, flexShrink: 0 }}>
+                <H color={accent}>Langues</H>
+                {cv.languages.map((l) => (
+                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11.5, color: "#374151" }}>{l.name}</span>
+                    <Bars level={l.level} color={accent} off="#E5E7EB" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+    </Sheet>
+  );
+}
+
 const GABARITS: Record<TemplateId, (p: { cv: CVContent }) => JSX.Element> = {
   moderne: Moderne,
   classique: Classique,
@@ -2178,12 +2907,22 @@ const GABARITS: Record<TemplateId, (p: { cv: CVContent }) => JSX.Element> = {
   signature: SignatureCV,
   arche: Arche,
   grille: Grille,
+  vague: Vague,
+  fiche: Fiche,
+  pilule: Pilule,
+  medaillon: Medaillon,
+  biseau: Biseau,
+  ruban: Ruban,
+  entete: Entete,
+  tandem: Tandem,
+  relief: Relief,
+  sillon: Sillon,
 };
 
 export default function CVSheet({ cv, template }: { cv: CVContent; template: TemplateId }) {
   const Gabarit = GABARITS[template] || Moderne;
   // La police est posee ICI et une seule fois : les gabarits l heritent. La
-  // faire passer en parametre a travers les dix-sept aurait garanti qu on en
+  // faire passer en parametre a travers chacun aurait garanti qu on en
   // oublie un, et ce gabarit-la serait sorti dans une autre police que
   // l apercu.
   return (

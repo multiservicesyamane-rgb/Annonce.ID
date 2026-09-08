@@ -502,7 +502,7 @@ export default function CVWizard({
     // posent l'apercu a droite (voir `Split`, qui borne lui-meme la colonne de
     // texte a une mesure lisible), et le choix du modele parce que c'est une
     // galerie. Il etait le seul a rester dans la colonne etroite : les
-    // dix-sept gabarits y formaient cinq rangees a derouler, au milieu d'un
+    // les gabarits y formaient plusieurs rangees a derouler, au milieu d'un
     // ecran vide aux deux tiers.
     <div className={pageWide}>
       <div className="mb-5">
@@ -517,9 +517,9 @@ export default function CVWizard({
 
           {/* Deux modeles cote a cote au telephone, puis autant que la largeur
               en accepte — jusqu'a sept sur un ecran d'ordinateur. A quatre
-              colonnes dans la colonne etroite des formulaires, les dix-sept
-              gabarits formaient cinq rangees a derouler au milieu d'un ecran
-              vide aux deux tiers : on ne pouvait pas les comparer. */}
+              colonnes dans la colonne etroite des formulaires, les gabarits
+              formaient une pile de rangees a derouler au milieu d'un ecran vide
+              aux deux tiers : on ne pouvait pas les comparer. */}
           <div className="grid grid-cols-2 gap-3 sm:[grid-template-columns:repeat(auto-fill,minmax(164px,1fr))]">
             {CV_TEMPLATES.map((t) => {
               const verrouille = t.pro && !abonne;

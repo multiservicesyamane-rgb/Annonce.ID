@@ -69,6 +69,20 @@ export const CV_TEMPLATES = [
   { id: "signature", name: "Signature", pro: true },
   { id: "arche", name: "Arche", pro: true },
   { id: "grille", name: "Grille", pro: true },
+  // Troisieme serie — les codes des modeles de CV professionnels du commerce :
+  // colonne a bord courbe, rubriques en pilules, cartes sur fond gris, photo
+  // en medaillon. Trois gratuits, dont « Vague », la mise en page la plus
+  // reconnaissable : la porte d'entree doit donner envie, pas frustrer.
+  { id: "vague", name: "Vague", pro: false },
+  { id: "sillon", name: "Sillon", pro: false },
+  { id: "tandem", name: "Tandem", pro: false },
+  { id: "fiche", name: "Fiche", pro: true },
+  { id: "pilule", name: "Pilule", pro: true },
+  { id: "medaillon", name: "Medaillon", pro: true },
+  { id: "biseau", name: "Biseau", pro: true },
+  { id: "ruban", name: "Ruban", pro: true },
+  { id: "entete", name: "En-tete", pro: true },
+  { id: "relief", name: "Relief", pro: true },
 ] as const;
 
 export type TemplateId = (typeof CV_TEMPLATES)[number]["id"];
@@ -197,6 +211,18 @@ export const TEMPLATE_ACCENT: Record<TemplateId, string> = {
   signature: "#14532D",
   arche: "#B45309",
   grille: "#1F2937",
+  vague: "#2B4C8C",
+  sillon: "#1F2937",
+  tandem: "#111827",
+  fiche: "#0F766E",
+  pilule: "#2B4C8C",
+  medaillon: "#0F172A",
+  biseau: "#2B4C8C",
+  // L'accent de « Ruban » se detache sur une colonne noire : il lui faut une
+  // teinte chaude, un bleu nuit s'y noierait.
+  ruban: "#B45309",
+  entete: "#7F1D1D",
+  relief: "#0F766E",
 };
 
 /* ============================ Les polices ============================ */
@@ -334,7 +360,7 @@ export type CVContent = {
    * Niveau declare pour une competence, de 1 a 5. Clef = le libelle exact.
    *
    * ── Pourquoi une table et non un champ sur la competence ────────────────
-   * `skills` est un tableau de chaines lu par les vingt-sept gabarits. En
+   * `skills` est un tableau de chaines lu par tous les gabarits. En
    * faire des objets aurait demande de reecrire quarante-huit endroits d'un
    * coup, pour un gain purement visuel : la table se pose a cote, et rien de
    * ce qui existe ne bouge.

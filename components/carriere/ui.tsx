@@ -266,7 +266,7 @@ export const ZOOMS = [0.75, 1, 1.25, 1.5, 2];
  *
  * ── Le panneau se SUPERPOSE, il ne pousse pas ────────────────────────────
  * Premiere version : le panneau ouvert poussait la feuille vers le bas. Sur la
- * liste des dix-sept modeles, cela chassait le document entierement hors de
+ * liste complete des modeles, cela chassait le document entierement hors de
  * l'ecran — on choisissait un modele sans voir ce qu'il donnait, ce qui est
  * exactement l'inverse du but. Il se pose donc PAR-DESSUS le haut de la
  * feuille, avec sa propre hauteur maximale et son propre defilement : la page
