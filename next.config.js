@@ -43,6 +43,23 @@ const nextConfig = {
       { protocol: "https", hostname: "*.supabase.co" },
     ],
   },
+  /**
+   * Anciennes adresses.
+   *
+   * Le kit d'affiches a demenage vers /partenaires. La premiere version le
+   * redirigeait depuis une PAGE, avec `redirect()` : Next rend alors un 307
+   * sans en-tete `Location` et un corps `__next_error__`, que seul son
+   * runtime cote navigateur sait interpreter. Un moteur de recherche, un
+   * apercu WhatsApp ou un simple `curl -L` n'y voient qu'une page d'erreur.
+   *
+   * Une redirection declaree ici est une vraie redirection HTTP, servie avant
+   * meme d'atteindre l'application. `permanent` parce que le contenu a bien
+   * change d'adresse pour de bon — les liens deja partages suivront.
+   */
+  async redirects() {
+    return [{ source: "/affiches", destination: "/partenaires", permanent: true }];
+  },
+
   async headers() {
     return [
       {
