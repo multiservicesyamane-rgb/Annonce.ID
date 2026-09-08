@@ -9,6 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getProSubscription } from "@/lib/proBilling";
 import { isOwner } from "@/lib/owners";
 import { txt } from "@/lib/proServer";
+import { compter as compterLedger, debutDuMoisUTC } from "@/lib/quotaLedger";
 import {
   CAREER_KINDS,
   PLAFOND_REDACTIONS,
@@ -40,13 +41,15 @@ export type EtatQuotaCarriere = {
   autorise: boolean;
   /** Redactions assistees consommees — sert au garde-fou, pas au peage. */
   redactions: number;
+  /**
+   * Un document deja finalise se remodifie-t-il ?
+   *
+   * Faux sans abonnement : le plan gratuit donne UN document fini par mois,
+   * pas un document qu'on retouche a l'infini. Vrai pour un abonne et pour un
+   * compte proprietaire.
+   */
+  peutModifier: boolean;
 };
-
-/** Premier jour du mois courant, en ISO — borne du compteur. */
-function debutDuMois(): string {
-  const d = new Date();
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
-}
 
 /**
  * Les comptes proprietaires — la MEME liste que pour les annonces
@@ -80,7 +83,7 @@ export async function etatQuota(
   userId: string,
   email?: string,
 ): Promise<EtatQuotaCarriere> {
-  const depuis = debutDuMois();
+  const depuis = debutDuMoisUTC();
 
   /** Compte les lignes d'une table pour ce compte, depuis le 1er du mois. */
   const compter = async (table: string, colonne: string): Promise<number> => {
@@ -98,15 +101,32 @@ export async function etatQuota(
     }
   };
 
-  const [documents, redactions] = await Promise.all([
+  // Le compteur qui fait foi est le REGISTRE : il porte une ligne par
+  // creation et survit a la suppression du document. Denombrer les documents
+  // presents comptait ce qui reste et non ce qui a ete pris — supprimer son
+  // CV rendait l'unite du mois, et le tour recommencait.
+  //
+  // Tant que MIGRATION_VERROU_GRATUIT.sql n'a pas tourne, le registre repond
+  // null et l'on retombe sur l'ancien denombrement : l'ancienne regle, moins
+  // etanche, vaut mieux qu'un module ferme.
+  const [inscrites, presents, redactions] = await Promise.all([
+    compterLedger(sb, userId, "carriere"),
     compter("career_documents", "created_at"),
     compter("career_usage", "created_at"),
   ]);
+  const documents = inscrites ?? presents;
 
   // Le proprietaire du site n'a pas de quota : il doit pouvoir essayer et
   // montrer son propre produit sans se heurter a son propre peage.
   if (estProprietaire(email)) {
-    return { abonne: true, utilises: documents, quota: QUOTA_DOCUMENTS_PRO, autorise: true, redactions };
+    return {
+      abonne: true,
+      utilises: documents,
+      quota: QUOTA_DOCUMENTS_PRO,
+      autorise: true,
+      redactions,
+      peutModifier: true,
+    };
   }
 
   const abo = await getProSubscription(sb, userId);
@@ -118,7 +138,42 @@ export async function etatQuota(
     quota,
     autorise: documents < quota,
     redactions,
+    // Le plan gratuit donne un document FINI par mois. Une fois telecharge,
+    // il ne se retouche plus : sans cela, un seul CV servait toute l'annee,
+    // le poste vise change avant chaque candidature.
+    peutModifier: abo.actif,
   };
+}
+
+/* ============================ Le verrou ============================ */
+
+/**
+ * Ce document est-il ferme a la modification ?
+ *
+ * Deux conditions, et les deux comptent :
+ *   - il a ete FINALISE (premier telechargement) ;
+ *   - le compte n'a pas le droit de modifier (plan gratuit).
+ *
+ * Un document jamais telecharge reste ouvert indefiniment, meme sans
+ * abonnement : on ne fige pas un brouillon que personne n'a encore tenu entre
+ * les mains.
+ */
+export function documentVerrouille(
+  finaliseAt: string | null | undefined,
+  etat: EtatQuotaCarriere,
+): boolean {
+  return !!finaliseAt && !etat.peutModifier;
+}
+
+/** Le message montre quand la modification est refusee. */
+export function messageVerrou(kind: CareerKind): string {
+  const nom = kind === "cv" ? "Ce CV" : kind === "lettre" ? "Cette lettre" : "Ce courrier";
+  return (
+    `${nom} est termine : tu l'as deja telecharge. ` +
+    `Le plan gratuit donne un document fini par mois. ` +
+    `Passe a Pro pour le reprendre autant de fois que tu veux — ` +
+    `ton document reste telechargeable sans rien payer.`
+  );
 }
 
 /**
@@ -177,8 +232,27 @@ function urlPhoto(v: unknown): string {
   return /^https:\/\//i.test(s) || s.startsWith("/") ? s : "";
 }
 
+/**
+ * Niveaux declares, ramenes aux competences qui existent.
+ *
+ * `undefined` quand il n'y en a aucun : ecrire une table vide dans chaque
+ * document alourdirait tous les CV deja enregistres pour rien.
+ */
+function niveauxDe(raw: unknown, competences: string[]): CVContent["niveaux"] {
+  if (!raw || typeof raw !== "object") return undefined;
+  const connues = new Set(competences);
+  const out: Record<string, 1 | 2 | 3 | 4 | 5> = {};
+  for (const [nom, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!connues.has(nom)) continue;
+    const n = Math.round(Number(v));
+    if (n >= 1 && n <= 5) out[nom] = n as 1 | 2 | 3 | 4 | 5;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 function nettoyerCV(raw: any): CVContent {
   const p = raw?.personalInfo || {};
+  const competences = liste(raw?.skills, MAX_LISTE, 80);
   return {
     personalInfo: {
       firstName: str(p.firstName, 60),
@@ -227,7 +301,11 @@ function nettoyerCV(raw: any): CVContent {
         issuer: str(c?.issuer, 120),
         year: str(c?.year, 20),
       })),
-    skills: liste(raw?.skills, MAX_LISTE, 80),
+    skills: competences,
+    // Les niveaux sont retenus UNIQUEMENT pour des competences reellement
+    // presentes : sans ce filtre, une table envoyee a la main pourrait faire
+    // grossir le document avec des milliers de clefs mortes, et le jsonb avec.
+    niveaux: niveauxDe(raw?.niveaux, competences),
     languages: (Array.isArray(raw?.languages) ? raw.languages : [])
       .slice(0, 8)
       .map((l: any) => ({

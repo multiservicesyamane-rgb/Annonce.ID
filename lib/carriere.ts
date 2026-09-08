@@ -330,10 +330,35 @@ export type CVContent = {
   education: Education[];
   certifications: Certification[];
   skills: string[];
+  /**
+   * Niveau declare pour une competence, de 1 a 5. Clef = le libelle exact.
+   *
+   * ── Pourquoi une table et non un champ sur la competence ────────────────
+   * `skills` est un tableau de chaines lu par les vingt-sept gabarits. En
+   * faire des objets aurait demande de reecrire quarante-huit endroits d'un
+   * coup, pour un gain purement visuel : la table se pose a cote, et rien de
+   * ce qui existe ne bouge.
+   *
+   * Facultatif, et c'est le point : sans niveau declare, le gabarit dessine
+   * une etiquette et AUCUNE barre. Inventer un pourcentage reviendrait a
+   * ecrire sur le CV de quelqu'un une affirmation sur son niveau qu'il n'a
+   * jamais faite — devant un recruteur, c'est lui qui la porterait.
+   *
+   * Renommer une competence lui fait perdre son niveau : la barre disparait,
+   * le libelle reste. Une perte visible et sans gravite, la ou un tableau
+   * parallele aurait decale silencieusement tous les niveaux.
+   */
+  niveaux?: Record<string, 1 | 2 | 3 | 4 | 5>;
   languages: Langue[];
   /** Qualites illustrees en pied de CV sur le gabarit Moderne. */
   atouts: string[];
 };
+
+/** Niveau declare pour cette competence, ou 0 quand l'auteur n'en a pas mis. */
+export function niveauCompetence(cv: CVContent, nom: string): 0 | 1 | 2 | 3 | 4 | 5 {
+  const n = cv.niveaux?.[nom];
+  return n && n >= 1 && n <= 5 ? n : 0;
+}
 
 /* =================== Lettre de motivation et demande =================== */
 

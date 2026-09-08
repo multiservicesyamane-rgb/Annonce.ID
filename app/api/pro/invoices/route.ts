@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { sanitizeItems, computeTotals, publicToken, formatFcfa, waNumber } from "@/lib/pro";
 import {
   proContext, txt, num, dateOrNull, isMissingTable,
   logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, taxAllowed,
 } from "@/lib/proServer";
-import { getEtatQuota, messageQuotaAtteint } from "@/lib/proBilling";
+import {
+  factureVerrouillee,
+  getEtatQuota,
+  messageQuotaAtteint,
+  messageVerrouFacture,
+} from "@/lib/proBilling";
+import { inscrire } from "@/lib/quotaLedger";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +20,30 @@ function defaultDueDate(): string {
   const d = new Date();
   d.setDate(d.getDate() + 30);
   return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Horodate la remise de la facture au client.
+ *
+ * Silencieux et hors du chemin critique : appelé APRÈS que l'envoi ou le
+ * téléchargement a réussi. Poser l'horodatage dans la même requête aurait fait
+ * échouer l'envoi entier tant que MIGRATION_VERROU_GRATUIT.sql n'a pas tourné —
+ * un professionnel n'aurait plus pu envoyer ses factures à cause d'un compteur.
+ *
+ * Le premier geste fait foi : `.is("finalise_at", null)` empêche qu'un second
+ * téléchargement repousse la date.
+ */
+async function marquerRemise(sb: SupabaseClient, userId: string, id: string): Promise<void> {
+  try {
+    await sb
+      .from("pro_invoices")
+      .update({ finalise_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("user_id", userId)
+      .is("finalise_at", null);
+  } catch {
+    /* colonne absente ou base indisponible — jamais bloquant */
+  }
 }
 
 // Factures : émission, envoi, encaissement, relance.
@@ -35,6 +66,10 @@ export async function POST(req: Request) {
         utilisees: q.utilisees,
         quota: q.abonne ? null : q.quota,
         peutCreer: q.peutCreer,
+        // L'ecran s'en sert pour montrer « Modifier » ou un rappel
+        // d'abonnement, plutot que de laisser decouvrir le refus au moment
+        // d'enregistrer une correction deja saisie.
+        peutModifier: q.peutModifier,
         message: q.peutCreer ? null : messageQuotaAtteint(),
       });
     }
@@ -177,6 +212,11 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error.message || "Création impossible." }, { status: 500 });
       }
 
+      // Le registre des creations, ecrit APRES l'insertion avec l'identifiant
+      // reel. C'est lui qui compte le quota du mois : supprimer la facture ne
+      // rend plus l'unite consommee.
+      await inscrire(sb, userId, "pro", "facture", data.id);
+
       await logEvent(
         sb, userId, "invoice", data.id, "created",
         fromQuoteId ? `Facture ${data.number} créée depuis un devis accepté` : `Facture ${data.number} créée`,
@@ -197,6 +237,19 @@ export async function POST(req: Request) {
         return NextResponse.json(
           { error: "Cette facture a déjà reçu un paiement : elle n'est plus modifiable." },
           { status: 409 },
+        );
+      }
+
+      // Le verrou du plan gratuit. Distinct du precedent : celui-ci ne parle
+      // pas de comptabilité mais d'abonnement, et il ne ferme QUE les factures
+      // deja remises au client. Un brouillon se corrige librement.
+      //
+      // 402 et non 403 : ce n'est pas interdit, c'est payé.
+      const quotaMod = await getEtatQuota(sb, userId, email);
+      if (factureVerrouillee(before, quotaMod)) {
+        return NextResponse.json(
+          { error: messageVerrouFacture(), verrouille: true },
+          { status: 402 },
         );
       }
 
@@ -271,6 +324,10 @@ export async function POST(req: Request) {
         client = c || null;
       }
 
+      // Envoyer, c'est remettre. La facture quitte le bureau : pour un compte
+      // gratuit, elle ne se corrige plus.
+      await marquerRemise(sb, userId, id);
+
       await logEvent(sb, userId, "invoice", id, "sent", `Facture ${data.number} envoyée au client`);
       return NextResponse.json({
         ok: true,
@@ -305,6 +362,25 @@ export async function POST(req: Request) {
 
       await logEvent(sb, userId, "invoice", id, "reminded", `Relance envoyée pour ${data.number}`);
       return NextResponse.json({ ok: true, invoice: data, url, message, phone: waNumber(client?.phone) });
+    }
+
+    // Téléchargement du PDF ou copie du lien public : la facture part chez le
+    // client par WhatsApp ou sur papier. C'est la voie NORMALE ici — bien plus
+    // que le bouton « Envoyer » — et s'en tenir au statut aurait laissé le
+    // verrou ouvert sur le chemin que tout le monde emprunte.
+    if (action === "finaliser") {
+      const id = txt(body?.id, 60);
+      if (!id) return NextResponse.json({ error: "Facture requise." }, { status: 400 });
+
+      // On vérifie l'appartenance avant d'écrire : sans ce contrôle, un
+      // identifiant deviné suffirait à figer la facture de quelqu'un d'autre.
+      if (!(await ownsRow(sb, "pro_invoices", id, userId))) {
+        return NextResponse.json({ error: "Facture introuvable." }, { status: 404 });
+      }
+
+      await marquerRemise(sb, userId, id);
+      const q = await getEtatQuota(sb, userId, email);
+      return NextResponse.json({ ok: true, peutModifier: q.peutModifier });
     }
 
     if (action === "cancel") {

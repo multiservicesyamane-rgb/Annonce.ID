@@ -7,9 +7,9 @@ import { useDoc } from "./useDoc";
 import A4Preview from "@/components/pro/A4Preview";
 import ImageCropperModal from "@/components/ImageCropperModal";
 import {
-  ActionBar, AiBtn, Area, AsideCard, BarreOutils, Dots, Field, Note, OutilBtn,
-  OutlineBtn, PanneauOutil, PrimaryBtn, Select, Split, Title, ZOOMS,
-  api, card, input, lbl, pageWide,
+  ActionBar, AiBtn, Area, AsideCard, BandeauVerrou, BarreOutils, Dots, Field,
+  Note, OutilBtn, OutlineBtn, PanneauOutil, PrimaryBtn, Select, Split, Title,
+  ZOOMS, api, card, input, lbl, messageAvantFinalisation, pageWide,
 } from "./ui";
 import {
   ACCENTS,
@@ -20,6 +20,7 @@ import {
   POLICES,
   accentDe,
   newId,
+  niveauCompetence,
   resumeDossier,
   templateCV,
   templateIsPro,
@@ -106,6 +107,10 @@ const EXEMPLE: CVContent = {
   education: [{ id: "e1", degree: "Licence en Commerce", school: "Universite Cheikh Anta Diop", location: "Dakar", startDate: "2016", endDate: "2019" }],
   certifications: [{ id: "c1", name: "Bureautique et Pack Office", issuer: "Centre Sonatel Academy", year: "2020" }],
   skills: ["Relation client", "Prospection", "Pack Office"],
+  // Notes presentes uniquement sur ce CV d'exemple : les miniatures doivent
+  // montrer a quoi ressemble un modele REMPLI, barres comprises. Aucun CV
+  // reel ne recoit de niveau qu'on n'a pas saisi.
+  niveaux: { "Relation client": 5, Prospection: 4, "Pack Office": 4 } as const,
   languages: [{ id: "l1", name: "Francais", level: 5 }, { id: "l2", name: "Anglais", level: 3 }],
   atouts: ["Sens de l'organisation", "Rigueur"],
 };
@@ -155,6 +160,28 @@ export default function CVWizard({
   const patchCv = (p: Partial<CVContent>) => doc.patch(p as Record<string, unknown>);
   const patchInfo = (p: Partial<CVContent["personalInfo"]>) =>
     patchCv({ personalInfo: { ...cv.personalInfo, ...p } });
+
+  /** Pose ou retire la note d'une competence. `0` efface. */
+  const majNiveau = (nom: string, niveau: number) => {
+    const niveaux = { ...(cv.niveaux || {}) };
+    if (niveau >= 1 && niveau <= 5) niveaux[nom] = niveau as 1 | 2 | 3 | 4 | 5;
+    else delete niveaux[nom];
+    patchCv({ niveaux: Object.keys(niveaux).length ? niveaux : undefined });
+  };
+
+  /**
+   * Remplace la liste des competences, et jette les notes devenues orphelines.
+   *
+   * Sans ce menage, supprimer « Excel » puis le retaper plus tard lui rendrait
+   * l'ancienne note sans que personne l'ait demandee.
+   */
+  const majCompetences = (valeurs: string[]) => {
+    const restants = new Set(valeurs);
+    const niveaux = Object.fromEntries(
+      Object.entries(cv.niveaux || {}).filter(([nom]) => restants.has(nom)),
+    ) as CVContent["niveaux"];
+    patchCv({ skills: valeurs, niveaux: niveaux && Object.keys(niveaux).length ? niveaux : undefined });
+  };
 
   /* ------------------------------- L'IA ------------------------------- */
 
@@ -257,29 +284,45 @@ export default function CVWizard({
      l'ecran d'apercu final montrent EXACTEMENT la meme barre. Les ecrire deux
      fois aurait garanti qu'un reglage finisse par n'exister que d'un cote. */
 
+  /**
+   * Ouvre un panneau de la barre d'outils — ou l'abonnement si le CV est fini.
+   *
+   * Changer de modele, de couleur ou de police EST une modification : sur un
+   * document verrouille, l'enregistrement automatique est coupe. Laisser ces
+   * boutons agir aurait donne le pire des cas — la page change sous les yeux,
+   * et rien n'est garde. Un bouton qui ment est pire qu'un bouton ferme.
+   */
+  const ouvrirPanneau = (nom: "modele" | "couleur" | "police") => {
+    if (doc.verrouille) {
+      onPeage();
+      return;
+    }
+    setPanneau((p) => (p === nom ? null : nom));
+  };
+
   const outilsCV = (compact: boolean) => (
     <>
       <OutilBtn
-        icone="▦"
+        icone={doc.verrouille ? "🔒" : "▦"}
         compact={compact}
         actif={panneau === "modele"}
-        onClick={() => setPanneau((p) => (p === "modele" ? null : "modele"))}
+        onClick={() => ouvrirPanneau("modele")}
       >
         Modele
       </OutilBtn>
       <OutilBtn
-        icone="🎨"
+        icone={doc.verrouille ? "🔒" : "🎨"}
         compact={compact}
         actif={panneau === "couleur"}
-        onClick={() => setPanneau((p) => (p === "couleur" ? null : "couleur"))}
+        onClick={() => ouvrirPanneau("couleur")}
       >
         Couleur
       </OutilBtn>
       <OutilBtn
-        icone="Aa"
+        icone={doc.verrouille ? "🔒" : "Aa"}
         compact={compact}
         actif={panneau === "police"}
-        onClick={() => setPanneau((p) => (p === "police" ? null : "police"))}
+        onClick={() => ouvrirPanneau("police")}
       >
         Police
       </OutilBtn>
@@ -887,8 +930,56 @@ export default function CVWizard({
               suggestions={COMPETENCES_COURANTES}
               max={20}
               placeholder="Ajouter une competence"
-              onChange={(v) => patchCv({ skills: v })}
+              onChange={majCompetences}
             />
+
+            {/* Le niveau est FACULTATIF, et le rester est un choix : sans note
+                donnee, le gabarit dessine une etiquette et aucune barre.
+                Remplir a la place du candidat reviendrait a affirmer sur son
+                CV un niveau qu'il n'a jamais declare — devant un recruteur,
+                c'est lui qui le porterait. */}
+            {cv.skills.length > 0 && (
+              <div className="mt-4 rounded-xl border border-gray-200 p-3.5 dark:border-white/10">
+                <p className="text-[.8rem] font-bold text-gray-700 dark:text-gray-200">
+                  Ton niveau <span className="font-normal text-gray-400">— facultatif</span>
+                </p>
+                <p className="mt-0.5 text-[.76rem] leading-relaxed text-gray-500">
+                  Note une competence pour qu&apos;elle sorte avec une barre sur les modeles
+                  qui en affichent. Sans note, elle reste une etiquette simple.
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {cv.skills.map((nom) => {
+                    const niveau = niveauCompetence(cv, nom);
+                    return (
+                      <li key={nom} className="flex items-center gap-3">
+                        <span className="min-w-0 flex-1 truncate text-[.85rem] text-gray-700 dark:text-gray-300">
+                          {nom}
+                        </span>
+                        <div className="flex gap-1.5" role="group" aria-label={`Niveau de ${nom}`}>
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <button
+                              key={n}
+                              type="button"
+                              aria-label={`${nom} : niveau ${n} sur 5`}
+                              aria-pressed={n <= niveau}
+                              // Recliquer sur la note en cours l'efface : sans
+                              // cela, une barre posee par erreur ne pouvait
+                              // plus etre retiree qu'en supprimant la
+                              // competence entiere.
+                              onClick={() => majNiveau(nom, n === niveau ? 0 : n)}
+                              className={
+                                "h-4 w-4 rounded-full transition " +
+                                (n <= niveau ? "bg-green" : "bg-gray-200 dark:bg-white/15")
+                              }
+                            />
+                          ))}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </section>
 
           <section className="mb-6">
@@ -951,7 +1042,10 @@ export default function CVWizard({
             outils={
               <>
                 {outilsCV(false)}
-                <OutilBtn icone="✎" onClick={() => setEtape(1)}>
+                {/* Verrouille, « Modifier » mene a l'abonnement et non au
+                    formulaire : ouvrir un editeur dont chaque frappe sera
+                    refusee ferait perdre du temps a quelqu'un pour rien. */}
+                <OutilBtn icone={doc.verrouille ? "🔒" : "✎"} onClick={() => (doc.verrouille ? onPeage() : setEtape(1))}>
                   Modifier
                 </OutilBtn>
               </>
@@ -960,10 +1054,18 @@ export default function CVWizard({
             onFermerPanneau={() => setPanneau(null)}
             filename={`CV-${(nomComplet || "sans-nom").replace(/[^\w-]+/g, "-")}.pdf`}
             title={`CV ${nomComplet}`.trim()}
+            // Rien a avertir pour un abonne, ni pour un CV deja fini : la
+            // boite ne s'ouvre qu'une fois, au moment ou le geste devient
+            // irreversible.
+            avertissement={!abonne && !doc.verrouille ? messageAvantFinalisation("ton CV") : null}
+            onTelecharge={doc.finaliser}
             footer={
-              templateIsPro(doc.template) && !abonne ? (
-                <Note tone="warn">Ce modele est reserve a l&apos;abonnement Pro : le PDF sort avec le modele Moderne.</Note>
-              ) : null
+              <>
+                {doc.verrouille && <BandeauVerrou quoi="Ce CV" onPeage={onPeage} />}
+                {templateIsPro(doc.template) && !abonne ? (
+                  <Note tone="warn">Ce modele est reserve a l&apos;abonnement Pro : le PDF sort avec le modele Moderne.</Note>
+                ) : null}
+              </>
             }
             aside={
               <div className="mb-4 border-b border-gray-100 pb-4 dark:border-white/10">

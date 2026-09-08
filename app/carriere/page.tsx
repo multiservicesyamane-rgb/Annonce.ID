@@ -283,6 +283,7 @@ export default function CarrierePage() {
           {ecran.v === "documents" && (
             <MesDocuments
               documents={documents}
+              abonne={abonne}
               onOuvrir={(d) =>
                 setEcran(d.kind === "cv" ? { v: "cv", id: d.id } : { v: d.kind, id: d.id })
               }
@@ -312,6 +313,7 @@ export default function CarrierePage() {
               kind={ecran.v}
               docId={ecran.id}
               prefill={ecran.prefill}
+              abonne={abonne}
               onQuitter={rentrer}
               onPeage={() => setEcran({ v: "peage" })}
               toast={toast}

@@ -6,9 +6,9 @@ import LettreSheet from "./LettreSheet";
 import { useDoc } from "./useDoc";
 import A4Preview from "@/components/pro/A4Preview";
 import {
-  ActionBar, AiBtn, Area, AsideCard, BarreOutils, Field, Note, OutilBtn,
-  OutlineBtn, PanneauOutil, PrimaryBtn, ZOOMS,
-  Split, Steps, Title, api, card, input, lbl, pageWide,
+  ActionBar, AiBtn, Area, AsideCard, BandeauVerrou, BarreOutils, Field, Note,
+  OutilBtn, OutlineBtn, PanneauOutil, PrimaryBtn, ZOOMS,
+  Split, Steps, Title, api, card, input, lbl, messageAvantFinalisation, pageWide,
 } from "./ui";
 import { LETTRE_TEMPLATES, resumeDossier } from "@/lib/carriere";
 import type { CVContent, DemandeContent, Genre, LettreContent } from "@/lib/carriere";
@@ -40,6 +40,7 @@ export default function CourrierWizard({
   kind,
   docId,
   prefill,
+  abonne,
   onQuitter,
   onPeage,
   toast,
@@ -48,6 +49,7 @@ export default function CourrierWizard({
   docId?: string;
   /** Reponses deja donnees a l'assistant. */
   prefill?: Partial<LettreContent & DemandeContent>;
+  abonne: boolean;
   onQuitter: () => void;
   onPeage: () => void;
   toast: (m: string) => void;
@@ -188,12 +190,15 @@ export default function CourrierWizard({
      (« l_… ») — un gabarit de CV enregistre par erreur retomberait sur le
      classique plutot que sur une page blanche. */
 
+  // Changer de mise en page EST une modification : sur un courrier fini,
+  // l'enregistrement automatique est coupe, et laisser le bouton agir
+  // changerait la page a l'ecran sans rien garder.
   const outilsCourrier = (compact: boolean) => (
     <OutilBtn
-      icone="▦"
+      icone={doc.verrouille ? "🔒" : "▦"}
       compact={compact}
       actif={panneauModele}
-      onClick={() => setPanneauModele((v) => !v)}
+      onClick={() => (doc.verrouille ? onPeage() : setPanneauModele((v) => !v))}
     >
       Modele
     </OutilBtn>
@@ -457,16 +462,27 @@ export default function CourrierWizard({
             </div>
             <button
               type="button"
-              onClick={() => setEtape(1)}
+              onClick={() => (doc.verrouille ? onPeage() : setEtape(1))}
               className="rounded-lg px-3 py-2 text-[.85rem] font-bold text-gray-500 transition hover:bg-gray-100 hover:text-green dark:hover:bg-white/10"
             >
-              ✎ Modifier le texte
+              {doc.verrouille ? "🔒" : "✎"} Modifier le texte
             </button>
           </div>
 
           <ExportA4
             filename={`${(objet || "courrier").replace(/[^\w-]+/g, "-").slice(0, 60)}.pdf`}
             title={objet}
+            avertissement={
+              !abonne && !doc.verrouille
+                ? messageAvantFinalisation(kind === "lettre" ? "ta lettre" : "ton courrier")
+                : null
+            }
+            onTelecharge={doc.finaliser}
+            footer={
+              doc.verrouille ? (
+                <BandeauVerrou quoi={kind === "lettre" ? "Cette lettre" : "Ce courrier"} onPeage={onPeage} />
+              ) : null
+            }
             aside={
               <div className="mb-4 border-b border-gray-100 pb-4 dark:border-white/10">
                 <p className="text-[.68rem] font-bold uppercase tracking-[.06em] text-gray-400">Ton document</p>

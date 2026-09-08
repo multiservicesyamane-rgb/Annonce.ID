@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { proContext, txt, isMissingTable } from "@/lib/proServer";
+import { proContext, txt, isMissingTable, isMissingColumn } from "@/lib/proServer";
 import { messageFerme, peutAcceder } from "@/lib/moduleAccess";
-import { etatQuota, isCareerKind, nettoyerContenu } from "@/lib/carriereServer";
+import {
+  documentVerrouille,
+  etatQuota,
+  isCareerKind,
+  messageVerrou,
+  nettoyerContenu,
+} from "@/lib/carriereServer";
+import { inscrire } from "@/lib/quotaLedger";
 import { moteursDisponibles } from "@/lib/ia";
 import {
   DEFAULT_LETTRE_TEMPLATE,
@@ -36,15 +43,23 @@ export async function POST(req: Request) {
 
     /* ------------------------------ Lister ------------------------------ */
     if (action === "list") {
-      const { data, error } = await sb
-        .from("career_documents")
-        // Le contenu est volontairement absent : la liste n'affiche qu'un
-        // titre et une date, et rapatrier le CV complet de chaque ligne
-        // ferait payer plusieurs dizaines de kilo-octets a une audience 4G.
-        .select("id, kind, title, template, created_at, updated_at")
-        .eq("user_id", userId)
-        .order("updated_at", { ascending: false })
-        .limit(MAX_DOCUMENTS);
+      // Le contenu est volontairement absent : la liste n'affiche qu'un titre
+      // et une date, et rapatrier le CV complet de chaque ligne ferait payer
+      // plusieurs dizaines de kilo-octets a une audience 4G.
+      const COLONNES = "id, kind, title, template, created_at, updated_at";
+      const lister = (colonnes: string) =>
+        sb
+          .from("career_documents")
+          .select(colonnes)
+          .eq("user_id", userId)
+          .order("updated_at", { ascending: false })
+          .limit(MAX_DOCUMENTS);
+
+      let { data, error } = await lister(`${COLONNES}, finalise_at`);
+      // MIGRATION_VERROU_GRATUIT.sql pas encore passe : la colonne manque. On
+      // relit sans elle plutot que de renvoyer une liste vide — le module
+      // fonctionne, il lui manque seulement le verrou.
+      if (error && isMissingColumn(error)) ({ data, error } = await lister(COLONNES));
 
       if (error) {
         // Migration pas encore passee : le module s'affiche vide plutot que
@@ -83,7 +98,15 @@ export async function POST(req: Request) {
       }
       if (!data) return NextResponse.json({ error: "Document introuvable." }, { status: 404 });
 
-      return NextResponse.json({ document: data, quota: await etatQuota(sb, userId, email) });
+      const etat = await etatQuota(sb, userId, email);
+      return NextResponse.json({
+        document: data,
+        quota: etat,
+        // L'ecran a besoin de le savoir AVANT d'ouvrir l'editeur : decouvrir
+        // le verrou au premier enregistrement ferait perdre ce qui vient
+        // d'etre tape.
+        verrouille: documentVerrouille(data.finalise_at, etat),
+      });
     }
 
     /* ------------------------------- Creer ------------------------------- */
@@ -104,9 +127,12 @@ export async function POST(req: Request) {
         );
       }
 
-      // Le peage est ICI, a la creation : un document gratuit par mois, cinq
-      // avec l'abonnement. C'est le seul endroit ou il compte — une fois le
-      // document ouvert, on ecrit et on recommence sans limite.
+      // Premier peage : le nombre de documents du mois. Un gratuit, cinq avec
+      // l'abonnement. Le compteur vient du REGISTRE et non du nombre de
+      // documents presents — sans quoi supprimer le sien rendait l'unite.
+      //
+      // Second peage, plus bas dans `update` : une fois le document
+      // telecharge, il ne se remodifie plus sans abonnement.
       const q = await etatQuota(sb, userId, email);
       if (!q.autorise) {
         // 402 et non 403 : ce n'est pas interdit, c'est paye. L'ecran s'en
@@ -148,6 +174,11 @@ export async function POST(req: Request) {
         throw error;
       }
 
+      // Le registre est ecrit APRES l'insertion, avec l'identifiant reel : une
+      // ligne inscrite pour un document qui n'aurait pas ete cree ferait payer
+      // une unite pour rien.
+      await inscrire(sb, userId, "carriere", kind, data?.id || "");
+
       return NextResponse.json({ document: data });
     }
 
@@ -159,15 +190,38 @@ export async function POST(req: Request) {
       // On relit le type en base au lieu de faire confiance a celui envoye :
       // sans cela, un contenu de lettre pourrait etre nettoye comme un CV et
       // ecraser un document existant par un objet presque vide.
-      const { data: existant } = await sb
-        .from("career_documents")
-        .select("kind")
-        .eq("id", id)
-        .eq("user_id", userId)
-        .maybeSingle();
+      const relire = (colonnes: string) =>
+        sb.from("career_documents").select(colonnes).eq("id", id).eq("user_id", userId).maybeSingle();
+
+      // Le `select` prend une chaine construite : TypeScript ne peut plus
+      // deduire la forme de la ligne, d'ou la remise a plat ci-dessous.
+      type LigneDoc = { kind: string; finalise_at?: string | null };
+      const { data: avecColonne, error: errLecture } = await relire("kind, finalise_at");
+      let existant = avecColonne as unknown as LigneDoc | null;
+      // Sans ce repli, une colonne manquante ferait repondre « Document
+      // introuvable » a CHAQUE enregistrement : le module entier cesserait
+      // d'enregistrer tant que la migration n'aurait pas tourne.
+      if (errLecture && isMissingColumn(errLecture)) {
+        const { data: sansColonne } = await relire("kind");
+        existant = sansColonne as unknown as LigneDoc | null;
+      }
       if (!existant) return NextResponse.json({ error: "Document introuvable." }, { status: 404 });
 
       const kind = existant.kind as Parameters<typeof nettoyerContenu>[0];
+
+      // Le verrou du plan gratuit. Il est pose ICI, cote serveur : griser un
+      // champ dans l'interface n'empeche personne d'appeler la route a la
+      // main, et c'est precisement ce peage-la qui finance le module.
+      //
+      // 402 et non 403 : ce n'est pas interdit, c'est paye. L'ecran s'en sert
+      // pour ouvrir l'abonnement plutot qu'afficher une erreur.
+      const etatDoc = await etatQuota(sb, userId, email);
+      if (documentVerrouille(existant.finalise_at, etatDoc)) {
+        return NextResponse.json(
+          { error: messageVerrou(kind), verrouille: true, quota: etatDoc },
+          { status: 402 },
+        );
+      }
       const patch: Record<string, unknown> = {};
 
       if (body?.content !== undefined) patch.content = nettoyerContenu(kind, body.content);
@@ -189,6 +243,58 @@ export async function POST(req: Request) {
       if (error) throw error;
 
       return NextResponse.json({ document: data });
+    }
+
+    /* ---------------------------- Finaliser ---------------------------- */
+    //
+    // Appele par l'ecran d'apercu au PREMIER telechargement reussi, et par lui
+    // seul. C'est le moment ou le document a une valeur entre les mains de son
+    // auteur : avant, ce n'est qu'un brouillon qu'on peaufine.
+    //
+    // Pourquoi pas « des la creation », au pied de la lettre ? Parce que
+    // l'enregistrement de Ma Carriere est automatique, 1,2 s apres la premiere
+    // frappe : le verrou se serait referme sur un CV contenant une seule
+    // lettre du prenom.
+    //
+    // L'horodatage est pose pour TOUT LE MONDE, abonne compris — c'est un fait
+    // ("ce document a ete produit tel jour"), pas une sanction. Le verrou,
+    // lui, ne regarde que l'etat de l'abonnement AU MOMENT de la modification :
+    // un abonne modifie ses documents finalises, et retrouve ce droit sur tous
+    // ses documents s'il se reabonne.
+    if (action === "finaliser") {
+      const id = txt(body?.id, 60);
+      if (!id) return NextResponse.json({ error: "Document requis." }, { status: 400 });
+
+      const { data, error } = await sb
+        .from("career_documents")
+        .update({ finalise_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("user_id", userId)
+        // Le premier telechargement fait foi. Sans ce filtre, chaque
+        // telechargement repousserait la date et l'on ne saurait plus quand le
+        // document a reellement ete termine.
+        .is("finalise_at", null)
+        .select("id, finalise_at")
+        .maybeSingle();
+
+      // Colonne absente (migration pas passee) : rien a verrouiller, et
+      // surtout pas de quoi faire echouer un telechargement qui, lui, a
+      // parfaitement fonctionne.
+      if (error && (isMissingColumn(error) || isMissingTable(error))) {
+        return NextResponse.json({ ok: true, verrouille: false });
+      }
+      if (error) throw error;
+
+      const etat = await etatQuota(sb, userId, email);
+      return NextResponse.json({
+        ok: true,
+        // `data` est nul quand le document etait deja finalise : le filtre
+        // `.is(null)` n'a alors rien mis a jour. Le document est verrouille
+        // dans les deux cas — il ne l'est pas moins parce qu'on le telecharge
+        // une seconde fois.
+        verrouille: !etat.peutModifier,
+        quota: etat,
+      });
     }
 
     /* ----------------------------- Supprimer ----------------------------- */

@@ -23,6 +23,7 @@ import {
   accentDe,
   fullName,
   initials,
+  niveauCompetence,
   periode,
   policeDe,
   type CVContent,
@@ -272,6 +273,58 @@ function Parcours({
  * lui-meme au moment de la capture et l'incorpore au PDF. C'est deja ainsi
  * que le logo et la signature des devis arrivent dans leur fichier.
  */
+/**
+ * Les competences, avec la barre de niveau quand l'auteur en a declare un.
+ *
+ * Presque toutes les maquettes de reference montrent des barres. Elles
+ * manquaient ici pour une raison qui tenait : le formulaire ne demandait aucun
+ * niveau, et dessiner une barre en aurait affirme un a la place du candidat —
+ * devant un recruteur, c'est lui qui l'aurait porte.
+ *
+ * Le niveau se saisit desormais, et il reste FACULTATIF. Sans note, la
+ * competence sort en simple libelle, sans barre : la maquette est respectee
+ * quand il y a de quoi la remplir, et rien n'est invente quand il n'y en a pas.
+ */
+function Competences({
+  cv, texte, remplissage, piste, taille = 11.5,
+}: {
+  cv: CVContent;
+  texte: string;
+  /** Couleur de la portion remplie. */
+  remplissage: string;
+  /** Couleur du rail, sous la portion remplie. */
+  piste: string;
+  taille?: number;
+}) {
+  return (
+    <>
+      {cv.skills.map((nom, i) => {
+        const n = niveauCompetence(cv, nom);
+        return (
+          <div key={i} style={{ marginBottom: n ? 10 : 6 }}>
+            <p style={{ fontSize: taille, color: texte, lineHeight: 1.5 }}>{nom}</p>
+            {n > 0 && (
+              <span
+                style={{ display: "block", height: 4, borderRadius: 2, background: piste, marginTop: 4 }}
+              >
+                <span
+                  style={{
+                    display: "block",
+                    width: `${n * 20}%`,
+                    height: "100%",
+                    borderRadius: 2,
+                    background: remplissage,
+                  }}
+                />
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function Photo({
   p, taille, forme, bordure, couleurTexte, marge = 20,
 }: {
@@ -363,13 +416,12 @@ function Moderne({ cv }: { cv: CVContent }) {
           <>
             <hr style={{ border: 0, borderTop: "1px solid rgba(255,255,255,.25)", margin: "26px 0" }} />
             <HSide>Competences</HSide>
-            <ul style={{ paddingLeft: 14 }}>
-              {cv.skills.map((s, i) => (
-                <li key={i} style={{ fontSize: 11.5, lineHeight: 1.9, listStyle: "disc" }}>
-                  {s}
-                </li>
-              ))}
-            </ul>
+            <Competences
+              cv={cv}
+              texte="#ffffff"
+              remplissage="#ffffff"
+              piste="rgba(255,255,255,.28)"
+            />
           </>
         )}
 
@@ -423,11 +475,7 @@ function Classique({ cv }: { cv: CVContent }) {
             {cv.skills.length > 0 && (
               <div style={{ marginTop: 26 }}>
                 <HSide color="#111827">Competences</HSide>
-                {cv.skills.map((s, i) => (
-                  <p key={i} style={{ fontSize: 11.5, color: "#374151", lineHeight: 1.9 }}>
-                    {s}
-                  </p>
-                ))}
+                <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" />
               </div>
             )}
 
@@ -480,17 +528,11 @@ function Executif({ cv }: { cv: CVContent }) {
         {cv.skills.length > 0 && (
           <div style={{ marginTop: 28 }}>
             <HSide>Competences cles</HSide>
-            {/* Un simple filet dore sous chaque competence, de longueur fixe.
-                Les maquettes montraient des barres de longueurs differentes :
-                elles se lisent comme un niveau de maitrise, or le formulaire
-                ne demande aucun niveau — le CV afficherait une note que le
-                candidat n'a jamais donnee. */}
-            {cv.skills.map((s, i) => (
-              <div key={i} style={{ marginBottom: 10 }}>
-                <p style={{ fontSize: 11, marginBottom: 4 }}>{s}</p>
-                <span style={{ display: "block", width: 34, height: 2, background: or, opacity: 0.7, borderRadius: 2 }} />
-              </div>
-            ))}
+            {/* La barre suit la note donnee par le candidat, et n'apparait que
+                s'il en a donne une. Le filet de longueur fixe qui tenait cette
+                place ne disait rien ; une barre inventee aurait dit un
+                mensonge. */}
+            <Competences cv={cv} texte="#ffffff" remplissage={or} piste="rgba(255,255,255,.22)" taille={11} />
           </div>
         )}
 
@@ -552,14 +594,9 @@ function Africain({ cv }: { cv: CVContent }) {
             <>
               <hr style={{ border: 0, borderTop: "1px solid rgba(255,255,255,.25)", margin: "24px 0" }} />
               <HSide color={or}>Competences</HSide>
-              {/* Pas de pastilles ici : elles diraient un niveau de maitrise
-                  que le candidat n'a jamais saisi. Seules les LANGUES en
-                  portent, parce que leur niveau est reellement demande. */}
-              {cv.skills.map((s, i) => (
-                <p key={i} style={{ fontSize: 11.5, lineHeight: 1.9 }}>
-                  {s}
-                </p>
-              ))}
+              {/* La barre ne parait que si le candidat a note la competence.
+                  Sans note, le libelle seul — jamais un niveau suppose. */}
+              <Competences cv={cv} texte="#ffffff" remplissage={or} piste="rgba(255,255,255,.22)" />
             </>
           )}
 
@@ -674,13 +711,7 @@ function Etudiant({ cv }: { cv: CVContent }) {
               {cv.skills.length > 0 && (
                 <div style={{ flex: 1 }}>
                   <H color={accent}>Competences</H>
-                  <ul style={{ paddingLeft: 14 }}>
-                    {cv.skills.map((k, i) => (
-                      <li key={i} style={{ fontSize: 12, lineHeight: 1.8, color: "#374151", listStyle: "disc" }}>
-                        {k}
-                      </li>
-                    ))}
-                  </ul>
+                  <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" taille={12} />
                 </div>
               )}
               {cv.languages.length > 0 && (
@@ -874,13 +905,7 @@ function Compact({ cv }: { cv: CVContent }) {
             {cv.skills.length > 0 && (
               <section style={{ marginBottom: 18 }}>
                 <H color={accent}>Competences</H>
-                <ul style={{ paddingLeft: 13 }}>
-                  {cv.skills.map((k, i) => (
-                    <li key={i} style={{ fontSize: 11.5, lineHeight: 1.7, color: "#374151", listStyle: "disc" }}>
-                      {k}
-                    </li>
-                  ))}
-                </ul>
+                <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" />
               </section>
             )}
 
@@ -1090,11 +1115,7 @@ function Duo({ cv }: { cv: CVContent }) {
             {cv.skills.length > 0 && (
               <div style={{ marginTop: 24 }}>
                 <H color={accent}>Competences</H>
-                {cv.skills.map((s, i) => (
-                  <p key={i} style={{ fontSize: 11.5, color: "#374151", lineHeight: 1.9 }}>
-                    {s}
-                  </p>
-                ))}
+                <Competences cv={cv} texte="#374151" remplissage={accent} piste="#E5E7EB" />
               </div>
             )}
 

@@ -178,6 +178,12 @@ export type Invoice = {
   quote_id: string | null;
   reminded_at: string | null;
   created_at: string;
+  /**
+   * Premiere remise au client — envoi, lien copie ou PDF telecharge.
+   * Sur un compte gratuit, la facture n'est plus corrigible a partir de la.
+   * Absent tant que MIGRATION_VERROU_GRATUIT.sql n'a pas tourne.
+   */
+  finalise_at?: string | null;
   pro_clients?: Partial<Client> | null;
 };
 

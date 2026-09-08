@@ -42,7 +42,9 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
   // Etat du quota connu DES le chargement, et pas seulement au moment
   // d'enregistrer : c'est ce qui permet de ne pas dessiner l'apercu d'une
   // facture qui ne pourra pas etre creee.
-  const [quota, setQuota] = useState<{ peutCreer: boolean; message: string | null } | null>(null);
+  const [quota, setQuota] = useState<
+    { peutCreer: boolean; peutModifier: boolean; message: string | null } | null
+  >(null);
   const [detail, setDetail] = useState<Detail | null>(null);
 
   const [query, setQuery] = useState("");
@@ -82,7 +84,14 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
     setProjects(p.data?.projects || []);
     setQuota(
       qt.ok && typeof qt.data?.peutCreer === "boolean"
-        ? { peutCreer: qt.data.peutCreer, message: qt.data.message || null }
+        ? {
+            peutCreer: qt.data.peutCreer,
+            // Absent d'une reponse ancienne : on suppose alors que la
+            // correction reste ouverte. Fermer par defaut interdirait de
+            // corriger une facture a cause d'un simple champ manquant.
+            peutModifier: qt.data.peutModifier !== false,
+            message: qt.data.message || null,
+          }
         : null,
     );
     setLoading(false);
@@ -421,8 +430,37 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
     });
   }
 
+  /**
+   * Cette facture est-elle fermée à la correction ?
+   *
+   * Le serveur tranche pour de bon ; ce calcul ne sert qu'à ne pas montrer un
+   * bouton « Modifier » qui refuserait. Deux façons d'avoir été remise : un
+   * horodatage de remise, ou un statut qui a quitté « brouillon » — les
+   * factures antérieures à la migration n'ont que le second.
+   */
+  function verrouillee(inv: Invoice): boolean {
+    if (quota === null || quota.peutModifier) return false;
+    return !!inv.finalise_at || (inv.status || "draft") !== "draft";
+  }
+
+  /**
+   * Horodate la remise au client, sans bloquer le geste demandé.
+   *
+   * Appelé après le téléchargement ou la copie du lien. Sur ce marché la
+   * facture part par WhatsApp bien plus souvent que par le bouton « Envoyer » :
+   * s'en tenir au statut aurait laissé le verrou ouvert sur le chemin le plus
+   * emprunté. La liste est rechargée pour que l'écran cesse aussitôt d'offrir
+   * une correction qui serait refusée.
+   */
+  async function marquerRemise(inv: Invoice) {
+    if (quota?.peutModifier !== false || inv.finalise_at) return;
+    const r = await api("invoices", { action: "finaliser", id: inv.id });
+    if (r.ok) load();
+  }
+
   function openPdf(inv: Invoice) {
     window.open(`/facture/${inv.public_token}/imprimer`, "_blank", "noopener");
+    marquerRemise(inv);
   }
 
   /**
@@ -436,6 +474,7 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
   async function copyLink(inv: Invoice) {
     await navigator.clipboard?.writeText(`${window.location.origin}/facture/${inv.public_token}`).catch(() => {});
     toast("✓ Lien de la facture copié");
+    marquerRemise(inv);
   }
 
   /* ---------------- Rendu ---------------- */
@@ -725,7 +764,22 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
                 <button onClick={() => copyLink(inv)} className={btnGhost}>🔗 Copier le lien</button>
                 <button onClick={() => openPdf(inv)} className={btnGhost}>⬇ Télécharger</button>
                 {(inv.paid_amount || 0) === 0 && status !== "cancelled" && (
-                  <button onClick={() => openEdit(inv)} className={btnGhost}>✏️ Modifier</button>
+                  verrouillee(inv) ? (
+                    // Le bouton reste, mais il dit la vérité et mène à
+                    // l'abonnement. Le faire disparaître laisserait chercher
+                    // une fonction qui existe pourtant, un cran plus haut.
+                    <button
+                      onClick={() => setQuotaMessage(
+                        "Cette facture a déjà été remise à votre client : le plan gratuit ne permet plus de la corriger. " +
+                        "L'abonnement Pro rouvre la correction de toutes vos factures.",
+                      )}
+                      className={btnGhost}
+                    >
+                      🔒 Modifier (Pro)
+                    </button>
+                  ) : (
+                    <button onClick={() => openEdit(inv)} className={btnGhost}>✏️ Modifier</button>
+                  )
                 )}
                 {status !== "cancelled" && (inv.paid_amount || 0) === 0 && (
                   <button onClick={() => cancel(inv)} className={btnGhost}>Annuler la facture</button>

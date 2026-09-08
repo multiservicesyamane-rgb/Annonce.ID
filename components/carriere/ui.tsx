@@ -621,6 +621,52 @@ export function Note({ children, tone = "info" }: { children: ReactNode; tone?: 
   );
 }
 
+/**
+ * Ce que l'on dit AVANT le premier telechargement, sur un compte gratuit.
+ *
+ * Le texte insiste sur ce qui se corrige mal apres coup — le nom, les dates,
+ * les numeros — parce que c'est exactement ce qu'on relit trop vite. Et il
+ * rappelle ce qui reste possible : le document restera telechargeable. Un
+ * avertissement qui ne dit que ce qu'on perd fait reculer sans convertir.
+ */
+export function messageAvantFinalisation(quoi: string): string {
+  return (
+    `Ce telechargement termine ${quoi}. Avec le plan gratuit tu pourras ` +
+    `toujours le retelecharger, mais plus le modifier. ` +
+    `Verifie l'orthographe de ton nom, tes dates et tes numeros avant de continuer.`
+  );
+}
+
+/**
+ * Le bandeau d'un document fini que l'on ne peut plus modifier.
+ *
+ * Il dit ce qui reste ouvert avant ce qui est ferme, et propose une sortie.
+ * Un mur sans porte ne vend rien.
+ */
+export function BandeauVerrou({ quoi, onPeage }: { quoi: string; onPeage: () => void }) {
+  return (
+    <div className="mb-4 rounded-xl border border-gold/40 bg-gold-pale p-4">
+      <p className="flex gap-2.5 text-[.85rem] font-bold leading-relaxed text-gold-dark">
+        <span aria-hidden="true">🔒</span>
+        <span>{quoi} est termine</span>
+      </p>
+      <p className="mt-1.5 pl-[26px] text-[.83rem] leading-relaxed text-gold-dark/90">
+        Tu peux le telecharger et le partager autant que tu veux. Pour le reprendre
+        et le modifier, il faut l&apos;abonnement Pro.
+      </p>
+      <div className="mt-3 pl-[26px]">
+        <button
+          type="button"
+          onClick={onPeage}
+          className="rounded-lg bg-gold-dark px-4 py-2 text-[.83rem] font-bold text-white transition active:scale-[.99]"
+        >
+          Voir l&apos;abonnement
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Appel des routes /api/carriere/*, avec le message d'erreur deja extrait. */
 export async function api(resource: string, payload: Record<string, unknown>) {
   const res = await fetch(`/api/carriere/${resource}`, {

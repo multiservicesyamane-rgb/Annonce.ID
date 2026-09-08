@@ -6,6 +6,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isOwner } from "@/lib/owners";
+import { compter as compterLedger } from "@/lib/quotaLedger";
 
 export type ProPlanKey = "mensuel" | "annuel";
 
@@ -120,6 +121,14 @@ export type EtatQuota = {
   quota: number;
   /** false quand le compte gratuit a epuise son quota du mois. */
   peutCreer: boolean;
+  /**
+   * Une facture deja remise au client se corrige-t-elle ?
+   *
+   * Faux sans abonnement. Le plan gratuit donne UNE facture finie par mois,
+   * pas un modele qu'on reecrit pour chaque client — sans ce second verrou, le
+   * quota mensuel ne coutait rien a contourner.
+   */
+  peutModifier: boolean;
 };
 
 /**
@@ -138,29 +147,69 @@ export async function getEtatQuota(
   // limite (lib/owners.ts). Meme regle pour les annonces, l'Espace Pro et Ma
   // Carriere : une seule liste a tenir a jour.
   if (isOwner(email)) {
-    return { abonne: true, utilisees: 0, quota: Infinity, peutCreer: true };
+    return { abonne: true, utilisees: 0, quota: Infinity, peutCreer: true, peutModifier: true };
   }
 
   const abo = await getProSubscription(sb, userId);
   if (abo.actif) {
-    return { abonne: true, utilisees: 0, quota: Infinity, peutCreer: true };
+    return { abonne: true, utilisees: 0, quota: Infinity, peutCreer: true, peutModifier: true };
   }
 
-  const { count, error } = await sb
-    .from("pro_invoices")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .gte("created_at", debutDuMois());
+  // Le compteur qui fait foi est le REGISTRE des creations : il survit a la
+  // suppression de la facture. Denombrer les factures presentes comptait ce
+  // qui reste et non ce qui a ete pris — creer, telecharger, supprimer,
+  // recreer remettait le quota a zero a chaque tour.
+  const inscrites = await compterLedger(sb, userId, "pro");
 
-  // En cas d'erreur de lecture on laisse passer : un compteur casse ne doit
-  // jamais empecher un professionnel de facturer son client.
-  const utilisees = error ? 0 : count || 0;
+  let utilisees = inscrites ?? 0;
+  if (inscrites === null) {
+    // MIGRATION_VERROU_GRATUIT.sql pas encore passe : on retombe sur l'ancien
+    // denombrement. Moins etanche, mais le professionnel continue de
+    // facturer — un compteur casse ne doit jamais l'en empecher.
+    const { count, error } = await sb
+      .from("pro_invoices")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", debutDuMois());
+    utilisees = error ? 0 : count || 0;
+  }
+
   return {
     abonne: false,
     utilisees,
     quota: QUOTA_GRATUIT_FACTURES,
     peutCreer: utilisees < QUOTA_GRATUIT_FACTURES,
+    peutModifier: false,
   };
+}
+
+/**
+ * Cette facture est-elle fermee a la correction ?
+ *
+ * Deux facons d'etre « remise au client », et l'une ne suffit pas :
+ *   - `finalise_at` : envoyee, lien copie, ou PDF telecharge ;
+ *   - un statut autre que « brouillon », pour les factures anterieures a la
+ *     migration, qui n'ont pas d'horodatage mais ont bien quitte le bureau.
+ *
+ * Une facture restee brouillon se corrige librement, meme sans abonnement :
+ * on ne fige pas ce que le client n'a jamais vu.
+ */
+export function factureVerrouillee(
+  facture: { finalise_at?: string | null; status?: string | null },
+  etat: EtatQuota,
+): boolean {
+  if (etat.peutModifier) return false;
+  return !!facture.finalise_at || (facture.status || "draft") !== "draft";
+}
+
+/** Le message montre quand la correction est refusee. */
+export function messageVerrouFacture(): string {
+  return (
+    "Cette facture a deja ete remise a votre client : le plan gratuit ne " +
+    "permet plus de la corriger. Passez au Pro pour reprendre vos factures " +
+    `autant de fois que necessaire — ${formatFcfaPlan(PRO_PLANS.mensuel.price)} par mois. ` +
+    "Elle reste telechargeable sans rien payer."
+  );
 }
 
 /** Le message montre au professionnel quand le quota est atteint. */

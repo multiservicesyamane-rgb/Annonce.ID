@@ -24,6 +24,16 @@ import { ActionBar, BarreOutils, OutlineBtn, PrimaryBtn, ZOOMS } from "./ui";
  * (navigator.share avec un fichier), disponible sur Chrome Android mais pas
  * partout. Quand il manque, le bouton telecharge et dit ou retrouver le
  * fichier — plutot que de promettre un envoi qui n'aura pas lieu.
+ *
+ * ── Le verrou du plan gratuit ────────────────────────────────────────────
+ * Sur un compte gratuit, ce premier telechargement TERMINE le document : il
+ * ne sera plus modifiable. On le dit AVANT, et on demande confirmation.
+ *
+ * Ce n'est pas une politesse : sans elle, quelqu'un qui telecharge pour
+ * verifier son PDF, y voit une faute de frappe et revient la corriger
+ * trouverait porte close — pour un geste que rien ne l'avertissait d'etre
+ * definitif. Un produit qui piege son utilisateur au premier essai ne le
+ * convertit pas, il le perd.
  */
 
 const A4_W = 210;
@@ -39,11 +49,20 @@ export default function ExportA4({
   outils,
   panneau,
   onFermerPanneau,
+  avertissement,
+  onTelecharge,
 }: {
   filename: string;
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  /**
+   * Texte de l'avertissement montre AVANT le premier telechargement.
+   * `null` quand il n'y a rien a avertir : abonne, ou document deja fini.
+   */
+  avertissement?: string | null;
+  /** Appele apres un telechargement ou un partage REUSSI. */
+  onTelecharge?: () => void;
   /** Boutons propres au document (modele, couleur, police), a gauche de la barre. */
   outils?: ReactNode;
   /** Panneau deplie sous la barre par l'un de ces boutons. */
@@ -67,6 +86,10 @@ export default function ExportA4({
   // sur une page.
   const [iZoom, setIZoom] = useState(1);
   const zoom = ZOOMS[iZoom];
+  // Geste en attente de confirmation. `null` = rien a confirmer. Il porte
+  // l'action demandee pour la rejouer telle quelle une fois l'accord donne :
+  // confirmer un partage ne doit pas declencher un telechargement.
+  const [aConfirmer, setAConfirmer] = useState<"pdf" | "share" | "shareFallback" | null>(null);
 
   // Le partage de fichiers n'existe qu'au navigateur, et pas sur tous : on ne
   // montre le bouton « natif » que la ou il fonctionne reellement.
@@ -128,6 +151,9 @@ export default function ExportA4({
     try {
       if (!(await telecharger())) throw new Error("feuille introuvable");
       setMsg("PDF enregistre dans tes telechargements.");
+      // Apres le succes, jamais avant : verrouiller un document dont le PDF a
+      // echoue laisserait quelqu'un sans fichier ET sans droit de le refaire.
+      onTelecharge?.();
     } catch (e) {
       console.error("[carriere] PDF echoue", e);
       setMsg("Telechargement impossible. Reessaie, ou fais une capture d'ecran.");
@@ -143,6 +169,7 @@ export default function ExportA4({
       const file = await render();
       if (!file) throw new Error("feuille introuvable");
       await navigator.share({ files: [file], title });
+      onTelecharge?.();
     } catch (e) {
       // Refermer le panneau de partage n'est pas une erreur.
       if ((e as Error)?.name !== "AbortError") {
@@ -161,6 +188,7 @@ export default function ExportA4({
     try {
       if (!(await telecharger())) throw new Error("feuille introuvable");
       setMsg("Ton document est dans tes telechargements : ouvre WhatsApp, puis joins-le a ta conversation.");
+      onTelecharge?.();
     } catch (e) {
       console.error("[carriere] partage de repli echoue", e);
       setMsg("Telechargement impossible. Reessaie, ou fais une capture d'ecran.");
@@ -169,18 +197,79 @@ export default function ExportA4({
     }
   }
 
+  /** Rejoue le geste demande une fois qu'il n'y a plus rien a confirmer. */
+  function lancer(geste: "pdf" | "share" | "shareFallback") {
+    if (geste === "pdf") return onPdf();
+    if (geste === "share") return onShare();
+    return onShareFallback();
+  }
+
+  /**
+   * Porte d'entree de tous les boutons d'export.
+   *
+   * Sans avertissement — abonne, ou document deja fini — le geste part
+   * directement : personne n'a envie d'une boite de dialogue a chaque
+   * telechargement.
+   */
+  function demander(geste: "pdf" | "share" | "shareFallback") {
+    if (avertissement) {
+      setAConfirmer(geste);
+      return;
+    }
+    lancer(geste);
+  }
+
   const boutons = (
     <>
-      <PrimaryBtn onClick={onPdf} disabled={busy !== null}>
+      <PrimaryBtn onClick={() => demander("pdf")} disabled={busy !== null}>
         <span aria-hidden="true">⬇</span>
         {busy === "pdf" ? "Preparation…" : "Telecharger le PDF"}
       </PrimaryBtn>
 
-      <OutlineBtn onClick={canShare ? onShare : onShareFallback} disabled={busy !== null}>
+      <OutlineBtn onClick={() => demander(canShare ? "share" : "shareFallback")} disabled={busy !== null}>
         <span aria-hidden="true">↗</span>
         {busy === "share" ? "Preparation…" : "Partager"}
       </OutlineBtn>
     </>
+  );
+
+  /**
+   * L'avertissement du plan gratuit, avant le premier telechargement.
+   *
+   * Une boite posee par-dessus l'ecran, et non un bandeau : c'est le seul
+   * moment ou une interruption se justifie, parce que le geste suivant est
+   * irreversible. Le bouton de sortie est le premier et le plus visible —
+   * « verifier encore » doit rester plus facile que « terminer ».
+   */
+  const confirmation = aConfirmer && (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="verrou-titre"
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center"
+    >
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-dark-800">
+        <h2 id="verrou-titre" className="text-[1.05rem] font-extrabold text-gray-900 dark:text-white">
+          <span aria-hidden="true">🔒</span> Derniere verification
+        </h2>
+        <p className="mt-2 text-[.9rem] leading-relaxed text-gray-600 dark:text-gray-300">{avertissement}</p>
+
+        <div className="mt-5 space-y-3">
+          <OutlineBtn onClick={() => setAConfirmer(null)}>
+            <span aria-hidden="true">←</span> Verifier encore
+          </OutlineBtn>
+          <PrimaryBtn
+            onClick={() => {
+              const geste = aConfirmer;
+              setAConfirmer(null);
+              lancer(geste);
+            }}
+          >
+            <span aria-hidden="true">⬇</span> C'est bon, telecharger
+          </PrimaryBtn>
+        </div>
+      </div>
+    </div>
   );
 
   return (
@@ -226,6 +315,8 @@ export default function ExportA4({
           </p>
         )}
       </div>
+
+      {confirmation}
     </div>
   );
 }

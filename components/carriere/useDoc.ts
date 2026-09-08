@@ -24,6 +24,17 @@ import {
  * telephone, souvent en 4G instable : un bouton « Enregistrer » a trouver
  * avant de fermer l'onglet perd du travail. Le premier enregistrement CREE
  * le document, les suivants le mettent a jour.
+ *
+ * ── Le verrou du plan gratuit ────────────────────────────────────────────
+ * Un document telecharge devient FINI : sans abonnement, il ne se remodifie
+ * plus. C'est justement parce que l'enregistrement est automatique que le
+ * verrou ne peut pas tomber a la creation — il se refermerait sur un CV
+ * contenant une seule lettre du prenom. Il tombe au premier telechargement,
+ * apres confirmation explicite (voir ExportA4).
+ *
+ * Une fois verrouille, l'enregistrement automatique s'arrete net : laisser
+ * partir des requetes que le serveur refuse afficherait « Erreur » en boucle
+ * sous les yeux de quelqu'un qui n'a rien fait de mal.
  */
 export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<CareerContent>) {
   const [id, setId] = useState<string | null>(docId || null);
@@ -38,6 +49,10 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
   const [template, setTemplate] = useState<string>(DEFAULT_TEMPLATE);
   const [chargement, setChargement] = useState(!!docId);
   const [etat, setEtat] = useState<"repos" | "enregistrement" | "enregistre" | "erreur">("repos");
+  /** Document deja telecharge sur un compte gratuit : lecture seule. */
+  const [verrouille, setVerrouille] = useState(false);
+  /** Le texte que le serveur oppose a la modification, montre tel quel. */
+  const [messageVerrou, setMessageVerrou] = useState<string | null>(null);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Le premier rendu ne doit rien enregistrer : sans ce garde-fou, ouvrir un
@@ -58,6 +73,9 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
         setContent(d.document.content || contenuVide(kind));
         setTemplate(d.document.template || DEFAULT_TEMPLATE);
         setId(d.document.id);
+        // Connu AVANT que l'editeur s'ouvre : decouvrir le verrou au premier
+        // enregistrement ferait perdre ce qui vient d'etre tape.
+        setVerrouille(!!d.verrouille);
       } catch {
         // Document introuvable ou supprime : on repart d'un document vierge
         // plutot que de bloquer l'ecran sur une erreur.
@@ -92,7 +110,16 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
           setId(d.document.id);
         }
         setEtat("enregistre");
-      } catch {
+      } catch (e: any) {
+        // 402 : le document est fini et le compte est gratuit. Ce n'est pas
+        // une panne, c'est le peage — on bascule en lecture seule et on
+        // reprend le texte du serveur plutot que d'afficher « Erreur ».
+        if (e?.status === 402 && e?.data?.verrouille) {
+          setVerrouille(true);
+          setMessageVerrou(e?.data?.error || null);
+          setEtat("repos");
+          return;
+        }
         setEtat("erreur");
       }
     },
@@ -101,17 +128,42 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
 
   useEffect(() => {
     if (!pret.current || chargement) return;
+    // Verrouille : plus rien ne part. Sans ce garde-fou, chaque frappe
+    // declencherait un refus du serveur, et le bandeau clignoterait a l'infini
+    // sur un ecran ou l'utilisateur ne peut de toute facon rien changer.
+    if (verrouille) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => enregistrer(content, template), 1200);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [content, template, chargement, enregistrer]);
+  }, [content, template, chargement, enregistrer, verrouille]);
+
+  /**
+   * Le document vient d'etre telecharge : il est fini.
+   *
+   * Appele par l'ecran d'apercu APRES un telechargement reussi, jamais avant —
+   * verrouiller un document dont le PDF a echoue laisserait quelqu'un sans
+   * fichier ET sans droit de le refaire.
+   */
+  const finaliser = useCallback(async () => {
+    if (!id) return;
+    try {
+      const r = await api("documents", { action: "finaliser", id });
+      if (r?.verrouille) setVerrouille(true);
+    } catch {
+      // Le PDF est deja dans les telechargements : echouer ici ne doit rien
+      // casser a l'ecran. Le serveur refusera la modification de toute facon.
+    }
+  }, [id]);
 
   /** Modifie une partie du contenu sans avoir a recopier tout l'objet. */
   const patch = useCallback((p: Record<string, unknown>) => {
     setContent((c) => ({ ...(c as object), ...p }) as CareerContent);
   }, []);
 
-  return { id, content, setContent, patch, template, setTemplate, chargement, etat };
+  return {
+    id, content, setContent, patch, template, setTemplate, chargement, etat,
+    verrouille, messageVerrou, finaliser,
+  };
 }

@@ -19,6 +19,11 @@ export type DocRow = {
   title: string;
   template: string;
   updated_at: string;
+  /**
+   * Premier telechargement. Absent tant que MIGRATION_VERROU_GRATUIT.sql n'a
+   * pas tourne — le document est alors traite comme un brouillon.
+   */
+  finalise_at?: string | null;
 };
 
 const ICONE: Record<CareerKind, string> = { cv: "📄", lettre: "✉️", demande: "💼" };
@@ -34,12 +39,15 @@ function quand(iso: string): string {
 
 export default function MesDocuments({
   documents,
+  abonne,
   onOuvrir,
   onNouveau,
   onRecharger,
   toast,
 }: {
   documents: DocRow[];
+  /** Sert a dire la verite sur la pastille : un abonne modifie tout. */
+  abonne: boolean;
   onOuvrir: (d: DocRow) => void;
   onNouveau: () => void;
   onRecharger: () => void;
@@ -215,10 +223,19 @@ export default function MesDocuments({
                   {/* La date sur sa propre ligne : cote a cote avec la pastille,
                       elles se coupaient toutes les deux des que la carte
                       retrecissait. */}
+                  {/* La pastille doit dire la verite : afficher « pret a
+                      modifier » sur un document verrouille ferait decouvrir le
+                      refus apres l'avoir ouvert et retape quelque chose. */}
                   <p className="mt-1.5">
-                    <span className="inline-block rounded-full bg-green/10 px-2 py-0.5 text-[.75rem] font-semibold text-green">
-                      {accord(d.kind, "Pret")} a modifier
-                    </span>
+                    {!abonne && d.finalise_at ? (
+                      <span className="inline-block rounded-full bg-gold-pale px-2 py-0.5 text-[.75rem] font-semibold text-gold-dark">
+                        🔒 {accord(d.kind, "Termine")} · telechargeable
+                      </span>
+                    ) : (
+                      <span className="inline-block rounded-full bg-green/10 px-2 py-0.5 text-[.75rem] font-semibold text-green">
+                        {accord(d.kind, "Pret")} a modifier
+                      </span>
+                    )}
                   </p>
                   <p className="mt-1 truncate text-[.78rem] text-gray-500">
                     Modifie le {quand(d.updated_at)}

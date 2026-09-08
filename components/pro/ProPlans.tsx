@@ -29,9 +29,10 @@ const CONTENU = {
   pro: {
     unite: (n: number) => (n === 1 ? "1 facture" : `${n} factures`),
     accroche: (u: string) =>
-      `Le gratuit vous offre ${u} par mois. Le Pro lève la limite — vos devis, eux, ont toujours été illimités.`,
+      `Le gratuit vous offre ${u} par mois, corrigeable jusqu'à sa remise au client. ` +
+      `Le Pro lève la limite et rouvre la correction — vos devis, eux, ont toujours été illimités.`,
     sousTitrePublic:
-      "Vous pouvez travailler gratuitement, sans limite de durée. Le Pro ne débloque qu'une chose : le nombre de factures.",
+      "Vous pouvez travailler gratuitement, sans limite de durée. Le Pro débloque deux choses : le nombre de factures, et le droit de les corriger après les avoir remises.",
     sousTitreGratuit: "Pour travailler pour de vrai, sans carte bancaire et sans limite de durée.",
     atoutsGratuit: (u: string) => [
       "Devis illimités",
@@ -41,10 +42,13 @@ const CONTENU = {
       "PDF A4 et QR code",
       "Envoi par WhatsApp",
       "Suivi des paiements",
+      // Dit dans la colonne gratuite, et pas seulement dans la colonne Pro :
+      // une limite qu'on ne decouvre qu'en la heurtant se lit comme un piege.
+      "Correction avant remise au client",
     ],
     atoutPro: "Factures illimitées",
     /** Ce que le Pro ajoute, en plus de l'atout fort ci-dessus. */
-    atoutsPro: ["Tout ce que contient le gratuit"],
+    atoutsPro: ["Tout ce que contient le gratuit", "Correction de vos factures à tout moment"],
     titreApp: "Passez au Pro",
     lien: "/mon-activite",
     pied: "Vos devis et factures déjà créés restent accessibles, quoi qu'il arrive.",
@@ -52,9 +56,10 @@ const CONTENU = {
   carriere: {
     unite: (n: number) => (n === 1 ? "1 document" : `${n} documents`),
     accroche: (u: string) =>
-      `Le gratuit te donne ${u} par mois. Le Pro lève la limite — tu peux réécrire tes textes autant que tu veux, ça n'a jamais été compté.`,
+      `Le gratuit te donne ${u} par mois : tu l'écris, tu le retouches autant que tu veux, ` +
+      `et il est à toi une fois téléchargé. Le Pro lève la limite et rouvre tes documents pour les modifier plus tard.`,
     sousTitrePublic:
-      "Tu peux créer tes documents gratuitement, sans limite de durée. Le Pro ne débloque qu'une chose : leur nombre.",
+      "Tu peux créer et télécharger tes documents gratuitement, sans limite de durée. Le Pro débloque leur nombre, et le droit de les reprendre après téléchargement.",
     sousTitreGratuit: "De quoi produire un vrai document, le télécharger et l'envoyer. Sans carte bancaire.",
     atoutsGratuit: (u: string) => [
       `${u} par mois`,
@@ -64,10 +69,15 @@ const CONTENU = {
       "Demande d'emploi ou de stage",
       "PDF A4 téléchargeable",
       "Tes documents enregistrés",
+      // La limite est annoncee ici, avant l'inscription. La decouvrir apres
+      // avoir telecharge donnerait le sentiment d'un piege — et un utilisateur
+      // qui se sent piege ne s'abonne pas, il s'en va.
+      "Retouches libres avant téléchargement",
     ],
     atoutPro: "Documents illimités",
     atoutsPro: [
       "Tout ce que contient le gratuit",
+      "Reprendre et modifier tes documents",
       `Les ${CV_TEMPLATES.length} modèles de CV`,
     ],
     titreApp: "Passe au Pro",
