@@ -155,7 +155,7 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
 
   // Vrai d'office quand le carnet est vide : une liste deroulante vide suivie
   // d'un message qui renvoie ailleurs, c'etait le parcours trop long.
-  const clientNouveau = clients.length === 0 || form.client_id === CLIENT_NOUVEAU;
+  const clientNouveau = !form.client_id || form.client_id === CLIENT_NOUVEAU;
 
   const previewClient = useMemo<PrintParty | null>(() => {
     if (clientNouveau) {
@@ -293,9 +293,6 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
     const clean = items.filter((i) => i.label.trim());
     if (!form.title?.trim()) return toast("⚠ Indiquez l'objet du devis.");
     if (!clean.length) return toast("⚠ Ajoutez au moins une prestation.");
-    if (clientNouveau && !nouveauClient.name.trim() && !editing) {
-      return toast("⚠ Indiquez le nom du client.");
-    }
 
     setBusy(true);
     const payload: Record<string, unknown> = {
@@ -412,6 +409,44 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
     .filter((p) => !form.client_id || !p.client_id || p.client_id === form.client_id)
     .map((p) => ({ value: p.id, label: p.name }));
 
+  /**
+   * Saisie d'un client a la volee, rendue en tete du formulaire.
+   *
+   * Definie ici plutot qu'en place : la section « Le client » ouvre le
+   * formulaire, et c'est la qu'on la cherche.
+   */
+  const blocNouveauClient = clientNouveau ? (
+    <div className="rounded-xl border border-dashed border-gray-300 p-3.5 dark:border-white/15">
+      <p className="text-[.85rem] font-bold text-gray-900 dark:text-white">
+        À qui adressez-vous ce devis ?
+      </p>
+      <p className="mt-0.5 text-[.78rem] leading-snug text-gray-500">
+        Le nom suffit — sa fiche se remplira plus tard. Il est ajouté à vos clients au
+        moment où le devis est enregistré.
+      </p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <F
+          l="Nom du client"
+          v={nouveauClient.name}
+          set={(v: string) => setNouveauClient({ ...nouveauClient, name: v })}
+          ph="Ex : Awa Diallo"
+        />
+        <F
+          l="Téléphone (optionnel)"
+          v={nouveauClient.phone}
+          set={(v: string) => setNouveauClient({ ...nouveauClient, phone: v })}
+          ph="+221 77 000 00 00"
+        />
+        <F
+          l="Société (optionnel)"
+          v={nouveauClient.company}
+          set={(v: string) => setNouveauClient({ ...nouveauClient, company: v })}
+          ph="Ex : SunuCom"
+        />
+      </div>
+    </div>
+  ) : null;
+
   /* ===== Formulaire ===== */
   if (view === "form") {
     return (
@@ -425,19 +460,27 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(440px,520px)]">
             <div className="flex flex-col gap-4">
-              <Section icon="🧾" title="Informations">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {clients.length > 0 ? (
+              {/* Le CLIENT d'abord, ses champs ouverts d'emblee : c'est au
+                  premier devis qu'un client apparait, presque toujours. Le
+                  cacher derriere une liste deroulante revenait a le rendre
+                  introuvable. */}
+              <Section icon="👤" title="Le client">
+                {clients.length > 0 && (
+                  <div className="mb-3 sm:max-w-[420px]">
                     <Select
-                      l="Client"
+                      l="Un client déjà enregistré ?"
                       v={form.client_id}
                       set={(v) => setForm({ ...form, client_id: v, project_id: "" })}
                       options={clientOptions}
-                      placeholder="Choisir un client…"
+                      placeholder="Non — nouveau client, à saisir ci-dessous"
                     />
-                  ) : (
-                    <div />
-                  )}
+                  </div>
+                )}
+                {blocNouveauClient}
+              </Section>
+
+              <Section icon="🧾" title="Informations">
+                <div className="grid gap-3 sm:grid-cols-2">
                   <F l="Objet du devis" v={form.title} set={(v) => setForm({ ...form, title: v })} ph="Ex : Logo + charte graphique" />
                   <Select
                     l="Projet (optionnel)"
@@ -449,37 +492,6 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
                   <F l="Valable jusqu'au" v={form.valid_until} set={(v) => setForm({ ...form, valid_until: v })} type="date" />
                 </div>
 
-                {clientNouveau && (
-                  <div className="mt-3 rounded-xl border border-dashed border-gray-300 p-3.5 dark:border-white/15">
-                    <p className="text-[.85rem] font-bold text-gray-900 dark:text-white">
-                      {clients.length === 0 ? "À qui adressez-vous ce devis ?" : "Nouveau client"}
-                    </p>
-                    <p className="mt-0.5 text-[.78rem] leading-snug text-gray-500">
-                      Le nom suffit — sa fiche se remplira plus tard. Il est ajouté à vos clients
-                      au moment où le devis est enregistré.
-                    </p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                      <F
-                        l="Nom du client"
-                        v={nouveauClient.name}
-                        set={(v: string) => setNouveauClient({ ...nouveauClient, name: v })}
-                        ph="Ex : Awa Diallo"
-                      />
-                      <F
-                        l="Téléphone (optionnel)"
-                        v={nouveauClient.phone}
-                        set={(v: string) => setNouveauClient({ ...nouveauClient, phone: v })}
-                        ph="+221 77 000 00 00"
-                      />
-                      <F
-                        l="Société (optionnel)"
-                        v={nouveauClient.company}
-                        set={(v: string) => setNouveauClient({ ...nouveauClient, company: v })}
-                        ph="Ex : SunuCom"
-                      />
-                    </div>
-                  </div>
-                )}
               </Section>
 
               <Section icon="📋" title="Prestations">

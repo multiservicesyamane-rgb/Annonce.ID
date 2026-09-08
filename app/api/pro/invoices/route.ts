@@ -273,9 +273,18 @@ export async function POST(req: Request) {
       if ("issue_date" in body) patch.issue_date = dateOrNull(body.issue_date) || before.issue_date;
       if ("due_date" in body) patch.due_date = dateOrNull(body.due_date);
       if ("client_id" in body) {
-        const cid = txt(body.client_id, 60) || null;
+        let cid = txt(body.client_id, 60) || null;
         if (cid && !(await ownsRow(sb, "pro_clients", cid, userId))) {
           return NextResponse.json({ error: "Client introuvable." }, { status: 404 });
+        }
+        // Client tape a la volee pendant une MODIFICATION. Sans ce cas, saisir
+        // un nom sur une piece existante ne creait rien — et pire, le
+        // `client_id` vide qui l'accompagne effacait le client en place. On
+        // detruisait un lien au lieu d'en creer un.
+        if (!cid && body?.client_new) {
+          const cree = await creerClientRapide(sb, userId, body.client_new);
+          if ("error" in cree) return NextResponse.json({ error: cree.error }, { status: 400 });
+          cid = cree.id;
         }
         patch.client_id = cid;
       }
