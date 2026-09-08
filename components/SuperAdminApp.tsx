@@ -3371,6 +3371,18 @@ function Partenaires({ T }: { T: (m: string) => void }) {
   const [loading, setLoading] = useState(true);
   const [filtre, setFiltre] = useState<"tous" | "candidat" | "actif" | "suspendu">("tous");
   const [occupe, setOccupe] = useState<string | null>(null);
+  /**
+   * Duree appliquee par les boutons de validation.
+   *
+   * Choisie une fois pour tout le tableau plutot que repetee sur chaque ligne :
+   * quatre boutons par partenaire (deux plans x deux durees) auraient rendu la
+   * colonne illisible, et le clic sur le mauvais bouton bien trop facile.
+   *
+   * La page publique vend les deux formules — 10 000 F/mois ou 80 000 F/an.
+   * Sans ce choix, un partenaire qui payait l'annee ne pouvait etre enregistre
+   * que pour trente jours.
+   */
+  const [duree, setDuree] = useState<30 | 365>(30);
 
   const charger = async () => {
     setLoading(true);
@@ -3486,7 +3498,26 @@ function Partenaires({ T }: { T: (m: string) => void }) {
         ))}
       </div>
 
-      <Card title="Qui a postule" sub="Valider pose le plan paye ET son echeance">
+      <Card
+        title="Qui a postule"
+        sub="Valider pose le plan paye ET son echeance"
+        action={
+          <div className="flex items-center gap-1.5">
+            <span className="text-[.72rem] text-[#8B949E]">Duree encaissee :</span>
+            {([[30, "30 jours"], [365, "1 an"]] as const).map(([j, label]) => (
+              <button
+                key={j}
+                onClick={() => setDuree(j)}
+                className={`rounded-[9px] px-3 py-1.5 text-[.74rem] font-bold ${
+                  duree === j ? "bg-g1 text-white" : "border border-[#30363D] bg-[#21262D] text-[#8B949E] hover:text-white"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        }
+      >
         {liste.length === 0 ? (
           <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucun partenaire dans cette vue.</div>
         ) : (
@@ -3515,19 +3546,19 @@ function Partenaires({ T }: { T: (m: string) => void }) {
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       disabled={occupe === p.user_id}
-                      onClick={() => changer(p.user_id, "actif", "starter", 30)}
+                      onClick={() => changer(p.user_id, "actif", "starter", duree)}
                       className={btnG}
-                      title="Starter, 30 jours"
+                      title={`Starter — ${duree === 365 ? "80 000 F/an" : "10 000 F/mois"}`}
                     >
-                      + Starter 30j
+                      + Starter {duree === 365 ? "1 an" : "30j"}
                     </button>
                     <button
                       disabled={occupe === p.user_id}
-                      onClick={() => changer(p.user_id, "actif", "agence", 30)}
+                      onClick={() => changer(p.user_id, "actif", "agence", duree)}
                       className={btnG}
-                      title="Agence Pro, 30 jours"
+                      title={`Agence Pro — ${duree === 365 ? "200 000 F/an" : "25 000 F/mois"}`}
                     >
-                      + Agence 30j
+                      + Agence {duree === 365 ? "1 an" : "30j"}
                     </button>
                     {p.statut !== "suspendu" ? (
                       <button
