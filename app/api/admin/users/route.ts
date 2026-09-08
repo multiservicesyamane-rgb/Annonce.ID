@@ -343,8 +343,19 @@ export async function POST(req: Request) {
 
       // Migration pas passee : on le dit, plutot que d'afficher une liste vide
       // qui laisserait croire que personne n'a postule.
-      if (error && /does not exist|schema cache/i.test(error.message || "")) {
-        return NextResponse.json({ needsMigration: true });
+      //
+      // On distingue la TABLE absente de la COLONNE absente. Le message unique
+      // « les tables ne sont pas creees » a deja envoye chercher au mauvais
+      // endroit : les tables existaient, il manquait deux colonnes ajoutees
+      // apres coup. Un diagnostic faux coute plus cher que pas de diagnostic.
+      if (error && /does not exist|schema cache|Could not find/i.test(error.message || "")) {
+        const msg = error.message || "";
+        const colonneSeule = /column .* does not exist|Could not find the '.*' column/i.test(msg);
+        return NextResponse.json({
+          needsMigration: true,
+          colonneSeule,
+          detail: msg.slice(0, 200),
+        });
       }
       if (error) throw error;
 

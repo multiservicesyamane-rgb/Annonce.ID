@@ -3409,8 +3409,21 @@ function Partenaires({ T }: { T: (m: string) => void }) {
         <PageHead title="🤝 Partenaires" />
         <Card>
           <div className="py-8 text-center text-[.85rem] text-amber-300">
-            Les tables du programme ne sont pas encore creees.<br />
-            Executez <b>database/MIGRATION_PARTENAIRES.sql</b> dans Supabase → SQL Editor.
+            {data.colonneSeule ? (
+              <>
+                Les tables existent, mais il manque une colonne ajoutee depuis.<br />
+                Relancez <b>database/MIGRATION_PARTENAIRES.sql</b> — le script est rejouable,
+                il ne detruit rien.
+              </>
+            ) : (
+              <>
+                Les tables du programme ne sont pas encore creees.<br />
+                Executez <b>database/MIGRATION_PARTENAIRES.sql</b> dans Supabase → SQL Editor.
+              </>
+            )}
+            {data.detail && (
+              <div className="mt-3 font-mono text-[.72rem] text-[#8B949E]">{data.detail}</div>
+            )}
           </div>
         </Card>
       </>
