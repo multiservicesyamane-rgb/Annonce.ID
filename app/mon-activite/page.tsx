@@ -18,16 +18,29 @@ import { MigrationNotice } from "@/components/pro/ui";
  *
  * Les écrans eux-mêmes (Clients, Devis, Factures...) sont réutilisés tels
  * quels depuis components/pro — ils ne dépendent que de `toast` et `goTo`.
+ *
+ * ── L'ordre des tuiles ───────────────────────────────────────────────────
+ * Le TABLEAU DE BORD d'abord, puis le parcours de travail : clients, devis,
+ * factures, projets, et l'entreprise en dernier.
+ *
+ * Il était rangé cinquième, à sa place « chronologique » dans le flux. C'était
+ * une erreur de raisonnement : on ouvre son activité pour savoir où on en est
+ * — qui doit de l'argent, ce qui est en retard — pas pour dérouler un
+ * processus depuis le début. La première tuile doit répondre avant qu'on ait
+ * cliqué, et les suivantes servent à agir.
+ *
+ * « Mon entreprise » reste en dernier : on y règle son logo et son NINEA une
+ * fois, puis plus jamais.
  */
 
 type Screen = "home" | ProPanel | "business";
 
 const TILES: { id: Screen; icon: string; label: string; grad: string; accent: string; glow: string }[] = [
+  { id: "activity", icon: "📊", label: "Tableau de bord", grad: "from-[#ECFEFF] to-[#CFFAFE] dark:from-[#0891B2]/25 dark:to-[#0891B2]/10", accent: "text-[#0891B2] dark:text-[#67E8F9]", glow: "shadow-[0_10px_28px_-10px_rgba(8,145,178,0.4)]" },
   { id: "clients", icon: "👥", label: "Clients", grad: "from-[#FEF3DC] to-[#FDE4B0] dark:from-[#F59E0B]/25 dark:to-[#F59E0B]/10", accent: "text-gold-dark dark:text-neon-gold", glow: "shadow-[0_10px_28px_-10px_rgba(212,137,26,0.45)]" },
   { id: "quotes", icon: "📄", label: "Devis", grad: "from-[#EEF2FF] to-[#E0E7FF] dark:from-[#4F46E5]/25 dark:to-[#4F46E5]/10", accent: "text-[#4F46E5] dark:text-[#A5B4FC]", glow: "shadow-[0_10px_28px_-10px_rgba(79,70,229,0.45)]" },
   { id: "invoices", icon: "🧾", label: "Factures", grad: "from-[#ECFDF5] to-[#D1FAE5] dark:from-[#047857]/25 dark:to-[#047857]/10", accent: "text-[#047857] dark:text-[#6EE7B7]", glow: "shadow-[0_10px_28px_-10px_rgba(4,120,87,0.4)]" },
   { id: "projects", icon: "🗂️", label: "Projets", grad: "from-[#F5F3FF] to-[#EDE4FF] dark:from-[#7C3AED]/25 dark:to-[#7C3AED]/10", accent: "text-[#7C3AED] dark:text-[#C4B5FD]", glow: "shadow-[0_10px_28px_-10px_rgba(124,58,237,0.4)]" },
-  { id: "activity", icon: "📊", label: "Tableau de bord", grad: "from-[#ECFEFF] to-[#CFFAFE] dark:from-[#0891B2]/25 dark:to-[#0891B2]/10", accent: "text-[#0891B2] dark:text-[#67E8F9]", glow: "shadow-[0_10px_28px_-10px_rgba(8,145,178,0.4)]" },
   { id: "business", icon: "🏢", label: "Mon entreprise", grad: "from-gray-100 to-gray-200 dark:from-white/10 dark:to-white/5", accent: "text-gray-600 dark:text-gray-300", glow: "shadow-[0_10px_28px_-10px_rgba(0,0,0,0.18)]" },
 ];
 
