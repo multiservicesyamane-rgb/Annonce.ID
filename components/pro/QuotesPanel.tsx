@@ -51,6 +51,8 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
    * ne revenaient pas.
    */
   const [nouveauClient, setNouveauClient] = useState({ name: "", phone: "", company: "" });
+  /** Numero que portera le devis une fois enregistre. Voir la route `list`. */
+  const [numeroSuivant, setNumeroSuivant] = useState<string | null>(null);
   const [items, setItems] = useState<QuoteItem[]>([{ label: "", qty: 1, unit_price: 0 }]);
   const [discount, setDiscount] = useState(0);
   const [taxRate, setTaxRate] = useState(0);
@@ -75,6 +77,7 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
     ]);
     if (q.data?.needsMigration || c.data?.needsMigration) setNeedsMigration(true);
     setQuotes(q.data?.quotes || []);
+    setNumeroSuivant(q.data?.numero_suivant || null);
     setClients(c.data?.clients || []);
     setProjects(p.data?.projects || []);
     setLoading(false);
@@ -183,7 +186,8 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
 
   const previewDoc = useMemo<PrintDoc>(() => ({
     kind: "devis",
-    number: editing?.number || null,
+    // Sur un devis en cours, le numero a venir plutot qu'un blanc.
+    number: editing?.number || numeroSuivant,
     // Un titre vide laisserait un trou dans l'en-tête : on montre l'intitulé
     // du champ à la place, le temps qu'il soit rempli.
     title: form.title?.trim() || "Objet du devis",
@@ -200,7 +204,7 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
     sections: previewSections,
     // Brouillon tant que rien n'est enregistré : pas de cartouche d'état.
     status: editing ? effectiveQuoteStatus(editing) : "draft",
-  }), [editing, form, items, totals, previewSections]);
+  }), [editing, form, items, totals, previewSections, numeroSuivant]);
 
   /* ------------- Voir un devis déjà émis -------------
      Même manque que sur les factures : la fiche montrait les données du devis,

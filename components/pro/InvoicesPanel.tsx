@@ -48,6 +48,14 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
   const [quota, setQuota] = useState<
     { peutCreer: boolean; peutModifier: boolean; message: string | null } | null
   >(null);
+  /**
+   * Numero que portera la facture une fois enregistree.
+   *
+   * L'apercu n'en affichait AUCUN pendant la saisie : le document se composait
+   * sans numero, et on ne le decouvrait qu'apres avoir enregistre. Sur une
+   * piece comptable, c'est la premiere chose que l'oeil cherche.
+   */
+  const [numeroSuivant, setNumeroSuivant] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
 
   const [query, setQuery] = useState("");
@@ -107,6 +115,7 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
     setQuotes(q.data?.quotes || []);
     setClients(c.data?.clients || []);
     setProjects(p.data?.projects || []);
+    setNumeroSuivant(qt.data?.numero_suivant || null);
     setQuota(
       qt.ok && typeof qt.data?.peutCreer === "boolean"
         ? {
@@ -225,7 +234,9 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
 
   const previewDoc = useMemo<PrintDoc>(() => ({
     kind: "facture",
-    number: editing?.number || null,
+    // Sur une facture en cours, le numero a venir. Le montrer vaut mieux que
+    // de laisser un blanc a l'endroit ou tout le monde le cherche.
+    number: editing?.number || numeroSuivant,
     title: form.title?.trim() || "Objet de la facture",
     items: items.filter((i) => i.label.trim()),
     subtotal: totals.subtotal,
@@ -239,7 +250,7 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
     terms: form.terms || null,
     // Brouillon tant que rien n'est enregistré : pas de cartouche d'état.
     status: editing ? effectiveInvoiceStatus(editing) : "draft",
-  }), [editing, form, items, totals]);
+  }), [editing, form, items, totals, numeroSuivant]);
 
   /* ------------- Voir une facture déjà émise -------------
      Le détail d'une facture montrait ses DONNÉES — lignes, échéance, historique

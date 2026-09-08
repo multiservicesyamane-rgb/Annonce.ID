@@ -4,6 +4,7 @@ import { sanitizeItems, computeTotals, publicToken, formatFcfa, waNumber } from 
 import {
   proContext, txt, num, dateOrNull, isMissingTable,
   logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, taxAllowed,
+  apercuProchainNumero,
   creerClientRapide,
 } from "@/lib/proServer";
 import {
@@ -62,7 +63,17 @@ export async function POST(req: Request) {
     // que la facture ait deja ete composee, et affichee en entier.
     if (action === "quota") {
       const q = await getEtatQuota(sb, userId, email);
+      // Le numero qui sera attribue a la prochaine facture. Renvoye ICI et non
+      // par un appel a part : l'ecran le demande au chargement, et une requete
+      // de moins compte sur une connexion 4G instable.
+      //
+      // Il est calcule a l'enregistrement, comme avant — celui-ci ne sert qu'a
+      // l'AFFICHER pendant la saisie. La numerotation etant propre a chaque
+      // compte, les deux valeurs ne divergent que si le meme professionnel
+      // cree deux factures dans deux onglets a la fois.
+      const numeroSuivant = await apercuProchainNumero(sb, userId, "FAC");
       return NextResponse.json({
+        numero_suivant: numeroSuivant,
         abonne: q.abonne,
         utilisees: q.utilisees,
         quota: q.abonne ? null : q.quota,

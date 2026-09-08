@@ -176,6 +176,57 @@ export function publicBase(): string {
  * Repli sur le comptage si la fonction n'existe pas encore (migration non
  * exécutée) : mieux vaut un numéro imparfait qu'un blocage de la création.
  */
+/**
+ * Le prochain numéro, SANS le consommer.
+ *
+ * ── Pourquoi cette fonction existe, et pourquoi elle ne peut pas être
+ *    `nextDocumentNumber` ───────────────────────────────────────────────
+ * `pro_next_number` n'est pas une lecture : elle INCRÉMENTE le compteur
+ * (`value = value + 1`) et rend la valeur obtenue. C'est ce qu'on veut au
+ * moment d'écrire une pièce — deux appels concurrents obtiennent deux numéros
+ * différents, la numérotation ne peut pas se dédoubler.
+ *
+ * Mais l'appeler pour AFFICHER le numéro pendant la saisie brûlerait une
+ * unité à chaque ouverture du formulaire : la numérotation se trouerait, et
+ * le numéro montré ne serait jamais celui enregistré. Cette fonction-ci lit
+ * donc le compteur sans y toucher.
+ *
+ * Le numéro reste attribué à l'écriture, par `nextDocumentNumber`. Celui-ci
+ * n'est qu'un aperçu — juste, sauf si le même professionnel enregistre une
+ * autre pièce entre-temps depuis un second onglet.
+ */
+export async function apercuProchainNumero(
+  sb: SupabaseClient,
+  userId: string,
+  prefix: "DEV" | "FAC",
+): Promise<string> {
+  const annee = new Date().getFullYear();
+  const format = (n: number) => `${prefix}-${annee}-${String(n).padStart(3, "0")}`;
+
+  try {
+    const { data, error } = await sb
+      .from("pro_counters")
+      .select("value")
+      .eq("user_id", userId)
+      .eq("prefix", prefix)
+      .eq("year", annee)
+      .maybeSingle();
+
+    if (!error) return format((Number(data?.value) || 0) + 1);
+
+    // Table de compteurs absente (migration ancienne) : on retombe sur le
+    // même dénombrement que `nextDocumentNumber`, pour que l'aperçu et
+    // l'écriture racontent la même histoire.
+    const table = prefix === "DEV" ? "pro_quotes" : "pro_invoices";
+    const { count } = await sb
+      .from(table).select("id", { count: "exact", head: true }).eq("user_id", userId);
+    return format((count || 0) + 1);
+  } catch {
+    // Un aperçu de numéro ne doit jamais empêcher d'ouvrir un formulaire.
+    return format(1);
+  }
+}
+
 export async function nextDocumentNumber(
   sb: SupabaseClient,
   userId: string,

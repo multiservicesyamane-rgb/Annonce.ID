@@ -3,6 +3,7 @@ import { sanitizeItems, computeTotals, publicToken } from "@/lib/pro";
 import {
   proContext, txt, num, dateOrNull, isMissingTable, isMissingColumn,
   logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, defaultQuoteSections, taxAllowed,
+  apercuProchainNumero,
   creerClientRapide,
 } from "@/lib/proServer";
 
@@ -29,7 +30,14 @@ export async function POST(req: Request) {
         if (isMissingTable(error)) return NextResponse.json({ quotes: [], needsMigration: true });
         throw error;
       }
-      return NextResponse.json({ quotes: await attachClients(sb, data || []) });
+      // Le numero du PROCHAIN devis, joint a la liste que l'ecran charge deja.
+      // L'apercu n'en affichait aucun pendant la saisie : le document se
+      // composait sans numero et on ne le decouvrait qu'apres enregistrement.
+      // Il reste calcule a l'ecriture — celui-ci ne sert qu'a l'afficher.
+      return NextResponse.json({
+        quotes: await attachClients(sb, data || []),
+        numero_suivant: await apercuProchainNumero(sb, userId, "DEV"),
+      });
     }
 
     if (action === "get") {
