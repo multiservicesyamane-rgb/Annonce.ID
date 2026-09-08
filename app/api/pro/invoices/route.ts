@@ -4,6 +4,7 @@ import { sanitizeItems, computeTotals, publicToken, formatFcfa, waNumber } from 
 import {
   proContext, txt, num, dateOrNull, isMissingTable,
   logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, taxAllowed,
+  creerClientRapide,
 } from "@/lib/proServer";
 import {
   factureVerrouillee,
@@ -150,6 +151,15 @@ export async function POST(req: Request) {
 
       if (!title) return NextResponse.json({ error: "Indiquez l'objet de la facture." }, { status: 400 });
       if (!items.length) return NextResponse.json({ error: "Ajoutez au moins une ligne." }, { status: 400 });
+
+      // Client saisi directement dans la facture, sans fiche prealable. On ne
+      // l'ouvre que si aucun client existant n'a ete choisi — et jamais pour
+      // une facture issue d'un devis, qui porte deja le sien.
+      if (!clientId && body?.client_new) {
+        const cree = await creerClientRapide(sb, userId, body.client_new);
+        if ("error" in cree) return NextResponse.json({ error: cree.error }, { status: 400 });
+        clientId = cree.id;
+      }
 
       // Quota du mois. Le controle est ICI et pas dans l'interface : masquer un
       // bouton n'empeche personne d'appeler la route a la main.

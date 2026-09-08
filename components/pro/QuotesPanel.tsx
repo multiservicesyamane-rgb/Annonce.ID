@@ -23,6 +23,9 @@ import type { PrintDoc, PrintParty } from "./PrintableDocument";
 
 type Detail = { quote: Quote; events: ProEvent[]; invoice: { id: string; number: string; status: string; total: number } | null };
 
+/** Valeur reservee du choix « Nouveau client » dans la liste deroulante. */
+const CLIENT_NOUVEAU = "__nouveau";
+
 export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; goTo: GoTo; focusId?: string }) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -40,6 +43,14 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
 
   // Formulaire
   const [form, setForm] = useState<Record<string, string>>({});
+  /**
+   * Client tape directement dans le devis, sans fiche prealable.
+   *
+   * C'est au premier devis qu'un client apparait, presque toujours. Exiger sa
+   * fiche d'abord faisait sortir du formulaire pour y revenir — et beaucoup
+   * ne revenaient pas.
+   */
+  const [nouveauClient, setNouveauClient] = useState({ name: "", phone: "", company: "" });
   const [items, setItems] = useState<QuoteItem[]>([{ label: "", qty: 1, unit_price: 0 }]);
   const [discount, setDiscount] = useState(0);
   const [taxRate, setTaxRate] = useState(0);
@@ -142,7 +153,22 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
     return saved.length > 0 ? saved : DEFAULT_QUOTE_SECTIONS;
   }, [editing, proSections]);
 
+  // Vrai d'office quand le carnet est vide : une liste deroulante vide suivie
+  // d'un message qui renvoie ailleurs, c'etait le parcours trop long.
+  const clientNouveau = clients.length === 0 || form.client_id === CLIENT_NOUVEAU;
+
   const previewClient = useMemo<PrintParty | null>(() => {
+    if (clientNouveau) {
+      if (!nouveauClient.name.trim() && !nouveauClient.company.trim()) return null;
+      return {
+        name: nouveauClient.name,
+        company: nouveauClient.company || null,
+        phone: nouveauClient.phone,
+        email: "",
+        address: null,
+        tax_id: null,
+      };
+    }
     const c = clients.find((x) => x.id === form.client_id);
     if (!c) return null;
     return {
@@ -153,7 +179,7 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
       address: c.address || c.city || null,
       tax_id: c.tax_id,
     };
-  }, [clients, form.client_id]);
+  }, [clients, form.client_id, clientNouveau, nouveauClient]);
 
   const previewDoc = useMemo<PrintDoc>(() => ({
     kind: "devis",
@@ -230,6 +256,7 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
 
   function openNew() {
     setEditing(null);
+    setNouveauClient({ name: "", phone: "", company: "" });
     setForm({});
     setItems([{ label: "", qty: 1, unit_price: 0 }]);
     setDiscount(0);
@@ -266,12 +293,18 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
     const clean = items.filter((i) => i.label.trim());
     if (!form.title?.trim()) return toast("⚠ Indiquez l'objet du devis.");
     if (!clean.length) return toast("⚠ Ajoutez au moins une prestation.");
+    if (clientNouveau && !nouveauClient.name.trim() && !editing) {
+      return toast("⚠ Indiquez le nom du client.");
+    }
 
     setBusy(true);
     const payload: Record<string, unknown> = {
       action: editing ? "update" : "create",
       title: form.title,
-      client_id: form.client_id || "",
+      // `__nouveau` n'est pas un identifiant : le serveur cree le client puis
+      // le devis, en une seule requete.
+      client_id: clientNouveau ? "" : form.client_id || "",
+      client_new: clientNouveau && nouveauClient.name.trim() ? nouveauClient : undefined,
       project_id: form.project_id || "",
       items: clean,
       discount,
@@ -371,7 +404,10 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
   if (needsMigration) return <MigrationNotice />;
   if (loading) return <div className="py-16 text-center text-gray-400">Chargement…</div>;
 
-  const clientOptions = clients.map((c) => ({ value: c.id, label: c.company || c.name }));
+  const clientOptions = [
+    { value: CLIENT_NOUVEAU, label: "+ Nouveau client" },
+    ...clients.map((c) => ({ value: c.id, label: c.company || c.name })),
+  ];
   const projectOptions = projects
     .filter((p) => !form.client_id || !p.client_id || p.client_id === form.client_id)
     .map((p) => ({ value: p.id, label: p.name }));
@@ -387,26 +423,21 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
           current={editing ? `Modifier ${editing.number || editing.title}` : "Nouveau devis"}
         />
 
-        {clients.length === 0 ? (
-          <Empty
-            icon="👥"
-            title="Ajoutez d'abord un client"
-            sub="Un devis est toujours adressé à un client. Créez-en un, puis revenez ici."
-            cta="Aller aux clients"
-            onCta={() => goTo("clients")}
-          />
-        ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(440px,520px)]">
             <div className="flex flex-col gap-4">
               <Section icon="🧾" title="Informations">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Select
-                    l="Client"
-                    v={form.client_id}
-                    set={(v) => setForm({ ...form, client_id: v, project_id: "" })}
-                    options={clientOptions}
-                    placeholder="Choisir un client…"
-                  />
+                  {clients.length > 0 ? (
+                    <Select
+                      l="Client"
+                      v={form.client_id}
+                      set={(v) => setForm({ ...form, client_id: v, project_id: "" })}
+                      options={clientOptions}
+                      placeholder="Choisir un client…"
+                    />
+                  ) : (
+                    <div />
+                  )}
                   <F l="Objet du devis" v={form.title} set={(v) => setForm({ ...form, title: v })} ph="Ex : Logo + charte graphique" />
                   <Select
                     l="Projet (optionnel)"
@@ -417,6 +448,38 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
                   />
                   <F l="Valable jusqu'au" v={form.valid_until} set={(v) => setForm({ ...form, valid_until: v })} type="date" />
                 </div>
+
+                {clientNouveau && (
+                  <div className="mt-3 rounded-xl border border-dashed border-gray-300 p-3.5 dark:border-white/15">
+                    <p className="text-[.85rem] font-bold text-gray-900 dark:text-white">
+                      {clients.length === 0 ? "À qui adressez-vous ce devis ?" : "Nouveau client"}
+                    </p>
+                    <p className="mt-0.5 text-[.78rem] leading-snug text-gray-500">
+                      Le nom suffit — sa fiche se remplira plus tard. Il est ajouté à vos clients
+                      au moment où le devis est enregistré.
+                    </p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      <F
+                        l="Nom du client"
+                        v={nouveauClient.name}
+                        set={(v: string) => setNouveauClient({ ...nouveauClient, name: v })}
+                        ph="Ex : Awa Diallo"
+                      />
+                      <F
+                        l="Téléphone (optionnel)"
+                        v={nouveauClient.phone}
+                        set={(v: string) => setNouveauClient({ ...nouveauClient, phone: v })}
+                        ph="+221 77 000 00 00"
+                      />
+                      <F
+                        l="Société (optionnel)"
+                        v={nouveauClient.company}
+                        set={(v: string) => setNouveauClient({ ...nouveauClient, company: v })}
+                        ph="Ex : SunuCom"
+                      />
+                    </div>
+                  </div>
+                )}
               </Section>
 
               <Section icon="📋" title="Prestations">
@@ -525,7 +588,6 @@ export default function QuotesPanel({ toast, goTo, focusId }: { toast: Toast; go
               onPreview={() => setPreviewOpen(true)}
             />
           </div>
-        )}
 
         {/* Sur téléphone, l'aperçu n'a pas de colonne où vivre : il s'ouvre
             par-dessus la saisie, à la demande. */}

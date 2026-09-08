@@ -323,6 +323,22 @@ export type Education = {
  */
 export type Langue = { id: string; name: string; level: 1 | 2 | 3 | 4 | 5 };
 
+/**
+ * Ce que veut dire chaque cran, en toutes lettres.
+ *
+ * Cinq pastilles ne disent rien a celui qui les remplit : « 3 sur 5 » n'a de
+ * sens que si l'on sait ce que valent les cinq. Le libelle guide la saisie —
+ * quelqu'un qui parle wolof tous les jours coche « courant » sans hesiter, la
+ * ou il aurait mis 3 par prudence.
+ */
+export const NIVEAUX_LANGUE: Record<1 | 2 | 3 | 4 | 5, string> = {
+  1: "Notions",
+  2: "Elementaire",
+  3: "Intermediaire",
+  4: "Courant",
+  5: "Langue maternelle ou bilingue",
+};
+
 export type PersonalInfo = {
   firstName: string;
   lastName: string;

@@ -70,9 +70,26 @@ export const lbl = "mb-1.5 block text-[.78rem] font-semibold text-gray-500 dark:
  * L'apercu est MASQUE au telephone (`hidden lg:block`) : l'y empiler
  * rallongerait la page, exactement ce qu'on cherche a eviter.
  */
+/**
+ * Saisie a gauche, apercu a droite — le partage d'ecran des editeurs de CV.
+ *
+ * ── Pourquoi une largeur en POURCENTAGE ──────────────────────────────────
+ * La colonne d'apercu etait figee a 360 px. Sur un ecran de 1 920 px, la
+ * feuille A4 y tombait sous 45 % de sa taille : un timbre-poste a cote d'un
+ * formulaire qui, lui, s'etalait sur 1 400 px. L'aperçu doit grandir avec
+ * l'ecran, sinon il ne sert qu'a confirmer qu'il se passe quelque chose.
+ *
+ * Le plancher en pixels reste : sous 320 px de colonne, la page devient
+ * illisible et mieux vaut rendre la place au formulaire.
+ */
 export function Split({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
-    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-10">
+    <div
+      className={
+        "lg:grid lg:items-start lg:gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,36%)] " +
+        "xl:gap-10 xl:grid-cols-[minmax(0,1fr)_minmax(420px,42%)]"
+      }
+    >
       <div className="min-w-0">{children}</div>
       {aside && <aside className="hidden lg:sticky lg:top-24 lg:block">{aside}</aside>}
     </div>

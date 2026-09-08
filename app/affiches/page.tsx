@@ -49,6 +49,27 @@ export default function AffichesPage() {
           </p>
         </header>
 
+        {/* ── NOUVEAU : Affiches Officielles ESPACE PRO & CARRIÈRE ── */}
+        <SectionTitle>🌟 NOUVEAU : Affiches Officielles Espace Pro & Carrière</SectionTitle>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <Downloadable filename="wanteermako-affiche-espace-pro-dark" label="PNG HD"><AfficheEspaceProHero /></Downloadable>
+          <Downloadable filename="wanteermako-affiche-carriere-dark" label="PNG HD"><AfficheCarriereHero /></Downloadable>
+          <Downloadable filename="wanteermako-affiche-espace-pro-light" label="PNG HD"><AfficheEspaceProLight /></Downloadable>
+        </div>
+
+        {/* ── Formats Portrait (A4 / Statut WhatsApp / Story) ── */}
+        <SectionTitle>📱 Formats Portrait (Flyer A4 / Statut WhatsApp / Story)</SectionTitle>
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Downloadable filename="wanteermako-portrait-espace-pro" label="PNG Flyer A4"><AfficheEspaceProPortrait /></Downloadable>
+          <Downloadable filename="wanteermako-portrait-carriere" label="PNG Flyer A4"><AfficheCarrierePortrait /></Downloadable>
+        </div>
+
+        {/* ── Bannière Duo / Écosystème (16:9 Web & Réseaux) ── */}
+        <SectionTitle>🚀 Bannière Duo Écosystème (16:9 Web & Réseaux)</SectionTitle>
+        <div className="mb-10">
+          <Downloadable filename="wanteermako-banniere-pro-carriere" label="PNG Bannière 16:9"><AfficheDuoSplitScreen /></Downloadable>
+        </div>
+
         {/* ── Affiches 100% HTML (sans captures) — moitié sombre / clair ── */}
         <SectionTitle>🎨 Affiches HTML — stats & prix nets (moitié sombre / clair)</SectionTitle>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -681,3 +702,516 @@ function FooterBig() {
     </div>
   );
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   🌟 NOUVELLES AFFICHES : ESPACE PRO (DEVIS & FACTURES WHATSAPP)
+   ══════════════════════════════════════════════════════════════════ */
+
+function AfficheEspaceProHero() {
+  return (
+    <Poster className="aspect-square bg-[radial-gradient(at_20%_15%,rgba(99,102,241,0.45)_0,transparent_50%),radial-gradient(at_85%_75%,rgba(245,166,35,0.3)_0,transparent_50%)] bg-[#070C18]">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <LogoFull className="h-9" />
+        <span className="flex items-center gap-1.5 rounded-full border border-[#FFC93C]/30 bg-[#FFC93C]/15 px-3 py-1 text-[.65rem] font-bold uppercase tracking-wider text-[#FFC93C]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#FFC93C] animate-pulse" />
+          Espace Pro
+        </span>
+      </div>
+
+      {/* Titre choc */}
+      <div className="mt-3">
+        <h3 className="font-display text-[1.65rem] font-black leading-[1.1] text-white">
+          Vos Devis & Factures <br />
+          <span className="bg-gradient-to-r from-[#FFC93C] via-[#F5A623] to-[#FFD166] bg-clip-text text-transparent">
+            en 2 minutes chrono
+          </span>
+        </h3>
+        <p className="mt-1.5 text-[.82rem] text-white/70">
+          Envoyez par WhatsApp · Validation en 1 clic · Sans création de compte client
+        </p>
+      </div>
+
+      {/* Mockup Devis 3D Glassmorphism */}
+      <div className="relative mt-3 flex-1 overflow-hidden rounded-xl border border-white/15 bg-white/[0.06] p-3 shadow-2xl backdrop-blur-md">
+        <div className="flex items-center justify-between border-b border-white/10 pb-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#6366F1]/30 text-[.75rem]">📄</span>
+            <div>
+              <div className="text-[.7rem] font-bold text-white">DEVIS #D-2026-0084</div>
+              <div className="text-[.58rem] text-white/50">Client : Agence Digitale & Associés</div>
+            </div>
+          </div>
+          <span className="rounded-full bg-[#10B981]/20 px-2 py-0.5 text-[.58rem] font-bold text-[#10B981] border border-[#10B981]/30">
+            ✓ Accepté en 1 clic
+          </span>
+        </div>
+
+        {/* Lignes du devis */}
+        <div className="mt-2 space-y-1.5 text-[.64rem]">
+          <div className="flex justify-between rounded bg-white/[0.03] px-2 py-1 text-white/80">
+            <span>1. Prestation de Service & Conseil Pro</span>
+            <span className="font-bold text-[#FFC93C]">250 000 FCFA</span>
+          </div>
+          <div className="flex justify-between rounded bg-white/[0.03] px-2 py-1 text-white/80">
+            <span>2. Accompagnement & Suivi Mensuel</span>
+            <span className="font-bold text-[#FFC93C]">100 000 FCFA</span>
+          </div>
+        </div>
+
+        {/* Total & WhatsApp tag */}
+        <div className="mt-2.5 flex items-center justify-between border-t border-white/10 pt-2">
+          <div className="flex items-center gap-1.5 text-[.6rem] text-[#25D366] font-semibold">
+            <span>💬 Envoyé via WhatsApp</span>
+          </div>
+          <div className="text-right">
+            <span className="text-[.55rem] uppercase text-white/50">Total Net : </span>
+            <span className="font-display text-[.92rem] font-black text-[#FFC93C]">350 000 FCFA</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Badges */}
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <Pill>🚀 100% Gratuit</Pill>
+        <Pill>📱 Lien Public WhatsApp</Pill>
+        <Pill>🧾 Facture Auto</Pill>
+        <Pill>🔒 QR Code Certifié</Pill>
+      </div>
+
+      {/* CTA Bar */}
+      <div className="mt-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-[#6366F1] via-[#4F46E5] to-[#FFC93C] p-[1px]">
+        <div className="flex w-full items-center justify-between rounded-xl bg-[#0B1120]/90 px-3 py-2 backdrop-blur">
+          <span className="text-[.72rem] font-bold text-white">wanteermako.com/espace-pro</span>
+          <span className="rounded-lg bg-gradient-to-r from-[#FFC93C] to-[#F5A623] px-2.5 py-1 text-[.64rem] font-black text-[#0B1120] shadow-md">
+            CRÉER UN DEVIS →
+          </span>
+        </div>
+      </div>
+    </Poster>
+  );
+}
+
+function AfficheEspaceProPortrait() {
+  return (
+    <Poster className="aspect-[4/5] bg-[radial-gradient(at_15%_10%,rgba(99,102,241,0.5)_0,transparent_55%),radial-gradient(at_85%_90%,rgba(245,166,35,0.35)_0,transparent_55%)] bg-[#070C18] p-7">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <LogoFull className="h-10" />
+        <span className="rounded-full border border-[#FFC93C]/40 bg-[#FFC93C]/15 px-3 py-1 text-[.68rem] font-bold uppercase tracking-wider text-[#FFC93C]">
+          ⚡ Espace Pro Gratuit
+        </span>
+      </div>
+
+      {/* Titre Principal */}
+      <div className="mt-5">
+        <span className="text-[.72rem] font-bold uppercase tracking-widest text-[#6366F1]">
+          Pour Freelances, Artisans & Entreprises
+        </span>
+        <h3 className="mt-1 font-display text-[2rem] font-black leading-[1.05] text-white">
+          Fini les devis brouillons.<br />
+          <span className="bg-gradient-to-r from-[#FFC93C] via-[#F5A623] to-[#FFD166] bg-clip-text text-transparent">
+            Passez au niveau supérieur.
+          </span>
+        </h3>
+        <p className="mt-2 text-[.88rem] text-white/75">
+          Créez, signez et faites valider vos devis directement sur WhatsApp sans aucune contrainte technique.
+        </p>
+      </div>
+
+      {/* 4 Étapes Clés */}
+      <div className="mt-5 space-y-2.5">
+        {[
+          { num: "1", title: "Rédigez en 2 min", desc: "Rubriques prêtes, montants calculés automatiquement", icon: "📝" },
+          { num: "2", title: "Envoyez par WhatsApp", desc: "Un lien public gratuit, sans inscription pour le client", icon: "💬" },
+          { num: "3", title: "Validation en 1 clic", desc: "Signature & accord immédiat depuis le smartphone", icon: "✅" },
+          { num: "4", title: "Facture automatique", desc: "Génération PDF A4 avec QR Code d'authenticité", icon: "🧾" },
+        ].map((step) => (
+          <div key={step.num} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-2.5 backdrop-blur-sm">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#6366F1] to-[#FFC93C] text-[.9rem] font-black text-white shadow">
+              {step.icon}
+            </span>
+            <div className="flex-1">
+              <div className="text-[.82rem] font-bold text-white">{step.title}</div>
+              <div className="text-[.68rem] text-white/60">{step.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Encadré Suivi Financier */}
+      <div className="mt-5 flex items-center justify-between rounded-xl border border-[#10B981]/30 bg-[#10B981]/10 p-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[1.2rem]">💰</span>
+          <div>
+            <div className="text-[.74rem] font-bold text-white">Suivi des Règlements en Direct</div>
+            <div className="text-[.64rem] text-white/60">Wave, Orange Money, Mobile Money, Virements</div>
+          </div>
+        </div>
+        <span className="rounded-full bg-[#10B981] px-2.5 py-1 text-[.65rem] font-black text-white">0% Frais</span>
+      </div>
+
+      {/* Footer / Call To Action */}
+      <div className="mt-auto pt-4">
+        <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-[#6366F1] to-[#FFC93C] p-3 shadow-xl">
+          <div>
+            <div className="text-[.65rem] font-bold uppercase tracking-wider text-white/80">Disponible maintenant sur</div>
+            <div className="font-display text-[.95rem] font-black text-white">wanteermako.com/espace-pro</div>
+          </div>
+          <span className="rounded-xl bg-[#0B1120] px-3.5 py-2 text-[.72rem] font-black text-[#FFC93C] shadow-lg">
+            TESTER SANS FRAIS →
+          </span>
+        </div>
+      </div>
+    </Poster>
+  );
+}
+
+function AfficheEspaceProLight() {
+  return (
+    <div className="group relative flex aspect-square flex-col overflow-hidden rounded-[22px] border border-black/10 bg-white p-6 shadow-2xl">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(at_10%_10%,rgba(99,102,241,0.15)_0,transparent_50%),radial-gradient(at_90%_90%,rgba(245,166,35,0.18)_0,transparent_50%)]" />
+
+      {/* Header */}
+      <div className="relative flex items-center justify-between">
+        <BrandLight className="h-8" />
+        <span className="rounded-full bg-[#6366F1]/10 px-3 py-1 text-[.62rem] font-bold uppercase tracking-wider text-[#6366F1]">
+          Espace Pro
+        </span>
+      </div>
+
+      {/* Titre */}
+      <div className="relative mt-3">
+        <h3 className="font-display text-[1.6rem] font-black leading-tight text-[#0B1120]">
+          Générez vos Devis & Factures <br />
+          <span className="text-[#6366F1]">directement sur WhatsApp</span>
+        </h3>
+        <p className="mt-1 text-[.8rem] text-gray-600">
+          La solution de gestion commerciale simple et rapide pour toute l'Afrique de l'Ouest.
+        </p>
+      </div>
+
+      {/* Aperçu Pro épuré */}
+      <div className="relative mt-3 flex-1 rounded-xl border border-gray-200 bg-gray-50/80 p-3 shadow-inner">
+        <div className="flex items-center justify-between border-b border-gray-200 pb-1.5">
+          <span className="text-[.68rem] font-bold text-gray-900">📑 Facture Standard FCFA</span>
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[.58rem] font-bold text-emerald-800">Prêt à envoyer</span>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2 text-[.66rem]">
+          <div className="rounded bg-white p-1.5 border border-gray-100">
+            <span className="text-gray-500 block text-[.55rem]">CLIENT</span>
+            <span className="font-bold text-gray-800">Particulier ou Société</span>
+          </div>
+          <div className="rounded bg-white p-1.5 border border-gray-100">
+            <span className="text-gray-500 block text-[.55rem]">AUTHENTIFICATION</span>
+            <span className="font-bold text-emerald-700">QR Code Certifié</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3 Atouts */}
+      <div className="relative mt-3 grid grid-cols-3 gap-1.5 text-center">
+        <div className="rounded-lg bg-gray-100 p-1.5 text-[.64rem] font-bold text-gray-800">⚡ 2 min chrono</div>
+        <div className="rounded-lg bg-gray-100 p-1.5 text-[.64rem] font-bold text-gray-800">📲 Sans appli</div>
+        <div className="rounded-lg bg-gray-100 p-1.5 text-[.64rem] font-bold text-[#6366F1]">🆓 100% Gratuit</div>
+      </div>
+
+      {/* Footer */}
+      <div className="relative mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+        <span className="text-[.76rem] font-black text-[#6366F1]">wanteermako.com/espace-pro</span>
+        <span className="rounded-lg bg-[#6366F1] px-3 py-1.5 text-[.65rem] font-black text-white shadow">
+          CRÉER MON DEVIS →
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   🌟 NOUVELLES AFFICHES : MODULE CARRIÈRE (CV IA & RECRUTEMENT)
+   ══════════════════════════════════════════════════════════════════ */
+
+function AfficheCarriereHero() {
+  return (
+    <Poster className="aspect-square bg-[radial-gradient(at_80%_15%,rgba(139,92,246,0.45)_0,transparent_50%),radial-gradient(at_15%_80%,rgba(99,102,241,0.4)_0,transparent_50%)] bg-[#050914]">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <LogoFull className="h-9" />
+        <span className="flex items-center gap-1.5 rounded-full border border-[#8B5CF6]/30 bg-[#8B5CF6]/20 px-3 py-1 text-[.65rem] font-bold uppercase tracking-wider text-[#A5B4FC]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#A5B4FC] animate-pulse" />
+          Module Carrière IA
+        </span>
+      </div>
+
+      {/* Titre */}
+      <div className="mt-3">
+        <h3 className="font-display text-[1.65rem] font-black leading-[1.1] text-white">
+          Faites Décoller Votre Carrière <br />
+          <span className="bg-gradient-to-r from-[#A5B4FC] via-[#C084FC] to-[#FFC93C] bg-clip-text text-transparent">
+            avec un CV optimisé par l'IA
+          </span>
+        </h3>
+        <p className="mt-1.5 text-[.82rem] text-white/70">
+          Rédigez CV irrésistibles, lettres de motivation & demandes d'emploi en quelques minutes.
+        </p>
+      </div>
+
+      {/* Mockup Holographique CV IA */}
+      <div className="relative mt-3 flex-1 overflow-hidden rounded-xl border border-white/15 bg-white/[0.06] p-3 shadow-2xl backdrop-blur-md">
+        <div className="flex items-center justify-between border-b border-white/10 pb-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#8B5CF6]/30 text-[.75rem]">🧠</span>
+            <div>
+              <div className="text-[.7rem] font-bold text-white">Assistant Rédaction IA</div>
+              <div className="text-[.58rem] text-white/50">Score de recrutement ATS : 98%</div>
+            </div>
+          </div>
+          <span className="rounded-full bg-[#8B5CF6]/20 px-2 py-0.5 text-[.58rem] font-bold text-[#A5B4FC] border border-[#8B5CF6]/30">
+            ⚡ Rédigé en 3 min
+          </span>
+        </div>
+
+        {/* Sections du CV */}
+        <div className="mt-2 space-y-1.5 text-[.64rem]">
+          <div className="flex items-center justify-between rounded bg-white/[0.03] px-2 py-1 text-white/80">
+            <span>📄 Modèle CV Moderne A4</span>
+            <span className="font-bold text-[#A5B4FC]">Design Certifié</span>
+          </div>
+          <div className="flex items-center justify-between rounded bg-white/[0.03] px-2 py-1 text-white/80">
+            <span>✉️ Lettre de motivation sur-mesure</span>
+            <span className="font-bold text-[#FFC93C]">Prête pour envoi</span>
+          </div>
+        </div>
+
+        {/* Badges d'export */}
+        <div className="mt-2.5 flex items-center justify-between border-t border-white/10 pt-2">
+          <span className="text-[.6rem] text-white/60">Compatible tous cabinets & RH</span>
+          <span className="rounded bg-white/10 px-2 py-0.5 text-[.6rem] font-bold text-[#FFC93C]">Export PDF A4 HD 📥</span>
+        </div>
+      </div>
+
+      {/* Badges */}
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <Pill>🤖 IA de Rédaction</Pill>
+        <Pill>📑 CV + Lettre + Demande</Pill>
+        <Pill>🎯 Adapté Afrique de l'Ouest</Pill>
+        <Pill>✨ 100% Gratuit</Pill>
+      </div>
+
+      {/* CTA Bar */}
+      <div className="mt-3 flex items-center justify-between rounded-xl bg-gradient-to-r from-[#8B5CF6] via-[#6366F1] to-[#FFC93C] p-[1px]">
+        <div className="flex w-full items-center justify-between rounded-xl bg-[#0B1120]/90 px-3 py-2 backdrop-blur">
+          <span className="text-[.72rem] font-bold text-white">wanteermako.com/carriere</span>
+          <span className="rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] px-2.5 py-1 text-[.64rem] font-black text-white shadow-md">
+            GÉNÉRER MON CV IA →
+          </span>
+        </div>
+      </div>
+    </Poster>
+  );
+}
+
+function AfficheCarrierePortrait() {
+  return (
+    <Poster className="aspect-[4/5] bg-[radial-gradient(at_80%_10%,rgba(139,92,246,0.5)_0,transparent_55%),radial-gradient(at_20%_90%,rgba(99,102,241,0.35)_0,transparent_55%)] bg-[#050914] p-7">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <LogoFull className="h-10" />
+        <span className="rounded-full border border-[#8B5CF6]/40 bg-[#8B5CF6]/15 px-3 py-1 text-[.68rem] font-bold uppercase tracking-wider text-[#A5B4FC]">
+          🤖 Propulsé par l'IA
+        </span>
+      </div>
+
+      {/* Titre Principal */}
+      <div className="mt-5">
+        <span className="text-[.72rem] font-bold uppercase tracking-widest text-[#FFC93C]">
+          Emplois, Stages & Opportunités
+        </span>
+        <h3 className="mt-1 font-display text-[2rem] font-black leading-[1.05] text-white">
+          Passez devant 99%<br />
+          <span className="bg-gradient-to-r from-[#A5B4FC] via-[#C084FC] to-[#FFC93C] bg-clip-text text-transparent">
+            des autres candidats.
+          </span>
+        </h3>
+        <p className="mt-2 text-[.88rem] text-white/75">
+          Créez un dossier de candidature professionnel et percutant qui attire immédiatement l'attention des recruteurs.
+        </p>
+      </div>
+
+      {/* 4 Piliers Carrière */}
+      <div className="mt-5 space-y-2.5">
+        {[
+          { num: "1", title: "Assistant IA Intelligent", desc: "Formule vos expériences et atouts avec un style soigné", icon: "🧠" },
+          { num: "2", title: "Modèles CV A4 Recruteurs", desc: "Design épuré, élégant et parfaitement lisible", icon: "📄" },
+          { num: "3", title: "Lettres de Motivation Ciblées", desc: "Personnalisées pour chaque poste et entreprise", icon: "✉️" },
+          { num: "4", title: "Demandes Officielles & Stages", desc: "Formules administratives conformes et prêtes à signer", icon: "🏛️" },
+        ].map((item) => (
+          <div key={item.num} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-2.5 backdrop-blur-sm">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#8B5CF6] to-[#6366F1] text-[.9rem] font-black text-white shadow">
+              {item.icon}
+            </span>
+            <div className="flex-1">
+              <div className="text-[.82rem] font-bold text-white">{item.title}</div>
+              <div className="text-[.68rem] text-white/60">{item.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer / Call To Action */}
+      <div className="mt-auto pt-4">
+        <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] p-3 shadow-xl">
+          <div>
+            <div className="text-[.65rem] font-bold uppercase tracking-wider text-white/80">Accessible gratuitement sur</div>
+            <div className="font-display text-[.95rem] font-black text-white">wanteermako.com/carriere</div>
+          </div>
+          <span className="rounded-xl bg-[#0B1120] px-3.5 py-2 text-[.72rem] font-black text-[#FFC93C] shadow-lg">
+            CRÉER MON CV →
+          </span>
+        </div>
+      </div>
+    </Poster>
+  );
+}
+
+function AfficheCarriereLight() {
+  return (
+    <div className="group relative flex aspect-square flex-col overflow-hidden rounded-[22px] border border-black/10 bg-white p-6 shadow-2xl">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(at_10%_10%,rgba(139,92,246,0.15)_0,transparent_50%),radial-gradient(at_90%_90%,rgba(99,102,241,0.12)_0,transparent_50%)]" />
+
+      {/* Header */}
+      <div className="relative flex items-center justify-between">
+        <BrandLight className="h-8" />
+        <span className="rounded-full bg-[#8B5CF6]/10 px-3 py-1 text-[.62rem] font-bold uppercase tracking-wider text-[#8B5CF6]">
+          Ma Carrière
+        </span>
+      </div>
+
+      {/* Titre */}
+      <div className="relative mt-3">
+        <h3 className="font-display text-[1.6rem] font-black leading-tight text-[#0B1120]">
+          Rédigez votre CV & Lettre <br />
+          <span className="text-[#8B5CF6]">avec l'Assistant IA</span>
+        </h3>
+        <p className="mt-1 text-[.8rem] text-gray-600">
+          Valorisez vos compétences et postulez aux meilleures offres en quelques clics.
+        </p>
+      </div>
+
+      {/* Aperçu clair */}
+      <div className="relative mt-3 flex-1 rounded-xl border border-gray-200 bg-gray-50/80 p-3 shadow-inner">
+        <div className="flex items-center justify-between border-b border-gray-200 pb-1.5">
+          <span className="text-[.68rem] font-bold text-gray-900">📄 Curriculum Vitae Professionnel</span>
+          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[.58rem] font-bold text-indigo-800">Modèle A4</span>
+        </div>
+        <div className="mt-2 space-y-1 text-[.64rem] text-gray-700">
+          <div className="flex justify-between"><span>• Structure optimisée</span><b className="text-[#8B5CF6]">✓ IA Active</b></div>
+          <div className="flex justify-between"><span>• Lettre de motivation</span><b className="text-emerald-700">✓ Incluse</b></div>
+        </div>
+      </div>
+
+      {/* 3 Atouts */}
+      <div className="relative mt-3 grid grid-cols-3 gap-1.5 text-center">
+        <div className="rounded-lg bg-gray-100 p-1.5 text-[.64rem] font-bold text-gray-800">🤖 Rédaction IA</div>
+        <div className="rounded-lg bg-gray-100 p-1.5 text-[.64rem] font-bold text-gray-800">📥 Export PDF HD</div>
+        <div className="rounded-lg bg-gray-100 p-1.5 text-[.64rem] font-bold text-[#8B5CF6]">🆓 100% Gratuit</div>
+      </div>
+
+      {/* Footer */}
+      <div className="relative mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+        <span className="text-[.76rem] font-black text-[#8B5CF6]">wanteermako.com/carriere</span>
+        <span className="rounded-lg bg-[#8B5CF6] px-3 py-1.5 text-[.65rem] font-black text-white shadow">
+          GÉNÉRER MON CV →
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   🌟 BANNIÈRE DUO : L'ÉCOSYSTÈME WANTEERMAKO (PRO & CARRIÈRE)
+   ══════════════════════════════════════════════════════════════════ */
+
+function AfficheDuoSplitScreen() {
+  return (
+    <div className="relative flex flex-col overflow-hidden rounded-[26px] border border-white/15 bg-[#070C18] p-6 shadow-2xl md:p-8">
+      {/* Background glow split */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(at_20%_30%,rgba(245,166,35,0.25)_0,transparent_55%),radial-gradient(at_80%_30%,rgba(139,92,246,0.3)_0,transparent_55%)]" />
+
+      {/* Header Central */}
+      <div className="relative flex flex-col items-center justify-between gap-4 border-b border-white/10 pb-5 sm:flex-row">
+        <LogoFull className="h-10" />
+        <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-4 py-1.5 text-[.72rem] font-bold text-white shadow-inner">
+          <span className="h-2 w-2 rounded-full bg-[#10B981] animate-pulse" />
+          L'Écosystème Professionnel Tout-en-Un d'Afrique de l'Ouest
+        </div>
+      </div>
+
+      {/* Split Content 50/50 */}
+      <div className="relative mt-6 grid gap-6 md:grid-cols-2">
+        {/* Côté Gauche : Espace Pro */}
+        <div className="flex flex-col rounded-2xl border border-[#FFC93C]/25 bg-gradient-to-b from-[#FFC93C]/10 to-transparent p-5 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="rounded-full bg-[#FFC93C]/20 px-3 py-1 text-[.65rem] font-black uppercase text-[#FFC93C]">
+              ESPACE PRO
+            </span>
+            <span className="text-[1.2rem]">💼</span>
+          </div>
+          <h4 className="mt-3 font-display text-[1.4rem] font-black text-white">
+            Devis & Factures WhatsApp
+          </h4>
+          <p className="mt-1 text-[.82rem] text-white/70">
+            Créez en 2 min, partagez par lien direct, encaissez sans friction.
+          </p>
+          <ul className="mt-4 space-y-2 text-[.76rem] text-white/85">
+            <li className="flex items-center gap-2">✓ 10 modèles de documents A4</li>
+            <li className="flex items-center gap-2">✓ Validation client sans compte</li>
+            <li className="flex items-center gap-2">✓ Suivi des paiements & QR Code</li>
+          </ul>
+          <div className="mt-auto pt-5">
+            <span className="block text-center rounded-xl bg-gradient-to-r from-[#FFC93C] to-[#F5A623] py-2 text-[.75rem] font-black text-[#0B1120]">
+              wanteermako.com/espace-pro
+            </span>
+          </div>
+        </div>
+
+        {/* Côté Droit : Carrière */}
+        <div className="flex flex-col rounded-2xl border border-[#8B5CF6]/30 bg-gradient-to-b from-[#8B5CF6]/15 to-transparent p-5 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="rounded-full bg-[#8B5CF6]/25 px-3 py-1 text-[.65rem] font-black uppercase text-[#A5B4FC]">
+              MODULE CARRIÈRE
+            </span>
+            <span className="text-[1.2rem]">🧠</span>
+          </div>
+          <h4 className="mt-3 font-display text-[1.4rem] font-black text-white">
+            CV & Lettres propulsés par l'IA
+          </h4>
+          <p className="mt-1 text-[.82rem] text-white/70">
+            Générez des dossiers de candidature de standing international.
+          </p>
+          <ul className="mt-4 space-y-2 text-[.76rem] text-white/85">
+            <li className="flex items-center gap-2">✓ Rédacteur IA intelligent</li>
+            <li className="flex items-center gap-2">✓ Modèles A4 prêts pour export PDF</li>
+            <li className="flex items-center gap-2">✓ Demandes d'emploi & de stage</li>
+          </ul>
+          <div className="mt-auto pt-5">
+            <span className="block text-center rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] py-2 text-[.75rem] font-black text-white">
+              wanteermako.com/carriere
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bas de page Bannière */}
+      <div className="relative mt-6 flex flex-col items-center justify-between gap-2 border-t border-white/10 pt-4 text-center sm:flex-row sm:text-left">
+        <span className="text-[.8rem] font-bold text-white/70">
+          Propulsé par <b className="text-white">Wanteermako</b> · 27 pays couverts
+        </span>
+        <span className="text-[.76rem] font-black text-[#FFC93C]">
+          100% GRATUIT & SANS ENGAGEMENT
+        </span>
+      </div>
+    </div>
+  );
+}
+

@@ -19,6 +19,7 @@ import {
   PHOTO_RATIO,
   POLICES,
   accentDe,
+  NIVEAUX_LANGUE,
   newId,
   niveauCompetence,
   resumeDossier,
@@ -469,7 +470,7 @@ export default function CVWizard({
         iZoom={iZoomLateral}
         setIZoom={setIZoomLateral}
       >
-        <A4Preview zoom={ZOOMS[iZoomLateral]}>
+        <A4Preview zoom={ZOOMS[iZoomLateral]} ajusterHauteur>
           <CVSheet cv={cv} template={templateCV(doc.template)} />
         </A4Preview>
       </BarreOutils>
@@ -678,6 +679,17 @@ export default function CVWizard({
               <Field label="Telephone" value={cv.personalInfo.phone} onChange={(v) => patchInfo({ phone: v })} placeholder="+221 77 000 00 00" type="tel" maxLength={40} />
             </div>
             <Field label="Adresse e-mail" value={cv.personalInfo.email} onChange={(v) => patchInfo({ email: v })} placeholder="nom@email.com" type="email" maxLength={120} />
+            {/* Le champ existait dans les donnees et TOUS les gabarits le
+                dessinaient — il n'y avait simplement aucun endroit pour le
+                saisir. Une ligne que le CV promettait et que personne ne
+                pouvait remplir. */}
+            <Field
+              label="LinkedIn (facultatif)"
+              value={cv.personalInfo.linkedin}
+              onChange={(v) => patchInfo({ linkedin: v })}
+              placeholder="linkedin.com/in/ton-nom"
+              maxLength={160}
+            />
           </div>
 
           <Barre onBack={() => setEtape(0)} onNext={() => setEtape(2)} onApercu={() => setEtape(APERCU)} />
@@ -985,26 +997,30 @@ export default function CVWizard({
           <section className="mb-6">
             <h2 className="mb-2 text-[.95rem] font-bold text-gray-900 dark:text-white">Langues</h2>
             {cv.languages.map((l) => (
-              <div key={l.id} className="mb-2 flex items-center gap-3">
+              <div key={l.id} className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <input
                   value={l.name}
                   placeholder="Francais"
                   maxLength={60}
                   onChange={(e) => majLangue(l.id, { name: e.target.value })}
-                  className={input + " flex-1"}
+                  className={input + " min-w-0 flex-1"}
                 />
                 <div className="flex gap-1.5" role="group" aria-label={`Niveau de ${l.name || "la langue"}`}>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
                       key={n}
                       type="button"
-                      aria-label={`Niveau ${n} sur 5`}
+                      aria-label={`${NIVEAUX_LANGUE[n as 1 | 2 | 3 | 4 | 5]} — niveau ${n} sur 5`}
+                      aria-pressed={n <= l.level}
                       onClick={() => majLangue(l.id, { level: n as 1 | 2 | 3 | 4 | 5 })}
                       className={"h-4 w-4 rounded-full transition " + (n <= l.level ? "bg-green" : "bg-gray-200 dark:bg-white/15")}
                     />
                   ))}
                 </div>
                 <Supprimer onClick={() => patchCv({ languages: cv.languages.filter((x) => x.id !== l.id) })} />
+                {/* Le libelle sous les pastilles : « 3 sur 5 » ne veut rien
+                    dire tant qu'on ignore ce que valent les cinq. */}
+                <p className="w-full text-[.76rem] text-gray-500">{NIVEAUX_LANGUE[l.level]}</p>
               </div>
             ))}
             <Ajouter

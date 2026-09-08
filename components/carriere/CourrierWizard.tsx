@@ -270,7 +270,7 @@ export default function CourrierWizard({
         iZoom={iZoomCourrier}
         setIZoom={setIZoomCourrier}
       >
-        <A4Preview zoom={ZOOMS[iZoomCourrier]}>
+        <A4Preview zoom={ZOOMS[iZoomCourrier]} ajusterHauteur>
           <LettreSheet from={c.from} to={destinataire} objet={objet} corps={c.body} template={doc.template} />
         </A4Preview>
       </BarreOutils>

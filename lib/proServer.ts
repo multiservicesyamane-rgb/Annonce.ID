@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin, type SupabaseClient } from "@supabase/supabase-js";
-import { DEFAULT_QUOTE_SECTIONS, sanitizeSections, canChargeTax, type QuoteSection } from "@/lib/pro";
+import { DEFAULT_QUOTE_SECTIONS, sanitizeSections, canChargeTax, trackingCode, type QuoteSection } from "@/lib/pro";
 
 export const txt = (v: unknown, max = 160) => String(v ?? "").trim().slice(0, max);
 
@@ -245,4 +245,59 @@ export async function taxAllowed(sb: SupabaseClient, userId: string): Promise<bo
   } catch {
     return true;
   }
+}
+
+/**
+ * Cree un client a la volee, depuis un devis ou une facture.
+ *
+ * ── Pourquoi ce raccourci existe ─────────────────────────────────────────
+ * L'ecran refusait d'ouvrir le formulaire tant qu'aucun client n'existait :
+ * il fallait sortir, aller dans « Clients », remplir une fiche complete,
+ * revenir, retrouver son devis. Un artisan qui a son client au telephone
+ * abandonne avant la fin — et le produit a rate la seule minute ou il servait.
+ *
+ * Seul le NOM est demande. Le telephone et la societe sont acceptes s'ils
+ * sont la, parce qu'ils servent ensuite a relancer et a en-teter la piece,
+ * mais rien d'autre n'est exige : la fiche complete se remplira plus tard,
+ * quand il y aura le temps.
+ *
+ * Cote serveur et non dans l'ecran : creer le client puis la facture en deux
+ * appels depuis le navigateur laisse, en cas de coupure entre les deux, un
+ * client orphelin que personne n'a demande.
+ */
+export async function creerClientRapide(
+  sb: SupabaseClient,
+  userId: string,
+  brut: { name?: unknown; phone?: unknown; company?: unknown },
+): Promise<{ id: string } | { error: string }> {
+  const name = txt(brut?.name);
+  if (!name) return { error: "Indiquez le nom du client." };
+
+  // Meme plafond que la route des clients : le raccourci ne doit pas ouvrir
+  // une porte derobee sur une limite posee ailleurs.
+  const { count } = await sb
+    .from("pro_clients").select("id", { count: "exact", head: true }).eq("user_id", userId);
+  if ((count || 0) >= 500) return { error: "Maximum 500 clients atteint." };
+
+  // Le code de suivi est unique : on retente sur collision, comme la route
+  // des clients. Cinq essais suffisent tres largement.
+  for (let i = 0; i < 5; i++) {
+    const { data, error } = await sb
+      .from("pro_clients")
+      .insert({
+        user_id: userId,
+        name,
+        phone: txt(brut?.phone, 40) || null,
+        company: txt(brut?.company) || null,
+        status: "client",
+        tracking_code: trackingCode(name),
+      })
+      .select("id")
+      .single();
+    if (!error && data) return { id: data.id as string };
+    if (!/duplicate|unique/i.test(error?.message || "")) {
+      return { error: error?.message || "Creation du client impossible." };
+    }
+  }
+  return { error: "Creation du client impossible." };
 }

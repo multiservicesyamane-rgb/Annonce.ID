@@ -24,6 +24,9 @@ import type { PrintDoc, PrintParty } from "./PrintableDocument";
 
 type Detail = { invoice: Invoice; payments: Payment[]; events: ProEvent[] };
 
+/** Valeur reservee du choix « Nouveau client » dans la liste deroulante. */
+const CLIENT_NOUVEAU = "__nouveau";
+
 export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; goTo: GoTo; focusId?: string }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -65,6 +68,28 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
 
   // Saisie d'un encaissement
   const [payFor, setPayFor] = useState<Invoice | null>(null);
+
+  /**
+   * Client tape directement dans la facture, sans fiche prealable.
+   *
+   * L'ecran refusait d'ouvrir le formulaire tant qu'aucun client n'existait :
+   * il fallait sortir, remplir une fiche complete, revenir. Quelqu'un qui a
+   * son client au telephone abandonne avant la fin.
+   *
+   * Seul le nom est obligatoire. Le telephone sert a relancer, la societe a
+   * en-teter la piece — les deux restent facultatifs, la fiche complete se
+   * remplira plus tard.
+   */
+  const [nouveauClient, setNouveauClient] = useState({ name: "", phone: "", company: "" });
+
+  /**
+   * Saisit-on un nouveau client ?
+   *
+   * Vrai d'office quand le carnet est vide : afficher une liste deroulante
+   * sans rien dedans, puis un message qui renvoie ailleurs, etait la source
+   * meme du parcours trop long.
+   */
+  const clientNouveau = clients.length === 0 || form.client_id === CLIENT_NOUVEAU;
 
   const { ask, confirmNode } = useConfirm();
 
@@ -173,6 +198,19 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
      composant que la version imprimée. */
 
   const previewClient = useMemo<PrintParty | null>(() => {
+    // Client tape a la volee : l'apercu doit le montrer tout de suite, sinon
+    // on compose une facture dont le destinataire reste vide a l'ecran.
+    if (clientNouveau) {
+      if (!nouveauClient.name.trim() && !nouveauClient.company.trim()) return null;
+      return {
+        name: nouveauClient.name,
+        company: nouveauClient.company || null,
+        phone: nouveauClient.phone,
+        email: "",
+        address: null,
+        tax_id: null,
+      };
+    }
     const c = clients.find((x) => x.id === form.client_id);
     if (!c) return null;
     return {
@@ -183,7 +221,7 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
       address: c.address || c.city || null,
       tax_id: c.tax_id,
     };
-  }, [clients, form.client_id]);
+  }, [clients, form.client_id, clientNouveau, nouveauClient]);
 
   const previewDoc = useMemo<PrintDoc>(() => ({
     kind: "facture",
@@ -257,6 +295,7 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
 
   function openNew() {
     setEditing(null);
+    setNouveauClient({ name: "", phone: "", company: "" });
     const due = new Date();
     due.setDate(due.getDate() + 30);
     setForm({
@@ -298,12 +337,22 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
     const clean = items.filter((i) => i.label.trim());
     if (!form.title?.trim()) return toast("⚠ Indiquez l'objet de la facture.");
     if (!clean.length) return toast("⚠ Ajoutez au moins une ligne.");
+    // Le serveur le refuserait aussi, mais le dire ici evite un aller-retour
+    // et garde le curseur au bon endroit.
+    if (clientNouveau && !nouveauClient.name.trim() && !editing) {
+      return toast("⚠ Indiquez le nom du client.");
+    }
 
     setBusy(true);
     const payload: Record<string, unknown> = {
       action: editing ? "update" : "create",
       title: form.title,
-      client_id: form.client_id || "",
+      // `__nouveau` n'est pas un identifiant : on l'efface et on envoie la
+      // saisie a la place. Le serveur cree le client puis la facture, en une
+      // seule requete — en deux appels, une coupure entre les deux laisserait
+      // un client orphelin.
+      client_id: clientNouveau ? "" : form.client_id || "",
+      client_new: clientNouveau && nouveauClient.name.trim() ? nouveauClient : undefined,
       project_id: form.project_id || "",
       items: clean,
       discount,
@@ -482,7 +531,12 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
   if (needsMigration) return <MigrationNotice what="Table des factures à créer" />;
   if (loading) return <div className="py-16 text-center text-gray-400">Chargement…</div>;
 
-  const clientOptions = clients.map((c) => ({ value: c.id, label: c.company || c.name }));
+  // « Nouveau client » en TETE de liste et non en queue : c'est le choix le
+  // plus frequent au debut, et le seul possible quand le carnet est mince.
+  const clientOptions = [
+    { value: CLIENT_NOUVEAU, label: "+ Nouveau client" },
+    ...clients.map((c) => ({ value: c.id, label: c.company || c.name })),
+  ];
   const projectOptions = projects
     .filter((p) => !form.client_id || !p.client_id || p.client_id === form.client_id)
     .map((p) => ({ value: p.id, label: p.name }));
@@ -532,26 +586,21 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
           </div>
         )}
 
-        {clients.length === 0 ? (
-          <Empty
-            icon="👥"
-            title="Ajoutez d'abord un client"
-            sub="Une facture est toujours adressée à un client."
-            cta="Aller aux clients"
-            onCta={() => goTo("clients")}
-          />
-        ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] xl:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(440px,520px)]">
             <div className="flex flex-col gap-4">
               <Section icon="🧾" title="Informations">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Select
-                    l="Client"
-                    v={form.client_id}
-                    set={(v) => setForm({ ...form, client_id: v, project_id: "" })}
-                    options={clientOptions}
-                    placeholder="Choisir un client…"
-                  />
+                  {clients.length > 0 ? (
+                    <Select
+                      l="Client"
+                      v={form.client_id}
+                      set={(v) => setForm({ ...form, client_id: v, project_id: "" })}
+                      options={clientOptions}
+                      placeholder="Choisir un client…"
+                    />
+                  ) : (
+                    <div />
+                  )}
                   <F l="Objet de la facture" v={form.title} set={(v) => setForm({ ...form, title: v })} ph="Ex : Prestation de design" />
                   <Select
                     l="Projet (optionnel)"
@@ -570,6 +619,38 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
                     hint="30 jours par défaut."
                   />
                 </div>
+
+                {clientNouveau && (
+                  <div className="mt-3 rounded-xl border border-dashed border-gray-300 p-3.5 dark:border-white/15">
+                    <p className="text-[.85rem] font-bold text-gray-900 dark:text-white">
+                      {clients.length === 0 ? "À qui adressez-vous cette facture ?" : "Nouveau client"}
+                    </p>
+                    <p className="mt-0.5 text-[.78rem] leading-snug text-gray-500">
+                      Le nom suffit — sa fiche se remplira plus tard. Il est ajouté à vos clients
+                      au moment où la facture est enregistrée.
+                    </p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      <F
+                        l="Nom du client"
+                        v={nouveauClient.name}
+                        set={(v: string) => setNouveauClient({ ...nouveauClient, name: v })}
+                        ph="Ex : Awa Diallo"
+                      />
+                      <F
+                        l="Téléphone (optionnel)"
+                        v={nouveauClient.phone}
+                        set={(v: string) => setNouveauClient({ ...nouveauClient, phone: v })}
+                        ph="+221 77 000 00 00"
+                      />
+                      <F
+                        l="Société (optionnel)"
+                        v={nouveauClient.company}
+                        set={(v: string) => setNouveauClient({ ...nouveauClient, company: v })}
+                        ph="Ex : SunuCom"
+                      />
+                    </div>
+                  </div>
+                )}
               </Section>
 
               <Section icon="📋" title="Lignes de la facture">
@@ -643,7 +724,6 @@ export default function InvoicesPanel({ toast, goTo, focusId }: { toast: Toast; 
               onPreview={() => setPreviewOpen(true)}
             />
           </div>
-        )}
 
         {/* Sur téléphone, l'aperçu n'a pas de colonne où vivre : il s'ouvre
             par-dessus la saisie, à la demande. */}

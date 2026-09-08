@@ -3,6 +3,7 @@ import { sanitizeItems, computeTotals, publicToken } from "@/lib/pro";
 import {
   proContext, txt, num, dateOrNull, isMissingTable, isMissingColumn,
   logEvent, attachClients, ownsRow, publicBase, nextDocumentNumber, defaultQuoteSections, taxAllowed,
+  creerClientRapide,
 } from "@/lib/proServer";
 
 export const dynamic = "force-dynamic";
@@ -59,9 +60,18 @@ export async function POST(req: Request) {
       const items = sanitizeItems(body?.items);
       if (!items.length) return NextResponse.json({ error: "Ajoutez au moins une ligne." }, { status: 400 });
 
-      const clientId = txt(body?.client_id, 60) || null;
+      let clientId = txt(body?.client_id, 60) || null;
       if (clientId && !(await ownsRow(sb, "pro_clients", clientId, userId))) {
         return NextResponse.json({ error: "Client introuvable." }, { status: 404 });
+      }
+
+      // Client saisi directement dans le devis, sans fiche prealable : c'est
+      // le plus souvent au premier devis qu'un client apparait, et l'obliger a
+      // exister d'abord faisait sortir du formulaire pour y revenir.
+      if (!clientId && body?.client_new) {
+        const cree = await creerClientRapide(sb, userId, body.client_new);
+        if ("error" in cree) return NextResponse.json({ error: cree.error }, { status: 400 });
+        clientId = cree.id;
       }
       const projectId = txt(body?.project_id, 60) || null;
       if (projectId && !(await ownsRow(sb, "pro_projects", projectId, userId))) {
