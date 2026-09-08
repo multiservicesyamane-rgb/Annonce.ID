@@ -235,6 +235,67 @@ export default function PartnerDashboardPage() {
     }
   }
 
+  /**
+   * L'abonnement court-il vraiment ?
+   *
+   * Le statut ne suffit pas : « actif » sans echeance valide, c'est un
+   * abonnement expire. Les deux conditions comptent, comme cote serveur.
+   */
+  const abonnementActif =
+    partenaire?.statut === "actif" &&
+    !!partenaire.expire_at &&
+    new Date(partenaire.expire_at).getTime() > Date.now();
+
+  /**
+   * Les trois champs d'identite, definis une seule fois.
+   *
+   * Ils servent AVANT l'abonnement — pour postuler — et apres, pour tamponner
+   * les affiches. Les ecrire deux fois aurait garanti qu'un jour l'un des deux
+   * exemplaires oublie un champ.
+   */
+  const champsCoordonnees = (
+    <div className="mt-5 grid gap-4 sm:grid-cols-3">
+      <div>
+        <label className="block text-[.72rem] font-bold uppercase text-[#FFC93C]">
+          📞 Votre Numéro WhatsApp & Appel
+        </label>
+        <input
+          type="text"
+          value={partnerPhone}
+          onChange={(e) => setPartnerPhone(e.target.value)}
+          placeholder="Ex: +221 77 123 45 67"
+          className="mt-1.5 w-full rounded-xl border border-white/20 bg-white/10 px-3.5 py-2.5 text-[.88rem] text-white focus:border-[#FFC93C] focus:outline-none"
+        />
+      </div>
+
+      <div>
+        <label className="block text-[.72rem] font-bold uppercase text-[#FFC93C]">
+          🏢 Nom de Votre Agence
+        </label>
+        <input
+          type="text"
+          value={partnerAgency}
+          onChange={(e) => setPartnerAgency(e.target.value)}
+          placeholder="Ex: Alpha Digital Services"
+          className="mt-1.5 w-full rounded-xl border border-white/20 bg-white/10 px-3.5 py-2.5 text-[.88rem] text-white focus:border-[#FFC93C] focus:outline-none"
+        />
+      </div>
+
+      <div>
+        <label className="block text-[.72rem] font-bold uppercase text-[#FFC93C]">
+          📍 Ville & Pays
+        </label>
+        <input
+          type="text"
+          value={partnerCity}
+          onChange={(e) => setPartnerCity(e.target.value)}
+          placeholder="Ex: Dakar, Sénégal"
+          className="mt-1.5 w-full rounded-xl border border-white/20 bg-white/10 px-3.5 py-2.5 text-[.88rem] text-white focus:border-[#FFC93C] focus:outline-none"
+        />
+      </div>
+    </div>
+  );
+
   /** Ecran plein, meme fond, pour les trois cas ou le tableau n'a rien a montrer. */
   const ecranSimple = (titre: string, texte: string, lien?: { href: string; libelle: string }) => (
     <div className="grid min-h-screen place-items-center bg-[#070C18] px-4 text-center text-white">
@@ -269,6 +330,80 @@ export default function PartnerDashboardPage() {
       "Espace partenaire pas encore installe",
       "Les tables du programme n'ont pas encore ete creees sur cette base. La page des partenaires, elle, reste consultable.",
       { href: "/partenaires", libelle: "Voir la presentation" },
+    );
+  }
+
+  // ── Le peage ────────────────────────────────────────────────────────────
+  // Le studio d'affiches, les outils et les scripts sont ce qui se vend. Les
+  // montrer a tout compte connecte revenait a les donner : il suffisait de
+  // connaitre l'adresse. La candidature, elle, reste ouverte — sans porte
+  // d'entree, personne ne peut devenir partenaire.
+  if (!abonnementActif) {
+    const echu =
+      partenaire?.statut === "actif" && !!partenaire.expire_at;
+    const titre = !partenaire
+      ? "Rejoins le reseau des partenaires"
+      : partenaire.statut === "suspendu"
+        ? "Compte suspendu"
+        : echu
+          ? "Ton abonnement est arrive a terme"
+          : "Candidature enregistree";
+    const texte = !partenaire
+      ? "Renseigne ton agence pour postuler. L'acces au studio d'affiches, aux outils et aux scripts s'ouvre une fois ton abonnement active."
+      : partenaire.statut === "suspendu"
+        ? "Ton acces a ete suspendu. Contacte-nous pour en connaitre la raison et le retablir."
+        : echu
+          ? `Il a pris fin le ${new Date(partenaire.expire_at as string).toLocaleDateString("fr-FR")}. Renouvelle-le pour retrouver ton studio.`
+          : "Ta candidature est enregistree. Il reste a activer ton abonnement pour ouvrir le studio.";
+
+    return (
+      <div className="min-h-screen bg-[#070C18] text-white">
+        <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(at_15%_0%,rgba(99,102,241,0.22)_0,transparent_45%),radial-gradient(at_85%_100%,rgba(245,201,60,0.15)_0,transparent_45%)]" />
+        <header className="sticky top-0 z-40 border-b border-white/10 bg-[#070C18]/90 backdrop-blur-md">
+          <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3.5">
+            <Link href="/partenaires"><LogoDark className="h-8" /></Link>
+            <Link href="/partenaires" className="text-[.78rem] text-white/70 transition hover:text-white">
+              ← Presentation &amp; plans
+            </Link>
+          </div>
+        </header>
+
+        <main className="relative mx-auto max-w-3xl px-4 py-10">
+          <h1 className="font-display text-[1.7rem] font-black sm:text-[2.1rem]">{titre}</h1>
+          <p className="mt-2 text-[.9rem] leading-relaxed text-white/70">{texte}</p>
+
+          {partenaire && (
+            <p className="mt-4 inline-block rounded-xl border border-white/15 bg-white/5 px-3.5 py-2 text-[.8rem]">
+              Ton code de parrainage : <b className="text-[#FFC93C]">{partenaire.code}</b>
+            </p>
+          )}
+
+          <div className="mt-6 rounded-2xl border border-[#FFC93C]/40 bg-black/40 p-6 backdrop-blur">
+            <h2 className="font-display text-[1.05rem] font-bold">Tes coordonnees</h2>
+            <p className="mt-0.5 text-[.76rem] text-white/60">
+              Elles s&apos;imprimeront sur tes affiches. Seul le nom de l&apos;agence est obligatoire.
+            </p>
+            {champsCoordonnees}
+            <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
+              <button
+                onClick={enregistrer}
+                disabled={enregistrement}
+                className="rounded-xl bg-gradient-to-r from-[#FFC93C] to-[#F5A623] px-5 py-2.5 text-[.84rem] font-black text-[#0B1120] shadow-lg transition hover:scale-105 disabled:opacity-50"
+              >
+                {enregistrement ? "Enregistrement…" : partenaire ? "Mettre a jour" : "Rejoindre le programme"}
+              </button>
+              {message && (
+                <p role="status" aria-live="polite" className="text-[.8rem] text-white/75">{message}</p>
+              )}
+            </div>
+          </div>
+
+          <p className="mt-6 text-[.82rem] leading-relaxed text-white/60">
+            Pour activer ou renouveler ton abonnement, contacte-nous — l&apos;encaissement se fait
+            par Wave, Orange Money ou en especes, et ton acces s&apos;ouvre des reception.
+          </p>
+        </main>
+      </div>
     );
   }
 
@@ -390,46 +525,7 @@ export default function PartnerDashboardPage() {
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                <div>
-                  <label className="block text-[.72rem] font-bold uppercase text-[#FFC93C]">
-                    📞 Votre Numéro WhatsApp & Appel
-                  </label>
-                  <input
-                    type="text"
-                    value={partnerPhone}
-                    onChange={(e) => setPartnerPhone(e.target.value)}
-                    placeholder="Ex: +221 77 123 45 67"
-                    className="mt-1.5 w-full rounded-xl border border-white/20 bg-white/10 px-3.5 py-2.5 text-[.88rem] text-white focus:border-[#FFC93C] focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[.72rem] font-bold uppercase text-[#FFC93C]">
-                    🏢 Nom de Votre Agence
-                  </label>
-                  <input
-                    type="text"
-                    value={partnerAgency}
-                    onChange={(e) => setPartnerAgency(e.target.value)}
-                    placeholder="Ex: Alpha Digital Services"
-                    className="mt-1.5 w-full rounded-xl border border-white/20 bg-white/10 px-3.5 py-2.5 text-[.88rem] text-white focus:border-[#FFC93C] focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[.72rem] font-bold uppercase text-[#FFC93C]">
-                    📍 Ville & Pays
-                  </label>
-                  <input
-                    type="text"
-                    value={partnerCity}
-                    onChange={(e) => setPartnerCity(e.target.value)}
-                    placeholder="Ex: Dakar, Sénégal"
-                    className="mt-1.5 w-full rounded-xl border border-white/20 bg-white/10 px-3.5 py-2.5 text-[.88rem] text-white focus:border-[#FFC93C] focus:outline-none"
-                  />
-                </div>
-              </div>
+              {champsCoordonnees}
 
               {/* Sans cet enregistrement, tout etait a retaper a chaque visite
                   — et un partenaire qui retape ses coordonnees chaque matin
