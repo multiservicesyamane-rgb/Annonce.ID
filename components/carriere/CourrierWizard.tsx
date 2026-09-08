@@ -6,10 +6,11 @@ import LettreSheet from "./LettreSheet";
 import { useDoc } from "./useDoc";
 import A4Preview from "@/components/pro/A4Preview";
 import {
-  ActionBar, AiBtn, Area, AsideCard, Field, Note, OutlineBtn, PrimaryBtn,
+  ActionBar, AiBtn, Area, AsideCard, BarreOutils, Field, Note, OutilBtn,
+  OutlineBtn, PanneauOutil, PrimaryBtn, ZOOMS,
   Split, Steps, Title, api, card, input, lbl, pageWide,
 } from "./ui";
-import { resumeDossier } from "@/lib/carriere";
+import { LETTRE_TEMPLATES, resumeDossier } from "@/lib/carriere";
 import type { CVContent, DemandeContent, Genre, LettreContent } from "@/lib/carriere";
 import { demarcheParId, destinataireDe, enTeteDe, objetDe, type Demarche } from "@/lib/demarches";
 
@@ -30,6 +31,11 @@ import { demarcheParId, destinataireDe, enTeteDe, objetDe, type Demarche } from 
 
 const ETAPES = ["Informations", "Courrier", "Apercu"];
 
+/** Miniature d un gabarit : seule la largeur est un choix, le reste suit. */
+const VIGNETTE_W = 92;
+const VIGNETTE_SCALE = VIGNETTE_W / 794;
+const VIGNETTE_H = Math.round(1123 * VIGNETTE_SCALE);
+
 export default function CourrierWizard({
   kind,
   docId,
@@ -47,8 +53,14 @@ export default function CourrierWizard({
   toast: (m: string) => void;
 }) {
   const doc = useDoc(kind, docId, prefill);
+  /** Panneau « Modele » deplie sous la barre de l apercu. */
+  const [panneauModele, setPanneauModele] = useState(false);
+  /** Zoom de l apercu final. Index dans ZOOMS ; 1 = page entiere. */
+  const [iZoomCourrier, setIZoomCourrier] = useState(1);
   const c = doc.content as LettreContent & DemandeContent;
-  const [etape, setEtape] = useState(0);
+  // Meme regle que pour les CV : un courrier deja ecrit s ouvre sur sa page,
+  // pas sur le questionnaire.
+  const [etape, setEtape] = useState(docId ? ETAPES.length - 1 : 0);
   const [genre, setGenre] = useState<Genre>("?");
   const [busy, setBusy] = useState(false);
 
@@ -170,11 +182,93 @@ export default function CourrierWizard({
 
   if (doc.chargement) return <p className="py-20 text-center text-gray-400">Chargement…</p>;
 
+  /* ------------------------- Le choix du modele -------------------------
+     Defini une seule fois : l'apercu lateral et l'apercu final montrent la
+     meme barre. Les gabarits de courrier ont leurs propres identifiants
+     (« l_… ») — un gabarit de CV enregistre par erreur retomberait sur le
+     classique plutot que sur une page blanche. */
+
+  const outilsCourrier = (compact: boolean) => (
+    <OutilBtn
+      icone="▦"
+      compact={compact}
+      actif={panneauModele}
+      onClick={() => setPanneauModele((v) => !v)}
+    >
+      Modele
+    </OutilBtn>
+  );
+
+  const panneauCourrier = panneauModele ? (
+    <PanneauOutil titre="Modele" sur={LETTRE_TEMPLATES.find((t) => t.id === doc.template)?.name}>
+      {/* Bande horizontale de vraies miniatures : « Colonne » ou « Initiale »
+          ne disent rien de ce qu'on choisit, l'image le montre. */}
+      <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-2">
+        {LETTRE_TEMPLATES.map((t) => {
+          const choisi = doc.template === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => doc.setTemplate(t.id as never)}
+              aria-pressed={choisi}
+              className={
+                "shrink-0 rounded-xl border-2 bg-white p-1.5 transition dark:bg-dark-900 " +
+                (choisi
+                  ? "border-green shadow-[0_8px_22px_-12px_rgba(99,102,241,.7)]"
+                  : "border-gray-200 hover:border-green/50 dark:border-white/10")
+              }
+            >
+              <span
+                className="block overflow-hidden rounded-md ring-1 ring-black/5"
+                style={{ width: VIGNETTE_W, height: VIGNETTE_H }}
+              >
+                <span
+                  className="block origin-top-left"
+                  style={{ transform: `scale(${VIGNETTE_SCALE})`, width: 794, height: 1123 }}
+                  aria-hidden="true"
+                >
+                  <span className="block" style={{ padding: 53 }}>
+                    <LettreSheet
+                      from={c.from}
+                      to={destinataire}
+                      objet={objet}
+                      corps={c.body}
+                      template={t.id}
+                    />
+                  </span>
+                </span>
+              </span>
+              <span
+                className={
+                  "mt-1.5 block truncate text-center text-[.72rem] font-bold " +
+                  (choisi ? "text-green" : "text-gray-600 dark:text-gray-300")
+                }
+                style={{ width: VIGNETTE_W }}
+              >
+                {t.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </PanneauOutil>
+  ) : null;
+
   const apercuLateral = (
     <AsideCard titre="Apercu du courrier">
-      <A4Preview>
-        <LettreSheet from={c.from} to={destinataire} objet={objet} corps={c.body} />
-      </A4Preview>
+      <BarreOutils
+        compact
+        outils={outilsCourrier(true)}
+        panneau={panneauCourrier}
+        onFermer={() => setPanneauModele(false)}
+        iZoom={iZoomCourrier}
+        setIZoom={setIZoomCourrier}
+      >
+        <A4Preview zoom={ZOOMS[iZoomCourrier]}>
+          <LettreSheet from={c.from} to={destinataire} objet={objet} corps={c.body} template={doc.template} />
+        </A4Preview>
+      </BarreOutils>
     </AsideCard>
   );
 
@@ -393,7 +487,7 @@ export default function CourrierWizard({
               </div>
             }
           >
-            <LettreSheet from={c.from} to={destinataire} objet={objet} corps={c.body} />
+            <LettreSheet from={c.from} to={destinataire} objet={objet} corps={c.body} template={doc.template} />
           </ExportA4>
 
           {/* Au telephone seulement : sur grand ecran le rappel est dans le

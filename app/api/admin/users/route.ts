@@ -6,6 +6,7 @@ import { configuredPlatforms } from "@/lib/social";
 import { publishPendingAnnonces, publishDueScheduled, publishOneListing } from "@/lib/campaign-engine";
 import { qualifyProspects } from "@/lib/prospects";
 import { sendProspectEmail, optOutProspect, emailsSentToday, dailyCap } from "@/lib/prospect-email";
+import { audience, configGA } from "@/lib/googleAnalytics";
 
 export const dynamic = "force-dynamic";
 // Laisse le temps aux appels Gemini (qualification prospects, campagne).
@@ -314,6 +315,28 @@ export async function POST(req: Request) {
           // personnelles, et superviser l'usage n'exige pas de les lire.
           .map((r: any) => ({ ...r, auteur: nomDe(r.user_id) })),
       });
+    }
+
+    /**
+     * Audience du site — visites, pages, sources, pays.
+     *
+     * Lue chez Google, jamais mesuree deux fois : compter nous-memes en
+     * parallele donnerait deux chiffres differents pour la meme journee, et
+     * on ne saurait jamais lequel croire.
+     */
+    if (action === "analytics_overview") {
+      if (!configGA()) {
+        return NextResponse.json({ nonConfigure: true });
+      }
+      try {
+        const jours = [7, 30, 90].includes(Number(body?.jours)) ? Number(body.jours) : 30;
+        return NextResponse.json(await audience(jours));
+      } catch (e: any) {
+        // Le message de Google est explicite (droits manquants, propriete
+        // inconnue) : on le remonte tel quel plutot qu'un « erreur serveur »
+        // qui laisserait chercher pendant une heure.
+        return NextResponse.json({ error: e?.message || "Lecture impossible." }, { status: 502 });
+      }
     }
 
     if (action === "dashboard") {

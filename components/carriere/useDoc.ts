@@ -8,7 +8,6 @@ import {
   titreParDefaut,
   type CareerContent,
   type CareerKind,
-  type TemplateId,
 } from "@/lib/carriere";
 
 /**
@@ -33,7 +32,10 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
   const [content, setContent] = useState<CareerContent>(
     () => ({ ...contenuVide(kind), ...(docId ? {} : prerempli) }) as CareerContent,
   );
-  const [template, setTemplate] = useState<TemplateId>(DEFAULT_TEMPLATE);
+  //  et non  : les courriers ont leurs propres gabarits
+  // (« l_… »), et la validation fait autorite cote serveur. Figer le type sur
+  // les CV interdisait a une lettre de choisir sa mise en page.
+  const [template, setTemplate] = useState<string>(DEFAULT_TEMPLATE);
   const [chargement, setChargement] = useState(!!docId);
   const [etat, setEtat] = useState<"repos" | "enregistrement" | "enregistre" | "erreur">("repos");
 
@@ -54,7 +56,7 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
         const d = await api("documents", { action: "get", id: docId });
         if (!vivant) return;
         setContent(d.document.content || contenuVide(kind));
-        setTemplate((d.document.template as TemplateId) || DEFAULT_TEMPLATE);
+        setTemplate(d.document.template || DEFAULT_TEMPLATE);
         setId(d.document.id);
       } catch {
         // Document introuvable ou supprime : on repart d'un document vierge
@@ -74,7 +76,7 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
 
   /* --------------------------- Enregistrement --------------------------- */
   const enregistrer = useCallback(
-    async (c: CareerContent, t: TemplateId) => {
+    async (c: CareerContent, t: string) => {
       setEtat("enregistrement");
       try {
         if (id) {

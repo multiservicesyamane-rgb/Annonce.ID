@@ -57,6 +57,18 @@ export const CV_TEMPLATES = [
   { id: "nuit", name: "Nuit", pro: true },
   { id: "neon", name: "Neon", pro: true },
   { id: "cyber", name: "Cyber", pro: true },
+  // Seconde serie. Trois gratuits pour elargir le choix d'entree, sept
+  // reserves : le gratuit doit rester utilisable, pas complet.
+  { id: "miroir", name: "Miroir", pro: false },
+  { id: "portrait", name: "Portrait", pro: false },
+  { id: "bicolore", name: "Bicolore", pro: false },
+  { id: "ligne", name: "Ligne", pro: true },
+  { id: "numerote", name: "Numerote", pro: true },
+  { id: "carte", name: "Carte", pro: true },
+  { id: "journal", name: "Journal", pro: true },
+  { id: "signature", name: "Signature", pro: true },
+  { id: "arche", name: "Arche", pro: true },
+  { id: "grille", name: "Grille", pro: true },
 ] as const;
 
 export type TemplateId = (typeof CV_TEMPLATES)[number]["id"];
@@ -67,10 +79,73 @@ export function isTemplateId(v: unknown): v is TemplateId {
   return CV_TEMPLATES.some((t) => t.id === v);
 }
 
+/**
+ * Identifiant de gabarit de CV sur, garanti valide.
+ *
+ * Un « l_… » de courrier enregistre par erreur sur un CV, ou un identifiant
+ * disparu d'une version a l'autre, retombe sur Moderne plutot que de laisser
+ * un ecran blanc.
+ */
+export function templateCV(v: unknown): TemplateId {
+  return isTemplateId(v) ? v : DEFAULT_TEMPLATE;
+}
+
 /** Un gabarit reserve aux abonnes ? Sert cote serveur autant qu'a l'ecran. */
 export function templateIsPro(id: string): boolean {
   return CV_TEMPLATES.find((t) => t.id === id)?.pro === true;
 }
+
+/* ====================== Les gabarits de courrier ======================
+ *
+ * Lettres de motivation et courriers de demarche partagent les memes dix
+ * mises en page : ce sont deux usages du meme objet — un courrier formel a
+ * en-tete, avec objet, corps et signature.
+ *
+ * Volontairement SOBRES, toutes. Un CV peut se permettre un aplat de couleur,
+ * pas une lettre adressee a une administration ou a un recruteur : la lettre
+ * se juge sur la tenue, jamais sur le graphisme. Ce qui change d'un gabarit a
+ * l'autre, c'est la structure de l'en-tete et le rythme typographique, pas la
+ * quantite de couleur.
+ */
+export const LETTRE_TEMPLATES = [
+  { id: "l_classique", name: "Classique", pro: false },
+  { id: "l_moderne", name: "Moderne", pro: false },
+  { id: "l_filet", name: "Filet", pro: false },
+  { id: "l_sobre", name: "Sobre", pro: false },
+  { id: "l_centre", name: "Centre", pro: false },
+  { id: "l_bandeau", name: "Bandeau", pro: true },
+  { id: "l_colonne", name: "Colonne", pro: true },
+  { id: "l_encadre", name: "Encadre", pro: true },
+  { id: "l_initiale", name: "Initiale", pro: true },
+  { id: "l_contemporain", name: "Contemporain", pro: true },
+] as const;
+
+export type LettreTemplateId = (typeof LETTRE_TEMPLATES)[number]["id"];
+
+export const DEFAULT_LETTRE_TEMPLATE: LettreTemplateId = "l_classique";
+
+export function isLettreTemplateId(v: unknown): v is LettreTemplateId {
+  return LETTRE_TEMPLATES.some((t) => t.id === v);
+}
+
+/** Un gabarit de courrier reserve aux abonnes ? */
+export function lettreTemplateIsPro(id: string): boolean {
+  return LETTRE_TEMPLATES.find((t) => t.id === id)?.pro === true;
+}
+
+/** Teinte d'encre de chaque gabarit. Toutes sombres : une lettre s'imprime. */
+export const LETTRE_ACCENT: Record<LettreTemplateId, string> = {
+  l_classique: "#1F2937",
+  l_moderne: "#2B4C8C",
+  l_filet: "#0F766E",
+  l_sobre: "#111827",
+  l_centre: "#7F1D1D",
+  l_bandeau: "#2B4C8C",
+  l_colonne: "#14532D",
+  l_encadre: "#7F1D1D",
+  l_initiale: "#B45309",
+  l_contemporain: "#0F172A",
+};
 
 /* ============================ Les couleurs ============================ */
 
@@ -112,6 +187,16 @@ export const TEMPLATE_ACCENT: Record<TemplateId, string> = {
   // valeurs ne servent que de repli, la feuille ne les peint pas telles quelles.
   neon: "#22D3EE",
   cyber: "#A855F7",
+  miroir: "#2B4C8C",
+  portrait: "#0F172A",
+  bicolore: "#0F766E",
+  ligne: "#111827",
+  numerote: "#7F1D1D",
+  carte: "#2B4C8C",
+  journal: "#111827",
+  signature: "#14532D",
+  arche: "#B45309",
+  grille: "#1F2937",
 };
 
 /* ============================ Les polices ============================ */

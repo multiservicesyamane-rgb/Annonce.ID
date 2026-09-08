@@ -11,6 +11,7 @@ const GRADS = ["bg-g1", "bg-g2", "bg-g3", "bg-g4", "bg-g5", "bg-g6", "bg-g7", "b
 
 const NAV: { id: string; icon: string; label: string; section?: string; badge?: number }[] = [
   { id: "overview", icon: "📊", label: "Vue d'ensemble", section: "Tableau de bord" },
+  { id: "audience", icon: "📈", label: "Audience du site" },
   { id: "crm", icon: "🎯", label: "CRM Prospects" },
   { id: "marketing", icon: "📢", label: "Centre Marketing" },
   { id: "campagne_ia", icon: "🚀", label: "Campagne IA 2025" },
@@ -440,6 +441,7 @@ export default function SuperAdminApp() {
             {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
             {page === "pro" && <EspacePro T={T} />}
             {page === "carriere" && <MaCarriere T={T} />}
+            {page === "audience" && <Audience T={T} />}
             {page === "import" && <ImportProduits T={T} reload={loadAllData} profiles={profiles} />}
             {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
             {page === "encaissement" && <Encaissement profiles={profiles} allListings={allListings} T={T} reload={loadAllData} />}
@@ -3131,6 +3133,206 @@ function EspacePro({ T }: { T: (m: string) => void }) {
 }
 
 /** Une repartition par statut, en barres — plus lisible qu'une liste de nombres. */
+/* ====================== Audience du site ====================== */
+
+/** « 2026-09-08 » → « 08/09 ». Les jours se lisent en abrege sur un graphe. */
+function jourCourt(iso: string) {
+  const [, m, d] = iso.split("-");
+  return d && m ? `${d}/${m}` : iso;
+}
+
+/** Secondes → « 2 min 14 s ». Une duree en secondes brutes ne se lit pas. */
+function duree(s: number) {
+  const m = Math.floor(s / 60);
+  return m > 0 ? `${m} min ${s % 60} s` : `${s} s`;
+}
+
+/**
+ * Audience — les chiffres de Google Analytics, dans le back-office.
+ *
+ * Lus chez Google, jamais mesures une seconde fois : compter en parallele
+ * donnerait deux chiffres differents pour la meme journee, et on ne saurait
+ * jamais lequel croire.
+ */
+function Audience({ T }: { T: (m: string) => void }) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [jours, setJours] = useState(30);
+
+  const charger = async (n = jours) => {
+    setLoading(true);
+    try {
+      setData(await adminApi("analytics_overview", { jours: n }));
+    } catch (e: any) {
+      T(e?.message || "Lecture de l'audience impossible.");
+      setData(null);
+    }
+    setLoading(false);
+  };
+  useEffect(() => { charger(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  if (loading) {
+    return (
+      <>
+        <PageHead title="📈 Audience" sub="Lecture chez Google Analytics…" />
+        <Card><div className="py-10 text-center text-[.85rem] text-[#8B949E]">Chargement…</div></Card>
+      </>
+    );
+  }
+
+  if (data?.nonConfigure) {
+    return (
+      <>
+        <PageHead title="📈 Audience" />
+        <Card>
+          <div className="py-8 text-center text-[.85rem] leading-relaxed text-amber-300">
+            La lecture des chiffres n&apos;est pas encore branchee.<br />
+            Il faut un <b>compte de service Google</b> autorise sur la propriete, puis les variables
+            <b> GA_PROPERTY_ID</b>, <b>GA_SA_EMAIL</b> et <b>GA_SA_KEY</b> cote serveur.
+            <div className="mt-3 text-[.8rem] text-[#8B949E]">
+              La balise de mesure, elle, fonctionne deja : les chiffres s&apos;accumulent chez
+              Google en attendant.
+            </div>
+          </div>
+        </Card>
+      </>
+    );
+  }
+
+  if (!data) {
+    return (
+      <>
+        <PageHead title="📈 Audience" />
+        <Card><div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucune donnee. <button onClick={() => charger()} className={btnG}>Reessayer</button></div></Card>
+      </>
+    );
+  }
+
+  const t = data.totaux || {};
+  const serie: any[] = data.par_jour || [];
+  const maxJour = Math.max(1, ...serie.map((j) => j.visiteurs));
+
+  return (
+    <>
+      <PageHead
+        title="📈 Audience"
+        sub={`${t.visiteurs || 0} visiteurs sur ${data.periode} jours · ${t.en_ligne || 0} en ligne maintenant`}
+      >
+        {[7, 30, 90].map((n) => (
+          <button
+            key={n}
+            onClick={() => { setJours(n); charger(n); }}
+            className={`rounded-[9px] px-3 py-2 text-[.78rem] font-bold ${jours === n ? "bg-g1 text-white" : "border border-[#30363D] bg-[#21262D] text-[#8B949E] hover:text-white"}`}
+          >
+            {n} j
+          </button>
+        ))}
+        <button onClick={() => charger()} className={btnG}>↻</button>
+      </PageHead>
+
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="👥" label="Visiteurs" value={t.visiteurs || 0} trend={`${t.en_ligne || 0} en ligne`} />
+        <Kpi grad="bg-g4" icon="🚪" label="Sessions (entrees)" value={t.sessions || 0} trend={`sur ${data.periode} jours`} />
+        <Kpi grad="bg-g2" icon="📄" label="Pages vues" value={t.pages_vues || 0} trend="clics de navigation" />
+        <Kpi grad="bg-g5" icon="⏱️" label="Duree moyenne" value={t.duree_moyenne || 0} suffix=" s" trend={duree(t.duree_moyenne || 0)} />
+      </div>
+
+      <Card title="Visiteurs par jour" sub={`${data.periode} derniers jours`}>
+        {serie.length === 0 ? (
+          <div className="py-8 text-center text-[.82rem] text-[#8B949E]">
+            Pas encore de donnees. Les rapports mettent 24 a 48 h a se remplir.
+          </div>
+        ) : (
+          <div className="overflow-x-auto pb-1">
+            {/* Barres CSS : une seule serie, donc aucune legende a lire — le
+                titre nomme la mesure. Chaque barre porte son chiffre en
+                infobulle plutot qu'une etiquette sur chaque jour. */}
+            <div className="flex h-[150px] min-w-[420px] items-end gap-[3px]">
+              {serie.map((j) => (
+                <div key={j.date} className="group flex h-full flex-1 flex-col justify-end gap-1" title={`${jourCourt(j.date)} — ${j.visiteurs} visiteurs, ${j.pages} pages`}>
+                  <div
+                    className="w-full rounded-t bg-[#3987e5] transition-colors group-hover:bg-[#5aa3f0]"
+                    style={{ height: `${j.visiteurs > 0 ? Math.max(3, (j.visiteurs / maxJour) * 100) : 0}%` }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 flex justify-between text-[.66rem] text-[#484F58]">
+              <span>{serie[0] && jourCourt(serie[0].date)}</span>
+              <span>Plus haut : {maxJour} visiteurs</span>
+              <span>{serie[serie.length - 1] && jourCourt(serie[serie.length - 1].date)}</span>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <Card title="D'ou viennent les visiteurs" sub="Canal d'acquisition">
+          {(data.sources || []).length === 0 ? (
+            <div className="py-6 text-center text-[.82rem] text-[#8B949E]">Rien pour l&apos;instant.</div>
+          ) : (
+            <Tbl head={["Canal", "Sessions", "Visiteurs"]}>
+              {data.sources.map((s: any) => (
+                <tr key={s.canal} className="hover:bg-white/[.02]">
+                  <Td bold>{s.canal}</Td>
+                  <Td>{s.sessions}</Td>
+                  <Td>{s.visiteurs}</Td>
+                </tr>
+              ))}
+            </Tbl>
+          )}
+        </Card>
+
+        <Card title="Pages les plus vues">
+          {(data.pages || []).length === 0 ? (
+            <div className="py-6 text-center text-[.82rem] text-[#8B949E]">Rien pour l&apos;instant.</div>
+          ) : (
+            <Tbl head={["Page", "Vues", "Visiteurs"]}>
+              {data.pages.map((p: any) => (
+                <tr key={p.chemin} className="hover:bg-white/[.02]">
+                  <Td bold>{p.chemin}</Td>
+                  <Td>{p.vues}</Td>
+                  <Td>{p.visiteurs}</Td>
+                </tr>
+              ))}
+            </Tbl>
+          )}
+        </Card>
+
+        <Card title="Pays">
+          {(data.pays || []).length === 0 ? (
+            <div className="py-6 text-center text-[.82rem] text-[#8B949E]">Rien pour l&apos;instant.</div>
+          ) : (
+            <Tbl head={["Pays", "Visiteurs"]}>
+              {data.pays.map((p: any) => (
+                <tr key={p.pays} className="hover:bg-white/[.02]">
+                  <Td bold>{p.pays}</Td>
+                  <Td>{p.visiteurs}</Td>
+                </tr>
+              ))}
+            </Tbl>
+          )}
+        </Card>
+
+        <Card title="Appareils" sub="Ce qui confirme ou non le choix « telephone d'abord »">
+          {(data.appareils || []).length === 0 ? (
+            <div className="py-6 text-center text-[.82rem] text-[#8B949E]">Rien pour l&apos;instant.</div>
+          ) : (
+            <Tbl head={["Type", "Visiteurs"]}>
+              {data.appareils.map((a: any) => (
+                <tr key={a.type} className="hover:bg-white/[.02]">
+                  <Td bold>{a.type}</Td>
+                  <Td>{a.visiteurs}</Td>
+                </tr>
+              ))}
+            </Tbl>
+          )}
+        </Card>
+      </div>
+    </>
+  );
+}
+
 /* ====================== Ma Carriere ====================== */
 
 const CARRIERE_KINDS: Record<string, string> = {

@@ -3,7 +3,15 @@ import { proContext, txt, isMissingTable } from "@/lib/proServer";
 import { messageFerme, peutAcceder } from "@/lib/moduleAccess";
 import { etatQuota, isCareerKind, nettoyerContenu } from "@/lib/carriereServer";
 import { moteursDisponibles } from "@/lib/ia";
-import { DEFAULT_TEMPLATE, isTemplateId, templateIsPro, titreParDefaut } from "@/lib/carriere";
+import {
+  DEFAULT_LETTRE_TEMPLATE,
+  DEFAULT_TEMPLATE,
+  isLettreTemplateId,
+  isTemplateId,
+  lettreTemplateIsPro,
+  templateIsPro,
+  titreParDefaut,
+} from "@/lib/carriere";
 
 export const dynamic = "force-dynamic";
 
@@ -221,6 +229,16 @@ async function templateAutorise(
   demande: unknown,
 ): Promise<string> {
   const id = txt(demande, 40);
+
+  // Gabarits de COURRIER : leur propre liste, leur propre repli. Un identifiant
+  // « l_… » valide ne doit pas retomber sur un gabarit de CV — la lettre
+  // sortirait dans une mise en page qui n'est pas la sienne.
+  if (isLettreTemplateId(id)) {
+    if (!lettreTemplateIsPro(id)) return id;
+    const q = await etatQuota(sb, userId, email);
+    return q.abonne ? id : DEFAULT_LETTRE_TEMPLATE;
+  }
+
   if (!isTemplateId(id)) return DEFAULT_TEMPLATE;
   if (!templateIsPro(id)) return id;
 

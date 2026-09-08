@@ -44,3 +44,25 @@ scripts/prospects-*.csv
 
 # journal des campagnes email (contient des adresses de prospects)
 scripts/journal-campagnes.json
+
+# Références de design (dossier de travail, jamais déployé)
+#
+# Tout ce qui vit dans public/ est SERVI PUBLIQUEMENT sur le domaine. Ce
+# dossier contient des CV personnels — accessibles par simple devinette
+# d'URL — et des aperçus de gabarits commerciaux (Canva, PSD) qui ne nous
+# appartiennent pas. Les regarder pour s'inspirer est normal, les héberger
+# sur wanteermako.com ne l'est pas.
+public/design/
+
+# Captures d'écran de travail
+#
+# Même raison que public/design : tout ce qui vit dans public/ est SERVI
+# PUBLIQUEMENT. Ces captures montrent des écrans d'administration, des
+# conversations et des données de test — vérifiées comme utilisées nulle part
+# dans le code. Elles restent sur le disque, elles ne partent pas en ligne.
+public/Screenshot_*
+public/*.PNG
+public/wanteermako_cv_editor_*.png
+public/wanteermako_editeur_*.png
+public/wanteermako_ia_*.png
+public/wanteermako_ma_carriere_*.png

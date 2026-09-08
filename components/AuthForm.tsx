@@ -24,6 +24,23 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
   const [signupsOpen, setSignupsOpen] = useState(true);
   const [supabase] = useState(() => createClient());
 
+  /**
+   * Connexion par code a usage unique.
+   *
+   * ── Pourquoi elle existe ─────────────────────────────────────────────
+   * Le mot de passe seul ne prouve RIEN sur l'adresse : un compte peut vivre
+   * avec une adresse qui n'existe pas. Le code, lui, ne peut etre lu que par
+   * quelqu'un qui releve reellement cette boite. C'est la seule preuve de
+   * possession qu'on puisse obtenir.
+   *
+   * `shouldCreateUser: false` est le garde-fou : cette voie CONNECTE, elle ne
+   * cree jamais de compte. Sans lui, n'importe qui pourrait s'inscrire ici en
+   * contournant les regles de l'inscription.
+   */
+  const [parCode, setParCode] = useState(false);
+  const [codeEnvoye, setCodeEnvoye] = useState(false);
+  const [code, setCode] = useState("");
+
   const isSignup = mode === "signup";
   const isBusy = loading || oauthLoading || resetting;
   const signupBlocked = isSignup && !signupsOpen;
@@ -170,6 +187,57 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
         if (error) throw error;
         window.location.href = getRedirect();
       }
+    } catch (error) {
+      setNotice({ tone: "error", text: authErrorMessage(error) });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /** Envoie le code a six chiffres. */
+  async function envoyerCode() {
+    const adresse = email.trim().toLowerCase();
+    if (!adresse.includes("@")) {
+      setNotice({ tone: "error", text: "Entrez votre adresse email complète pour recevoir un code." });
+      return;
+    }
+    setLoading(true);
+    setNotice(null);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: adresse,
+        // Ne cree JAMAIS de compte : cette voie sert a se connecter.
+        options: { shouldCreateUser: false },
+      });
+      if (error) throw error;
+      setCodeEnvoye(true);
+      setNotice({
+        tone: "success",
+        text: "Code envoyé. Regardez votre boîte mail — pensez aux spams. Il expire dans une heure.",
+      });
+    } catch (error) {
+      setNotice({ tone: "error", text: authErrorMessage(error) });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /** Verifie le code saisi et ouvre la session. */
+  async function verifierCode() {
+    const saisi = code.replace(/\D/g, "");
+    if (saisi.length < 6) {
+      setNotice({ tone: "error", text: "Le code compte six chiffres." });
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email.trim().toLowerCase(),
+        token: saisi,
+        type: "email",
+      });
+      if (error) throw error;
+      window.location.href = getRedirect();
     } catch (error) {
       setNotice({ tone: "error", text: authErrorMessage(error) });
     } finally {
@@ -431,14 +499,91 @@ export default function AuthForm({ mode = "login" }: { mode?: "login" | "signup"
               )}
             </div>
 
+            {/* ---- Connexion par code à usage unique ----
+                Le mot de passe ne prouve rien sur l'adresse ; le code, si :
+                seul quelqu'un qui relève vraiment cette boîte peut le lire. */}
+            {!isSignup && (
+              <div className="rounded-[10px] border border-gray-200 p-3.5 dark:border-white/10">
+                {!parCode ? (
+                  <button
+                    type="button"
+                    onClick={() => { setParCode(true); setNotice(null); }}
+                    disabled={isBusy}
+                    className="text-[.82rem] font-bold text-green hover:underline disabled:opacity-50"
+                  >
+                    ✉ Recevoir plutôt un code par email
+                  </button>
+                ) : !codeEnvoye ? (
+                  <>
+                    <p className="mb-2 text-[.8rem] leading-relaxed text-gray-600 dark:text-gray-300">
+                      Nous envoyons un code à six chiffres à <b>{email.trim() || "votre adresse"}</b>.
+                      Aucun mot de passe nécessaire.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={envoyerCode}
+                        disabled={isBusy}
+                        className="btn btn-green min-h-[44px] flex-1 rounded-[10px] text-[.88rem] disabled:opacity-60"
+                      >
+                        {loading ? "Envoi…" : "Envoyer le code"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setParCode(false)}
+                        disabled={isBusy}
+                        className="min-h-[44px] rounded-[10px] border border-gray-200 px-4 text-[.85rem] font-bold text-gray-600 disabled:opacity-50 dark:border-white/15 dark:text-gray-300"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <label htmlFor="auth-code" className="label dark:text-gray-300">Code reçu</label>
+                    <input
+                      id="auth-code"
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      placeholder="123456"
+                      className="input min-h-[48px] text-center font-mono text-[1.3rem] tracking-[.3em] dark:bg-[#161B22]"
+                    />
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={verifierCode}
+                        disabled={isBusy || code.length < 6}
+                        className="btn btn-green min-h-[44px] flex-1 rounded-[10px] text-[.88rem] disabled:opacity-60"
+                      >
+                        {loading ? "Vérification…" : "Me connecter"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={envoyerCode}
+                        disabled={isBusy}
+                        className="min-h-[44px] rounded-[10px] border border-gray-200 px-4 text-[.85rem] font-bold text-gray-600 disabled:opacity-50 dark:border-white/15 dark:text-gray-300"
+                      >
+                        Renvoyer
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             {signupBlocked && (
               <div role="alert" className="rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-3 text-[.82rem] font-semibold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
                 Les inscriptions sont momentanément fermées. Revenez bientôt ou contactez-nous.
               </div>
             )}
 
+            {/* En mode code, se « connecter » par mot de passe n'a plus de sens :
+                le bouton disparaît plutôt que de proposer deux chemins. */}
             <button
               type="submit"
+              hidden={parCode}
               disabled={isBusy || signupBlocked}
               className="btn btn-green min-h-[48px] w-full rounded-[10px] text-[.95rem] disabled:cursor-wait disabled:opacity-60"
             >

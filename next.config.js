@@ -3,7 +3,11 @@
 // À resserrer plus tard (nonces) après vérification en navigateur.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  // Les hôtes Google sont nommés un par un, jamais un `https:` global : sans
+  // eux le navigateur BLOQUE silencieusement les scripts, et on cherche des
+  // chiffres qui n'arriveront jamais. C'était déjà le cas d'AdSense, qui ne
+  // pouvait pas se charger. On ouvre le strict nécessaire, rien de plus.
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://www.googletagmanager.com https://*.google-analytics.com https://adservice.google.com https://partner.googleadservices.com https://tpc.googlesyndication.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "media-src 'self' data: blob: https:",

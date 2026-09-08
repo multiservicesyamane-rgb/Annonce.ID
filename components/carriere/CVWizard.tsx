@@ -21,6 +21,7 @@ import {
   accentDe,
   newId,
   resumeDossier,
+  templateCV,
   templateIsPro,
   type CVContent,
   type Genre,
@@ -127,7 +128,11 @@ export default function CVWizard({
 }) {
   const doc = useDoc("cv", docId, prefill);
   const cv = doc.content as CVContent;
-  const [etape, setEtape] = useState(docId ? 1 : 0);
+  // Ouvrir un document deja cree montre LE DOCUMENT, pas la deuxieme etape
+  // de sa saisie : on clique « Ouvrir » pour le relire ou le telecharger,
+  // pas pour recommencer. « Modifier » de la barre d outils ramene au
+  // formulaire en un geste.
+  const [etape, setEtape] = useState(docId ? APERCU : 0);
   const [genre, setGenre] = useState<Genre>("?");
   const [ia, setIa] = useState<string | null>(null);
   /** Image choisie, en attente de recadrage. */
@@ -422,7 +427,7 @@ export default function CVWizard({
         setIZoom={setIZoomLateral}
       >
         <A4Preview zoom={ZOOMS[iZoomLateral]}>
-          <CVSheet cv={cv} template={doc.template} />
+          <CVSheet cv={cv} template={templateCV(doc.template)} />
         </A4Preview>
       </BarreOutils>
     </AsideCard>
@@ -978,7 +983,7 @@ export default function CVWizard({
               </div>
             }
           >
-            <CVSheet cv={cv} template={doc.template} />
+            <CVSheet cv={cv} template={templateCV(doc.template)} />
           </ExportA4>
 
           {/* Au telephone seulement : sur grand ecran, le rappel vit dans le
@@ -1045,13 +1050,20 @@ function Barre({
       >
         ‹
       </button>
+      {/* Visible a CHAQUE etape, y compris au telephone. Il etait masque sous
+          640 px — precisement la ou l'apercu lateral n'existe pas non plus :
+          on saisissait donc sept ecrans sans jamais voir son document. Au
+          telephone l'icone seule, le libelle des que la place le permet. */}
       {onApercu && (
         <button
           type="button"
           onClick={onApercu}
-          className="hidden h-[52px] shrink-0 items-center rounded-xl border-[1.5px] border-green px-4 text-[.9rem] font-bold text-green transition active:scale-95 sm:flex"
+          aria-label="Voir l'apercu"
+          title="Voir l'apercu"
+          className="flex h-[52px] shrink-0 items-center gap-2 rounded-xl border-[1.5px] border-green px-3.5 text-[.9rem] font-bold text-green transition active:scale-95 sm:px-4"
         >
-          Apercu
+          <span aria-hidden="true">👁</span>
+          <span className="hidden sm:inline">Apercu</span>
         </button>
       )}
       <PrimaryBtn onClick={onNext}>{suivant}</PrimaryBtn>
