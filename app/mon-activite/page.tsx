@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BRAND } from "@/lib/constants";
 import MonActivite, { type ProPanel } from "@/components/MonActivite";
 import BusinessProfile from "@/components/pro/BusinessProfile";
-import { MigrationNotice } from "@/components/pro/ui";
+import { MigrationNotice, apiGet } from "@/components/pro/ui";
 
 /**
  * Mon Activité — service à part entière, hors du tableau de bord Annonces.
@@ -63,6 +63,21 @@ export default function MonActivitePage() {
   const [screen, setScreen] = useState<Screen>("home");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | undefined>(undefined);
+
+  /**
+   * Les chiffres affiches sous les tuiles.
+   *
+   * ── Pourquoi l'accueil doit les porter ─────────────────────────────────
+   * Six carres colores identiques ne disent rien : il fallait entrer dans
+   * chaque ecran pour savoir s'il s'y passait quelque chose. Un artisan ouvre
+   * son activite entre deux chantiers — il doit voir en UNE seconde ce qui
+   * cloche, sans cliquer.
+   *
+   * `null` tant que la lecture n'a pas abouti : on n'ecrit aucun chiffre
+   * avant de le connaitre. Un « 0 » affiche par defaut se lirait comme une
+   * information, et ce serait faux.
+   */
+  const [chiffres, setChiffres] = useState<any>(null);
 
   const toast = (m: string) => {
     setToastMsg(m);
@@ -125,6 +140,66 @@ export default function MonActivitePage() {
     setFocusId(focus);
     setScreen(id as Screen);
   };
+
+  /** Montant court : 145 000 F, ou 1,2 M F au-dela du million. */
+  const fcfa = (n: unknown): string => {
+    const v = Number(n) || 0;
+    if (v >= 1_000_000) return `${(v / 1_000_000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} M F`;
+    return `${v.toLocaleString("fr-FR")} F`;
+  };
+
+  const enRetard = Number(chiffres?.invoices?.overdue) || 0;
+
+  /**
+   * Ce qu'on ecrit sous chaque tuile.
+   *
+   * Toujours l'information la plus ACTIONNABLE, pas un total flatteur : le
+   * nombre de factures impayees vaut mieux que le nombre de factures emises,
+   * parce que le premier appelle un geste et le second seulement de la
+   * fierte. Chaine vide tant que les chiffres ne sont pas la.
+   */
+  const sousTitre = (id: Screen): string => {
+    if (!chiffres) return "";
+    const c = chiffres;
+    switch (id) {
+      case "activity": {
+        const m = Number(c.revenue?.month) || 0;
+        return m > 0 ? `${fcfa(m)} ce mois` : "Rien ce mois-ci";
+      }
+      case "clients": {
+        const n = Number(c.clients?.total) || 0;
+        return n === 0 ? "Aucun client" : `${n} client${n > 1 ? "s" : ""}`;
+      }
+      case "quotes": {
+        const n = Number(c.quotes?.pending) || 0;
+        return n > 0 ? `${n} en attente` : "Aucun en attente";
+      }
+      case "invoices": {
+        const n = Number(c.invoices?.unpaid) || 0;
+        return n > 0 ? `${fcfa(c.invoices?.unpaidAmount)} à encaisser` : "Tout est encaissé";
+      }
+      case "projects": {
+        const n = Number(c.projects?.active) || 0;
+        return n > 0 ? `${n} en cours` : "Aucun en cours";
+      }
+      default:
+        return "";
+    }
+  };
+
+  // Lue une seule fois, a l'ouverture de l'espace. Les ecrans de detail
+  // rechargent leurs propres donnees ; inutile d'interroger le serveur a
+  // chaque aller-retour vers l'accueil.
+  useEffect(() => {
+    if (state !== "ready") return;
+    let vivant = true;
+    apiGet("dashboard").then(({ ok, data }) => {
+      if (vivant && ok && !data?.needsMigration) setChiffres(data);
+    });
+    return () => {
+      vivant = false;
+    };
+  }, [state]);
 
   return (
     // min-h-screen et non 100vh−64px : depuis que SiteShell traite
@@ -200,23 +275,60 @@ export default function MonActivitePage() {
         )}
 
         {state === "ready" && screen === "home" && (
-          <div className="mx-auto grid max-w-[720px] grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6">
-            {TILES.map((t) => (
+          <>
+            {/* Le bandeau d'alerte. Il n'apparait QUE s'il y a une raison :
+                une barre permanente qui annonce « tout va bien » devient un
+                decor qu'on ne lit plus, et le jour ou elle dit autre chose,
+                personne ne le remarque. */}
+            {enRetard > 0 && (
               <button
-                key={t.id}
                 type="button"
-                onClick={() => setScreen(t.id)}
-                className={`group relative flex aspect-square flex-col items-center justify-center gap-3 overflow-hidden rounded-[32px] bg-gradient-to-br transition-all duration-200 ease-out active:scale-[0.95] active:duration-75 hover:-translate-y-1 ${t.grad} ${t.glow}`}
+                onClick={() => setScreen("invoices")}
+                className="mx-auto mb-5 flex w-full max-w-[720px] items-center gap-3 rounded-2xl border border-brand-red/25 bg-brand-red/[0.06] px-4 py-3 text-left transition hover:border-brand-red/50"
               >
-                {/* Reflet glossy en coin — donne le petit relief "icône d'appli". */}
-                <span className="pointer-events-none absolute -right-5 -top-5 h-20 w-20 rounded-full bg-white/40 blur-2xl dark:bg-white/10" aria-hidden="true" />
-                <span className="grid h-[3.4rem] w-[3.4rem] place-items-center rounded-2xl bg-white/80 text-[1.9rem] shadow-sm backdrop-blur-sm transition-transform duration-200 group-hover:scale-105 dark:bg-white/10 sm:h-16 sm:w-16 sm:text-[2.2rem]">
-                  <span aria-hidden="true">{t.icon}</span>
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-red/10 text-[1.05rem]" aria-hidden="true">⚠️</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[.9rem] font-bold text-brand-red">
+                    {enRetard} facture{enRetard > 1 ? "s" : ""} en retard
+                  </span>
+                  <span className="block text-[.8rem] text-gray-600 dark:text-gray-400">
+                    {fcfa(chiffres?.invoices?.overdueAmount)} à relancer
+                  </span>
                 </span>
-                <span className={`relative text-[.95rem] font-extrabold sm:text-[1.05rem] ${t.accent}`}>{t.label}</span>
+                <span className="shrink-0 text-[.85rem] font-bold text-brand-red" aria-hidden="true">→</span>
               </button>
-            ))}
-          </div>
+            )}
+
+            <div className="mx-auto grid max-w-[720px] grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6">
+              {TILES.map((t) => {
+                const sous = sousTitre(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setScreen(t.id)}
+                    className={`group relative flex aspect-square flex-col items-center justify-center gap-2.5 overflow-hidden rounded-[32px] bg-gradient-to-br px-3 text-center transition-all duration-200 ease-out active:scale-[0.95] active:duration-75 hover:-translate-y-1 ${t.grad} ${t.glow}`}
+                  >
+                    {/* Reflet glossy en coin — donne le petit relief "icône d'appli". */}
+                    <span className="pointer-events-none absolute -right-5 -top-5 h-20 w-20 rounded-full bg-white/40 blur-2xl dark:bg-white/10" aria-hidden="true" />
+                    <span className="grid h-[3rem] w-[3rem] place-items-center rounded-2xl bg-white/80 text-[1.7rem] shadow-sm backdrop-blur-sm transition-transform duration-200 group-hover:scale-105 dark:bg-white/10 sm:h-[3.6rem] sm:w-[3.6rem] sm:text-[2rem]">
+                      <span aria-hidden="true">{t.icon}</span>
+                    </span>
+                    <span className="relative min-w-0">
+                      <span className={`block text-[.92rem] font-extrabold leading-tight sm:text-[1.02rem] ${t.accent}`}>
+                        {t.label}
+                      </span>
+                      {/* La hauteur est reservee meme sans chiffre : sinon les
+                          tuiles sautent quand les donnees arrivent. */}
+                      <span className="mt-1 block min-h-[1.05rem] text-[.74rem] font-semibold leading-tight text-gray-600/90 dark:text-gray-300/80 sm:text-[.78rem]">
+                        {sous}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {state === "ready" && screen !== "home" && screen !== "business" && (
