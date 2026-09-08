@@ -11,6 +11,9 @@ type Partenaire = {
   ville: string;
   telephone: string;
   points: number;
+  plan: string | null;
+  /** Jusqu'a quand l'abonnement court. Null tant qu'aucun n'a ete paye. */
+  expire_at: string | null;
 };
 
 /** Appel de /api/partenaires, avec le message d'erreur deja extrait. */
@@ -480,6 +483,20 @@ export default function PartnerDashboardPage() {
                   <h3 className="font-display text-[1.05rem] font-bold text-white">Tes points</h3>
                   <p className="mt-3 font-display text-[2.6rem] font-black leading-none text-[#10B981]">
                     {partenaire.points}
+                  </p>
+                  {/* L'echeance, dite au partenaire lui-meme : c'est lui qui
+                      doit savoir quand payer, pas seulement l'administration. */}
+                  <p className="mt-3 border-t border-white/10 pt-3 text-[.76rem] text-white/70">
+                    {partenaire.expire_at && new Date(partenaire.expire_at).getTime() > Date.now() ? (
+                      <>
+                        Abonnement <b className="text-white">{partenaire.plan || "actif"}</b> jusqu&apos;au{" "}
+                        <b className="text-white">
+                          {new Date(partenaire.expire_at).toLocaleDateString("fr-FR")}
+                        </b>
+                      </>
+                    ) : (
+                      "Aucun abonnement en cours. Contacte-nous par WhatsApp pour l'activer."
+                    )}
                   </p>
                   <p className="mt-2 text-[.76rem] leading-relaxed text-white/60">
                     {partenaire.points === 0

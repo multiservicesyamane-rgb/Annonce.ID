@@ -34,6 +34,16 @@ create table if not exists partenaires (
   agence      text not null default '',
   ville       text not null default '',
   telephone   text not null default '',
+  -- L'abonnement souscrit : 'starter' ou 'agence'. Vide tant qu'aucun n'a ete
+  -- paye. C'est lui qui decide du volume de documents ouvert chaque mois.
+  plan        text not null default '',
+  -- Jusqu'a quand l'abonnement court.
+  --
+  -- L'encaissement se fait a la main, par Wave ou en especes : sans echeance,
+  -- le statut « actif » vaudrait a vie et il faudrait compter sur la memoire
+  -- de l'administrateur pour couper. Un abonnement que personne ne pense a
+  -- arreter n'est pas un abonnement, c'est un cadeau.
+  expire_at   timestamptz,
   -- Points cumules : partages, filleuls inscrits, missions livrees.
   points      integer not null default 0,
   notes       text not null default '',
@@ -49,6 +59,12 @@ alter table partenaires add  constraint partenaires_statut_chk
   check (statut in ('candidat', 'actif', 'suspendu'));
 
 create index if not exists partenaires_statut_idx on partenaires (statut, created_at desc);
+
+-- Plans autorises. La chaine vide signifie « aucun abonnement souscrit » et
+-- doit rester acceptee : un candidat existe avant d'avoir paye.
+alter table partenaires drop constraint if exists partenaires_plan_chk;
+alter table partenaires add  constraint partenaires_plan_chk
+  check (plan in ('', 'starter', 'agence'));
 
 -- ------------------------------------------------------------
 -- 2) Les points

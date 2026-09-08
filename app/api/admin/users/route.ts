@@ -324,6 +324,103 @@ export async function POST(req: Request) {
      * parallele donnerait deux chiffres differents pour la meme journee, et
      * on ne saurait jamais lequel croire.
      */
+    /**
+     * Le programme partenaire, vu de l'administration.
+     *
+     * ── Pourquoi il fallait cet ecran ────────────────────────────────────
+     * Les abonnements partenaires s'encaissent A LA MAIN — Wave, especes,
+     * WhatsApp. Personne ne pouvait donc dire « celui-la a paye » : le statut
+     * existait en base, aucun ecran ne permettait de le changer. Les
+     * candidatures s'empilaient sans reponse, et le programme ne pouvait pas
+     * demarrer.
+     */
+    if (action === "partenaires_overview") {
+      const { data, error } = await sb
+        .from("partenaires")
+        .select("user_id, code, statut, plan, expire_at, agence, ville, telephone, points, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      // Migration pas passee : on le dit, plutot que d'afficher une liste vide
+      // qui laisserait croire que personne n'a postule.
+      if (error && /does not exist|schema cache/i.test(error.message || "")) {
+        return NextResponse.json({ needsMigration: true });
+      }
+      if (error) throw error;
+
+      const lignes = data || [];
+      const ids = lignes.map((r: any) => r.user_id).filter(Boolean);
+      const { data: profs } = ids.length
+        ? await sb.from("profiles").select("id, full_name, phone").in("id", ids)
+        : { data: [] as any[] };
+      const profById: Record<string, any> = Object.fromEntries((profs || []).map((p: any) => [p.id, p]));
+
+      const maintenant = Date.now();
+      const partenaires = lignes.map((r: any) => ({
+        ...r,
+        nom_compte: profById[r.user_id]?.full_name || null,
+        // Calcule ici et pas dans l'ecran : « actif » depend de l'echeance
+        // autant que du statut, et les deux endroits ne doivent pas pouvoir
+        // repondre differemment.
+        abonnement_en_cours:
+          r.statut === "actif" && !!r.expire_at && new Date(r.expire_at).getTime() > maintenant,
+      }));
+
+      return NextResponse.json({
+        partenaires,
+        compteurs: {
+          candidat: partenaires.filter((p: any) => p.statut === "candidat").length,
+          actif: partenaires.filter((p: any) => p.abonnement_en_cours).length,
+          expire: partenaires.filter((p: any) => p.statut === "actif" && !p.abonnement_en_cours).length,
+          suspendu: partenaires.filter((p: any) => p.statut === "suspendu").length,
+        },
+      });
+    }
+
+    /**
+     * Valide, prolonge ou ecarte un partenaire.
+     *
+     * L'echeance est posee ICI, au moment ou l'on constate le paiement : c'est
+     * la seule chose qui empeche un abonnement encaisse une fois de courir a
+     * vie. `jours` vaut 30 ou 365 selon ce qui a ete regle.
+     */
+    if (action === "setPartenaireStatut") {
+      const uid = String(body?.user_id || "");
+      const statut = String(body?.statut || "");
+      if (!uid) return NextResponse.json({ error: "Partenaire requis." }, { status: 400 });
+      if (!["candidat", "actif", "suspendu"].includes(statut)) {
+        return NextResponse.json({ error: "Statut invalide." }, { status: 400 });
+      }
+
+      const patch: Record<string, unknown> = { statut };
+
+      if (statut === "actif") {
+        const plan = String(body?.plan || "");
+        if (!["starter", "agence"].includes(plan)) {
+          return NextResponse.json({ error: "Choisissez le plan paye." }, { status: 400 });
+        }
+        const jours = Number(body?.jours);
+        if (!Number.isFinite(jours) || jours < 1 || jours > 400) {
+          return NextResponse.json({ error: "Duree invalide." }, { status: 400 });
+        }
+        // On prolonge a partir de l'echeance en cours quand elle n'est pas
+        // depassee : un partenaire qui renouvelle en avance ne doit pas perdre
+        // les jours qu'il a deja payes.
+        const { data: actuel } = await sb
+          .from("partenaires").select("expire_at").eq("user_id", uid).maybeSingle();
+        const socle = actuel?.expire_at ? new Date(actuel.expire_at).getTime() : 0;
+        const depart = socle > Date.now() ? socle : Date.now();
+        patch.plan = plan;
+        patch.expire_at = new Date(depart + jours * 86400000).toISOString();
+      }
+
+      const { data, error } = await sb
+        .from("partenaires").update(patch).eq("user_id", uid).select("*").maybeSingle();
+      if (error) throw error;
+      if (!data) return NextResponse.json({ error: "Partenaire introuvable." }, { status: 404 });
+      return NextResponse.json({ ok: true, partenaire: data });
+    }
+
     if (action === "analytics_overview") {
       if (!configGA()) {
         return NextResponse.json({ nonConfigure: true });

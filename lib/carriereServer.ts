@@ -10,6 +10,7 @@ import { getProSubscription } from "@/lib/proBilling";
 import { isOwner } from "@/lib/owners";
 import { txt } from "@/lib/proServer";
 import { compter as compterLedger, debutDuMoisUTC } from "@/lib/quotaLedger";
+import { etatPartenaire } from "@/lib/partenaires";
 import {
   CAREER_KINDS,
   PLAFOND_REDACTIONS,
@@ -124,6 +125,22 @@ export async function etatQuota(
       utilises: documents,
       quota: QUOTA_DOCUMENTS_PRO,
       autorise: true,
+      redactions,
+      peutModifier: true,
+    };
+  }
+
+  // Le programme partenaire passe AVANT l'abonnement Pro : un partenaire paie
+  // plus cher, et c'est precisement le volume de documents qu'il achete. Sans
+  // ce branchement, valider une candidature n'ouvrait rien — il butait sur le
+  // sixieme document du mois comme n'importe quel abonne Pro.
+  const partenaire = await etatPartenaire(sb, userId);
+  if (partenaire.actif) {
+    return {
+      abonne: true,
+      utilises: documents,
+      quota: partenaire.documents,
+      autorise: documents < partenaire.documents,
       redactions,
       peutModifier: true,
     };

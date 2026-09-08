@@ -22,6 +22,7 @@ const NAV: { id: string; icon: string; label: string; section?: string; badge?: 
   { id: "moderation", icon: "🛡️", label: "Modération", section: "Plateforme" },
   { id: "pro", icon: "🧾", label: "Espace Pro" },
   { id: "carriere", icon: "📄", label: "Ma Carriere" },
+  { id: "partenaires", icon: "🤝", label: "Partenaires" },
   { id: "import", icon: "🛒", label: "Import Produits" },
   { id: "users", icon: "👥", label: "Utilisateurs" },
   { id: "encaissement", icon: "💵", label: "Encaissement (espèces)" },
@@ -441,6 +442,7 @@ export default function SuperAdminApp() {
             {page === "moderation" && <Moderation items={pendingListings} moderate={moderate} />}
             {page === "pro" && <EspacePro T={T} />}
             {page === "carriere" && <MaCarriere T={T} />}
+            {page === "partenaires" && <Partenaires T={T} />}
             {page === "audience" && <Audience T={T} />}
             {page === "import" && <ImportProduits T={T} reload={loadAllData} profiles={profiles} />}
             {page === "users" && <Users profiles={profiles} T={T} reload={loadAllData} />}
@@ -3352,6 +3354,196 @@ const CARRIERE_KINDS: Record<string, string> = {
  * Le CONTENU des documents n'est jamais rapatrie : un CV porte des donnees
  * personnelles, et superviser l'usage n'exige pas de les lire.
  */
+/**
+ * Le programme partenaire, cote administration.
+ *
+ * ── Pourquoi cet ecran ───────────────────────────────────────────────────
+ * Les abonnements partenaires s'encaissent A LA MAIN : Wave, especes, un
+ * message WhatsApp. Le statut existait en base, mais aucun ecran ne permettait
+ * de le changer — les candidatures s'empilaient sans reponse et le programme
+ * ne pouvait pas demarrer.
+ *
+ * Valider ici pose deux choses a la fois : le plan paye, et l'echeance. Sans
+ * echeance, un abonnement encaisse une fois courrait a vie.
+ */
+function Partenaires({ T }: { T: (m: string) => void }) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [filtre, setFiltre] = useState<"tous" | "candidat" | "actif" | "suspendu">("tous");
+  const [occupe, setOccupe] = useState<string | null>(null);
+
+  const charger = async () => {
+    setLoading(true);
+    try {
+      setData(await adminApi("partenaires_overview"));
+    } catch (e: any) {
+      T(e?.message || "Chargement des partenaires impossible.");
+    }
+    setLoading(false);
+  };
+  useEffect(() => { charger(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  async function changer(uid: string, statut: string, plan?: string, jours?: number) {
+    setOccupe(uid);
+    try {
+      await adminApi("setPartenaireStatut", { user_id: uid, statut, plan, jours });
+      T(statut === "actif" ? "✓ Abonnement enregistre" : "✓ Statut mis a jour");
+      await charger();
+    } catch (e: any) {
+      T(e?.message || "Modification impossible.");
+    }
+    setOccupe(null);
+  }
+
+  if (loading) {
+    return (
+      <>
+        <PageHead title="🤝 Partenaires" sub="Chargement…" />
+        <Card><div className="py-10 text-center text-[.85rem] text-[#8B949E]">Lecture de la table partenaires…</div></Card>
+      </>
+    );
+  }
+  if (data?.needsMigration) {
+    return (
+      <>
+        <PageHead title="🤝 Partenaires" />
+        <Card>
+          <div className="py-8 text-center text-[.85rem] text-amber-300">
+            Les tables du programme ne sont pas encore creees.<br />
+            Executez <b>database/MIGRATION_PARTENAIRES.sql</b> dans Supabase → SQL Editor.
+          </div>
+        </Card>
+      </>
+    );
+  }
+  if (!data) {
+    return (
+      <>
+        <PageHead title="🤝 Partenaires" />
+        <Card><div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucune donnee. <button onClick={charger} className={btnG}>Reessayer</button></div></Card>
+      </>
+    );
+  }
+
+  const c = data.compteurs || {};
+  const tous: any[] = data.partenaires || [];
+  const liste = tous.filter((p) => {
+    if (filtre === "tous") return true;
+    if (filtre === "actif") return p.abonnement_en_cours;
+    return p.statut === filtre;
+  });
+
+  const onglets: [typeof filtre, string, number][] = [
+    ["tous", "Tous", tous.length],
+    ["candidat", "Candidatures", c.candidat || 0],
+    ["actif", "Abonnes", c.actif || 0],
+    ["suspendu", "Suspendus", c.suspendu || 0],
+  ];
+
+  const jour = (iso: string | null) => {
+    if (!iso) return "—";
+    try { return new Date(iso).toLocaleDateString("fr-FR"); } catch { return "—"; }
+  };
+
+  return (
+    <>
+      <PageHead
+        title="🤝 Partenaires"
+        sub={`${tous.length} inscrits · ${c.candidat || 0} en attente · ${c.actif || 0} abonnes en cours`}
+      >
+        <button onClick={charger} className={btnG}>↻ Actualiser</button>
+      </PageHead>
+
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <Kpi grad="bg-g1" icon="🤝" label="Inscrits" value={tous.length} trend="au programme" />
+        <Kpi grad="bg-g4" icon="⏳" label="Candidatures" value={c.candidat || 0} trend="a traiter" />
+        <Kpi grad="bg-g2" icon="✅" label="Abonnes" value={c.actif || 0} trend="echeance a venir" />
+        <Kpi grad="bg-g5" icon="⚠️" label="Echus" value={c.expire || 0} trend="a relancer" />
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        {onglets.map(([id, label, n]) => (
+          <button
+            key={id}
+            onClick={() => setFiltre(id)}
+            className={`rounded-[9px] px-3.5 py-2 text-[.78rem] font-bold ${filtre === id ? "bg-g1 text-white" : "border border-[#30363D] bg-[#21262D] text-[#8B949E] hover:text-white"}`}
+          >
+            {label} <span className="opacity-70">({n})</span>
+          </button>
+        ))}
+      </div>
+
+      <Card title="Qui a postule" sub="Valider pose le plan paye ET son echeance">
+        {liste.length === 0 ? (
+          <div className="py-10 text-center text-[.85rem] text-[#8B949E]">Aucun partenaire dans cette vue.</div>
+        ) : (
+          <Tbl head={["Agence", "Ville", "Telephone", "Code", "Statut", "Plan", "Echeance", "Points", "Actions"]}>
+            {liste.map((p: any) => (
+              <tr key={p.user_id} className="border-t border-[#30363D]">
+                <Td bold>{p.agence || p.nom_compte || "—"}</Td>
+                <Td>{p.ville || "—"}</Td>
+                <Td>{p.telephone || "—"}</Td>
+                <Td><code className="text-[#A5B4FC]">{p.code}</code></Td>
+                <Td>
+                  {p.abonnement_en_cours ? (
+                    <span className="text-emerald-400">● Abonne</span>
+                  ) : p.statut === "suspendu" ? (
+                    <span className="text-rose-400">● Suspendu</span>
+                  ) : p.statut === "actif" ? (
+                    <span className="text-amber-300">● Echu</span>
+                  ) : (
+                    <span className="text-[#8B949E]">○ Candidat</span>
+                  )}
+                </Td>
+                <Td>{p.plan || "—"}</Td>
+                <Td>{jour(p.expire_at)}</Td>
+                <Td>{p.points ?? 0}</Td>
+                <Td>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      disabled={occupe === p.user_id}
+                      onClick={() => changer(p.user_id, "actif", "starter", 30)}
+                      className={btnG}
+                      title="Starter, 30 jours"
+                    >
+                      + Starter 30j
+                    </button>
+                    <button
+                      disabled={occupe === p.user_id}
+                      onClick={() => changer(p.user_id, "actif", "agence", 30)}
+                      className={btnG}
+                      title="Agence Pro, 30 jours"
+                    >
+                      + Agence 30j
+                    </button>
+                    {p.statut !== "suspendu" ? (
+                      <button
+                        disabled={occupe === p.user_id}
+                        onClick={() => changer(p.user_id, "suspendu")}
+                        className={`${btnG} text-rose-300`}
+                      >
+                        Suspendre
+                      </button>
+                    ) : (
+                      <button
+                        disabled={occupe === p.user_id}
+                        onClick={() => changer(p.user_id, "candidat")}
+                        className={btnG}
+                      >
+                        Reintegrer
+                      </button>
+                    )}
+                  </div>
+                </Td>
+              </tr>
+            ))}
+          </Tbl>
+        )}
+      </Card>
+    </>
+  );
+}
+
 function MaCarriere({ T }: { T: (m: string) => void }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
