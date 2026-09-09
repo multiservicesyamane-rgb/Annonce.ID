@@ -1,5 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { crossSubdomainCookieDomain } from '@/lib/cookieDomain'
+import { fetchRobuste } from '@/lib/supabase/fetchRobuste'
 
 export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -19,6 +20,9 @@ export function createClient() {
     supabaseUrl,
     supabaseKey,
     {
+      // Le public est en 4G instable : une requete perdue au moment ou l'on
+      // tape son mot de passe se lit comme « le site ne marche pas ».
+      global: { fetch: fetchRobuste() },
       cookieOptions: {
         domain: cookieDomain,
         path: "/",

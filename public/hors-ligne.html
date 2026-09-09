@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Pas de connexion — Wanteermako</title>
+<!--
+  Page volontairement AUTONOME : tout le style est ici, en ligne. Aucune
+  feuille externe, aucun script, aucune police à télécharger, aucune image
+  distante.
+
+  C'est tout l'intérêt. La version précédente était une page Next.js : son
+  HTML était bien en cache, mais son CSS ne l'était pas. Hors connexion, elle
+  se serait affichée en HTML brut — du texte noir sur fond blanc, sans mise en
+  page. Exactement l'impression qu'on cherche à éviter : une application
+  cassée.
+
+  Le fond et les couleurs suivent le thème du téléphone via
+  prefers-color-scheme, sans JavaScript.
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+    --fond: #f7f8fa;
+    --carte: #ffffff;
+    --bord: #e5e7eb;
+    --encre: #111827;
+    --encre-douce: #6b7280;
+    --accent: #1b4332;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond: #0d1117;
+      --carte: #161b22;
+      --bord: rgba(255, 255, 255, .1);
+      --encre: #ffffff;
+      --encre-douce: #9aa4b2;
+      --accent: #10b981;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+    background: var(--fond);
+    color: var(--encre);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.55;
+    text-align: center;
+  }
+  .boite { width: 100%; max-width: 420px; }
+  .rond {
+    width: 76px; height: 76px; margin: 0 auto 18px;
+    display: grid; place-items: center;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    font-size: 34px;
+  }
+  h1 { margin: 0 0 8px; font-size: 1.45rem; font-weight: 800; letter-spacing: -.01em; }
+  p  { margin: 0; font-size: .95rem; color: var(--encre-douce); }
+  .carte {
+    margin-top: 22px; padding: 16px 18px;
+    background: var(--carte);
+    border: 1px solid var(--bord);
+    border-radius: 16px;
+    text-align: left;
+  }
+  .carte strong { display: block; margin-bottom: 4px; font-size: .85rem; color: var(--encre); }
+  .carte p { font-size: .85rem; }
+  a.bouton {
+    display: inline-block; margin-top: 22px; padding: 13px 30px;
+    background: var(--accent); color: #fff;
+    border-radius: 12px; font-size: .95rem; font-weight: 700; text-decoration: none;
+  }
+  .note { margin-top: 14px; font-size: .78rem; color: var(--encre-douce); }
+</style>
+</head>
+<body>
+  <div class="boite">
+    <div class="rond" aria-hidden="true">📡</div>
+    <h1>Pas de connexion</h1>
+    <p>Wanteermako a besoin d&rsquo;Internet pour afficher cette page. Vérifie tes données mobiles ou ton Wi-Fi, puis réessaie.</p>
+
+    <div class="carte">
+      <strong>Rien n&rsquo;est perdu</strong>
+      <p>Tes documents, tes factures et tes annonces sont enregistrés sur nos serveurs, pas sur ton téléphone. Tout revient dès que la connexion revient.</p>
+    </div>
+
+    <!-- Un lien, pas un bouton : sans JavaScript, un rechargement scripté ne
+         fonctionnerait pas. Le lien relance une vraie navigation. -->
+    <a class="bouton" href="/">Réessayer</a>
+    <p class="note">Wanteermako &middot; Annonces, devis &amp; CV</p>
+  </div>
+</body>
+</html>

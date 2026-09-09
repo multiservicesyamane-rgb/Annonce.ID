@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 import { crossSubdomainCookieDomain } from "@/lib/cookieDomain";
+import { fetchRobuste } from "@/lib/supabase/fetchRobuste";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
@@ -23,6 +24,10 @@ export function createClient() {
   }
 
   return createServerClient(url, key, {
+    // C'est ce client qui echange le code d'authentification contre une
+    // session. Une connexion lente vers Supabase le faisait echouer, et
+    // l'utilisateur revenait sur la page de connexion sans explication.
+    global: { fetch: fetchRobuste() },
     cookies: {
       getAll() {
         return cookieStore.getAll();

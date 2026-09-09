@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdmin, type SupabaseClient } from "@supabase/supabase-js";
 import { DEFAULT_QUOTE_SECTIONS, sanitizeSections, canChargeTax, trackingCode, type QuoteSection } from "@/lib/pro";
+import { fetchRobuste } from "@/lib/supabase/fetchRobuste";
 
 export const txt = (v: unknown, max = 160) => String(v ?? "").trim().slice(0, max);
 
@@ -24,7 +25,12 @@ export function adminClient(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
-  return createAdmin(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  return createAdmin(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    // Toutes les routes de l'Espace Pro et de Ma Carriere passent par ici :
+    // une connexion lente y faisait echouer un enregistrement deja saisi.
+    global: { fetch: fetchRobuste() },
+  });
 }
 
 /**

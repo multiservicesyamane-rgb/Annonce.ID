@@ -18,9 +18,18 @@
  * différence entre « l'application est cassée » et « je n'ai pas de réseau ».
  */
 
-const VERSION = "wmk-v2";
+const VERSION = "wmk-v3";
 const CACHE = `wmk-coquille-${VERSION}`;
-const HORS_LIGNE = "/hors-ligne";
+/*
+ * Un fichier HTML AUTONOME, et non la page Next.js /hors-ligne.
+ *
+ * La page Next.js avait son HTML en cache, mais pas sa feuille de style :
+ * hors connexion elle serait sortie en texte brut, sans mise en page. Elle
+ * aurait donne l'impression exacte qu'on cherche a eviter — une application
+ * cassee. Le fichier statique porte son style en ligne : rien a telecharger,
+ * donc rien qui puisse manquer.
+ */
+const HORS_LIGNE = "/hors-ligne.html";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
