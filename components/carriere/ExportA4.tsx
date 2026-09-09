@@ -51,6 +51,7 @@ export default function ExportA4({
   onFermerPanneau,
   avertissement,
   onTelecharge,
+  onConnexion,
 }: {
   filename: string;
   title: string;
@@ -63,6 +64,16 @@ export default function ExportA4({
   avertissement?: string | null;
   /** Appele apres un telechargement ou un partage REUSSI. */
   onTelecharge?: () => void;
+  /**
+   * Visiteur sans compte : le document est fini, mais il faut un compte pour
+   * l'emporter.
+   *
+   * C'est le SEUL endroit ou la connexion est demandee. Avant, l'ecran
+   * opposait un cadenas des l'arrivee : on refusait quelqu'un qui n'avait
+   * encore rien vu. Ici, il a son document sous les yeux — la demande se
+   * comprend, et elle a une contrepartie visible.
+   */
+  onConnexion?: () => void;
   /** Boutons propres au document (modele, couleur, police), a gauche de la barre. */
   outils?: ReactNode;
   /** Panneau deplie sous la barre par l'un de ces boutons. */
@@ -92,6 +103,8 @@ export default function ExportA4({
   // l'action demandee pour la rejouer telle quelle une fois l'accord donne :
   // confirmer un partage ne doit pas declencher un telechargement.
   const [aConfirmer, setAConfirmer] = useState<"pdf" | "share" | "shareFallback" | null>(null);
+  /** La boite « il te faut un compte », montree au premier telechargement. */
+  const [compteDemande, setCompteDemande] = useState(false);
 
   // Le partage de fichiers n'existe qu'au navigateur, et pas sur tous : on ne
   // montre le bouton « natif » que la ou il fonctionne reellement.
@@ -214,6 +227,12 @@ export default function ExportA4({
    * telechargement.
    */
   function demander(geste: "pdf" | "share" | "shareFallback") {
+    // La connexion passe avant l'avertissement du verrou : sans compte, il
+    // n'y a pas encore de quota a consommer ni de document a figer.
+    if (onConnexion) {
+      setCompteDemande(true);
+      return;
+    }
     if (avertissement) {
       setAConfirmer(geste);
       return;
@@ -243,6 +262,46 @@ export default function ExportA4({
    * irreversible. Le bouton de sortie est le premier et le plus visible —
    * « verifier encore » doit rester plus facile que « terminer ».
    */
+  /**
+   * Ce qu'on montre a un visiteur sans compte quand il veut son document.
+   *
+   * Le ton compte autant que le contenu : on ne dit pas « acces refuse » mais
+   * ce qu'il gagne — son travail conserve, retrouvable, modifiable. La
+   * creation de compte n'est pas un peage ici, c'est ce qui rend le document
+   * recuperable demain.
+   */
+  const boiteCompte = compteDemande && onConnexion && (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="compte-titre"
+      className="fixed inset-0 z-[1200] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center"
+    >
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-dark-800">
+        <h2 id="compte-titre" className="text-[1.05rem] font-extrabold text-gray-900 dark:text-white">
+          <span aria-hidden="true">🎉</span> Ton document est pret
+        </h2>
+        <p className="mt-2 text-[.9rem] leading-relaxed text-gray-600 dark:text-gray-300">
+          Cree ton compte en une minute pour le telecharger. Il sera enregistre dans
+          <strong className="text-gray-800 dark:text-gray-100"> Mes documents</strong> : tu pourras
+          le reprendre, le modifier et le retelecharger quand tu veux.
+        </p>
+        <p className="mt-2 text-[.82rem] leading-relaxed text-gray-500">
+          Ce que tu viens d&apos;ecrire est garde — tu le retrouveras juste apres.
+        </p>
+
+        <div className="mt-5 space-y-3">
+          <PrimaryBtn onClick={onConnexion}>
+            <span aria-hidden="true">→</span> Creer mon compte
+          </PrimaryBtn>
+          <OutlineBtn onClick={() => setCompteDemande(false)}>
+            <span aria-hidden="true">←</span> Continuer a modifier
+          </OutlineBtn>
+        </div>
+      </div>
+    </div>
+  );
+
   const confirmation = aConfirmer && (
     <div
       role="dialog"
@@ -326,6 +385,7 @@ export default function ExportA4({
       </div>
 
       {confirmation}
+      {boiteCompte}
     </div>
   );
 }

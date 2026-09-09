@@ -58,6 +58,7 @@ const Dossier = (
 export default function Accueil({
   ia,
   quota,
+  invite = false,
   onAssistant,
   onCv,
   onLettre,
@@ -67,6 +68,8 @@ export default function Accueil({
   /** Un moteur de redaction repond-il ? */
   ia: boolean;
   quota: { abonne: boolean; utilises: number; quota: number } | null;
+  /** Visiteur sans compte : on le rassure avant qu'il commence. */
+  invite?: boolean;
   onAssistant: () => void;
   onCv: () => void;
   onLettre: () => void;
@@ -78,6 +81,22 @@ export default function Accueil({
   return (
     <div className={pageWide}>
       <Title sub="Cree tes documents professionnels en quelques minutes.">Ma Carriere</Title>
+
+      {/* Dit AVANT de commencer, pas au moment de telecharger. Quelqu'un qui
+          ignore qu'il pourra emporter son travail hesite a le commencer ; et
+          decouvrir la demande de compte a la fin, sans l'avoir vue venir, se
+          vit comme un piege. */}
+      {invite && (
+        <div className="mb-4 flex gap-3 rounded-2xl border border-green/25 bg-green/[0.06] p-4">
+          <span className="text-[1.15rem]" aria-hidden="true">✍️</span>
+          <p className="text-[.86rem] leading-relaxed text-gray-700 dark:text-gray-300">
+            <strong className="text-gray-900 dark:text-white">Commence sans compte.</strong>{" "}
+            Tu composes ton document ici et tu le vois en entier. On te demandera
+            simplement de creer un compte au moment de le telecharger — ton travail
+            sera garde.
+          </p>
+        </div>
+      )}
 
       <button
         type="button"

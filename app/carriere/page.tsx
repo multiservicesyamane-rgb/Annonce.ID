@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BRAND } from "@/lib/constants";
 import Accueil from "@/components/carriere/Accueil";
@@ -9,8 +9,10 @@ import CourrierWizard from "@/components/carriere/CourrierWizard";
 import CVWizard from "@/components/carriere/CVWizard";
 import MesDocuments, { type DocRow } from "@/components/carriere/MesDocuments";
 import { api } from "@/components/carriere/ui";
+import { effacerBrouillon, lireBrouillon } from "@/components/carriere/useDoc";
 import ProUpgrade from "@/components/pro/ProUpgrade";
 import { MigrationNotice } from "@/components/pro/ui";
+import { documentVide } from "@/lib/carriere";
 import type { CVContent, DemandeContent, LettreContent } from "@/lib/carriere";
 
 /**
@@ -81,6 +83,38 @@ export default function CarrierePage() {
   useEffect(() => {
     charger();
   }, [charger]);
+
+  /**
+   * Le brouillon compose sans compte, repris juste apres la connexion.
+   *
+   * Quelqu'un cree un compte PRECISEMENT pour telecharger le document qu'il
+   * vient d'ecrire. Le deposer sur l'accueil du module, en le laissant
+   * retrouver son travail tout seul, serait la meilleure facon de le perdre a
+   * la derniere marche.
+   *
+   * Une seule fois par visite (`reprisFaite`) : sans ce garde-fou, revenir a
+   * l'accueil rouvrirait l'editeur en boucle et on ne pourrait plus rien
+   * faire d'autre.
+   */
+  const reprisFaite = useRef(false);
+  useEffect(() => {
+    if (etat !== "pret" || reprisFaite.current) return;
+    reprisFaite.current = true;
+    for (const kind of ["cv", "lettre", "demande"] as const) {
+      const brouillon = lireBrouillon(kind);
+      if (!brouillon) continue;
+      // Un brouillon vide n'a rien a reprendre — et il ne doit pas ouvrir un
+      // editeur ni traîner dans le navigateur.
+      if (documentVide(kind, brouillon)) {
+        effacerBrouillon(kind);
+        continue;
+      }
+      setEcran({ v: kind, prefill: brouillon as any });
+      toast("On reprend la ou tu t'etais arrete.");
+      return;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etat]);
 
   // Lu depuis `window` et non par `useSearchParams`, qui imposerait
   // d'envelopper la page dans un <Suspense> pour un parametre facultatif —
@@ -184,6 +218,27 @@ export default function CarrierePage() {
 
   const abonne = quota?.abonne === true;
 
+  /**
+   * Visiteur sans compte.
+   *
+   * L'ecran lui opposait un cadenas et « Connecte-toi ». Quelqu'un qui recoit
+   * le lien par WhatsApp voyait une porte fermee sans savoir ce qu'il y avait
+   * derriere, et repartait. Il compose desormais son document en entier ; la
+   * connexion n'est demandee qu'au telechargement, quand il a quelque chose
+   * entre les mains et une raison de creer un compte.
+   */
+  const invite = etat === "nonConnecte";
+
+  /**
+   * Emmene vers la connexion, et revient ici.
+   *
+   * Le brouillon reste dans le navigateur : il sera repris au retour, sans
+   * quoi la creation de compte ferait perdre le travail qu'elle recompense.
+   */
+  const versConnexion = () => {
+    window.location.href = "/connexion?redirect=/carriere";
+  };
+
   /** Les deux ecrans de navigation, par opposition aux parcours de creation. */
   const surAccueil = ecran.v === "accueil" || ecran.v === "documents";
 
@@ -235,7 +290,7 @@ export default function CarrierePage() {
         <div className="ml-auto hidden items-center gap-1 lg:flex">
           <button
             type="button"
-            onClick={() => setEcran({ v: "documents" })}
+            onClick={() => (invite ? versConnexion() : setEcran({ v: "documents" }))}
             className="rounded-lg px-3 py-2 text-[.85rem] font-bold text-gray-500 transition hover:bg-gray-100 hover:text-green dark:hover:bg-white/10"
           >
             Mes documents
@@ -256,18 +311,6 @@ export default function CarrierePage() {
       </div>
 
       {etat === "chargement" && <p className="py-20 text-center text-gray-400">Chargement…</p>}
-
-      {etat === "nonConnecte" && (
-        <div className="mx-auto mt-10 max-w-[420px] rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm dark:border-dark-border dark:bg-dark-800">
-          <p className="text-[2rem]" aria-hidden="true">🔒</p>
-          <p className="mt-2 text-[.95rem] text-gray-700 dark:text-white/80">
-            Connecte-toi pour creer et retrouver tes documents.
-          </p>
-          <Link href="/connexion?redirect=/carriere" className="btn btn-green mt-4 inline-block px-6 py-3">
-            Se connecter
-          </Link>
-        </div>
-      )}
 
       {etat === "ferme" && (
         <div className="mx-auto mt-10 max-w-[460px] rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm dark:border-dark-border dark:bg-dark-800">
@@ -290,17 +333,18 @@ export default function CarrierePage() {
         </div>
       )}
 
-      {etat === "pret" && (
+      {(etat === "pret" || invite) && (
         <>
           {ecran.v === "accueil" && (
             <Accueil
               ia={ia}
               quota={quota}
+              invite={invite}
               onAssistant={() => ouvrir({ v: "assistant" })}
               onCv={() => ouvrir({ v: "cv" })}
               onLettre={() => ouvrir({ v: "lettre" })}
               onDemande={(type) => ouvrir({ v: "demande", prefill: { demarcheId: "emploi", reponses: { offre: type === "stage" ? "Non, candidature spontanee" : "" } } })}
-              onDocuments={() => setEcran({ v: "documents" })}
+              onDocuments={() => (invite ? versConnexion() : setEcran({ v: "documents" }))}
             />
           )}
 
@@ -326,8 +370,10 @@ export default function CarrierePage() {
               docId={ecran.id}
               prefill={ecran.prefill}
               abonne={abonne}
+              invite={invite}
               onQuitter={rentrer}
               onPeage={() => setEcran({ v: "peage" })}
+              onConnexion={versConnexion}
               toast={toast}
             />
           )}
@@ -338,8 +384,10 @@ export default function CarrierePage() {
               docId={ecran.id}
               prefill={ecran.prefill}
               abonne={abonne}
+              invite={invite}
               onQuitter={rentrer}
               onPeage={() => setEcran({ v: "peage" })}
+              onConnexion={versConnexion}
               toast={toast}
             />
           )}

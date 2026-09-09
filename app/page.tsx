@@ -6,6 +6,7 @@ import AdBanner from "@/components/AdBanner";
 import AdSensePlaceholder from "@/components/AdSensePlaceholder";
 import AdCard from "@/components/AdCard";
 import HomeRecent from "@/components/HomeRecent";
+import HomeServices from "@/components/HomeServices";
 import HomeMapSection from "@/components/HomeMapSection";
 import { getFeaturedListings, getPremiumListings, getRecentListings } from "@/lib/homeSections";
 import { createClient } from "@supabase/supabase-js";
@@ -91,6 +92,12 @@ export default async function HomePage() {
   return (
     <>
       <Hero />
+
+      {/* Les trois services, tout de suite apres l'accroche. L'Espace Pro
+          n'apparaissait qu'a la ligne 403 de cette page, et Ma Carriere nulle
+          part : les deux modules qui font vivre le site etaient invisibles
+          pour qui arrive ici — c'est-a-dire presque tout le monde. */}
+      <HomeServices />
 
       {/* Bandeau "À la Une" + Premium (déduplication par id), cliquable */}
       <FeaturedSlider listings={[...uneList, ...premList].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)} />

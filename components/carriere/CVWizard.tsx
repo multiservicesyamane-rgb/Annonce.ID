@@ -120,25 +120,40 @@ export default function CVWizard({
   docId,
   prefill,
   abonne,
+  invite = false,
   onQuitter,
   onPeage,
+  onConnexion,
   toast,
 }: {
   docId?: string;
   /** Reponses deja donnees a l'assistant — poste vise, ville. */
   prefill?: Partial<CVContent>;
   abonne: boolean;
+  /**
+   * Visiteur sans compte : le CV se compose dans le navigateur, et la
+   * connexion n'est demandee qu'au telechargement.
+   */
+  invite?: boolean;
   onQuitter: () => void;
   onPeage: () => void;
+  /** Emmene vers la connexion, en gardant le brouillon. */
+  onConnexion?: () => void;
   toast: (m: string) => void;
 }) {
   // Le quota tombe pendant la saisie — par exemple si un autre onglet a
   // consomme le document du mois. On previent ET on ouvre l'abonnement :
   // laisser l'ecran muet ferait taper un CV que plus rien n'enregistre.
-  const doc = useDoc("cv", docId, prefill, (m) => {
-    toast(m);
-    onPeage();
-  });
+  const doc = useDoc(
+    "cv",
+    docId,
+    prefill,
+    (m) => {
+      toast(m);
+      onPeage();
+    },
+    invite,
+  );
   const cv = doc.content as CVContent;
   // Ouvrir un document deja cree montre LE DOCUMENT, pas la deuxieme etape
   // de sa saisie : on clique « Ouvrir » pour le relire ou le telecharger,
@@ -1088,6 +1103,7 @@ export default function CVWizard({
             // irreversible.
             avertissement={!abonne && !doc.verrouille ? messageAvantFinalisation("ton CV") : null}
             onTelecharge={doc.finaliser}
+            onConnexion={invite ? onConnexion : undefined}
             footer={
               <>
                 {doc.verrouille && <BandeauVerrou quoi="Ce CV" onPeage={onPeage} />}

@@ -41,6 +41,8 @@ export default function CourrierWizard({
   docId,
   prefill,
   abonne,
+  invite = false,
+  onConnexion,
   onQuitter,
   onPeage,
   toast,
@@ -50,16 +52,25 @@ export default function CourrierWizard({
   /** Reponses deja donnees a l'assistant. */
   prefill?: Partial<LettreContent & DemandeContent>;
   abonne: boolean;
+  /** Visiteur sans compte : tout reste dans le navigateur jusqu'au telechargement. */
+  invite?: boolean;
+  onConnexion?: () => void;
   onQuitter: () => void;
   onPeage: () => void;
   toast: (m: string) => void;
 }) {
   // Meme regle que pour le CV : un refus de quota s'annonce, il ne se devine
   // pas dans un discret « erreur » au coin de l'ecran.
-  const doc = useDoc(kind, docId, prefill, (m) => {
-    toast(m);
-    onPeage();
-  });
+  const doc = useDoc(
+    kind,
+    docId,
+    prefill,
+    (m) => {
+      toast(m);
+      onPeage();
+    },
+    invite,
+  );
   /** Panneau « Modele » deplie sous la barre de l apercu. */
   const [panneauModele, setPanneauModele] = useState(false);
   /** Zoom de l apercu final. Index dans ZOOMS ; 1 = page entiere. */
@@ -486,6 +497,7 @@ export default function CourrierWizard({
                 : null
             }
             onTelecharge={doc.finaliser}
+            onConnexion={invite ? onConnexion : undefined}
             footer={
               doc.verrouille ? (
                 <BandeauVerrou quoi={kind === "lettre" ? "Cette lettre" : "Ce courrier"} onPeage={onPeage} />
