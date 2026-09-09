@@ -54,7 +54,12 @@ export default function CourrierWizard({
   onPeage: () => void;
   toast: (m: string) => void;
 }) {
-  const doc = useDoc(kind, docId, prefill);
+  // Meme regle que pour le CV : un refus de quota s'annonce, il ne se devine
+  // pas dans un discret « erreur » au coin de l'ecran.
+  const doc = useDoc(kind, docId, prefill, (m) => {
+    toast(m);
+    onPeage();
+  });
   /** Panneau « Modele » deplie sous la barre de l apercu. */
   const [panneauModele, setPanneauModele] = useState(false);
   /** Zoom de l apercu final. Index dans ZOOMS ; 1 = page entiere. */

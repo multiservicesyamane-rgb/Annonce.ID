@@ -48,7 +48,19 @@ import {
  * partir des requetes que le serveur refuse afficherait « Erreur » en boucle
  * sous les yeux de quelqu'un qui n'a rien fait de mal.
  */
-export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<CareerContent>) {
+export function useDoc(
+  kind: CareerKind,
+  docId?: string,
+  prerempli?: Partial<CareerContent>,
+  /**
+   * Appele quand le serveur refuse la CREATION faute de quota.
+   *
+   * Sans lui, ce 402 tombait dans le cas general et devenait un discret
+   * « erreur » : l'utilisateur continuait de taper un document que plus rien
+   * n'enregistrait. Le peage doit s'annoncer, pas se deviner.
+   */
+  onQuota?: (message: string) => void,
+) {
   const [id, setId] = useState<string | null>(docId || null);
   // Le pre-remplissage ne s'applique qu'a un NOUVEAU document : sur un
   // document existant, il ecraserait ce que l'utilisateur a deja ecrit.
@@ -65,6 +77,18 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
   const [verrouille, setVerrouille] = useState(false);
   /** Le texte que le serveur oppose a la modification, montre tel quel. */
   const [messageVerrou, setMessageVerrou] = useState<string | null>(null);
+
+  /**
+   * Le rappel de quota, garde dans une ref.
+   *
+   * Le passer en dependance de `enregistrer` aurait suffi a tout casser : les
+   * ecrans le fournissent sous forme de fonction anonyme, donc une NOUVELLE
+   * identite a chaque rendu. `enregistrer` aurait change a chaque rendu,
+   * l'effet d'enregistrement se serait relance a chaque rendu, et la minuterie
+   * de 1,2 s n'aurait jamais eu le temps d'arriver a son terme.
+   */
+  const rappelQuota = useRef(onQuota);
+  rappelQuota.current = onQuota;
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Le premier rendu ne doit rien enregistrer : sans ce garde-fou, ouvrir un
@@ -152,6 +176,14 @@ export function useDoc(kind: CareerKind, docId?: string, prerempli?: Partial<Car
           setVerrouille(true);
           setMessageVerrou(e?.data?.error || null);
           setEtat("repos");
+          return;
+        }
+        // 402 sans drapeau `verrouille` : c'est le QUOTA du mois, pas le
+        // verrou d'un document fini. Deux refus differents, deux ecrans
+        // differents — les confondre laissait le second sans explication.
+        if (e?.status === 402) {
+          setEtat("repos");
+          rappelQuota.current?.(e?.data?.message || e?.data?.error || "Quota de documents atteint.");
           return;
         }
         setEtat("erreur");

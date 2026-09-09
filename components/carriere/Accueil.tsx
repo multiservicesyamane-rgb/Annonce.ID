@@ -133,9 +133,24 @@ export default function Accueil({
           apres que tu l'aies relevee. */}
       {restant !== null && quota && (
         <p className="mt-3 text-center text-[.82rem] text-gray-500">
-          Il te reste <strong className="text-gray-700 dark:text-gray-200">{restant}</strong> redaction
-          {restant > 1 ? "s" : ""} assistee{restant > 1 ? "s" : ""} ce mois-ci
-          {restant === 0 ? " — l'ecriture a la main reste libre." : ` sur ${quota.quota}.`}
+          {/* « L'ecriture a la main reste libre » figurait ici quand le quota
+              portait sur les redactions IA. Il porte desormais sur les
+              DOCUMENTS : le serveur refuse aussi la creation manuelle, et la
+              phrase promettait donc l'inverse de ce qui se passe. */}
+          {restant === 0 ? (
+            <>
+              Tu as utilise{" "}
+              <strong className="text-gray-700 dark:text-gray-200">
+                {quota.quota === 1 ? "ton document gratuit" : `tes ${quota.quota} documents`}
+              </strong>{" "}
+              de ce mois-ci. Tes documents existants restent ouverts et telechargeables.
+            </>
+          ) : (
+            <>
+              Il te reste <strong className="text-gray-700 dark:text-gray-200">{restant}</strong>{" "}
+              document{restant > 1 ? "s" : ""} sur {quota.quota} ce mois-ci.
+            </>
+          )}
         </p>
       )}
 

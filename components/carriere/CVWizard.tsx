@@ -132,7 +132,13 @@ export default function CVWizard({
   onPeage: () => void;
   toast: (m: string) => void;
 }) {
-  const doc = useDoc("cv", docId, prefill);
+  // Le quota tombe pendant la saisie — par exemple si un autre onglet a
+  // consomme le document du mois. On previent ET on ouvre l'abonnement :
+  // laisser l'ecran muet ferait taper un CV que plus rien n'enregistre.
+  const doc = useDoc("cv", docId, prefill, (m) => {
+    toast(m);
+    onPeage();
+  });
   const cv = doc.content as CVContent;
   // Ouvrir un document deja cree montre LE DOCUMENT, pas la deuxieme etape
   // de sa saisie : on clique « Ouvrir » pour le relire ou le telecharger,

@@ -95,6 +95,30 @@ export default function CarrierePage() {
     }
   }, []);
 
+  /**
+   * Quota epuise ? On n'ouvre pas l'editeur.
+   *
+   * ── Ce que ce garde-fou repare ──────────────────────────────────────────
+   * Le serveur refusait deja la creation (402), mais l'ecran ne le disait pas :
+   * l'editeur s'ouvrait, on tapait son CV, l'enregistrement automatique
+   * echouait, et il ne restait qu'un discret « erreur » dans un coin. On
+   * croyait que ca passait — et on perdait son travail sans jamais savoir
+   * pourquoi.
+   *
+   * Refuser a la PORTE vaut mieux que refuser apres coup : personne ne perd
+   * ce qu'il a ecrit, et le peage s'explique avant l'effort, pas apres.
+   *
+   * Quota inconnu (`null`, lecture en echec) : on laisse passer. Un compteur
+   * casse ne doit pas fermer le module — le serveur reste le juge.
+   */
+  const ouvrir = (cible: Ecran) => {
+    if (quota && !quota.abonne && quota.utilises >= quota.quota) {
+      setEcran({ v: "peage" });
+      return;
+    }
+    setEcran(cible);
+  };
+
   /** Retour a l'accueil du module, en rafraichissant la liste au passage. */
   const rentrer = () => {
     setEcran({ v: "accueil" });
@@ -272,10 +296,10 @@ export default function CarrierePage() {
             <Accueil
               ia={ia}
               quota={quota}
-              onAssistant={() => setEcran({ v: "assistant" })}
-              onCv={() => setEcran({ v: "cv" })}
-              onLettre={() => setEcran({ v: "lettre" })}
-              onDemande={(type) => setEcran({ v: "demande", prefill: { demarcheId: "emploi", reponses: { offre: type === "stage" ? "Non, candidature spontanee" : "" } } })}
+              onAssistant={() => ouvrir({ v: "assistant" })}
+              onCv={() => ouvrir({ v: "cv" })}
+              onLettre={() => ouvrir({ v: "lettre" })}
+              onDemande={(type) => ouvrir({ v: "demande", prefill: { demarcheId: "emploi", reponses: { offre: type === "stage" ? "Non, candidature spontanee" : "" } } })}
               onDocuments={() => setEcran({ v: "documents" })}
             />
           )}
