@@ -1,9 +1,15 @@
 {
-  "name": "Wanteermako",
+  "id": "/",
+  "name": "Wanteermako — Annonces, Devis & CV",
   "short_name": "Wanteermako",
-  "description": "Petites Annonces Premium en Afrique de l'Ouest",
+  "description": "Vendez et achetez près de chez vous, éditez vos devis et factures, créez votre CV et vos lettres. Trois services, un seul compte.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "shopping"],
   "background_color": "#0D1117",
   "theme_color": "#1b4332",
   "icons": [
@@ -24,6 +30,29 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Publier une annonce",
+      "short_name": "Publier",
+      "description": "Mettre un article en vente",
+      "url": "/publier",
+      "icons": [{ "src": "/icon-192.png?v=3", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Devis et factures",
+      "short_name": "Mon activité",
+      "description": "Éditer un devis ou une facture",
+      "url": "/mon-activite",
+      "icons": [{ "src": "/icon-192.png?v=3", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Créer mon CV",
+      "short_name": "Ma carrière",
+      "description": "CV, lettre de motivation, demande d'emploi",
+      "url": "/carriere",
+      "icons": [{ "src": "/icon-192.png?v=3", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

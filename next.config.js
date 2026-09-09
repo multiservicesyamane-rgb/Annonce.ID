@@ -60,6 +60,13 @@ const nextConfig = {
     return [{ source: "/affiches", destination: "/partenaires", permanent: true }];
   },
 
+  // Digital Asset Links : Google exige ce fichier a la RACINE du domaine,
+  // pas sous /api. La reecriture donne l'adresse imposee sans obliger a
+  // ecrire l'empreinte du certificat en dur dans le depot (voir la route).
+  async rewrites() {
+    return [{ source: "/.well-known/assetlinks.json", destination: "/api/assetlinks" }];
+  },
+
   async headers() {
     return [
       {
