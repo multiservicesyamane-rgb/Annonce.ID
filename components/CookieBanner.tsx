@@ -35,35 +35,50 @@ export default function CookieBanner() {
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-[500px] z-[9999] bg-white/95 dark:bg-[#111722]/95 backdrop-blur-md border border-gray-200 dark:border-white/10 shadow-[0_15px_50px_rgba(0,0,0,0.15)] rounded-[20px] p-5 md:p-6 pb-safe animate-fadeUp">
-      <div className="flex flex-col gap-4">
-        
-        <div>
-          <h3 className="font-display font-extrabold text-[1.2rem] text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-            🍪 Nous utilisons des cookies
-          </h3>
-          <p className="text-[0.98rem] md:text-[1rem] text-gray-600 dark:text-gray-400 leading-relaxed">
-            <strong>Wanteermako</strong> et nos partenaires (dont Google AdSense) utilisent des cookies pour personnaliser le contenu, adapter les publicités à vos préférences et analyser notre trafic. En cliquant sur "Tout Accepter", vous consentez à l'utilisation de ces technologies.
-            <Link href="/politique-confidentialite" className="text-green hover:underline ml-1 font-semibold">
-              En savoir plus.
-            </Link>
-          </p>
-        </div>
+    /*
+     * Compact, et volontairement.
+     *
+     * Le bandeau precedent faisait la moitie d'un ecran de telephone : titre
+     * en 1,2 rem, cinq lignes de texte, deux gros boutons empiles. Sur la page
+     * d'accueil, il cachait les annonces — c'est-a-dire la raison meme de la
+     * visite. Un bandeau qui masque le produit fait fuir avant d'informer.
+     */
+    <div className="fixed bottom-3 left-3 right-3 z-[9999] rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.16)] backdrop-blur-md pb-safe animate-fadeUp md:left-auto md:right-4 md:max-w-[400px] dark:border-white/10 dark:bg-[#111722]/95">
+      <p className="text-[.86rem] leading-relaxed text-gray-700 dark:text-gray-300">
+        <span aria-hidden="true">🍪</span>{" "}
+        {/*
+          Ce que dit ce texte est exactement ce que fait le site.
+          « Refuser » coupe la mesure d'audience ; les publicites, elles,
+          continuent de s'afficher — elles sont chargees par le gabarit de
+          page, hors de ce choix. Ecrire « refusez et tout s'arrete » aurait
+          ete faux, et c'est precisement le genre de phrase qu'on ne peut plus
+          defendre le jour ou quelqu'un verifie.
 
-        <div className="flex items-center gap-3 w-full mt-2">
-          <button 
-            onClick={declineCookies}
-            className="flex-1 btn btn-outline border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold text-[0.9rem]"
-          >
-            Refuser l'essentiel
-          </button>
-          <button 
-            onClick={acceptCookies}
-            className="flex-1 btn btn-green shadow-lg shadow-green/20 py-3 rounded-xl font-bold text-[0.9rem]"
-          >
-            Tout Accepter
-          </button>
-        </div>
+          Le nom de la regie n'apparait pas : il n'apprend rien a personne et
+          fait peur. La politique de confidentialite, elle, la nomme.
+        */}
+        Nous comptons les visites pour améliorer le site, et la publicité le garde
+        gratuit. Vous pouvez refuser le comptage — tout continue de fonctionner.{" "}
+        <Link href="/politique-confidentialite" className="font-semibold text-green hover:underline">
+          Détails
+        </Link>
+      </p>
+
+      <div className="mt-3 flex items-center gap-2">
+        {/* « Refuser l'essentiel » disait litteralement le contraire de ce
+            qu'il faisait. Un mot suffit. */}
+        <button
+          onClick={declineCookies}
+          className="flex-1 rounded-xl border border-gray-300 py-2.5 text-[.84rem] font-bold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+        >
+          Refuser
+        </button>
+        <button
+          onClick={acceptCookies}
+          className="flex-1 rounded-xl bg-green py-2.5 text-[.84rem] font-bold text-white shadow-lg shadow-green/20 transition hover:opacity-95"
+        >
+          Accepter
+        </button>
       </div>
     </div>
   );

@@ -248,7 +248,11 @@ export default function ExportA4({
       role="dialog"
       aria-modal="true"
       aria-labelledby="verrou-titre"
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center"
+      // z-[1200] : AU-DESSUS de la barre d'actions fixe du bas, qui est en
+      // z-[810]. Elle recouvrait le bouton « C'est bon, telecharger » — la
+      // boite s'ouvrait, mais son seul bouton utile passait sous la barre.
+      // Une boite modale doit dominer TOUT ce qui reste a l'ecran.
+      className="fixed inset-0 z-[1200] flex items-end justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center"
     >
       <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-dark-800">
         <h2 id="verrou-titre" className="text-[1.05rem] font-extrabold text-gray-900 dark:text-white">
