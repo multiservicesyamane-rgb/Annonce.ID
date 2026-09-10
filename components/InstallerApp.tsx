@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useInstallation } from "./useInstallation";
 
 /**
  * Le bouton d'installation, et ce qu'il faut dire quand il ne peut pas exister.
@@ -19,51 +20,19 @@ import { useEffect, useState } from "react";
  *   Déjà installée    on le dit, plutôt que de proposer de refaire.
  */
 
-type Invite = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
-
 export default function InstallerApp() {
-  const [invite, setInvite] = useState<Invite | null>(null);
-  const [installee, setInstallee] = useState(false);
-  const [ios, setIos] = useState(false);
+  // La detection vit dans useInstallation, partagee avec la banniere de
+  // l'accueil : deux copies de ce raisonnement auraient fini par diverger.
+  const { invite, installee, ios, installer } = useInstallation();
   const [etat, setEtat] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Déjà lancée depuis l'écran d'accueil : inutile de proposer l'installation.
-    const enApp =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as { standalone?: boolean }).standalone === true;
-    setInstallee(enApp);
-
-    // iPadOS se déclare « Macintosh » : on regarde aussi le tactile, sinon un
-    // iPad reçoit les instructions d'un ordinateur de bureau.
-    const ua = window.navigator.userAgent;
-    setIos(/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && "ontouchend" in document));
-
-    const capter = (e: Event) => {
-      // Sans ceci, Chrome affiche sa propre bannière par-dessus la page —
-      // deux invitations concurrentes pour le même geste.
-      e.preventDefault();
-      setInvite(e as Invite);
-    };
-    window.addEventListener("beforeinstallprompt", capter);
-    window.addEventListener("appinstalled", () => {
-      setInstallee(true);
-      setInvite(null);
-    });
-    return () => window.removeEventListener("beforeinstallprompt", capter);
-  }, []);
-
-  async function installer() {
-    if (!invite) return;
-    await invite.prompt();
-    const { outcome } = await invite.userChoice;
-    // L'invitation ne se rejoue pas : une fois consommée, le navigateur ne la
-    // redonne plus avant un bon moment.
-    setInvite(null);
+  async function surInstaller() {
+    const r = await installer();
+    if (r === "indisponible") return;
     setEtat(
-      outcome === "accepted"
-        ? "Installation lancée. Retrouve l'icône Wanteermako sur ton écran d'accueil."
-        : "Installation annulée. Tu peux revenir quand tu veux.",
+      r === "accepted"
+        ? "Installation lancee. Retrouve l'icone Wanteermako sur ton ecran d'accueil."
+        : "Installation annulee. Tu peux revenir quand tu veux.",
     );
   }
 
@@ -112,7 +81,7 @@ export default function InstallerApp() {
     <div className="text-center">
       <button
         type="button"
-        onClick={installer}
+        onClick={surInstaller}
         disabled={!invite}
         className="w-full rounded-xl bg-green px-6 py-4 text-[1rem] font-bold text-white shadow-lg shadow-green/25 transition active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-50"
       >

@@ -7,6 +7,7 @@ import AdSensePlaceholder from "@/components/AdSensePlaceholder";
 import AdCard from "@/components/AdCard";
 import HomeRecent from "@/components/HomeRecent";
 import HomeServices from "@/components/HomeServices";
+import InstallerBanniere from "@/components/InstallerBanniere";
 import { VitrineCV, VitrineConfiance, VitrineEtapes, VitrinePro } from "@/components/HomeVitrines";
 import HomeMapSection from "@/components/HomeMapSection";
 import { getFeaturedListings, getPremiumListings, getRecentListings } from "@/lib/homeSections";
@@ -101,6 +102,12 @@ export default async function HomePage() {
 
           Pas de tuile « Annonces » : cette page EST le site d'annonces. */}
       <HomeServices />
+
+      {/* Une seule ligne, et elle disparait des qu'on la refuse ou que
+          l'application est installee. Les annonces sont la raison de la
+          visite : une banniere qui les repousse coute plus qu'elle ne
+          rapporte, meme quand ce qu'elle propose est utile. */}
+      <InstallerBanniere />
 
       {/* Bandeau "À la Une" + Premium (déduplication par id), cliquable */}
       <FeaturedSlider listings={[...uneList, ...premList].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)} />
