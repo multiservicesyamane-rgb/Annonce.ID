@@ -7,6 +7,7 @@ import AdSensePlaceholder from "@/components/AdSensePlaceholder";
 import AdCard from "@/components/AdCard";
 import HomeRecent from "@/components/HomeRecent";
 import HomeServices from "@/components/HomeServices";
+import { VitrineCV, VitrineConfiance, VitrineEtapes, VitrinePro } from "@/components/HomeVitrines";
 import HomeMapSection from "@/components/HomeMapSection";
 import { getFeaturedListings, getPremiumListings, getRecentListings } from "@/lib/homeSections";
 import { createClient } from "@supabase/supabase-js";
@@ -247,6 +248,18 @@ export default async function HomePage() {
         <HomeRecent initialListings={formattedListings} />
       </ScrollReveal>
 
+      {/* Les vitrines des deux autres modules, POSEES APRES les annonces
+          recentes et non avant : quelqu'un qui arrive ici cherche d'abord ce
+          qui se vend. On lui montre le reste une fois qu'il a vu ce pour quoi
+          il est venu. */}
+      <ScrollReveal delay={50}>
+        <VitrineCV />
+      </ScrollReveal>
+
+      <ScrollReveal delay={50}>
+        <VitrinePro />
+      </ScrollReveal>
+
       {/* CARTE DES ANNONCES — sous les annonces récentes */}
       {mapPoints.length > 0 && (
         <ScrollReveal className="wrap py-3 md:py-6" delay={50}>
@@ -466,6 +479,14 @@ export default async function HomePage() {
 
 
       {/* RECOMMANDÉ POUR VOUS (basé sur l'historique de vues) */}
+      <ScrollReveal delay={50}>
+        <VitrineEtapes />
+      </ScrollReveal>
+
+      <ScrollReveal delay={50}>
+        <VitrineConfiance />
+      </ScrollReveal>
+
       <RecommendedForYou />
 
       {/* VUS RÉCEMMENT */}
