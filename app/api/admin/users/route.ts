@@ -395,6 +395,104 @@ export async function POST(req: Request) {
      * la seule chose qui empeche un abonnement encaisse une fois de courir a
      * vie. `jours` vaut 30 ou 365 selon ce qui a ete regle.
      */
+    /**
+     * Inscrire un partenaire depuis l'administration.
+     *
+     * ── Pourquoi ca manquait ─────────────────────────────────────────────
+     * L'ecran savait valider une candidature, pas en creer une. Or le metier
+     * marche dans l'autre sens : Khalil rencontre quelqu'un, l'argent passe
+     * par Wave ou de la main a la main, et c'est LUI qui inscrit la personne.
+     * Attendre qu'elle se declare elle-meme sur un formulaire qu'elle n'a
+     * jamais vu revenait a n'avoir aucun partenaire.
+     *
+     * ── Le compte doit exister ───────────────────────────────────────────
+     * Une fiche partenaire s'accroche a un compte (`user_id`). On cherche donc
+     * par e-mail, et on refuse clairement si personne ne repond — plutot que
+     * de creer un compte a l'insu de son proprietaire, avec un mot de passe
+     * qu'il ne connaitrait pas.
+     */
+    if (action === "createPartenaire") {
+      const email = String(body?.email || "").trim().toLowerCase();
+      const agence = String(body?.agence || "").trim().slice(0, 120);
+      if (!email) return NextResponse.json({ error: "Indiquez l'e-mail du partenaire." }, { status: 400 });
+      if (!agence) return NextResponse.json({ error: "Indiquez le nom de son agence." }, { status: 400 });
+
+      // On cherche d'abord dans `profiles`, qui porte l'e-mail et se lit d'un
+      // coup. La liste d'authentification ne sert que de repli : elle se
+      // pagine, et la parcourir a chaque inscription serait lent pour rien.
+      let uid: string | null = null;
+      const { data: prof } = await sb.from("profiles").select("id").ilike("email", email).maybeSingle();
+      uid = prof?.id || null;
+
+      if (!uid) {
+        try {
+          const { data: liste } = await sb.auth.admin.listUsers({ page: 1, perPage: 200 });
+          uid = liste?.users?.find((u: any) => (u.email || "").toLowerCase() === email)?.id || null;
+        } catch {
+          /* repli indisponible : on repondra « compte introuvable » */
+        }
+      }
+
+      if (!uid) {
+        return NextResponse.json(
+          {
+            error:
+              "Aucun compte avec cet e-mail. Demandez-lui de creer son compte sur le site, " +
+              "puis revenez l'inscrire ici.",
+          },
+          { status: 404 },
+        );
+      }
+
+      const { data: deja } = await sb
+        .from("partenaires").select("user_id, code").eq("user_id", uid).maybeSingle();
+      if (deja) {
+        return NextResponse.json(
+          { error: `Ce compte est deja partenaire (code ${deja.code}).` },
+          { status: 409 },
+        );
+      }
+
+      // Meme alphabet que la route publique : ni O ni 0, ni I ni 1. Le code se
+      // dicte au telephone et s'imprime sur une affiche.
+      const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const nouveauCode = () =>
+        Array.from({ length: 6 }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join("");
+
+      const champs: Record<string, unknown> = {
+        user_id: uid,
+        agence,
+        ville: String(body?.ville || "").trim().slice(0, 80),
+        telephone: String(body?.telephone || "").trim().slice(0, 40),
+        statut: "candidat",
+      };
+
+      // Abonnement regle d'avance : on l'active dans la foulee. C'est le cas
+      // le plus frequent — on n'inscrit quelqu'un qu'une fois qu'il a paye.
+      const plan = String(body?.plan || "");
+      const jours = Number(body?.jours);
+      if (["starter", "agence"].includes(plan) && Number.isFinite(jours) && jours >= 1 && jours <= 400) {
+        champs.statut = "actif";
+        champs.plan = plan;
+        champs.expire_at = new Date(Date.now() + jours * 86400000).toISOString();
+      }
+
+      for (let i = 0; i < 5; i++) {
+        const { data, error } = await sb
+          .from("partenaires").insert({ ...champs, code: nouveauCode() }).select("*").maybeSingle();
+        if (!error && data) return NextResponse.json({ ok: true, partenaire: data });
+        // Seule une collision de code se retente : toute autre erreur doit
+        // remonter, sinon on boucle cinq fois sur un probleme reel.
+        if (!/duplicate|unique/i.test(error?.message || "")) {
+          if (/does not exist|schema cache/i.test(error?.message || "")) {
+            return NextResponse.json({ error: "Tables partenaires absentes.", needsMigration: true }, { status: 503 });
+          }
+          throw error;
+        }
+      }
+      return NextResponse.json({ error: "Inscription impossible, reessayez." }, { status: 500 });
+    }
+
     if (action === "setPartenaireStatut") {
       const uid = String(body?.user_id || "");
       const statut = String(body?.statut || "");

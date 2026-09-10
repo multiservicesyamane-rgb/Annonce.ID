@@ -3384,6 +3384,27 @@ function Partenaires({ T }: { T: (m: string) => void }) {
    */
   const [duree, setDuree] = useState<30 | 365>(30);
 
+  /**
+   * Le formulaire d'inscription d'un partenaire.
+   *
+   * L'ecran savait valider une candidature, pas en creer une — et personne
+   * n'avait jamais postule. Or le metier marche dans l'autre sens : on
+   * rencontre quelqu'un, il paie en Wave, on l'inscrit. Attendre qu'il se
+   * declare seul sur un formulaire qu'il n'a jamais vu, c'etait n'avoir aucun
+   * partenaire.
+   */
+  const [ouvrirForm, setOuvrirForm] = useState(false);
+  const [nouveau, setNouveau] = useState({
+    email: "",
+    agence: "",
+    ville: "",
+    telephone: "",
+    // « aucun » = on inscrit d'abord, on encaisse ensuite. Les deux cas
+    // existent, et forcer un plan a l'inscription obligerait a mentir.
+    plan: "" as "" | "starter" | "agence",
+  });
+  const [envoi, setEnvoi] = useState(false);
+
   const charger = async () => {
     setLoading(true);
     try {
@@ -3394,6 +3415,34 @@ function Partenaires({ T }: { T: (m: string) => void }) {
     setLoading(false);
   };
   useEffect(() => { charger(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  async function inscrire() {
+    if (!nouveau.email.trim() || !nouveau.agence.trim()) {
+      T("Indiquez au moins l'e-mail et le nom de l'agence.");
+      return;
+    }
+    setEnvoi(true);
+    try {
+      const r = await adminApi("createPartenaire", {
+        ...nouveau,
+        // Le plan n'est envoye que s'il a ete choisi : sans lui, le partenaire
+        // entre en « candidat » et sera active le jour du paiement.
+        plan: nouveau.plan || undefined,
+        jours: nouveau.plan ? duree : undefined,
+      });
+      T(
+        r?.partenaire?.statut === "actif"
+          ? `✓ Partenaire inscrit et abonnement actif — code ${r.partenaire.code}`
+          : `✓ Partenaire inscrit en candidat — code ${r?.partenaire?.code || ""}`,
+      );
+      setNouveau({ email: "", agence: "", ville: "", telephone: "", plan: "" });
+      setOuvrirForm(false);
+      await charger();
+    } catch (e: any) {
+      T(e?.message || "Inscription impossible.");
+    }
+    setEnvoi(false);
+  }
 
   async function changer(uid: string, statut: string, plan?: string, jours?: number) {
     setOccupe(uid);
@@ -3476,8 +3525,80 @@ function Partenaires({ T }: { T: (m: string) => void }) {
         title="🤝 Partenaires"
         sub={`${tous.length} inscrits · ${c.candidat || 0} en attente · ${c.actif || 0} abonnes en cours`}
       >
+        <button onClick={() => setOuvrirForm((v) => !v)} className={btnP}>
+          {ouvrirForm ? "Fermer" : "+ Inscrire un partenaire"}
+        </button>
         <button onClick={charger} className={btnG}>↻ Actualiser</button>
       </PageHead>
+
+      {/* Le formulaire d'inscription. Replie par defaut : la liste reste
+          l'ecran principal, on ne s'inscrit pas dix fois par jour. */}
+      {ouvrirForm && (
+        <div className="mb-3">
+          <Card
+            title="Inscrire un partenaire"
+            sub="Il doit deja avoir un compte sur le site — la fiche s'y accroche."
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              {([
+                ["email", "E-mail du compte *", "awa@exemple.com"],
+                ["agence", "Nom de son agence *", "Alpha Digital Services"],
+                ["ville", "Ville", "Dakar"],
+                ["telephone", "Telephone", "+221 77 000 00 00"],
+              ] as const).map(([cle, label, ph]) => (
+                <label key={cle} className="block">
+                  <span className="mb-1 block text-[.72rem] font-bold uppercase text-[#8B949E]">{label}</span>
+                  <input
+                    value={(nouveau as any)[cle]}
+                    onChange={(e) => setNouveau({ ...nouveau, [cle]: e.target.value })}
+                    placeholder={ph}
+                    className="w-full rounded-[9px] border border-[#30363D] bg-[#0D1117] px-3 py-2 text-[.85rem] text-white outline-none focus:border-[#6366F1]"
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="mt-4 border-t border-[#21262D] pt-3">
+              <span className="mb-1.5 block text-[.72rem] font-bold uppercase text-[#8B949E]">
+                A-t-il deja paye ?
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ["", "Pas encore — candidat"],
+                  ["starter", `Starter ${duree === 365 ? "1 an" : "30 j"}`],
+                  ["agence", `Agence ${duree === 365 ? "1 an" : "30 j"}`],
+                ] as const).map(([v, label]) => (
+                  <button
+                    key={v || "aucun"}
+                    onClick={() => setNouveau({ ...nouveau, plan: v })}
+                    className={`rounded-[9px] px-3.5 py-2 text-[.78rem] font-bold ${
+                      nouveau.plan === v
+                        ? "bg-g1 text-white"
+                        : "border border-[#30363D] bg-[#21262D] text-[#8B949E] hover:text-white"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {/* La duree se regle plus bas, avec le tableau : un seul reglage
+                  pour les deux endroits, sinon les deux se contredisent. */}
+              <p className="mt-2 text-[.72rem] text-[#8B949E]">
+                La duree ({duree === 365 ? "1 an" : "30 jours"}) se change au-dessus du tableau.
+              </p>
+            </div>
+
+            <div className="mt-4 flex items-center gap-3 border-t border-[#21262D] pt-3">
+              <button onClick={inscrire} disabled={envoi} className={btnP}>
+                {envoi ? "Inscription…" : "Inscrire"}
+              </button>
+              <span className="text-[.75rem] text-[#8B949E]">
+                Un code de parrainage lui sera attribue automatiquement.
+              </span>
+            </div>
+          </Card>
+        </div>
+      )}
 
       <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
         <Kpi grad="bg-g1" icon="🤝" label="Inscrits" value={tous.length} trend="au programme" />
