@@ -94,10 +94,12 @@ export default async function HomePage() {
     <>
       <Hero />
 
-      {/* Les trois services, tout de suite apres l'accroche. L'Espace Pro
-          n'apparaissait qu'a la ligne 403 de cette page, et Ma Carriere nulle
-          part : les deux modules qui font vivre le site etaient invisibles
-          pour qui arrive ici — c'est-a-dire presque tout le monde. */}
+      {/* Les DEUX autres services, tout de suite apres l'accroche. L'Espace
+          Pro n'apparaissait qu'a la ligne 403 de cette page, et Ma Carriere
+          nulle part : les deux modules qui font vivre le site etaient
+          invisibles pour qui arrive ici — c'est-a-dire presque tout le monde.
+
+          Pas de tuile « Annonces » : cette page EST le site d'annonces. */}
       <HomeServices />
 
       {/* Bandeau "À la Une" + Premium (déduplication par id), cliquable */}
